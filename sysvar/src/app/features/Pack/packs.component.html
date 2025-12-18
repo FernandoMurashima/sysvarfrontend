@@ -1,0 +1,166 @@
+<div class="grupos-page">
+  <header class="toolbar">
+    <h2>Packs</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar por nome..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
+      <button class="btn primary" (click)="doSearch()">Buscar</button>
+      <button class="btn primary" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" (click)="novoPack()">Novo Pack</button>
+      <button class="btn primary" (click)="goHome()">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="card form-placeholder" *ngIf="formModePack === null && !submitted">
+    <div class="placeholder-inner">
+      <p>Para cadastrar um <strong>pack</strong>, clique em <strong>Novo Pack</strong>.</p>
+      <p>Para editar, localize um <strong>pack</strong> na lista e clique em <strong>Editar</strong>.</p>
+    </div>
+  </section>
+
+  <div class="content">
+    <section class="card form" *ngIf="formModePack !== null || submitted">
+      <h3>{{ formModePack === 'edit' ? 'Editar Pack' : 'Novo Pack' }}</h3>
+
+      <form [formGroup]="formPack" (ngSubmit)="salvarPack()">
+        <div class="grid-10">
+          <label id="nome-box">
+            Nome
+            <input type="text" formControlName="nome" maxlength="80" />
+          </label>
+
+          <label id="grade-box">
+            Grade*
+            <select formControlName="grade" [attr.aria-invalid]="fieldInvalidPack('grade')">
+              <option [ngValue]="null">Selecione...</option>
+              <option *ngFor="let g of grades" [ngValue]="g.Idgrade">{{ g.Descricao }}</option>
+            </select>
+            <span class="field-error" *ngIf="fieldInvalidPack('grade')">Selecione a Grade.</span>
+          </label>
+
+          <label id="ativo-box" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" formControlName="ativo" /> Ativo
+          </label>
+        </div>
+
+        <div class="actions-form">
+          <button class="btn primary" type="submit" [disabled]="saving || (formPack.invalid && submitted)">
+            {{ formModePack === 'edit' ? 'Salvar alterações' : 'Salvar' }}
+          </button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoPack()">Cancelar</button>
+        </div>
+
+        <div class="overlay" *ngIf="submitted && formPack.invalid" role="alertdialog" aria-modal="true">
+          <div class="overlay-card">
+            <h4>Ops, precisamos de atenção</h4>
+            <p>Encontramos {{ getPackErrors().length }} pendência(s):</p>
+            <ul><li *ngFor="let m of getPackErrors()">{{ m }}</li></ul>
+            <button class="btn primary" type="button" (click)="submitted = false">OK, vou corrigir</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="card list">
+      <div class="empty-hint" *ngIf="!loading && packs.length === 0">Nenhum pack encontrado.</div>
+
+      <table class="table" *ngIf="packs.length > 0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Grade</th>
+            <th>Status</th>
+            <th style="width:260px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of packs">
+            <td>{{ p.id }}</td>
+            <td>{{ p.nome || '-' }}</td>
+            <td>{{ getGradeDesc(p.grade) }}</td>
+            <td>
+              <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
+                {{ p.ativo ? 'Ativo' : 'Inativo' }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn sm" (click)="editarPack(p)">Editar</button>
+              <button class="btn sm" (click)="selecionarPack(p.id!, p.grade)">Itens</button>
+              <button class="btn sm danger" (click)="excluirPack(p)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="loading" *ngIf="loading">Carregando...</div>
+    </section>
+
+    <section class="card subgrupos" *ngIf="selectedPackId !== null">
+      <h3>Itens do Pack #{{ selectedPackId }}</h3>
+
+      <form [formGroup]="formItem" (ngSubmit)="salvarItem()">
+        <div class="grid-10">
+          <label id="tam-box">
+            Tamanho*
+            <select formControlName="tamanho" [attr.aria-invalid]="fieldInvalidItem('tamanho')">
+              <option [ngValue]="null">Selecione...</option>
+              <option *ngFor="let t of tamanhosDaGrade" [ngValue]="t.Idtamanho">
+                {{ t.Tamanho }} — {{ t.Descricao || 'Tamanho' }}
+              </option>
+            </select>
+            <span class="field-error" *ngIf="fieldInvalidItem('tamanho')">Selecione o Tamanho.</span>
+          </label>
+
+          <label id="qtd-box">
+            Quantidade*
+            <input type="number" min="1" step="1" formControlName="qtd"
+                   [attr.aria-invalid]="fieldInvalidItem('qtd')" />
+            <span class="field-error" *ngIf="fieldInvalidItem('qtd')">Informe a Quantidade (>= 1).</span>
+          </label>
+        </div>
+
+        <div class="actions-form">
+          <button class="btn primary" type="submit" [disabled]="formItem.invalid">
+            {{ editingItemId ? 'Salvar alterações' : 'Adicionar' }}
+          </button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoItem()">Limpar</button>
+          <button class="btn ghost" type="button" (click)="fecharItens()">Fechar</button>
+        </div>
+
+        <div class="overlay" *ngIf="submittedSub && formItem.invalid" role="alertdialog" aria-modal="true">
+          <div class="overlay-card">
+            <h4>Ops, precisamos de atenção</h4>
+            <p>Encontramos {{ getItemErrors().length }} pendência(s):</p>
+            <ul><li *ngFor="let m of getItemErrors()">{{ m }}</li></ul>
+            <button class="btn primary" type="button" (click)="submittedSub = false">OK, vou corrigir</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="empty-hint" *ngIf="items.length === 0">Nenhum item neste pack.</div>
+
+      <table class="table" *ngIf="items.length > 0">
+        <thead>
+          <tr>
+            <th>Tamanho</th>
+            <th>Quantidade</th>
+            <th style="width:180px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of items">
+            <td>{{ getTamanhoDesc(it.tamanho) }}</td>
+            <td>{{ it.qtd }}</td>
+            <td class="actions">
+              <button class="btn sm" (click)="editarItem(it)">Editar</button>
+              <button class="btn sm danger" (click)="excluirItem(it)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>

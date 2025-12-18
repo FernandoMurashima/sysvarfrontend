@@ -1,0 +1,85 @@
+/* ===== Layout base ===== */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: 100vh;
+}
+
+.layout.sidebar-collapsed {
+  grid-template-columns: 72px 1fr;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  background: #0f172a;          /* slate-900 */
+  color: #e2e8f0;               /* slate-200 */
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;       /* permite footer colado embaixo */
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin-bottom: 12px;
+}
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.menu {
+  flex: 1 1 auto;
+  overflow: auto;            /* mantém o scroll */
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.menu::-webkit-scrollbar {    /* Chrome/Safari */
+  display: none;
+}
+
+
+
+/* links do menu (app-nav-item usa .nav-link) */
+.nav-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;               /* slate-300 */
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.nav-link:hover {
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+}
+.nav-link.active {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+}
+.nav-link.logout {
+  margin-top: 8px;
+  color: #fca5a5;               /* vermelho suave */
+}
+
+/* ===== Rodapé da sidebar: usuário ===== */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar .user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  color: #e2e8f0;
+}

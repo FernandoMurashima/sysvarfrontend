@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* garante que o card interno ocupe apenas o espaço do pai */
+.ls-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb; /* opcional: combina com os outros cards */
+  margin: 0;                 /* evita deslocamentos */
+}
+
+/* grid responsivo, sem forçar largura além do pai */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+  gap: 8px 16px;
+  margin-top: 8px;
+}

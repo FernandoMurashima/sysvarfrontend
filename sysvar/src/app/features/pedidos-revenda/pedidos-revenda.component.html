@@ -1,0 +1,327 @@
+// src/app/features/pedidos-revenda/pedidos-revenda.component.html
+<div class="pc-page">
+  <!-- BARRA SUPERIOR -->
+  <header class="toolbar toolbar-like-cores">
+    <h2>Pedidos de Revenda</h2>
+
+    <div class="toolbar-right">
+      <input
+        type="text"
+        placeholder="Buscar por nº, loja ou fornecedor"
+        [(ngModel)]="search"
+        (keyup)="onSearchKeyup($event)"
+      />
+      <button class="btn primary" (click)="doSearch()">Buscar</button>
+      <button class="btn" (click)="clearSearch()">Limpar</button>
+
+      <button class="btn primary" (click)="setViewList()">Consultar</button>
+      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <!-- DICA -->
+  <section class="card hint">
+    <p>
+      Para cadastrar um <strong>pedido de revenda</strong>, clique em <strong>Novo</strong>.
+      Para consultar, use a lista abaixo em <strong>Consultar</strong>.
+    </p>
+  </section>
+
+  <!-- LISTA -->
+  <section class="card list" *ngIf="view() === 'list'">
+    <div class="list-bar">
+      <div class="left"><strong>Total:</strong> {{ total }}</div>
+      <div class="right">
+        <label for="pageSize">Itens por página</label>
+        <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="pedidos.length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th class="col-numero">Nº Pedido</th>
+            <th class="col-loja">Loja</th>
+            <th class="col-fornecedor">Fornecedor</th>
+            <th class="col-emissao">Emissão</th>
+            <th class="col-status">Status</th>
+            <th class="col-total">Total</th>
+            <th class="col-acoes-list">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of pedidos">
+            <td>{{ p.id }}</td>
+            <td>{{ labelLoja(p.loja) }}</td>
+            <td>{{ labelFornecedor(p.fornecedor) }}</td>
+            <td>{{ p.emissao }}</td>
+            <td>
+              <span class="badge" [ngClass]="p.status === 'AP' ? 'badge-ok' : 'badge-off'">
+                {{ p.status }}
+              </span>
+            </td>
+            <td>{{ p.total_pedido | number : '1.2-2' }}</td>
+            <td>
+              <button
+                class="btn sm"
+                type="button"
+                (click)="editarPedido(p)"
+                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+              >
+                Editar
+              </button>
+              <button
+                class="btn sm danger"
+                type="button"
+                (click)="excluirPedido(p)"
+                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+                style="margin-left:4px;"
+              >
+                Excluir
+              </button>
+              <button
+                class="btn sm"
+                type="button"
+                (click)="aprovarPedido(p)"
+                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+                style="margin-left:4px;"
+              >
+                Aprovar
+              </button>
+              <button
+                class="btn sm"
+                type="button"
+                (click)="cancelarPedido(p)"
+                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+                style="margin-left:4px;"
+              >
+                Cancelar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loadingPedidos">Nenhum pedido encontrado.</div>
+        <div class="loading" *ngIf="loadingPedidos">Carregando...</div>
+      </ng-template>
+    </div>
+
+    <div class="pager" *ngIf="total > 0">
+      <div class="left">
+        <button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
+        <button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
+      </div>
+      <div class="center">
+        Página {{ page }} de {{ totalPages }}
+        <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span>
+      </div>
+      <div class="right">
+        <button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
+        <button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORM -->
+  <section class="card form" *ngIf="view() === 'form'">
+    <h3>Novo Pedido de Revenda</h3>
+
+    <div *ngIf="submitted && headerForm.invalid" class="alert error">
+      Existem {{ getFormErrors().length }} pendência(s) no cabeçalho:
+      <ul>
+        <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
+      </ul>
+    </div>
+
+    <!-- Cabeçalho -->
+    <form [formGroup]="headerForm" novalidate>
+      <div class="grid-12">
+        <!-- Linha 1: Loja / Fornecedor / Emissão / Previsão -->
+        <label class="input-item col-span-3"
+               [class.invalid]="isInvalid('loja')">
+          Loja*
+          <select formControlName="loja">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="isInvalid('loja')">
+            Obrigatória.
+          </span>
+        </label>
+
+        <label class="input-item col-span-5"
+               [class.invalid]="isInvalid('fornecedor')">
+          Fornecedor*
+          <select formControlName="fornecedor">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let f of fornecedores" [ngValue]="f.id">{{ f.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="isInvalid('fornecedor')">
+            Obrigatório.
+          </span>
+        </label>
+
+        <label class="input-item col-span-2"
+               [class.invalid]="isInvalid('emissao')">
+          Emissão*
+          <input type="date" formControlName="emissao" />
+          <span class="field-error" *ngIf="isInvalid('emissao')">
+            Obrigatória.
+          </span>
+        </label>
+
+        <label class="input-item col-span-2">
+          Previsão entrega
+          <input type="date" formControlName="previsao_entrega" />
+        </label>
+
+        <!-- Linha 2: Forma de pagamento / Observações -->
+        <label class="input-item col-span-4"
+               [class.invalid]="isInvalid('forma_pagamento_codigo')">
+          Forma de pagamento*
+          <select formControlName="forma_pagamento_codigo">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let fp of formas" [ngValue]="fp.codigo">{{ fp.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="isInvalid('forma_pagamento_codigo')">
+            Obrigatória.
+          </span>
+        </label>
+
+        <label class="input-item col-span-8">
+          Observações
+          <textarea rows="3" formControlName="observacoes"></textarea>
+        </label>
+      </div>
+    </form>
+
+    <hr class="divider" />
+
+    <!-- ITENS -->
+    <h3>Itens do Pedido</h3>
+
+    <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()">
+      <div class="grid-12 itens-grid">
+        <!-- Linha única: produto, cor, pack, n_packs, qtd, preço, desconto, total -->
+        <label class="input-item col-span-3">
+          Produto (ref ou ID)*
+          <input type="text" formControlName="produto_input" (blur)="onProdutoBlur()" />
+          <small *ngIf="produtoDescricaoAtual">
+            {{ produtoDescricaoAtual }}
+          </small>
+        </label>
+
+        <label class="input-item col-span-2">
+          Cor*
+          <select formControlName="cor">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let c of coresProduto" [ngValue]="c.id">
+              {{ c.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="input-item col-span-1">
+          Pack*
+          <input type="number" formControlName="pack" (blur)="onPackBlur()" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Nº packs*
+          <input type="number" formControlName="n_packs" min="1" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Quantidade
+          <input type="number" formControlName="quantidade" readonly />
+        </label>
+
+        <label class="input-item col-span-2">
+          Preço unitário*
+          <input type="number" formControlName="preco_unit" step="0.01" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Desconto (R$)
+          <input type="number" formControlName="desconto_valor" step="0.01" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Total
+          <input type="number" formControlName="total_item" readonly />
+        </label>
+
+<!--         <label class="input-item col-span-12">
+          Observações
+          <textarea rows="2" formControlName="observacoes"></textarea>
+        </label> -->
+      </div>
+
+      <div class="actions-form">
+        <button class="btn primary" type="submit" [disabled]="savingItem || headerForm.invalid">
+          {{ itemForm.get('id')?.value ? 'Atualizar item' : 'Adicionar item' }}
+        </button>
+        <button class="btn ghost" type="button" (click)="limparItem()">
+          Limpar item
+        </button>
+      </div>
+    </form>
+
+    <div class="table-wrapper itens-wrapper">
+      <table class="table" *ngIf="itens.length > 0; else itensEmptyTpl">
+        <thead>
+          <tr>
+            <th class="col-produto">Produto</th>
+            <th class="col-cor">Cor</th>
+            <th class="col-pack">Pack</th>
+            <th class="col-npacks">Packs</th>
+            <th class="col-qtd">Qtd</th>
+            <th class="col-preco">Preço</th>
+            <th class="col-desc">Desc</th>
+            <th class="col-total">Total</th>
+            <th class="col-acoes">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of itens">
+            <td>{{ it.produto_referencia }}</td>
+            <td>{{ it.cor_nome }}</td>
+            <td>{{ it.pack_nome }}</td>
+            <td>{{ it.n_packs }}</td>
+            <td>{{ it.quantidade | number : '1.0-0' }}</td>
+            <td>{{ it.preco_unit | number : '1.2-2' }}</td>
+            <td>{{ it.desconto_valor | number : '1.2-2' }}</td>
+            <td>{{ it.total_item | number : '1.2-2' }}</td>
+            <td>
+              <button class="btn sm" type="button" (click)="editarItem(it)">Editar</button>
+              <button class="btn sm danger" type="button" (click)="removerItem(it)" style="margin-left:4px;">
+                Remover
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #itensEmptyTpl>
+        <div class="empty-hint" *ngIf="!loadingItens">Nenhum item lançado.</div>
+        <div class="loading" *ngIf="loadingItens">Carregando itens...</div>
+      </ng-template>
+    </div>
+
+    <!-- AÇÕES FINAIS DO PEDIDO -->
+    <div class="actions-form">
+      <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving">
+        Gravar pedido
+      </button>
+      <button class="btn ghost" type="button" (click)="cancelar()">
+        Cancelar
+      </button>
+    </div>
+  </section>
+</div>

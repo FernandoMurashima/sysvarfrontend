@@ -1,0 +1,317 @@
+<div class="pc-page">
+  <!-- BARRA SUPERIOR -->
+  <header class="toolbar toolbar-like-cores">
+    <h2>Produtos</h2>
+
+    <div class="toolbar-right">
+      <input
+        type="text"
+        placeholder="Buscar por descrição ou referência"
+        [(ngModel)]="search"
+        (keyup)="onSearchKeyup($event)"
+      />
+      <button class="btn primary" (click)="doSearch()">Buscar</button>
+      <button class="btn" (click)="clearSearch()">Limpar</button>
+
+      <button class="btn primary" (click)="setViewList()">Consultar</button>
+      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <!-- DICA -->
+  <section class="card hint">
+    <p>
+      Para cadastrar um <strong>produto</strong>, clique em <strong>Novo</strong>.
+      Para editar, localize um <strong>Produto</strong> na lista e clique em <strong>Editar</strong>.
+    </p>
+  </section>
+
+  <!-- LISTA -->
+  <section class="card list" *ngIf="view() === 'list'">
+    <div class="list-bar">
+      <div class="left"><strong>Total:</strong> {{ total() }}</div>
+      <div class="right">
+        <label for="pageSize">Itens por página</label>
+        <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paged().length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th class="col-descricao">Descrição</th>
+            <th class="col-referencia">Referência</th>
+            <th class="col-colecao">Coleção</th>
+            <th class="col-status">Status</th>
+            <th class="actions">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of paged()">
+            <td>{{ p.descricao }}</td>
+            <td>{{ p.referencia || '—' }}</td>
+            <td>{{ colecaoLabel(p.colecao ?? null) }}</td>
+            <td>
+              <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
+                {{ p.ativo ? 'Ativo' : 'Inativo' }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn sm" (click)="editar(p)">Editar</button>
+              <button class="btn sm danger" (click)="excluir(p)">Excluir</button>
+              <button class="btn sm" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
+              <button class="btn sm" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading()">Nenhum produto encontrado.</div>
+        <div class="loading" *ngIf="loading()">Carregando...</div>
+      </ng-template>
+    </div>
+
+    <div class="pager" *ngIf="total() > 0">
+      <div class="left">
+        <button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
+        <button class="btn" (click)="prevPage()"  [disabled]="page() === 1">‹ Anterior</button>
+      </div>
+      <div class="center">
+        Página {{ page() }} de {{ totalPages() }}
+        <span class="range">— Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</span>
+      </div>
+      <div class="right">
+        <button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button>
+        <button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORM -->
+  <section class="card form" *ngIf="view() === 'form'">
+    <h3>{{ editingId ? 'Editar Produto' : 'Novo Produto' }}</h3>
+
+    <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
+      Existem {{ getFormErrors().length }} pendência(s).
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="grid-12">
+        <!-- Linha 1 -->
+        <label class="input-item col-span-5"
+               [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
+          Descrição*
+          <input type="text" formControlName="descricao"
+                 [attr.aria-invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted) ? 'true' : null"/>
+          <span class="field-error" *ngIf="form.get('descricao')?.touched || submitted">
+            <ng-container *ngIf="form.get('descricao')?.errors?.['required']">Obrigatória.</ng-container>
+            <ng-container *ngIf="form.get('descricao')?.errors?.['maxlength']">Máx. 120.</ng-container>
+            <ng-container *ngIf="form.get('descricao')?.errors?.['server']">{{ form.get('descricao')?.errors?.['server'] }}</ng-container>
+          </span>
+        </label>
+
+        <label class="input-item col-span-3"
+               [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">
+          Descrição reduzida
+          <input type="text" formControlName="descricao_reduzida" />
+          <span class="field-error" *ngIf="form.get('descricao_reduzida')?.touched || submitted">
+            <ng-container *ngIf="form.get('descricao_reduzida')?.errors?.['maxlength']">Máx. 60.</ng-container>
+            <ng-container *ngIf="form.get('descricao_reduzida')?.errors?.['server']">{{ form.get('descricao_reduzida')?.errors?.['server'] }}</ng-container>
+          </span>
+        </label>
+
+        <label class="input-item col-span-4"
+               [class.invalid]="form.get('colecao')?.invalid && (form.get('colecao')?.touched || submitted)">
+          Coleção*
+          <select formControlName="colecao">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let c of colecoes" [ngValue]="c.id">{{ c.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="form.get('colecao')?.touched || submitted">
+            <ng-container *ngIf="form.get('colecao')?.errors?.['required']">Obrigatória.</ng-container>
+          </span>
+        </label>
+
+        <!-- Linha 2 -->
+        <label class="input-item col-span-3"
+               [class.invalid]="form.get('grupo')?.invalid && (form.get('grupo')?.touched || submitted)">
+          Grupo*
+          <select formControlName="grupo">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let g of grupos" [ngValue]="g.id">{{ g.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="form.get('grupo')?.touched || submitted">
+            <ng-container *ngIf="form.get('grupo')?.errors?.['required']">Obrigatório.</ng-container>
+          </span>
+        </label>
+
+        <label class="input-item col-span-3">
+          Subgrupo
+          <select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option>
+          </select>
+        </label>
+
+
+        <label class="input-item col-span-3"
+               [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">
+          Unidade*
+          <select formControlName="unidade">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="form.get('unidade')?.touched || submitted">
+            <ng-container *ngIf="form.get('unidade')?.errors?.['required']">Obrigatória.</ng-container>
+          </span>
+        </label>
+
+        <label id="ncm-box" class="input-item col-span-3"
+               [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">
+          NCM* (####.##.##)
+          <select formControlName="ncm" class="ncm-select">
+            <option [ngValue]="null">— selecione —</option>
+            <ng-container *ngFor="let n of (ncms$ | async) ?? []">
+              <option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">
+                {{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}
+              </option>
+            </ng-container>
+          </select>
+          <span class="field-error" *ngIf="form.get('ncm')?.touched || submitted">
+            <ng-container *ngIf="form.get('ncm')?.errors?.['required']">Obrigatório.</ng-container>
+            <ng-container *ngIf="form.get('ncm')?.errors?.['pattern']">Use ####.##.##.</ng-container>
+            <ng-container *ngIf="form.get('ncm')?.errors?.['server']">{{ form.get('ncm')?.errors?.['server'] }}</ng-container>
+          </span>
+        </label>
+
+        <!-- Linha 3 -->
+        <label class="input-item col-span-3"
+               [class.invalid]="form.get('grade')?.invalid && (form.get('grade')?.touched || submitted)">
+          Grade*
+          <select formControlName="grade">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let g of grades" [ngValue]="g.id">{{ g.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="form.get('grade')?.touched || submitted">
+            <ng-container *ngIf="form.get('grade')?.errors?.['required']">Obrigatória.</ng-container>
+          </span>
+        </label>
+
+        <label class="input-item col-span-3">
+          Tabela de preço
+          <select formControlName="tabela_preco">
+            <option [ngValue]="null">— selecione —</option>
+            <option *ngFor="let t of tabelas" [ngValue]="t.id">{{ t.label }}</option>
+          </select>
+        </label>
+
+        <label class="input-item col-span-3">
+          Preço
+          <input type="number" step="0.01" min="0" formControlName="preco" />
+        </label>
+
+        <div class="col-span-3"></div>
+
+        <!-- Linha 4: botões (Lojas / Cores) + contadores -->
+        <div class="col-span-12" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+          <!-- Lojas -->
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn" type="button" (click)="abrirModalLojas()">Selecionar lojas…</button>
+            <span class="muted" style="white-space: nowrap;">
+              —
+              {{
+                lojasSelecionadasIds().length === 0
+                  ? 'nenhuma selecionada'
+                  : (lojasSelecionadasIds().length === 1
+                      ? '1 selecionada'
+                      : lojasSelecionadasIds().length + ' selecionadas')
+              }}
+            </span>
+          </div>
+
+          <!-- Cores -->
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn" type="button" (click)="abrirModalCores()">Selecionar cores…</button>
+            <span class="muted" style="white-space: nowrap;">
+              —
+              {{
+                coresSelecionadasIds().length === 0
+                  ? 'nenhuma selecionada'
+                  : (coresSelecionadasIds().length === 1
+                      ? '1 selecionada'
+                      : coresSelecionadasIds().length + ' selecionadas')
+              }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-form">
+        <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+        </button>
+        <button class="btn ghost" type="button" (click)="setViewList()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- OVERLAY ERROS -->
+  <div class="overlay" *ngIf="errorOverlayOpen()" role="alertdialog" aria-modal="true">
+    <div class="overlay-card">
+      <h4>Ops! Revise as informações</h4>
+      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
+      <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
+      <div class="overlay-actions">
+        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LOJAS -->
+  <div class="modal-backdrop" *ngIf="lojasModalAberto()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lojasTitle">
+      <div class="modal-header">
+        <h4 id="lojasTitle">Selecionar lojas</h4>
+      </div>
+
+      <div class="modal-body">
+        <app-lojas-selector
+          [selected]="lojasSelecionadasIds()"
+          (selectedChange)="lojasSelecionadasIds.set($event)">
+        </app-lojas-selector>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn" type="button" (click)="fecharModalLojas()">Cancelar</button>
+        <button class="btn btn-primary" type="button" (click)="confirmarLojas(lojasSelecionadasIds())">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CORES -->
+  <div class="modal-backdrop" *ngIf="coresModalAberto()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="coresTitle">
+      <div class="modal-header">
+        <h4 id="coresTitle">Selecionar cores</h4>
+      </div>
+
+      <div class="modal-body">
+        <app-cores-selector
+          [cores]="coresDisponiveis"
+          [selected]="coresSelecionadasIds()"
+          (selectedChange)="coresSelecionadasIds.set($event)"
+          [filtro]="corFiltro()">
+        </app-cores-selector>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn" type="button" (click)="fecharModalCores()">Cancelar</button>
+        <button class="btn btn-primary" type="button" (click)="confirmarCores(coresSelecionadasIds())">Aplicar</button>
+      </div>
+    </div>
+  </div>
+</div>
