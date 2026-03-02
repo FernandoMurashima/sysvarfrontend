@@ -21,8 +21,6 @@ Enterprise Resource Planning (ERP) web platform developed for retail business ma
 
 ## Tech Stack
 
-- Python
-- Django
-- Django REST Framework
 - Angular
-- MySQL
+- TypeScript
+- REST API Integration
