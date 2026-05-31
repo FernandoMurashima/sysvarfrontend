@@ -4,6 +4,6 @@ export interface User {
   first_name?: string;
   last_name?: string;
   email?: string;
-  type: 'Regular' | 'Caixa' | 'Gerente' | 'Admin' | 'Auxiliar' | 'Assistente';
+  type: 'Regular' | 'Vendedor' | 'Caixa' | 'Gerente' | 'Diretor' | 'Admin' | 'Auxiliar' | 'Assistente' | 'AssistenteReceber' | 'AssistentePagar';
   password?: string; // write-only no backend; só enviar em criação/alteração de senha
 }

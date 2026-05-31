@@ -10,6 +10,7 @@ export interface Funcionario {
 
   categoria?: string;
   meta?: number;
+  comissao_percentual?: number;
 
   idloja?: number | null;   // FK (Loja)
   ativo?: boolean;

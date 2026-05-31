@@ -2,16 +2,23 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from '../auth.service';
+import { UserRole } from '../models/nav-item';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAuthenticated()) {
-    return true;
+  if (!auth.isAuthenticated()) {
+    router.navigateByUrl('/login');
+    return false;
   }
 
-  // se não estiver logado, manda para /login e bloqueia a rota
-  router.navigateByUrl('/login');
+  const roles = (route.data?.['roles'] ?? []) as UserRole[];
+  if (!roles.length) return true;
+
+  const current = auth.getUserType() as UserRole | null;
+  if (current === 'Admin' || (current && roles.includes(current))) return true;
+
+  router.navigateByUrl('/home');
   return false;
 };

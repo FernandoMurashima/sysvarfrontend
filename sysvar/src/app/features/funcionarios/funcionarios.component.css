@@ -53,8 +53,9 @@ input, select{ padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; ou
 
 #inicio-box{ grid-column:1 / span 2; }
 #fim-box{ grid-column:3 / span 2; }
-#categoria-box{ grid-column:5 / span 3; }
-#meta-box{ grid-column:8 / span 3; }
+#categoria-box{ grid-column:5 / span 2; }
+#meta-box{ grid-column:7 / span 2; }
+#comissao-box{ grid-column:9 / span 2; }
 
 #ativo-box{ grid-column:1 / span 2; }
 
@@ -62,7 +63,7 @@ input, select{ padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; ou
 @media (max-width: 600px){
   .grid-10{ grid-template-columns:1fr; }
   #nome-box, #apelido-box, #cpf-box, #loja-box,
-  #inicio-box, #fim-box, #categoria-box, #meta-box, #ativo-box { grid-column:1 / -1; }
+  #inicio-box, #fim-box, #categoria-box, #meta-box, #comissao-box, #ativo-box { grid-column:1 / -1; }
 }
 
 /* Badges de status (igual Grades) */

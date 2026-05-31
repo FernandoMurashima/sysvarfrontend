@@ -49,7 +49,18 @@ export class UsuariosComponent implements OnInit {
   search = '';
   editingId: number | null = null;
 
-  typeOptions: User['type'][] = ['Regular','Caixa','Gerente','Admin','Auxiliar','Assistente'];
+  typeOptions: User['type'][] = [
+    'Regular',
+    'Vendedor',
+    'Caixa',
+    'Gerente',
+    'Diretor',
+    'Admin',
+    'Auxiliar',
+    'Assistente',
+    'AssistenteReceber',
+    'AssistentePagar'
+  ];
 
   form = this.fb.group({
     username: ['', [Validators.required, Validators.maxLength(150), this.usernameValidator]],

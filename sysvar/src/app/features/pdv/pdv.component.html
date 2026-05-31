@@ -1,0 +1,252 @@
+<div class="pdv-page">
+  <header class="pdv-topbar">
+    <div>
+      <h2>PDV</h2>
+      <span>{{ statusTopo }}</span>
+    </div>
+    <div class="pdv-session-pill" *ngIf="pdvAberto && !vendaIniciada">
+      <span>{{ lojaNome(lojaId) }}</span>
+      <strong>{{ caixaDescricao(caixaId) }}</strong>
+      <span>{{ operadorNome }} · {{ usuarioTipoLabel() }}</span>
+      <button class="btn sm" type="button" (click)="fecharPdv()">Fechar PDV</button>
+    </div>
+    <div class="quick-scan" *ngIf="vendaIniciada">
+      <input type="text" placeholder="Código de barras / EAN" [(ngModel)]="codigoRapido" (keyup.enter)="adicionarCodigoRapido()" />
+      <button class="btn primary" (click)="adicionarCodigoRapido()">Adicionar</button>
+      <button class="btn danger" (click)="cancelarVenda()">Cancelar venda</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="sale-done" *ngIf="cupom && !vendaIniciada">
+    <div class="done-summary">
+      <div class="done-status">
+        <span>Venda concluída</span>
+        <strong>NFC-e autorizada</strong>
+        <small>{{ cupom.nfce.retorno_codigo }} - {{ cupom.nfce.retorno_mensagem }}</small>
+      </div>
+
+      <div class="done-metrics">
+        <div><span>Total</span><strong>{{ cupom.total | currency:'BRL' }}</strong></div>
+        <div><span>Recebido</span><strong>{{ cupom.valor_recebido | currency:'BRL' }}</strong></div>
+        <div><span>Troco</span><strong>{{ cupom.troco | currency:'BRL' }}</strong></div>
+      </div>
+
+      <div class="done-actions">
+        <button class="btn primary" type="button" (click)="imprimirCupom()">Imprimir cupom</button>
+        <button class="btn success" type="button" (click)="novaVenda()">Nova venda</button>
+      </div>
+    </div>
+
+    <div class="receipt-shell">
+      <div class="receipt-title">
+        <div>
+          <span>Cupom fiscal eletrônico</span>
+          <strong>{{ cupom.documento }}</strong>
+        </div>
+        <small>NFC-e {{ cupom.nfce.serie }}/{{ cupom.nfce.numero }}</small>
+      </div>
+
+      <div class="cupom-print" id="cupom-pdv">
+        <div class="cupom-head">
+          <strong>{{ cupom.empresa }}</strong>
+          <span>CNPJ {{ cupom.cnpj }}</span>
+          <small>{{ cupom.endereco }}</small>
+        </div>
+        <div class="cupom-meta">
+          <span>{{ cupom.data }}</span>
+          <span>{{ cupom.documento }}</span>
+        </div>
+        <div class="cupom-meta">
+          <span>Cliente: {{ cupom.cliente }}</span>
+          <span>Vendedor: {{ cupom.vendedor }}</span>
+        </div>
+        <div class="cupom-lines">
+          <div class="cupom-line" *ngFor="let item of cupom.itens">
+            <span>{{ item.descricao }}</span>
+            <small>{{ item.ean }} · {{ item.quantidade }} x {{ item.preco_unitario | currency:'BRL' }} · Desc. {{ item.desconto | currency:'BRL' }}</small>
+            <strong>{{ item.total_item | currency:'BRL' }}</strong>
+          </div>
+        </div>
+        <div class="cupom-totals">
+          <div><span>Subtotal</span><strong>{{ cupom.subtotal | currency:'BRL' }}</strong></div>
+          <div><span>Desconto</span><strong>{{ cupom.desconto | currency:'BRL' }}</strong></div>
+          <div><span>Total</span><strong>{{ cupom.total | currency:'BRL' }}</strong></div>
+          <div><span>Recebido</span><strong>{{ cupom.valor_recebido | currency:'BRL' }}</strong></div>
+          <div><span>Troco</span><strong>{{ cupom.troco | currency:'BRL' }}</strong></div>
+        </div>
+        <div class="cupom-fiscal">
+          <strong>NFC-e {{ cupom.nfce.serie }}/{{ cupom.nfce.numero }} - {{ cupom.nfce.status }}</strong>
+          <span>Chave: {{ cupom.nfce.chave_acesso }}</span>
+          <span>Protocolo: {{ cupom.nfce.protocolo }}</span>
+          <small>{{ cupom.nfce.qr_code_url }}</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="open-pdv" *ngIf="!pdvAberto && !vendaIniciada && !cupom">
+    <div class="open-card">
+      <div class="open-head">
+        <span>Operação do balcão</span>
+        <h3>Abrir PDV</h3>
+      </div>
+      <div class="operator-card" [class.blocked]="!podeAbrirPdv">
+        <div>
+          <span>Usuário logado</span>
+          <strong>{{ operadorNome || 'Usuário' }}</strong>
+        </div>
+        <small>{{ usuarioTipoLabel() }}</small>
+        <em>{{ podeAbrirPdv ? 'Permissão liberada para abertura.' : 'Somente Caixa, Gerente ou Admin pode abrir o PDV.' }}</em>
+      </div>
+      <div class="open-grid">
+        <label>Loja
+          <select [(ngModel)]="lojaId" (ngModelChange)="selecionarLojaOperacao()">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+          </select>
+        </label>
+        <label>Caixa
+          <select [(ngModel)]="caixaId">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let caixa of caixasDaLoja" [ngValue]="caixa.Idcaixa">{{ caixa.codigo }} - {{ caixa.descricao }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="open-summary">
+        <div><span>Loja</span><strong>{{ lojaNome(lojaId) || 'Não selecionada' }}</strong></div>
+        <div><span>Caixa</span><strong>{{ caixaDescricao(caixaId) || 'Não selecionado' }}</strong></div>
+        <div><span>Operador</span><strong>{{ operadorNome || 'Usuário' }}</strong></div>
+      </div>
+      <button class="start-button" [disabled]="!podeAbrirPdv" (click)="abrirPdv()">Abrir PDV</button>
+    </div>
+  </section>
+
+  <section class="start-sale" *ngIf="pdvAberto && !vendaIniciada && !cupom">
+    <div class="start-card compact-start">
+      <div class="operation-bar">
+        <div><span>Loja</span><strong>{{ lojaNome(lojaId) }}</strong></div>
+        <div><span>Caixa</span><strong>{{ caixaDescricao(caixaId) }}</strong></div>
+        <div><span>Operador</span><strong>{{ operadorNome }}</strong></div>
+        <div><span>Abertura</span><strong>{{ abertoEmFormatado() }}</strong></div>
+      </div>
+      <h3>Iniciar venda</h3>
+      <div class="start-grid sale-start-grid">
+        <label class="cliente-start">Cliente
+          <div class="cliente-select-row">
+            <select [(ngModel)]="clienteId"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
+            <button class="btn" type="button" (click)="abrirCadastroCliente()">Novo</button>
+          </div>
+        </label>
+        <label>Vendedor
+          <select [(ngModel)]="vendedorId">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let func of funcionarios" [ngValue]="func.id">{{ func.nomefuncionario }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="quick-client" *ngIf="cadastroClienteAberto">
+        <h4>Cadastro rápido de cliente</h4>
+        <div class="quick-client-grid">
+          <label>Nome*<input type="text" [(ngModel)]="novoCliente.nome_cliente" /></label>
+          <label>Apelido<input type="text" [(ngModel)]="novoCliente.apelido" /></label>
+          <label>CPF<input type="text" [(ngModel)]="novoCliente.cpf" /></label>
+          <label>Telefone<input type="text" [(ngModel)]="novoCliente.telefone1" /></label>
+          <label>E-mail<input type="email" [(ngModel)]="novoCliente.email" /></label>
+        </div>
+        <div class="quick-client-actions">
+          <button class="btn primary" type="button" [disabled]="salvandoCliente" (click)="salvarClienteRapido()">Salvar cliente</button>
+          <button class="btn" type="button" (click)="cadastroClienteAberto=false">Cancelar</button>
+        </div>
+      </div>
+      <button class="start-button" (click)="iniciarVenda()">Iniciar venda</button>
+    </div>
+  </section>
+
+  <section class="pdv-layout" *ngIf="vendaIniciada">
+    <aside class="sale-panel">
+      <div class="sale-context">
+        <div><span>Loja</span><strong>{{ lojaNome(lojaId) }}</strong></div>
+        <div><span>Cliente</span><strong>{{ clienteNome(clienteId) }}</strong></div>
+        <div><span>Vendedor</span><strong>{{ vendedorNome(vendedorId) }}</strong></div>
+        <div><span>Caixa</span><strong>{{ caixaDescricao(caixaId) }}</strong></div>
+        <button class="btn sm" (click)="cancelarVenda()">Cancelar venda</button>
+      </div>
+
+      <div class="cart-list">
+        <div class="cart-empty" *ngIf="!carrinho.length">Nenhum item na venda.</div>
+        <div class="cart-item" *ngFor="let item of carrinho; let i = index">
+          <img [src]="item.imagem" [alt]="item.descricao" />
+          <div>
+            <strong>{{ item.descricao }}</strong>
+            <small>{{ item.cor }} · {{ item.tamanho }} · {{ item.ean }}</small>
+            <div class="line-controls">
+              <label>Qtd<input type="number" min="1" [(ngModel)]="item.qtd" /></label>
+              <label>Preço<input type="number" step="0.01" [(ngModel)]="item.preco" /></label>
+              <label>Desc.<input type="number" step="0.01" [(ngModel)]="item.desconto" /></label>
+              <button class="btn sm danger" (click)="removerItem(i)">Remover</button>
+            </div>
+          </div>
+          <span class="line-total">{{ (item.qtd * item.preco - item.desconto) | currency:'BRL' }}</span>
+        </div>
+      </div>
+
+      <div class="payment-panel">
+        <label>Forma de pagamento<select [(ngModel)]="formaCodigo"><option *ngFor="let forma of formas" [value]="forma.codigo">{{ forma.codigo }} - {{ forma.descricao }}</option></select></label>
+        <label>Desconto geral<input type="number" step="0.01" [(ngModel)]="descontoGeral" /></label>
+        <label>Valor recebido<input type="number" step="0.01" [(ngModel)]="valorRecebido" /></label>
+      </div>
+
+      <div class="totals">
+        <div><span>Subtotal</span><strong>{{ subtotal | currency:'BRL' }}</strong></div>
+        <div><span>Descontos</span><strong>{{ (descontoItens + descontoGeral) | currency:'BRL' }}</strong></div>
+        <div class="grand"><span>Total</span><strong>{{ total | currency:'BRL' }}</strong></div>
+        <div><span>Troco</span><strong>{{ troco | currency:'BRL' }}</strong></div>
+      </div>
+
+      <button class="checkout" [disabled]="finalizando || !carrinho.length" (click)="finalizar()">
+        {{ finalizando ? 'Finalizando...' : 'Finalizar venda' }}
+      </button>
+    </aside>
+
+    <main class="product-panel">
+      <div class="search-row">
+        <input type="text" placeholder="Buscar produto, referência ou EAN..." [(ngModel)]="busca" />
+        <span *ngIf="loading">Carregando...</span>
+      </div>
+
+      <section class="selected-product" *ngIf="selecionado">
+        <img [src]="selecionado.imagem" [alt]="selecionado.produto.descricao" />
+        <div class="selected-info">
+          <span class="ref">{{ selecionado.produto.referencia }}</span>
+          <h3>{{ selecionado.produto.descricao }}</h3>
+          <strong>{{ selecionado.preco | currency:'BRL' }}</strong>
+          <span>Disponível: {{ selecionado.estoqueTotal }}</span>
+          <div class="sku-grid">
+            <button
+              *ngFor="let sku of selecionado.skus"
+              class="sku"
+              [class.selected]="skuSelecionado?.ean13 === sku.ean13"
+              [disabled]="disponivelSku(sku) <= 0"
+              (click)="skuSelecionado = sku"
+            >
+              {{ corNome(sku.idcor) }} / {{ tamanhoNome(sku.idtamanho) }}
+              <small>{{ disponivelSku(sku) }} un.</small>
+            </button>
+          </div>
+          <button class="btn primary add-selected" [disabled]="!skuSelecionado" (click)="adicionarSelecionado()">Adicionar selecionado</button>
+        </div>
+      </section>
+
+      <section class="catalog-grid">
+        <button class="product-card" *ngFor="let item of catalogoFiltrado" (click)="selecionarProduto(item)">
+          <img [src]="item.imagem" [alt]="item.produto.descricao" />
+          <span>{{ item.produto.referencia }}</span>
+          <strong>{{ item.produto.descricao }}</strong>
+          <small>{{ item.preco | currency:'BRL' }} · {{ item.estoqueTotal }} un.</small>
+        </button>
+      </section>
+    </main>
+  </section>
+</div>

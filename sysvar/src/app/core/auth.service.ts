@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
-interface TokenResponse { token: string; }
+interface TokenResponse { token: string; user?: MeResponse; }
 interface MeResponse {
   id: number; username: string; first_name: string; last_name: string; email: string; type: string;
 }
@@ -23,8 +23,15 @@ export class AuthService {
   login(username: string, password: string) {
     return this.http.post<TokenResponse>(`${this.api}/auth/token/`, { username, password })
       .pipe(
-        tap(res => this.setToken(res.token)),
-        tap(() => {
+        tap(res => {
+          this.setToken(res.token);
+          if (res.user) {
+            this.setUserType(res.user.type || 'Regular');
+            this.setUserName(res.user.username || '');
+          }
+        }),
+        tap((res) => {
+          if (res.user) return;
           // após salvar o token, busca /me para armazenar tipo e nome
           this.me().subscribe({
             next: me => {
@@ -75,6 +82,12 @@ export class AuthService {
 
   const t = v.toLowerCase().trim();
   if (t === 'admin' || t === 'administrador') return 'Admin';
+  if (t === 'diretor' || t === 'diretoria') return 'Diretor';
+  if (t === 'gerente' || t === 'manager') return 'Gerente';
+  if (t === 'caixa') return 'Caixa';
+  if (t === 'vendedor' || t === 'vendas') return 'Vendedor';
+  if (t === 'assistente receber' || t === 'assistente contas a receber' || t === 'assistentereceber') return 'AssistenteReceber';
+  if (t === 'assistente pagar' || t === 'assistente contas a pagar' || t === 'assistentepagar') return 'AssistentePagar';
   if (t === 'regular' || t === 'user' || t === 'usuário' || t === 'usuario') return 'Regular';
 
   return v;

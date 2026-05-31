@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/.angular-build-check
 /tmp
 /out-tsc
 /bazel-out

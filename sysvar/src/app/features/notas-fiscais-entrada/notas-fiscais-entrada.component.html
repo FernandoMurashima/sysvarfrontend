@@ -1,0 +1,246 @@
+<div class="nfe-page">
+  <header class="toolbar">
+    <h2>Notas Fiscais de Entrada</h2>
+
+    <div class="toolbar-right">
+      <input
+        type="text"
+        placeholder="Buscar por pedido, número, série ou chave"
+        [(ngModel)]="search"
+        (keyup)="onSearchKeyup($event)"
+      />
+      <button class="btn primary" type="button" (click)="applyFilter()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Nova</button>
+      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <section class="alert success" *ngIf="mensagem">{{ mensagem }}</section>
+  <section class="alert error" *ngIf="erro">{{ erro }}</section>
+
+  <section class="card list" *ngIf="view() === 'list'">
+    <div class="list-bar">
+      <div><strong>Total:</strong> {{ total }}</div>
+      <div class="list-tools">
+        <label>Itens por página</label>
+        <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="notasPagina.length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Modelo</th>
+            <th>Série</th>
+            <th>Número</th>
+            <th>Emissão</th>
+            <th>Entrada</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let nota of notasPagina">
+            <td>{{ nota.pedido_compra }}</td>
+            <td>{{ nota.modelo }}</td>
+            <td>{{ nota.serie || '-' }}</td>
+            <td>{{ nota.numero }}</td>
+            <td>{{ nota.dt_emissao }}</td>
+            <td>{{ nota.dt_entrada }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusClass(nota.status)">
+                {{ statusLabel(nota.status) }}
+              </span>
+            </td>
+            <td>{{ nota.valor_total | number : '1.2-2' }}</td>
+            <td>
+              <button class="btn sm" type="button" (click)="editar(nota)">Abrir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading">Nenhuma nota encontrada.</div>
+        <div class="loading" *ngIf="loading">Carregando...</div>
+      </ng-template>
+    </div>
+
+    <div class="pager" *ngIf="total > 0">
+      <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">Anterior</button>
+      <span>Página {{ page }} de {{ totalPages }}</span>
+      <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima</button>
+    </div>
+  </section>
+
+  <section class="card form" *ngIf="view() === 'form'">
+    <div class="form-title">
+      <h3>{{ notaAtual() ? 'Nota fiscal de entrada' : 'Nova nota fiscal de entrada' }}</h3>
+      <span class="badge" *ngIf="notaAtual()" [ngClass]="statusClass(notaAtual()!.status)">
+        {{ statusLabel(notaAtual()!.status) }}
+      </span>
+    </div>
+
+    <form [formGroup]="form" novalidate>
+      <div class="grid-12">
+        <label class="input-item col-span-5">
+          Pedido aprovado*
+          <select formControlName="pedido_compra" (change)="onPedidoChange()">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let p of pedidosAprovados" [ngValue]="p.id">
+              {{ pedidoLabel(p) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="input-item col-span-1">
+          Modelo*
+          <input type="text" formControlName="modelo" maxlength="2" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Série
+          <input type="text" formControlName="serie" />
+        </label>
+
+        <label class="input-item col-span-2">
+          Número*
+          <input type="text" formControlName="numero" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Emissão*
+          <input type="date" formControlName="dt_emissao" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Entrada*
+          <input type="date" formControlName="dt_entrada" />
+        </label>
+
+        <label class="input-item col-span-1">
+          Frete
+          <input type="number" formControlName="valor_frete" step="0.01" />
+        </label>
+
+        <label class="input-item col-span-8">
+          Chave de acesso
+          <input type="text" formControlName="chave_acesso" />
+        </label>
+
+        <label class="input-item col-span-4">
+          Observações
+          <input type="text" formControlName="observacoes" />
+        </label>
+      </div>
+    </form>
+
+    <div class="actions-form">
+      <button class="btn primary" type="button" (click)="salvarCabecalho()" [disabled]="saving || notaAtual()?.status !== 'AB' && !!notaAtual()">
+        Gravar cabeçalho
+      </button>
+      <button class="btn ghost" type="button" (click)="voltarLista()">Voltar</button>
+    </div>
+
+    <div class="totals" *ngIf="notaAtual()">
+      <span>Produtos: {{ notaAtual()!.valor_produtos | number : '1.2-2' }}</span>
+      <span>Descontos: {{ notaAtual()!.valor_desconto | number : '1.2-2' }}</span>
+      <span>Frete: {{ notaAtual()!.valor_frete | number : '1.2-2' }}</span>
+      <strong>Total: {{ notaAtual()!.valor_total | number : '1.2-2' }}</strong>
+    </div>
+
+    <hr class="divider" />
+
+    <h3>Itens do Pedido</h3>
+
+    <div class="table-wrapper itens-wrapper" *ngIf="notaAtual(); else saveFirstTpl">
+      <table class="table" *ngIf="itensPedido.length > 0; else itensEmptyTpl">
+        <thead>
+          <tr>
+            <th>Item pedido</th>
+            <th>Produto</th>
+            <th>Descrição</th>
+            <th>Qtd pedido</th>
+            <th>Recebido outras</th>
+            <th>Saldo</th>
+            <th>Qtd NF</th>
+            <th>Preço NF</th>
+            <th>Desc</th>
+            <th>Total</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of itensPedido">
+            <td>{{ item.pedido_item }}</td>
+            <td>{{ item.produto || '-' }}</td>
+            <td>{{ item.descricao_livre || '-' }}</td>
+            <td>{{ item.qtd_pedido | number : '1.3-3' }}</td>
+            <td>{{ item.qtd_recebida_outras_notas | number : '1.3-3' }}</td>
+            <td>{{ item.saldo_total_recebivel | number : '1.3-3' }}</td>
+            <td>
+              <input
+                type="number"
+                [(ngModel)]="item.qtd_receber"
+                (ngModelChange)="recalcularItem(item)"
+                [disabled]="notaAtual()?.status !== 'AB'"
+                step="0.001"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                [(ngModel)]="item.preco_unit_nf"
+                (ngModelChange)="recalcularItem(item)"
+                [disabled]="notaAtual()?.status !== 'AB'"
+                step="0.0001"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                [(ngModel)]="item.desconto_item"
+                (ngModelChange)="recalcularItem(item)"
+                [disabled]="notaAtual()?.status !== 'AB'"
+                step="0.01"
+              />
+            </td>
+            <td>{{ item.total_item | number : '1.2-2' }}</td>
+            <td>
+              <button class="btn sm" type="button" (click)="salvarItem(item)" [disabled]="saving || notaAtual()?.status !== 'AB'">
+                Gravar
+              </button>
+              <button class="btn sm danger" type="button" (click)="removerItem(item)" [disabled]="!item.nota_item || notaAtual()?.status !== 'AB'">
+                Remover
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #itensEmptyTpl>
+        <div class="empty-hint" *ngIf="!loadingItens">Nenhum item disponível para este pedido.</div>
+        <div class="loading" *ngIf="loadingItens">Carregando itens...</div>
+      </ng-template>
+    </div>
+
+    <ng-template #saveFirstTpl>
+      <div class="empty-hint">Grave o cabeçalho para carregar os itens do pedido.</div>
+    </ng-template>
+
+    <div class="actions-form end-actions" *ngIf="notaAtual()">
+      <button class="btn primary" type="button" (click)="fecharNota()" [disabled]="notaAtual()?.status !== 'AB'">
+        Fechar NF
+      </button>
+      <button class="btn danger" type="button" (click)="cancelarNota()" [disabled]="notaAtual()?.status === 'CA'">
+        Cancelar NF
+      </button>
+    </div>
+  </section>
+</div>

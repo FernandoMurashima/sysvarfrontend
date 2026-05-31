@@ -1,0 +1,24 @@
+<div class="estoque-page">
+  <header class="toolbar">
+    <h2>Consulta de Estoque</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Referência ou EAN..." [(ngModel)]="search" (keyup.enter)="load()" />
+      <select [(ngModel)]="loja"><option value="">Todas as lojas</option><option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option></select>
+      <input type="text" placeholder="Coleção" [(ngModel)]="colecao" />
+      <input type="text" placeholder="Estação" [(ngModel)]="estacao" />
+      <button class="btn primary" (click)="load()">Buscar</button>
+      <button class="btn" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <section class="panel">
+    <div class="list-header"><strong>Total: {{ estoques.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="estoques.length; else vazioTpl">
+        <thead><tr><th>Referência</th><th>EAN</th><th>Loja</th><th>Saldo</th><th>Reserva</th><th>Disponível</th></tr></thead>
+        <tbody><tr *ngFor="let e of estoques"><td>{{ e.referencia }}</td><td>{{ e.CodigodeBarra }}</td><td>{{ lojaNome(e.Idloja) }}</td><td>{{ e.Estoque || 0 }}</td><td>{{ e.reserva || 0 }}</td><td>{{ saldoDisponivel(e) }}</td></tr></tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum saldo encontrado.</div></ng-template>
+    </div>
+  </section>
+</div>

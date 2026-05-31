@@ -44,6 +44,7 @@ export class FuncionariosComponent implements OnInit {
 
     categoria: ['', [Validators.maxLength(15)]],
     meta: [0, []],
+    comissao_percentual: [0, []],
 
     idloja: [null],
     ativo: [true],
@@ -174,6 +175,7 @@ export class FuncionariosComponent implements OnInit {
       fim: '',
       categoria: '',
       meta: 0,
+      comissao_percentual: 0,
       idloja: null,
       ativo: true,
     });
@@ -194,6 +196,7 @@ export class FuncionariosComponent implements OnInit {
       fim: row.fim ?? '',
       categoria: row.categoria ?? '',
       meta: row.meta ?? 0,
+      comissao_percentual: row.comissao_percentual ?? 0,
       idloja: (row as any).idloja ?? null,
       ativo: row.ativo ?? true,
     });
@@ -218,6 +221,7 @@ export class FuncionariosComponent implements OnInit {
     const payload: Funcionario = {
       ...raw,
       meta: raw.meta === '' || raw.meta === null ? 0 : Number(raw.meta),
+      comissao_percentual: raw.comissao_percentual === '' || raw.comissao_percentual === null ? 0 : Number(raw.comissao_percentual),
       idloja: raw.idloja === '' ? null : raw.idloja,
       inicio: raw.inicio ? raw.inicio : null as any,
       fim: raw.fim ? raw.fim : null as any,
@@ -285,7 +289,7 @@ export class FuncionariosComponent implements OnInit {
     P(f.get('cpf')?.hasError('cpf') || false, 'CPF inválido.');
     P(f.get('categoria')?.hasError('maxlength') || false, 'Categoria: máx. 15 caracteres.');
 
-    ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','idloja','ativo']
+    ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','comissao_percentual','idloja','ativo']
       .forEach(field => {
         const err = f.get(field)?.errors?.['server'];
         if (err) msgs.push(`${field}: ${err}`);

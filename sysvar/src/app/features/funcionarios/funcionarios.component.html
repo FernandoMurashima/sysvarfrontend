@@ -75,7 +75,7 @@
             <span class="field-error" *ngIf="form.get('idloja')?.errors?.['server']">{{ form.get('idloja')?.errors?.['server'] }}</span>
           </label>
 
-          <!-- Linha 3: início | fim | categoria | meta -->
+          <!-- Linha 3: início | fim | categoria | meta | comissão -->
           <label id="inicio-box" class="input-item">
             Início
             <input type="date" formControlName="inicio" />
@@ -98,6 +98,12 @@
             Meta
             <input type="number" step="0.01" formControlName="meta" />
             <span class="field-error" *ngIf="form.get('meta')?.errors?.['server']">{{ form.get('meta')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="comissao-box" class="input-item">
+            Comissão %
+            <input type="number" step="0.01" formControlName="comissao_percentual" />
+            <span class="field-error" *ngIf="form.get('comissao_percentual')?.errors?.['server']">{{ form.get('comissao_percentual')?.errors?.['server'] }}</span>
           </label>
 
           <!-- Linha 4: ativo -->
@@ -141,6 +147,7 @@
               <th>Loja</th>
               <th>Categoria</th>
               <th>Meta</th>
+              <th>Comissão %</th>
               <th>Ativo</th>
               <th style="width:140px;">Ações</th>
             </tr>
@@ -153,6 +160,7 @@
               <td>{{ f.idloja }}</td>
               <td>{{ f.categoria }}</td>
               <td>{{ f.meta }}</td>
+              <td>{{ f.comissao_percentual || 0 }}</td>
 
               <!-- <td>{{ f.ativo ? 'Sim' : 'Não' }}</td> -->
 

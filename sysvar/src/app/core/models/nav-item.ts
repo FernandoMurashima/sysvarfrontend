@@ -1,11 +1,15 @@
 // src/app/core/models/nav-item.ts
 export type UserRole =
   | 'Regular'
+  | 'Vendedor'
   | 'Caixa'
   | 'Gerente'
+  | 'Diretor'
   | 'Admin'
   | 'Auxiliar'
-  | 'Assistente';
+  | 'Assistente'
+  | 'AssistenteReceber'
+  | 'AssistentePagar';
 
 export interface NavItem {
   label: string;

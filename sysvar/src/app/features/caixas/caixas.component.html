@@ -1,0 +1,54 @@
+<div class="financeiro-page">
+  <header class="toolbar">
+    <h2>Caixa</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
+      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
+      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Novo caixa</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>{{ editingId ? 'Editar caixa' : 'Novo caixa' }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label>Tipo*<select formControlName="tipo_caixa"><option value="LOJA">Caixa da loja</option><option value="MASTER">Caixa master do grupo</option></select></label>
+      <label>Loja*<select formControlName="idloja"><option [ngValue]="null">{{ form.value.tipo_caixa === 'MASTER' ? 'Grupo' : 'Selecione' }}</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+      <label>Código*<input type="text" formControlName="codigo" /></label>
+      <label class="span-2">Descrição*<input type="text" formControlName="descricao" /></label>
+      <label>Saldo inicial*<input type="number" step="0.01" formControlName="saldo_inicial" /></label>
+      <label>Saldo atual*<input type="number" step="0.01" formControlName="saldo_atual" /></label>
+      <label>Data abertura*<input type="date" formControlName="data_abertura" /></label>
+      <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+      <div class="form-actions span-2">
+        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="list-header"><strong>Total: {{ caixas.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="caixas.length; else vazioTpl">
+        <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Loja</th><th>Saldo atual</th><th>Ativo</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let caixa of caixas">
+            <td>{{ caixa.codigo }}</td>
+            <td>{{ caixa.descricao }}</td>
+            <td>{{ caixa.tipo_caixa === 'MASTER' ? 'Master' : 'Loja' }}</td>
+            <td>{{ lojaNome(caixa.idloja) }}</td>
+            <td>{{ caixa.saldo_atual | currency:'BRL' }}</td>
+            <td><span class="badge" [ngClass]="caixa.ativo ? 'ok' : 'off'">{{ caixa.ativo ? 'Ativo' : 'Inativo' }}</span></td>
+            <td class="actions"><button class="btn sm" (click)="editar(caixa)">Editar</button><button class="btn sm danger" (click)="excluir(caixa)">Excluir</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum caixa encontrado.</div></ng-template>
+    </div>
+  </section>
+</div>

@@ -13,6 +13,7 @@ export class PermissionService {
 
   canAccess(item: NavItem): boolean {
     if (!item.roles || item.roles.length === 0) return true;
+    if (this.currentRole === 'Admin') return true;
     return item.roles.includes(this.currentRole);
   }
 

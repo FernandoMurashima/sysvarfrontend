@@ -22,119 +22,134 @@ export class ShellComponent {
 
   sidebarOpen = true;
 
+  private cadastrosRoles: NavItem['roles'] = ['Diretor', 'Gerente'];
+  private clientesRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'];
+  private produtosRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
+  private estoqueConsultaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'];
+  private estoqueOperacaoRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
+  private pdvRoles: NavItem['roles'] = ['Caixa', 'Gerente'];
+  private vendasGestaoRoles: NavItem['roles'] = ['Diretor', 'Gerente'];
+  private comprasRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistentePagar'];
+  private receberRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistenteReceber'];
+  private pagarRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistentePagar'];
+  private caixaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Caixa'];
+  private financeiroRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'];
+
   menuItems: NavItem[] = [
-    { label: 'Home', link: '/home', icon: 'bi bi-house', roles: ['Regular'] },
+    { label: 'Home', link: '/home', icon: 'bi bi-house' },
 
     {
-      label: 'Cadastros', icon: 'bi bi-journal-text', roles: ['Regular'],
+      label: 'Cadastros', icon: 'bi bi-journal-text', roles: this.cadastrosRoles,
       children: [
-        { label: 'Lojas',               link: '/lojas',         icon: 'bi bi-shop',          roles: ['Regular'] },
-        { label: 'Clientes',            link: '/clientes',      icon: 'bi bi-people',        roles: ['Regular'] },
-        { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: ['Regular'] },
-        { label: 'Funcionários',        link: '/funcionarios',  icon: 'bi bi-person-badge',  roles: ['Regular'] },
-        { label: 'Natureza Lançamento', link: '/natureza', icon: 'bi bi-person-badge',  roles: ['Regular'] },
+        { label: 'Lojas',               link: '/lojas',         icon: 'bi bi-shop',          roles: this.cadastrosRoles },
+        { label: 'Clientes',            link: '/clientes',      icon: 'bi bi-people',        roles: this.clientesRoles },
+        { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: this.comprasRoles },
+        { label: 'Funcionários',        link: '/funcionarios',  icon: 'bi bi-person-badge',  roles: this.cadastrosRoles },
+        { label: 'Natureza Lançamento', link: '/natureza', icon: 'bi bi-person-badge',  roles: this.cadastrosRoles },
       ]
     },
 
     {
-      label: 'Produtos', icon: 'bi bi-box-seam', roles: ['Regular'],
+      label: 'Produtos', icon: 'bi bi-box-seam', roles: this.produtosRoles,
       children: [
-        { label: 'Produtos Revenda'    ,   link: '/produtos',      icon: 'bi bi-box',           roles: ['Regular'] },
-        { label: 'Produtos Uso/consumo',   link: '/produtos-uso',  icon: 'bi bi-box',           roles: ['Regular'] },
-        { label: 'Grupos',                 link: '/grupos',        icon: 'bi bi-diagram-2',     roles: ['Regular'] },        
-        { label: 'Cores',                  link: '/cores',         icon: 'bi bi-palette',       roles: ['Regular'] },
-        { label: 'Grades',                 link: '/grades',        icon: 'bi bi-grid',          roles: ['Regular'] },
-        { label: 'Coleções',               link: '/colecoes',      icon: 'bi bi-layers',        roles: ['Regular'] },
-        { label: 'Pack'    ,               link: '/packs'    ,     icon: 'bi bi-bounding-box',  roles: ['Regular'] },
+        { label: 'Produtos Revenda'    ,   link: '/produtos',      icon: 'bi bi-box',           roles: this.produtosRoles },
+        { label: 'Produtos Uso/consumo',   link: '/produtos-uso',  icon: 'bi bi-box',           roles: this.produtosRoles },
+        { label: 'Grupos',                 link: '/grupos',        icon: 'bi bi-diagram-2',     roles: this.produtosRoles },        
+        { label: 'Cores',                  link: '/cores',         icon: 'bi bi-palette',       roles: this.produtosRoles },
+        { label: 'Grades',                 link: '/grades',        icon: 'bi bi-grid',          roles: this.produtosRoles },
+        { label: 'Coleções',               link: '/colecoes',      icon: 'bi bi-layers',        roles: this.produtosRoles },
+        { label: 'Pack'    ,               link: '/packs'    ,     icon: 'bi bi-bounding-box',  roles: this.produtosRoles },
       ]
     },
 
     {
-      label: 'Fiscal', icon: 'bi bi-receipt', roles: ['Regular'],
+      label: 'Fiscal', icon: 'bi bi-receipt', roles: this.vendasGestaoRoles,
       children: [
-        { label: 'N.C.M'      , link: '/fiscal/ncm' , icon: 'bi bi-cash',                    roles: ['Regular'] },
-        { label: 'Unidades'   , link: '/unidades'   , icon: 'bi bi-arrow-counterclockwise',  roles: ['Regular'] },
-        { label: 'Material'   , link: '/material'   , icon: 'bi bi-arrow-counterclockwise',  roles: ['Regular'] },       
+        { label: 'N.C.M'      , link: '/fiscal/ncm' , icon: 'bi bi-cash',                    roles: this.vendasGestaoRoles },
+        { label: 'Unidades'   , link: '/unidades'   , icon: 'bi bi-arrow-counterclockwise',  roles: this.produtosRoles },
+        { label: 'Material'   , link: '/material'   , icon: 'bi bi-arrow-counterclockwise',  roles: this.produtosRoles },       
       ]
     },
 
 
     {
-  label: 'Estoque', icon: 'bi bi-archive', roles: ['Regular'],
+  label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles,
   children: [
     {
-      label: 'Consultas', icon: 'bi bi-search', roles: ['Regular'],
+      label: 'Consultas', icon: 'bi bi-search', roles: this.estoqueConsultaRoles,
       children: [
-        { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: ['Regular'] },
-        { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: ['Regular'] },
+        { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles },
+        { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: this.estoqueConsultaRoles },
 
         // adicione outras consultas aqui:
         // { label: 'Por EAN',       link: '/estoque/consulta-ean',         icon: 'bi bi-dot', roles: ['Regular'] },
         // { label: 'Por Loja',      link: '/estoque/consulta-loja',        icon: 'bi bi-dot', roles: ['Regular'] },
       ]
     },
-    { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Regular'] },
-    { label: 'Inventário',    link: '/estoque/inventario',    icon: 'bi bi-clipboard-data',  roles: ['Regular'] },
+    { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: this.estoqueOperacaoRoles },
+    { label: 'Inventário',    link: '/estoque/inventario',    icon: 'bi bi-clipboard-data',  roles: this.estoqueOperacaoRoles },
   ]
 },
 
 
     {
-      label: 'Vendas', icon: 'bi bi-receipt', roles: ['Regular'],
+      label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'],
       children: [
-        { label: 'Nota Fiscal'          , link: '/vendas/nota',       icon: 'bi bi-cash',                   roles: ['Regular'] },
-        { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
-        { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
+        { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles },
+        { label: 'Relatórios de vendas' , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles },
+        { label: 'Nota Fiscal'          , link: '/vendas/nota',       icon: 'bi bi-cash',                   roles: this.vendasGestaoRoles },
+        { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles },
+        { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles },
       ]
     },
 
     {
-      label: 'Compras', icon: 'bi bi-receipt', roles: ['Regular'],
+      label: 'Compras', icon: 'bi bi-receipt', roles: this.comprasRoles,
       children: [
         
-        { label: 'Pedido de Compra Uso/Consumo' , link: '/compras/pedidos-uso-consumo' , icon: 'bi bi-bag-check',              roles: ['Regular'] },
-        { label: 'Pedido de Compra Revenda'     , link: '/compras/pedidos-revenda'     , icon: 'bi bi-bag-check',              roles: ['Regular'] },
-        { label: 'Devoluções'                   , link: '/compras/devolucoes'          , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
-        { label: 'Cotação de Compras'           , link: '/compras/cotacoes'            , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
-        { label: 'Entrada de Nf-e'              , link: '/compras/nfe/upload'          , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
-        { label: 'Trocas'                       , link: '/compras/trocas'              , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
-        { label: 'Notas Lançadas'               , link: '/compras/notas'               , icon: 'bi bi-arrow-counterclockwise', roles: ['Regular'] },
+        { label: 'Pedido de Compra Uso/Consumo' , link: '/compras/pedidos-uso-consumo' , icon: 'bi bi-bag-check',              roles: this.comprasRoles },
+        { label: 'Pedido de Compra Revenda'     , link: '/compras/pedidos-revenda'     , icon: 'bi bi-bag-check',              roles: this.comprasRoles },
+        { label: 'Devoluções'                   , link: '/compras/devolucoes'          , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
+        { label: 'Cotação de Compras'           , link: '/compras/cotacoes'            , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
+        { label: 'Entrada de Nf-e'              , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt',               roles: this.comprasRoles },
+        { label: 'Trocas'                       , link: '/compras/trocas'              , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
+        { label: 'Notas Lançadas'               , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt-cutoff',        roles: this.comprasRoles },
 
       ]
     },
 
     {
-      label: 'Financeiro', icon: 'bi bi-cash-coin', roles: ['Regular'],
+      label: 'Financeiro', icon: 'bi bi-cash-coin', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'],
       children: [
-        { label: 'Contas a Receber',          link: '/financeiro/receber',       icon: 'bi bi-cash-stack',       roles: ['Regular'] },
-        { label: 'Contas a Pagar',            link: '/financeiro/pagar',         icon: 'bi bi-wallet2',          roles: ['Regular'] },
-        { label: 'Caixa',                     link: '/financeiro/caixa',         icon: 'bi bi-safe',             roles: ['Regular'] },
-        { label: 'Contas Bancárias',          link: '/financeiro/contas',        icon: 'bi bi-bank',             roles: ['Regular'] },
-        { label: 'Movimentações Financeiras', link: '/financeiro/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Regular'] },
-        { label: 'Formas de Pagamentos'     , link: 'financeiro/formas-pagamento', icon: 'bi bi-arrow-left-right', roles: ['Regular'] },
+        { label: 'Contas a Receber',          link: '/financeiro/receber',       icon: 'bi bi-cash-stack',       roles: this.receberRoles },
+        { label: 'Contas a Pagar',            link: '/financeiro/pagar',         icon: 'bi bi-wallet2',          roles: this.pagarRoles },
+        { label: 'Caixa',                     link: '/financeiro/caixa',         icon: 'bi bi-safe',             roles: this.caixaRoles },
+        { label: 'Contas Bancárias',          link: '/financeiro/contas',        icon: 'bi bi-bank',             roles: this.financeiroRoles },
+        { label: 'Movimentações Financeiras', link: '/financeiro/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] },
+        { label: 'Formas de Pagamentos'     , link: 'financeiro/formas-pagamento', icon: 'bi bi-arrow-left-right', roles: this.vendasGestaoRoles },
       ]
     },
 
     {
-      label: 'Relatórios', icon: 'bi bi-graph-up', roles: ['Regular'],
+      label: 'Relatórios', icon: 'bi bi-graph-up', roles: ['Diretor', 'Gerente'],
       children: [
-        { label: 'Vendas'     ,  link: '/relatorios/vendas',     icon: 'bi bi-bar-chart', roles: ['Regular'] },
-        { label: 'Financeiro' ,  link: '/relatorios/financeiro', icon: 'bi bi-pie-chart', roles: ['Regular'] },
-        { label: 'Estoque'    ,  link: '/relatorios/estoque',    icon: 'bi bi-clipboard', roles: ['Regular'] },
-        { label: 'Compras'    ,  link: '/relatorios/compras',    icon: 'bi bi-clipboard', roles: ['Regular'] },
+        { label: 'Vendas'     ,  link: '/relatorios/vendas',     icon: 'bi bi-bar-chart', roles: this.vendasGestaoRoles },
+        { label: 'Financeiro' ,  link: '/relatorios/financeiro', icon: 'bi bi-pie-chart', roles: ['Diretor', 'Gerente'] },
+        { label: 'Estoque'    ,  link: '/relatorios/estoque',    icon: 'bi bi-clipboard', roles: ['Diretor', 'Gerente'] },
+        { label: 'Compras'    ,  link: '/relatorios/compras',    icon: 'bi bi-clipboard', roles: ['Diretor', 'Gerente'] },
         
 
       ]
     },
 
     {
-      label: 'Configurações', icon: 'bi bi-gear', roles: ['Regular'],
+      label: 'Configurações', icon: 'bi bi-gear', roles: ['Admin'],
       children: [
-        { label: 'Usuários',               link: '/config/usuarios',            icon: 'bi bi-person-gear',  roles: ['Regular'] },
-        { label: 'Perfis/Acessos',         link: '/config/perfis',              icon: 'bi bi-shield-lock',  roles: ['Regular'] },
-        { label: 'Modelo de Documentos',   link: '/config/modelos',             icon: 'bi bi-sliders',      roles: ['Regular'] },
-        { label: 'Impostos / NCM',         link: '/config/impostos',            icon: 'bi bi-percent',      roles: ['Regular'] },
-        { label: 'Estoque Lançamento',     link: '/config/estoque-lancamento',  icon: 'bi bi-percent',      roles: ['Regular'] },
+        { label: 'Usuários',               link: '/config/usuarios',            icon: 'bi bi-person-gear',  roles: ['Admin'] },
+        { label: 'Perfis/Acessos',         link: '/config/perfis',              icon: 'bi bi-shield-lock',  roles: ['Admin'] },
+        { label: 'Modelo de Documentos',   link: '/config/modelos',             icon: 'bi bi-sliders',      roles: ['Admin'] },
+        { label: 'Impostos / NCM',         link: '/config/impostos',            icon: 'bi bi-percent',      roles: ['Admin'] },
+        { label: 'Estoque Lançamento',     link: '/config/estoque-lancamento',  icon: 'bi bi-percent',      roles: ['Admin'] },
         
         
       ]

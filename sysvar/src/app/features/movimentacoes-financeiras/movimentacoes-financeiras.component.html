@@ -1,0 +1,58 @@
+<div class="financeiro-page">
+  <header class="toolbar">
+    <h2>Movimentações Financeiras</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
+      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
+      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Nova movimentação</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>{{ editingId ? 'Editar movimentação' : 'Nova movimentação' }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label>Loja*<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+      <label>Data*<input type="date" formControlName="data_movimento" /></label>
+      <label>Tipo*<select formControlName="tipo"><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option><option value="TRANSFERENCIA">Transferência</option></select></label>
+      <label>Status*<select formControlName="status"><option value="EFETIVA">Efetiva</option><option value="PREVISTA">Prevista</option><option value="CANCELADA">Cancelada</option></select></label>
+      <label>Valor*<input type="number" step="0.01" formControlName="valor" /></label>
+      <label class="span-2">Histórico*<input type="text" formControlName="historico" /></label>
+      <label>Documento<input type="text" formControlName="documento" /></label>
+      <label>Natureza<select formControlName="Idnatureza"><option [ngValue]="null">Selecione</option><option *ngFor="let nat of naturezas" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option></select></label>
+      <label>Forma<select formControlName="FormaPagamento"><option value="">Selecione</option><option *ngFor="let forma of formas" [value]="forma.codigo">{{ forma.codigo }} - {{ forma.descricao }}</option></select></label>
+      <label>Destino*<select formControlName="destino_tipo"><option value="CAIXA">Caixa</option><option value="CONTA">Conta bancária</option></select></label>
+      <label *ngIf="form.value.destino_tipo === 'CAIXA'">Caixa*<select formControlName="caixa"><option [ngValue]="null">Selecione</option><option *ngFor="let caixa of caixas" [ngValue]="caixa.Idcaixa">{{ caixa.descricao }}</option></select></label>
+      <label *ngIf="form.value.destino_tipo === 'CONTA'">Conta bancária*<select formControlName="conta_bancaria"><option [ngValue]="null">Selecione</option><option *ngFor="let conta of contas" [ngValue]="conta.Idconta">{{ conta.descricao }}</option></select></label>
+      <div class="form-actions span-2">
+        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="list-header"><strong>Total: {{ movimentacoes.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="movimentacoes.length; else vazioTpl">
+        <thead><tr><th>Data</th><th>Tipo</th><th>Histórico</th><th>Destino</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let mov of movimentacoes">
+            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+            <td>{{ mov.tipo }}</td>
+            <td><strong>{{ mov.historico }}</strong><small>{{ mov.documento || 'Sem documento' }}</small></td>
+            <td>{{ destinoNome(mov) }}</td>
+            <td>{{ mov.valor | currency:'BRL' }}</td>
+            <td><span class="badge" [ngClass]="statusClass(mov.status)">{{ mov.status }}</span></td>
+            <td class="actions"><button class="btn sm" (click)="editar(mov)">Editar</button><button class="btn sm danger" (click)="cancelarMov(mov)" *ngIf="mov.status !== 'CANCELADA'">Cancelar</button><button class="btn sm danger" (click)="excluir(mov)">Excluir</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada.</div></ng-template>
+    </div>
+  </section>
+</div>

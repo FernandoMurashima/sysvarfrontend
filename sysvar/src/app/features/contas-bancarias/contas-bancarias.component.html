@@ -1,0 +1,57 @@
+<div class="financeiro-page">
+  <header class="toolbar">
+    <h2>Contas Bancárias</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
+      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
+      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Nova conta</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>{{ editingId ? 'Editar conta bancária' : 'Nova conta bancária' }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label>Loja*<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+      <label class="span-2">Descrição*<input type="text" formControlName="descricao" /></label>
+      <label>Tipo*<select formControlName="tipo_conta"><option value="CORRENTE">Corrente</option><option value="POUPANCA">Poupança</option><option value="PAGAMENTO">Pagamento</option></select></label>
+      <label>Banco*<input type="text" formControlName="banco" /></label>
+      <label>Agência*<input type="text" formControlName="agencia" /></label>
+      <label>Conta*<input type="text" formControlName="conta" /></label>
+      <label>Pix<input type="text" formControlName="pix_chave" /></label>
+      <label>Saldo inicial*<input type="number" step="0.01" formControlName="saldo_inicial" /></label>
+      <label>Saldo atual*<input type="number" step="0.01" formControlName="saldo_atual" /></label>
+      <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+      <div class="form-actions span-2">
+        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="list-header"><strong>Total: {{ contas.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="contas.length; else vazioTpl">
+        <thead><tr><th>Descrição</th><th>Banco</th><th>Agência</th><th>Conta</th><th>Loja</th><th>Saldo atual</th><th>Ativo</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let conta of contas">
+            <td>{{ conta.descricao }}</td>
+            <td>{{ conta.banco }}</td>
+            <td>{{ conta.agencia }}</td>
+            <td>{{ conta.conta }}</td>
+            <td>{{ lojaNome(conta.idloja) }}</td>
+            <td>{{ conta.saldo_atual | currency:'BRL' }}</td>
+            <td><span class="badge" [ngClass]="conta.ativo ? 'ok' : 'off'">{{ conta.ativo ? 'Ativo' : 'Inativo' }}</span></td>
+            <td class="actions"><button class="btn sm" (click)="editar(conta)">Editar</button><button class="btn sm danger" (click)="excluir(conta)">Excluir</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
+    </div>
+  </section>
+</div>
