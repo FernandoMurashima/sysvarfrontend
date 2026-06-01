@@ -11,13 +11,14 @@ export class ProdutosService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/produto/produto/`;
 
-  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false' }): Observable<Produto[] | Paginated<Produto>> {
+  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' }): Observable<Produto[] | Paginated<Produto>> {
     let hp = new HttpParams();
     if (params?.search)    hp = hp.set('search', params.search);
     if (params?.ordering)  hp = hp.set('ordering', params.ordering);
     if (params?.page)      hp = hp.set('page', String(params.page));
     if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
     if (params?.ativo)     hp = hp.set('ativo', params.ativo);
+    if (params?.tipo_produto) hp = hp.set('tipo_produto', params.tipo_produto);
     return this.http.get<Produto[] | Paginated<Produto>>(this.base, { params: hp });
   }
 

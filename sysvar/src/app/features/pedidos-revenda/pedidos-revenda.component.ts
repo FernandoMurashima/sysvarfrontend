@@ -116,6 +116,11 @@ export class PedidosRevendaComponent implements OnInit {
   produtoDescricaoAtual = '';
   coresAll: CorOption[] = [];
   coresProduto: CorOption[] = [];
+  consultaProdutoAberta = false;
+  produtoConsultaBusca = '';
+  produtosConsulta: any[] = [];
+  produtoConsultaId: number | null = null;
+  carregandoProdutosConsulta = false;
 
   // quantidade de 1 pack (somatório dos itens do pack)
   private packQtdUnit = 0;
@@ -449,11 +454,11 @@ export class PedidosRevendaComponent implements OnInit {
   }
 
   private buscarProdutoPorReferencia(refOrDesc: string) {
-    this.produtosApi.list({ search: refOrDesc, page_size: 5 }).subscribe({
+    this.produtosApi.list({ search: refOrDesc, page_size: 5, ativo: 'true', tipo_produto: '1' }).subscribe({
       next: (resp: any) => {
-        const arr = this.arrayOrResults<any>(resp);
+        const arr = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '1');
         if (!arr.length) {
-          alert('Produto não encontrado.');
+          alert('Produto de revenda não encontrado.');
           this.itemForm.patchValue({ produto: null }, { emitEvent: false });
           this.produtoDescricaoAtual = '';
           this.coresProduto = this.coresAll.slice();
@@ -467,7 +472,41 @@ export class PedidosRevendaComponent implements OnInit {
     });
   }
 
+  buscarProdutosConsulta(): void {
+    this.carregandoProdutosConsulta = true;
+    const search = (this.produtoConsultaBusca || '').trim();
+
+    this.produtosApi.list({ search, page_size: 30, ativo: 'true', tipo_produto: '1' }).subscribe({
+      next: (resp: any) => {
+        this.produtosConsulta = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '1');
+        this.carregandoProdutosConsulta = false;
+      },
+      error: () => {
+        this.produtosConsulta = [];
+        this.carregandoProdutosConsulta = false;
+        alert('Erro ao buscar produtos de revenda.');
+      },
+    });
+  }
+
+  usarProdutoConsulta(): void {
+    const prod = this.produtosConsulta.find(p => (p.Idproduto ?? p.id) === this.produtoConsultaId);
+    if (!prod) {
+      alert('Selecione um produto da consulta.');
+      return;
+    }
+    this.setProdutoFromApi(prod);
+  }
+
   private setProdutoFromApi(prod: any) {
+    if ((prod.tipo_produto ?? '').toString() !== '1') {
+      alert('Este produto não é de revenda.');
+      this.itemForm.patchValue({ produto: null }, { emitEvent: false });
+      this.produtoDescricaoAtual = '';
+      this.coresProduto = this.coresAll.slice();
+      return;
+    }
+
     const id = (prod.Idproduto ?? prod.id) as number;
     const referencia = (prod.referencia ?? '').toString();
     const descricao = (prod.descricao ?? '').toString();
@@ -598,6 +637,7 @@ export class PedidosRevendaComponent implements OnInit {
     });
     this.produtoDescricaoAtual = '';
     this.packQtdUnit = 0;
+    this.produtoConsultaId = null;
   }
 
   editarItem(it: PedidoCompraItemUI) {

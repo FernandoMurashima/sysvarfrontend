@@ -50,6 +50,17 @@ export class FuncionariosComponent implements OnInit {
     ativo: [true],
   });
 
+  private categoriasExigemLoja = new Set([
+    'vendedor',
+    'caixa',
+    'gerente',
+    'assistente',
+    'assistentereceber',
+    'assistentepagar',
+    'assistentecontasareceber',
+    'assistentecontasapagar'
+  ]);
+
   // Lista + paginação client-side
   funcionariosAll: Funcionario[] = [];
   funcionarios: Funcionario[] = [];
@@ -211,6 +222,11 @@ export class FuncionariosComponent implements OnInit {
 
   salvar(): void {
     this.submitted = true;
+    const categoria = String(this.form.value.categoria || '').toLowerCase().replace(/[\s_-]/g, '');
+    if (this.categoriasExigemLoja.has(categoria) && !this.form.value.idloja) {
+      const current = this.form.get('idloja')?.errors || {};
+      this.form.get('idloja')?.setErrors({ ...current, required: true });
+    }
     if (this.form.invalid) {
       this.openErrorOverlayIfNeeded();
       return;
@@ -288,6 +304,7 @@ export class FuncionariosComponent implements OnInit {
     P(f.get('apelido')?.hasError('maxlength') || false, 'Apelido: máx. 20 caracteres.');
     P(f.get('cpf')?.hasError('cpf') || false, 'CPF inválido.');
     P(f.get('categoria')?.hasError('maxlength') || false, 'Categoria: máx. 15 caracteres.');
+    P(f.get('idloja')?.hasError('required') || false, 'Loja é obrigatória para este cargo.');
 
     ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','comissao_percentual','idloja','ativo']
       .forEach(field => {

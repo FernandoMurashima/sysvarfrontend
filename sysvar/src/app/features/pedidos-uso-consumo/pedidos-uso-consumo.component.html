@@ -216,6 +216,42 @@
           </small>
         </label>
 
+        <div class="quick-product-lookup col-span-12">
+          <label class="lookup-toggle">
+            <input
+              type="checkbox"
+              [(ngModel)]="consultaProdutoAberta"
+              [ngModelOptions]="{ standalone: true }"
+            />
+            Consulta rápida de produtos de uso/consumo
+          </label>
+
+          <div class="lookup-body" *ngIf="consultaProdutoAberta">
+            <input
+              type="text"
+              placeholder="Buscar descrição, referência ou código"
+              [(ngModel)]="produtoConsultaBusca"
+              [ngModelOptions]="{ standalone: true }"
+              (keyup.enter)="buscarProdutosConsulta()"
+            />
+            <button class="btn" type="button" (click)="buscarProdutosConsulta()" [disabled]="carregandoProdutosConsulta">
+              {{ carregandoProdutosConsulta ? 'Buscando...' : 'Buscar' }}
+            </button>
+            <select
+              size="6"
+              [(ngModel)]="produtoConsultaId"
+              [ngModelOptions]="{ standalone: true }"
+            >
+              <option *ngFor="let p of produtosConsulta" [ngValue]="p.Idproduto ?? p.id">
+                {{ p.referencia || (p.Idproduto ?? p.id) }} - {{ p.descricao }}
+              </option>
+            </select>
+            <button class="btn primary" type="button" [disabled]="!produtoConsultaId" (click)="usarProdutoConsulta()">
+              Usar produto selecionado
+            </button>
+          </div>
+        </div>
+
         <label class="input-item col-span-2">
           Quantidade*
           <input type="number" formControlName="quantidade" min="1" />

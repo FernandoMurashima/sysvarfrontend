@@ -86,9 +86,9 @@
 
           <!-- NOVO: Loja (simples select) -->
           <label id="loja-box" class="input-item">
-            Loja
+            Loja / matriz
             <select formControlName="Idloja">
-              <option [ngValue]="null">—</option>
+              <option [ngValue]="null">Selecione</option>
               <option *ngFor="let l of lojas" [ngValue]="l.Idloja">
                 {{ l.nome_loja || l.apelido_loja || ('Loja #' + l.Idloja) }}
               </option>

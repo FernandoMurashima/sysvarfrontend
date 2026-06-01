@@ -1,24 +1,176 @@
 <div class="estoque-page">
   <header class="toolbar">
-    <h2>Consulta de Estoque</h2>
+    <h2>{{ tituloConsulta() }}</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Referência ou EAN..." [(ngModel)]="search" (keyup.enter)="load()" />
+      <input *ngIf="!isColecao()" type="text" placeholder="Referência ou EAN..." [(ngModel)]="search" (keyup.enter)="load()" />
+      <select *ngIf="isColecao()" [(ngModel)]="colecao" (change)="onColecaoChange()">
+        <option value="">Selecione a coleção</option>
+        <option *ngFor="let c of colecoes" [value]="c.Idcolecao">
+          {{ c.Codigo }} - {{ c.Descricao }}
+        </option>
+      </select>
+      <select *ngIf="isColecao() && produtosColecao.length" [(ngModel)]="produtoReferencia">
+        <option value="">Todos os produtos da coleção</option>
+        <option *ngFor="let p of produtosColecao" [value]="p.referencia">
+          {{ p.referencia }} - {{ p.descricao_reduzida || p.descricao }}
+        </option>
+      </select>
       <select [(ngModel)]="loja"><option value="">Todas as lojas</option><option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option></select>
-      <input type="text" placeholder="Coleção" [(ngModel)]="colecao" />
-      <input type="text" placeholder="Estação" [(ngModel)]="estacao" />
+      <select [(ngModel)]="filtroSaldo">
+        <option value="todos">Todos os saldos</option>
+        <option value="com_saldo">Somente com saldo</option>
+        <option value="zerados">Somente zerados</option>
+      </select>
+      <input *ngIf="!isColecao()" type="text" placeholder="Coleção" [(ngModel)]="colecao" />
+      <input *ngIf="!isColecao()" type="text" placeholder="Estação" [(ngModel)]="estacao" />
       <button class="btn primary" (click)="load()">Buscar</button>
+      <button class="btn" *ngIf="matrizTemDados() || colecaoTemDados()" (click)="exportarCsv()">Exportar Excel</button>
       <button class="btn" [routerLink]="['/home']">Home</button>
     </div>
   </header>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
-  <section class="panel">
-    <div class="list-header"><strong>Total: {{ estoques.length }}</strong><span *ngIf="loading">Carregando...</span></div>
-    <div class="table-wrapper">
-      <table class="table" *ngIf="estoques.length; else vazioTpl">
-        <thead><tr><th>Referência</th><th>EAN</th><th>Loja</th><th>Saldo</th><th>Reserva</th><th>Disponível</th></tr></thead>
-        <tbody><tr *ngFor="let e of estoques"><td>{{ e.referencia }}</td><td>{{ e.CodigodeBarra }}</td><td>{{ lojaNome(e.Idloja) }}</td><td>{{ e.Estoque || 0 }}</td><td>{{ e.reserva || 0 }}</td><td>{{ saldoDisponivel(e) }}</td></tr></tbody>
-      </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum saldo encontrado.</div></ng-template>
+
+  <section class="panel matrix-panel" *ngIf="isMatriz() && search.trim()">
+    <div class="list-header">
+      <div>
+        <strong>Matriz por referência</strong>
+        <span class="muted" *ngIf="referenciasMatriz.length">
+          {{ referenciasMatriz.join(', ') }}
+        </span>
+      </div>
+      <span *ngIf="matrizTemDados()">Total disponível: {{ matrizTotalGeral }}</span>
     </div>
+
+    <div class="table-wrapper matrix-wrapper" *ngIf="matrizTemDados(); else matrizVaziaTpl">
+      <table class="table matrix-table">
+        <thead>
+          <tr>
+            <th>Loja</th>
+            <th>Cor</th>
+            <th *ngFor="let t of matrizTamanhos" class="num">{{ t.label }}</th>
+            <th class="num total-col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of matrizRows">
+            <td>{{ row.loja }}</td>
+            <td>{{ row.cor }}</td>
+            <td
+              *ngFor="let t of matrizTamanhos"
+              class="num"
+              [class.zero]="matrizSaldo(row, t.id) === 0">
+              {{ matrizSaldo(row, t.id) }}
+            </td>
+            <td class="num total-col">{{ row.total }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Total</th>
+            <th *ngFor="let t of matrizTamanhos" class="num">{{ matrizTotais[t.id] || 0 }}</th>
+            <th class="num total-col">{{ matrizTotalGeral }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <ng-template #matrizVaziaTpl>
+      <div class="empty" *ngIf="!loading">
+        Informe uma referência cadastrada para montar a matriz de loja, cor e tamanho.
+      </div>
+    </ng-template>
+  </section>
+
+  <section class="panel movimentos-panel" *ngIf="isMovimentos() && search.trim()">
+    <div class="list-header">
+      <strong>Movimentações da referência</strong>
+      <span *ngIf="loading">Carregando...</span>
+      <span *ngIf="!loading">Total: {{ movimentos.length }}</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table movimentos-table" *ngIf="movimentos.length; else vazioTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Loja</th>
+            <th>Tipo</th>
+            <th>Referência</th>
+            <th>EAN</th>
+            <th class="num">Quantidade</th>
+            <th>Documento</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of movimentos">
+            <td>{{ movimentoData(m) }}</td>
+            <td>{{ lojaNome(m.Idloja) }}</td>
+            <td>
+              <span class="tipo-badge" [class.entrada]="m.tipo === 'ENTRADA'" [class.saida]="m.tipo === 'SAIDA'">
+                {{ m.tipo }}
+              </span>
+            </td>
+            <td>{{ m.referencia || '-' }}</td>
+            <td>{{ m.CodigodeBarra }}</td>
+            <td class="num">{{ movimentoQuantidade(m) }}</td>
+            <td>{{ m.documento || '-' }}</td>
+            <td>{{ m.observacao || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl>
+        <div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada para essa referência.</div>
+      </ng-template>
+    </div>
+  </section>
+
+  <section class="panel matrix-panel" *ngIf="isColecao()">
+    <div class="list-header">
+      <div>
+        <strong>Matriz da coleção</strong>
+        <span class="muted" *ngIf="colecaoSelecionadaLabel()">{{ colecaoSelecionadaLabel() }}</span>
+      </div>
+      <span *ngIf="colecaoTemDados()">Total disponível: {{ colecaoTotalGeral }}</span>
+    </div>
+
+    <div class="table-wrapper matrix-wrapper" *ngIf="colecaoTemDados(); else colecaoVaziaTpl">
+      <table class="table matrix-table colecao-table">
+        <thead>
+          <tr>
+            <th>Referência</th>
+            <th>Produto</th>
+            <th *ngFor="let lojaId of colecaoLojaIds" class="num">{{ lojaNome(lojaId) }}</th>
+            <th class="num total-col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of colecaoRows">
+            <td>{{ row.referencia }}</td>
+            <td>{{ row.produto }}</td>
+            <td
+              *ngFor="let lojaId of colecaoLojaIds"
+              class="num"
+              [class.zero]="colecaoSaldo(row, lojaId) === 0">
+              {{ colecaoSaldo(row, lojaId) }}
+            </td>
+            <td class="num total-col">{{ row.total }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Total</th>
+            <th *ngFor="let lojaId of colecaoLojaIds" class="num">{{ colecaoTotaisLoja[lojaId] || 0 }}</th>
+            <th class="num total-col">{{ colecaoTotalGeral }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <ng-template #colecaoVaziaTpl>
+      <div class="empty" *ngIf="!loading">
+        Selecione uma coleção e clique em Buscar para montar a matriz de referências.
+      </div>
+    </ng-template>
   </section>
 </div>

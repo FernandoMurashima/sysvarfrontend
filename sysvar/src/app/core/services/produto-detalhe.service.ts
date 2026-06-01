@@ -9,6 +9,7 @@ export interface ProdutoSku {
   produto: number;
   idcor: number;
   idtamanho: number;
+  codigo_item_ref?: string;
   ean13: string;
   ativo?: boolean;
   bloqueado_venda?: boolean;
@@ -21,11 +22,12 @@ export class ProdutoDetalheService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/produto/produto-detalhe/`;
 
-  list(params?: { produto?: number; idcor?: number; idtamanho?: number }): Observable<ListResp> {
+  list(params?: { produto?: number; idcor?: number; idtamanho?: number; page_size?: number }): Observable<ListResp> {
     let p = new HttpParams();
     if (params?.produto) p = p.set('produto', String(params.produto));
     if (params?.idcor) p = p.set('idcor', String(params.idcor));
     if (params?.idtamanho) p = p.set('idtamanho', String(params.idtamanho));
+    if (params?.page_size) p = p.set('page_size', String(params.page_size));
     return this.http.get<ListResp>(this.base, { params: p });
   }
 }

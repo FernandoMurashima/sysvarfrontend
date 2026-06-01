@@ -1,4 +1,4 @@
-<div class="layout" [class.sidebar-collapsed]="!sidebarOpen">
+<div class="layout" [class.sidebar-collapsed]="!sidebarOpen" [class.focus-mode]="focusMode">
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
@@ -31,9 +31,19 @@
     <header class="topbar">
       <button class="btn-toggle" (click)="toggleSidebar()" aria-label="Alternar menu">
         <i class="bi bi-list"></i>
+        <span>{{ sidebarOpen ? 'Ocultar menu' : 'Menu' }}</span>
       </button>
+
+      <div class="page-title">
+        {{ currentPageTitle }}
+      </div>
+
       <div class="spacer"></div>
-      <!-- (nada de user-chip aqui) -->
+
+      <div class="topbar-user">
+        <i class="bi bi-person-circle"></i>
+        <span>{{ userName }} ({{ userType }})</span>
+      </div>
     </header>
 
     <section class="content">

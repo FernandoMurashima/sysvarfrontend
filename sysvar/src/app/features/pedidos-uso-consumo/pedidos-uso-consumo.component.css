@@ -74,6 +74,38 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .field-error { color:#b91c1c; font-size:12px; min-height:16px; }
 
+.quick-product-lookup {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #eef6fb;
+}
+.lookup-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.lookup-toggle input {
+  width: auto;
+}
+.lookup-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+.lookup-body select {
+  grid-column: 1 / -1;
+  min-height: 148px;
+}
+.lookup-body .btn.primary {
+  justify-self: start;
+}
+
 /* Ações (botões) */
 .actions-form { margin-top:12px; display:flex; gap:8px; }
 .btn { padding:8px 12px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; }
@@ -113,6 +145,7 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 }
 @media (max-width: 900px) {
   .toolbar-right input { width: 320px; max-width: 56vw; }
+  .lookup-body { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px){
   .grid-12 { grid-template-columns:1fr; }

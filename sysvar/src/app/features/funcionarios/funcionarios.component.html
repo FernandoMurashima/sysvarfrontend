@@ -67,9 +67,9 @@
           </label>
 
           <label id="loja-box" class="input-item">
-            Loja
+            Loja / matriz
             <select formControlName="idloja">
-              <option [ngValue]="null">—</option>
+              <option [ngValue]="null">Selecione</option>
               <option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option>
             </select>
             <span class="field-error" *ngIf="form.get('idloja')?.errors?.['server']">{{ form.get('idloja')?.errors?.['server'] }}</span>

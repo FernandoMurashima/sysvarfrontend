@@ -1,7 +1,8 @@
 // src/app/layout/shell/shell.component.ts
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 
 import { AuthService } from '../../core/auth.service';
 import { NavItem } from '../../core/models/nav-item';
@@ -79,6 +80,7 @@ export class ShellComponent {
       label: 'Consultas', icon: 'bi bi-search', roles: this.estoqueConsultaRoles,
       children: [
         { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles },
+        { label: 'Movimentação por Referência', link: '/estoque/consulta-movimentacao-referencia', icon: 'bi bi-arrow-left-right', roles: this.estoqueConsultaRoles },
         { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: this.estoqueConsultaRoles },
 
         // adicione outras consultas aqui:
@@ -160,6 +162,16 @@ export class ShellComponent {
     return this.perm.filterMenu(this.menuItems);
   }
 
+  focusMode = false;
+  currentPageTitle = 'Home';
+
+  constructor() {
+    this.applyRouteState(this.router.url);
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(event => this.applyRouteState(event.urlAfterRedirects));
+  }
+
   toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; }
 
   sair() {
@@ -187,6 +199,33 @@ export class ShellComponent {
     };
 
   return map[t] ?? raw ;
+  }
+
+  private applyRouteState(url: string) {
+    const path = this.normalizeUrl(url);
+    this.focusMode = path !== '/home';
+    this.sidebarOpen = !this.focusMode;
+    this.currentPageTitle = this.findMenuLabel(this.menuItems, path) || 'SYSVAR';
+  }
+
+  private normalizeUrl(url: string): string {
+    const cleanUrl = (url || '/home').split('?')[0].split('#')[0] || '/home';
+    return cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+  }
+
+  private findMenuLabel(items: NavItem[], path: string): string | null {
+    for (const item of items) {
+      if (item.link && this.normalizeUrl(item.link) === path) {
+        return item.label;
+      }
+
+      if (item.children?.length) {
+        const childLabel = this.findMenuLabel(item.children, path);
+        if (childLabel) return childLabel;
+      }
+    }
+
+    return null;
   }
 
 }

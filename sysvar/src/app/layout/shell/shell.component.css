@@ -3,10 +3,21 @@
   display: grid;
   grid-template-columns: 260px 1fr;
   grid-template-rows: 100vh;
+  transition: grid-template-columns 160ms ease;
 }
 
 .layout.sidebar-collapsed {
   grid-template-columns: 72px 1fr;
+}
+
+.layout.focus-mode.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+}
+
+.layout.focus-mode.sidebar-collapsed .sidebar {
+  padding-left: 0;
+  padding-right: 0;
+  overflow: hidden;
 }
 
 /* ===== Sidebar ===== */
@@ -16,6 +27,11 @@
   padding: 16px 10px;
   display: flex;
   flex-direction: column;       /* permite footer colado embaixo */
+  min-width: 0;
+}
+
+.layout.focus-mode.sidebar-collapsed .sidebar > * {
+  display: none;
 }
 
 .brand {
@@ -82,4 +98,94 @@
   border-radius: 10px;
   background: rgba(255,255,255,0.06);
   color: #e2e8f0;
+}
+
+/* ===== Barra superior ===== */
+.main {
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+}
+
+.topbar {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.btn-toggle {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.btn-toggle:hover {
+  background: #f1f5f9;
+}
+
+.page-title {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 0.94rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.topbar-user {
+  min-width: 0;
+  max-width: 260px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+.topbar-user span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px 16px;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: 0 1fr;
+  }
+
+  .layout:not(.sidebar-collapsed) {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .btn-toggle span,
+  .topbar-user span {
+    display: none;
+  }
 }

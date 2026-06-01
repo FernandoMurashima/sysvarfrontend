@@ -8,6 +8,13 @@ export interface VendaPdvItemPayload {
   desconto: number;
 }
 
+export interface VendaPdvPagamentoPayload {
+  forma: string;
+  descricao: string;
+  valor: number;
+  autorizacao?: string;
+}
+
 export interface FinalizarVendaPdvPayload {
   loja: number;
   caixa: number;
@@ -16,6 +23,7 @@ export interface FinalizarVendaPdvPayload {
   forma_pagamento: string;
   desconto_geral: number;
   valor_recebido: number;
+  pagamentos: VendaPdvPagamentoPayload[];
   itens: VendaPdvItemPayload[];
 }
 
@@ -56,6 +64,12 @@ export interface CupomPdv {
   forma_pagamento: string;
   valor_recebido: string;
   troco: string;
+  pagamentos: Array<{
+    forma: string;
+    descricao: string;
+    valor: string;
+    autorizacao?: string;
+  }>;
   nfce: NFCeResumo;
 }
 

@@ -1,4 +1,4 @@
-<div class="pdv-page">
+<div class="pdv-page" [class.pdv-fullscreen]="pdvAberto || vendaIniciada || cupom">
   <header class="pdv-topbar">
     <div>
       <h2>PDV</h2>
@@ -10,9 +10,8 @@
       <span>{{ operadorNome }} · {{ usuarioTipoLabel() }}</span>
       <button class="btn sm" type="button" (click)="fecharPdv()">Fechar PDV</button>
     </div>
-    <div class="quick-scan" *ngIf="vendaIniciada">
-      <input type="text" placeholder="Código de barras / EAN" [(ngModel)]="codigoRapido" (keyup.enter)="adicionarCodigoRapido()" />
-      <button class="btn primary" (click)="adicionarCodigoRapido()">Adicionar</button>
+    <div class="pdv-live-actions" *ngIf="vendaIniciada">
+      <strong>{{ total | currency:'BRL' }}</strong>
       <button class="btn danger" (click)="cancelarVenda()">Cancelar venda</button>
     </div>
   </header>
@@ -73,6 +72,7 @@
           <div><span>Subtotal</span><strong>{{ cupom.subtotal | currency:'BRL' }}</strong></div>
           <div><span>Desconto</span><strong>{{ cupom.desconto | currency:'BRL' }}</strong></div>
           <div><span>Total</span><strong>{{ cupom.total | currency:'BRL' }}</strong></div>
+          <div *ngFor="let pagamento of cupom.pagamentos"><span>{{ pagamento.descricao }}</span><strong>{{ pagamento.valor | currency:'BRL' }}</strong></div>
           <div><span>Recebido</span><strong>{{ cupom.valor_recebido | currency:'BRL' }}</strong></div>
           <div><span>Troco</span><strong>{{ cupom.troco | currency:'BRL' }}</strong></div>
         </div>
@@ -142,7 +142,7 @@
         <label>Vendedor
           <select [(ngModel)]="vendedorId">
             <option [ngValue]="null">Selecione</option>
-            <option *ngFor="let func of funcionarios" [ngValue]="func.id">{{ func.nomefuncionario }}</option>
+            <option *ngFor="let func of vendedoresDaLoja" [ngValue]="func.id">{{ func.nomefuncionario }}</option>
           </select>
         </label>
       </div>
@@ -165,7 +165,70 @@
   </section>
 
   <section class="pdv-layout" *ngIf="vendaIniciada">
-    <aside class="sale-panel">
+    <main class="product-panel scan-first-panel">
+      <section class="scan-workbench">
+        <div class="scan-entry">
+          <label>Código de barras
+            <input class="scan-input" type="text" placeholder="Bipe o EAN ou digite código/referência" [(ngModel)]="codigoRapido" (keyup.enter)="adicionarCodigoRapido()" autofocus />
+          </label>
+          <button class="btn primary scan-button" type="button" (click)="adicionarCodigoRapido()">Lançar item</button>
+        </div>
+
+        <section class="quick-product-lookup">
+          <label class="lookup-toggle"><input type="checkbox" [(ngModel)]="consultaProdutoAberta" /> Consulta rápida de produto</label>
+          <div class="lookup-body" *ngIf="consultaProdutoAberta">
+            <input type="text" placeholder="Buscar descrição, referência, SKU ou EAN" [(ngModel)]="buscaProdutoConsulta" />
+            <select size="7" [(ngModel)]="produtoConsultaId" (ngModelChange)="selecionarProdutoConsulta()">
+              <option *ngFor="let item of produtosConsulta" [ngValue]="item.produto.Idproduto">
+                {{ item.produto.referencia || item.produto.Idproduto }} - {{ item.produto.descricao }} - {{ item.preco | currency:'BRL' }}
+              </option>
+            </select>
+            <div class="lookup-skus" *ngIf="produtoConsultaSelecionado">
+              <button
+                type="button"
+                class="lookup-sku"
+                *ngFor="let sku of skusConsultaSelecionada"
+                [class.selected]="skuConsultaEan === sku.ean13"
+                [class.no-stock]="disponivelSku(sku) <= 0"
+                (click)="skuConsultaEan = sku.ean13"
+              >
+                <strong>{{ corNome(sku.idcor) }} / {{ tamanhoNome(sku.idtamanho) }}</strong>
+                <span>{{ sku.ean13 }}</span>
+                <em>Saldo {{ disponivelSku(sku) }}</em>
+              </button>
+            </div>
+            <div class="lookup-actions">
+              <label>Qtd<input type="number" min="1" step="1" [(ngModel)]="qtdConsulta" /></label>
+              <button class="btn primary" type="button" (click)="lancarProdutoConsulta()">Lançar item</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="selected-product scanned-product" *ngIf="selecionado; else aguardandoBip">
+          <img [src]="selecionado.imagem" [alt]="selecionado.produto.descricao" />
+          <div class="selected-info">
+            <span class="ref">Último item lançado</span>
+            <h3>{{ selecionado.produto.descricao }}</h3>
+            <strong>{{ selecionado.preco | currency:'BRL' }}</strong>
+            <div class="scanned-details" *ngIf="skuSelecionado">
+              <div><span>EAN</span><strong>{{ skuSelecionado.ean13 }}</strong></div>
+              <div><span>Cor</span><strong>{{ corNome(skuSelecionado.idcor) }}</strong></div>
+              <div><span>Tamanho</span><strong>{{ tamanhoNome(skuSelecionado.idtamanho) }}</strong></div>
+              <div><span>Estoque</span><strong>{{ disponivelSku(skuSelecionado) }}</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <ng-template #aguardandoBip>
+          <section class="scan-empty">
+            <strong>Aguardando leitura</strong>
+            <span>Bipe o código de barras para lançar o item e ver foto, cor, tamanho e preço.</span>
+          </section>
+        </ng-template>
+      </section>
+    </main>
+
+    <aside class="sale-panel checkout-panel">
       <div class="sale-context">
         <div><span>Loja</span><strong>{{ lojaNome(lojaId) }}</strong></div>
         <div><span>Cliente</span><strong>{{ clienteNome(clienteId) }}</strong></div>
@@ -182,9 +245,9 @@
             <strong>{{ item.descricao }}</strong>
             <small>{{ item.cor }} · {{ item.tamanho }} · {{ item.ean }}</small>
             <div class="line-controls">
-              <label>Qtd<input type="number" min="1" [(ngModel)]="item.qtd" /></label>
-              <label>Preço<input type="number" step="0.01" [(ngModel)]="item.preco" /></label>
-              <label>Desc.<input type="number" step="0.01" [(ngModel)]="item.desconto" /></label>
+              <label>Qtd<input type="number" min="1" [(ngModel)]="item.qtd" (ngModelChange)="sugerirPagamentoTotal()" /></label>
+              <label>Preço<input type="number" step="0.01" [(ngModel)]="item.preco" (ngModelChange)="sugerirPagamentoTotal()" /></label>
+              <label>Desc.<input type="number" step="0.01" [(ngModel)]="item.desconto" (ngModelChange)="sugerirPagamentoTotal()" /></label>
               <button class="btn sm danger" (click)="removerItem(i)">Remover</button>
             </div>
           </div>
@@ -193,60 +256,44 @@
       </div>
 
       <div class="payment-panel">
-        <label>Forma de pagamento<select [(ngModel)]="formaCodigo"><option *ngFor="let forma of formas" [value]="forma.codigo">{{ forma.codigo }} - {{ forma.descricao }}</option></select></label>
-        <label>Desconto geral<input type="number" step="0.01" [(ngModel)]="descontoGeral" /></label>
-        <label>Valor recebido<input type="number" step="0.01" [(ngModel)]="valorRecebido" /></label>
+        <label>Desconto geral<input type="number" step="0.01" [(ngModel)]="descontoGeral" (ngModelChange)="sugerirPagamentoTotal()" /></label>
+        <div class="payment-summary">
+          <div><span>Total</span><strong>{{ total | currency:'BRL' }}</strong></div>
+          <div><span>Pago</span><strong>{{ totalPago | currency:'BRL' }}</strong></div>
+          <div><span>Pendente</span><strong>{{ saldoPendente | currency:'BRL' }}</strong></div>
+        </div>
+        <div class="payment-lines">
+          <div class="payment-line" *ngFor="let pagamento of pagamentos; let i = index">
+            <label>Forma
+              <select [(ngModel)]="pagamento.forma" (ngModelChange)="pagamento.descricao = pagamentoDescricao(pagamento.forma)">
+                <option value="DINHEIRO">Dinheiro</option>
+                <option value="DEBITO">Cartão débito</option>
+                <option value="CREDITO">Cartão crédito</option>
+                <option value="PIX">Pix</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+            </label>
+            <label>Valor<input type="number" min="0" step="0.01" [(ngModel)]="pagamento.valor" /></label>
+            <label>Autorização<input type="text" [(ngModel)]="pagamento.autorizacao" /></label>
+            <button class="btn sm" type="button" (click)="preencherSaldoPagamento(i)">Saldo</button>
+            <button class="btn sm danger" type="button" (click)="removerPagamento(i)">Remover</button>
+          </div>
+          <button class="btn primary" type="button" (click)="adicionarPagamento()">Adicionar pagamento</button>
+        </div>
       </div>
 
       <div class="totals">
         <div><span>Subtotal</span><strong>{{ subtotal | currency:'BRL' }}</strong></div>
         <div><span>Descontos</span><strong>{{ (descontoItens + descontoGeral) | currency:'BRL' }}</strong></div>
         <div class="grand"><span>Total</span><strong>{{ total | currency:'BRL' }}</strong></div>
+        <div><span>Pago</span><strong>{{ totalPago | currency:'BRL' }}</strong></div>
+        <div><span>Pendente</span><strong>{{ saldoPendente | currency:'BRL' }}</strong></div>
         <div><span>Troco</span><strong>{{ troco | currency:'BRL' }}</strong></div>
       </div>
 
-      <button class="checkout" [disabled]="finalizando || !carrinho.length" (click)="finalizar()">
+      <button class="checkout" [disabled]="finalizando || !carrinho.length || totalPago < total" (click)="finalizar()">
         {{ finalizando ? 'Finalizando...' : 'Finalizar venda' }}
       </button>
     </aside>
-
-    <main class="product-panel">
-      <div class="search-row">
-        <input type="text" placeholder="Buscar produto, referência ou EAN..." [(ngModel)]="busca" />
-        <span *ngIf="loading">Carregando...</span>
-      </div>
-
-      <section class="selected-product" *ngIf="selecionado">
-        <img [src]="selecionado.imagem" [alt]="selecionado.produto.descricao" />
-        <div class="selected-info">
-          <span class="ref">{{ selecionado.produto.referencia }}</span>
-          <h3>{{ selecionado.produto.descricao }}</h3>
-          <strong>{{ selecionado.preco | currency:'BRL' }}</strong>
-          <span>Disponível: {{ selecionado.estoqueTotal }}</span>
-          <div class="sku-grid">
-            <button
-              *ngFor="let sku of selecionado.skus"
-              class="sku"
-              [class.selected]="skuSelecionado?.ean13 === sku.ean13"
-              [disabled]="disponivelSku(sku) <= 0"
-              (click)="skuSelecionado = sku"
-            >
-              {{ corNome(sku.idcor) }} / {{ tamanhoNome(sku.idtamanho) }}
-              <small>{{ disponivelSku(sku) }} un.</small>
-            </button>
-          </div>
-          <button class="btn primary add-selected" [disabled]="!skuSelecionado" (click)="adicionarSelecionado()">Adicionar selecionado</button>
-        </div>
-      </section>
-
-      <section class="catalog-grid">
-        <button class="product-card" *ngFor="let item of catalogoFiltrado" (click)="selecionarProduto(item)">
-          <img [src]="item.imagem" [alt]="item.produto.descricao" />
-          <span>{{ item.produto.referencia }}</span>
-          <strong>{{ item.produto.descricao }}</strong>
-          <small>{{ item.preco | currency:'BRL' }} · {{ item.estoqueTotal }} un.</small>
-        </button>
-      </section>
-    </main>
   </section>
 </div>

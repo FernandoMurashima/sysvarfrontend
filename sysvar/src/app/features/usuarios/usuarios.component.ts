@@ -68,10 +68,19 @@ export class UsuariosComponent implements OnInit {
     last_name: [''],
     email: ['', [Validators.email]],
     type: ['Regular', [Validators.required]],
-    Idloja: [null],          // NOVO: loja do usuário (opcional; torne required se quiser)
+    Idloja: [null],
     password: [''],          // obrigatória somente no create
     confirm_password: [''],  // só no front
   });
+
+  private tiposExigemLoja = new Set<User['type']>([
+    'Vendedor',
+    'Caixa',
+    'Gerente',
+    'Assistente',
+    'AssistenteReceber',
+    'AssistentePagar'
+  ]);
 
   ngOnInit(): void {
     this.load();
@@ -248,6 +257,11 @@ export class UsuariosComponent implements OnInit {
     if (pwdPairMsg) {
       const current = this.form.get('password')?.errors || {};
       this.form.get('password')?.setErrors({ ...current, pair: true });
+    }
+
+    if (this.tiposExigemLoja.has(this.form.value.type as User['type']) && !this.form.value.Idloja) {
+      const current = this.form.get('Idloja')?.errors || {};
+      this.form.get('Idloja')?.setErrors({ ...current, required: true });
     }
 
     if (this.form.invalid || !!pwdPairMsg) {

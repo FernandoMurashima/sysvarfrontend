@@ -40,7 +40,10 @@ export class EstoqueMovimentacoesComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    forkJoin({ lojas: this.lojasApi.list(), movs: this.api.listMovimentacoes({ search: this.search, referencia: this.search, ean: this.search }) }).subscribe({
+    forkJoin({
+      lojas: this.lojasApi.list({ page_size: 500 }),
+      movs: this.api.listMovimentacoes({ search: this.search, page_size: 5000 })
+    }).subscribe({
       next: res => {
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.movimentos = this.unwrap<EstoqueMovimentacao>(res.movs);

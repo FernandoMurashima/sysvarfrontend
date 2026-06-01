@@ -12,7 +12,7 @@ import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
 import { Produto } from '../../core/models/produto';
 import { TamanhoModel } from '../../core/models/tamanho';
-import { CupomPdv } from '../../core/models/venda-pdv';
+import { CupomPdv, VendaPdvPagamentoPayload } from '../../core/models/venda-pdv';
 import { AuthService } from '../../core/auth.service';
 import { CaixasService } from '../../core/services/caixas.service';
 import { ClientesService } from '../../core/services/clientes.service';
@@ -56,6 +56,13 @@ interface PdvSession {
   abertoEm: string;
 }
 
+interface PagamentoVenda {
+  forma: string;
+  descricao: string;
+  valor: number;
+  autorizacao: string;
+}
+
 @Component({
   selector: 'app-pdv',
   standalone: true,
@@ -91,9 +98,15 @@ export class PdvComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   busca = '';
+  consultaProdutoAberta = false;
+  buscaProdutoConsulta = '';
+  produtoConsultaId: number | null = null;
+  skuConsultaEan: string | null = null;
+  qtdConsulta = 1;
   codigoRapido = '';
   descontoGeral = 0;
   valorRecebido = 0;
+  pagamentos: PagamentoVenda[] = [];
   cupom: CupomPdv | null = null;
 
   lojaId: number | null = null;
@@ -143,7 +156,15 @@ export class PdvComponent implements OnInit {
   }
 
   get troco(): number {
-    return Math.max(0, Number(this.valorRecebido || 0) - this.total);
+    return Math.max(0, this.totalPago - this.total);
+  }
+
+  get totalPago(): number {
+    return this.pagamentos.reduce((sum, pagamento) => sum + Number(pagamento.valor || 0), 0);
+  }
+
+  get saldoPendente(): number {
+    return Math.max(0, this.total - this.totalPago);
   }
 
   get catalogoFiltrado(): CatalogoItem[] {
@@ -156,8 +177,35 @@ export class PdvComponent implements OnInit {
     );
   }
 
+  get produtosConsulta(): CatalogoItem[] {
+    const q = this.buscaProdutoConsulta.trim().toLowerCase();
+    const base = q ? this.catalogo.filter(item =>
+      (item.produto.descricao || '').toLowerCase().includes(q) ||
+      (item.produto.descricao_reduzida || '').toLowerCase().includes(q) ||
+      (item.produto.referencia || '').toLowerCase().includes(q) ||
+      String(item.produto.Idproduto || '').includes(q) ||
+      item.skus.some(sku => (sku.ean13 || '').includes(q) || (sku.codigo_item_ref || '').includes(q))
+    ) : this.catalogo;
+    return base.slice(0, 80);
+  }
+
+  get produtoConsultaSelecionado(): CatalogoItem | null {
+    return this.catalogo.find(item => item.produto.Idproduto === this.produtoConsultaId) ?? null;
+  }
+
+  get skusConsultaSelecionada(): ProdutoSku[] {
+    return this.produtoConsultaSelecionado?.skus ?? [];
+  }
+
   get caixasDaLoja(): Caixa[] {
     return this.caixas.filter(caixa => caixa.tipo_caixa !== 'MASTER' && (!this.lojaId || caixa.idloja === this.lojaId));
+  }
+
+  get vendedoresDaLoja(): Funcionario[] {
+    return this.funcionarios.filter(func => {
+      const categoria = (func.categoria || '').toLowerCase().trim();
+      return func.ativo !== false && categoria === 'vendedor' && (!this.lojaId || func.idloja === this.lojaId);
+    });
   }
 
   get statusTopo(): string {
@@ -184,8 +232,8 @@ export class PdvComponent implements OnInit {
       funcionarios: this.funcionariosApi.list({ page_size: 200 }),
       formas: this.formasApi.list({ ativo: true }),
       produtos: this.produtosApi.list({ ativo: 'true', page_size: 500 }),
-      skus: this.skusApi.list(),
-      estoques: this.estoqueApi.list(),
+      skus: this.skusApi.list({ page_size: 5000 }),
+      estoques: this.estoqueApi.list({ page_size: 5000 }),
       precos: this.precosApi.list(),
       cores: this.coresApi.list({ page_size: 500 }),
       tamanhos: this.tamanhosApi.list()
@@ -217,6 +265,7 @@ export class PdvComponent implements OnInit {
         }
         this.clienteId = this.clientePadraoId();
         this.formaCodigo = this.formas.find(forma => forma.codigo === 'AV')?.codigo ?? this.formas[0]?.codigo ?? 'AV';
+        if (!this.pagamentos.length) this.pagamentos = [this.novoPagamento('DINHEIRO')];
         this.montarCatalogo();
         this.selecionarProduto(null);
         this.loading = false;
@@ -270,6 +319,7 @@ export class PdvComponent implements OnInit {
     this.operadorTipo = this.auth.getUserType() || '';
     this.descontoGeral = 0;
     this.valorRecebido = 0;
+    this.pagamentos = [this.novoPagamento('DINHEIRO')];
     this.selecionarProduto(null);
     this.successMsg = 'PDV fechado.';
     this.errorMsg = '';
@@ -278,12 +328,34 @@ export class PdvComponent implements OnInit {
   selecionarLojaOperacao(): void {
     const caixas = this.caixasDaLoja;
     this.caixaId = caixas.length === 1 ? caixas[0].Idcaixa ?? null : null;
+    this.vendedorId = null;
   }
 
   selecionarProduto(item: CatalogoItem | null): void {
     if (!this.vendaIniciada && item) return;
     this.selecionado = item;
     this.skuSelecionado = item?.skus[0] ?? null;
+  }
+
+  lancarProdutoConsulta(): void {
+    const sku = this.skusConsultaSelecionada.find(item => item.ean13 === this.skuConsultaEan);
+    if (!sku) {
+      this.errorMsg = 'Selecione uma cor/tamanho para lançar.';
+      return;
+    }
+    const quantidade = Math.max(1, Number(this.qtdConsulta || 1));
+    if (this.disponivelSku(sku) < quantidade) {
+      this.errorMsg = 'Saldo insuficiente para a quantidade informada.';
+      return;
+    }
+    this.adicionarSku(sku.ean13, quantidade);
+    this.qtdConsulta = 1;
+  }
+
+  selecionarProdutoConsulta(): void {
+    const primeiroComSaldo = this.skusConsultaSelecionada.find(sku => this.disponivelSku(sku) > 0);
+    this.skuConsultaEan = primeiroComSaldo?.ean13 ?? this.skusConsultaSelecionada[0]?.ean13 ?? null;
+    this.qtdConsulta = 1;
   }
 
   iniciarVenda(): void {
@@ -295,11 +367,15 @@ export class PdvComponent implements OnInit {
       this.errorMsg = 'Informe cliente e vendedor para iniciar a venda.';
       return;
     }
+    if (!this.vendedoresDaLoja.some(vendedor => vendedor.id === this.vendedorId)) {
+      this.errorMsg = 'Selecione um vendedor vinculado a esta loja.';
+      return;
+    }
     this.vendaIniciada = true;
     this.errorMsg = '';
     this.successMsg = 'Venda iniciada.';
     this.montarCatalogo();
-    this.selecionarProduto(this.catalogo[0] ?? null);
+    this.selecionarProduto(null);
   }
 
   cancelarVenda(): void {
@@ -309,6 +385,7 @@ export class PdvComponent implements OnInit {
     this.selecionarProduto(null);
     this.descontoGeral = 0;
     this.valorRecebido = 0;
+    this.pagamentos = [this.novoPagamento('DINHEIRO')];
     this.cupom = null;
     this.successMsg = '';
     this.errorMsg = '';
@@ -361,7 +438,7 @@ export class PdvComponent implements OnInit {
   adicionarSelecionado(): void {
     if (!this.vendaIniciada) return;
     if (!this.selecionado || !this.skuSelecionado) return;
-    this.adicionarSku(this.skuSelecionado.ean13);
+    this.adicionarSku(this.skuSelecionado.ean13, 1);
   }
 
   adicionarCodigoRapido(): void {
@@ -371,18 +448,19 @@ export class PdvComponent implements OnInit {
     }
     const codigo = this.codigoRapido.trim();
     if (!codigo) return;
-    const ok = this.adicionarSku(codigo);
+    const ok = this.adicionarSku(codigo, 1);
     if (ok) this.codigoRapido = '';
   }
 
-  adicionarSku(ean: string): boolean {
+  adicionarSku(ean: string, quantidade = 1): boolean {
     if (!this.vendaIniciada) {
       this.errorMsg = 'Inicie a venda antes de lançar itens.';
       return false;
     }
-    const sku = this.skus.find(s => s.ean13 === ean);
+    const codigo = String(ean || '').trim().toLowerCase();
+    const sku = this.encontrarSkuPorCodigo(codigo);
     if (!sku) {
-      this.errorMsg = 'SKU/EAN não encontrado.';
+      this.errorMsg = 'Código, SKU ou produto não encontrado.';
       return false;
     }
     const produto = this.produtos.find(p => p.Idproduto === sku.produto);
@@ -390,29 +468,34 @@ export class PdvComponent implements OnInit {
       this.errorMsg = 'Produto não disponível para venda.';
       return false;
     }
+    const catalogo = this.catalogo.find(c => c.produto.Idproduto === produto.Idproduto);
+    if (catalogo) {
+      this.selecionado = catalogo;
+      this.skuSelecionado = sku;
+    }
     const disponivel = this.disponivelSku(sku);
-    const existente = this.carrinho.find(i => i.ean === ean);
-    if ((existente?.qtd ?? 0) + 1 > disponivel) {
+    const existente = this.carrinho.find(i => i.ean === sku.ean13);
+    if ((existente?.qtd ?? 0) + quantidade > disponivel) {
       this.errorMsg = 'Saldo insuficiente para este SKU.';
       return false;
     }
-    const catalogo = this.catalogo.find(c => c.produto.Idproduto === produto.Idproduto);
     if (existente) {
-      existente.qtd += 1;
+      existente.qtd += quantidade;
     } else {
       this.carrinho.push({
         produto,
         sku,
-        ean,
+        ean: sku.ean13,
         descricao: produto.descricao,
         cor: this.corNome(sku.idcor),
         tamanho: this.tamanhoNome(sku.idtamanho),
         imagem: catalogo?.imagem ?? this.imagemProduto(produto),
-        qtd: 1,
+        qtd: quantidade,
         preco: catalogo?.preco ?? this.precoProduto(produto.Idproduto),
         desconto: 0
       });
     }
+    this.sugerirPagamentoTotal();
     this.successMsg = '';
     this.errorMsg = '';
     return true;
@@ -420,6 +503,7 @@ export class PdvComponent implements OnInit {
 
   removerItem(index: number): void {
     this.carrinho.splice(index, 1);
+    this.sugerirPagamentoTotal();
   }
 
   limparVenda(): void {
@@ -427,15 +511,43 @@ export class PdvComponent implements OnInit {
     this.carrinho = [];
     this.descontoGeral = 0;
     this.valorRecebido = 0;
+    this.pagamentos = [this.novoPagamento('DINHEIRO')];
+  }
+
+  adicionarPagamento(): void {
+    this.pagamentos.push(this.novoPagamento('DINHEIRO'));
+  }
+
+  removerPagamento(index: number): void {
+    if (this.pagamentos.length === 1) {
+      this.pagamentos[0] = this.novoPagamento('DINHEIRO');
+      return;
+    }
+    this.pagamentos.splice(index, 1);
+  }
+
+  preencherSaldoPagamento(index: number): void {
+    const pagosOutros = this.pagamentos.reduce((sum, pagamento, i) => i === index ? sum : sum + Number(pagamento.valor || 0), 0);
+    this.pagamentos[index].valor = Math.max(0, Number((this.total - pagosOutros).toFixed(2)));
+  }
+
+  sugerirPagamentoTotal(): void {
+    if (this.pagamentos.length !== 1) return;
+    this.pagamentos[0].valor = Number(this.total.toFixed(2));
   }
 
   finalizar(): void {
-    if (!this.lojaId || !this.caixaId || !this.clienteId || !this.vendedorId || !this.formaCodigo || this.carrinho.length === 0) {
-      this.errorMsg = 'Informe loja, caixa, cliente, vendedor, forma e ao menos um item.';
+    const pagamentos = this.pagamentosValidos();
+    if (!this.lojaId || !this.caixaId || !this.clienteId || !this.vendedorId || this.carrinho.length === 0) {
+      this.errorMsg = 'Informe loja, caixa, cliente, vendedor e ao menos um item.';
       return;
     }
-    if (Number(this.valorRecebido || 0) < this.total && this.formaCodigo === 'AV') {
-      this.errorMsg = 'Valor recebido menor que o total.';
+    if (!pagamentos.length) {
+      this.errorMsg = 'Informe pelo menos uma forma de pagamento com valor.';
+      return;
+    }
+    if (this.totalPago < this.total) {
+      this.errorMsg = 'O valor pago pelo cliente ainda não cobre o total da venda.';
       return;
     }
 
@@ -446,9 +558,10 @@ export class PdvComponent implements OnInit {
       caixa: this.caixaId!,
       cliente: this.clienteId!,
       vendedor: this.vendedorId!,
-      forma_pagamento: this.formaCodigo,
+      forma_pagamento: pagamentos.length === 1 ? pagamentos[0].forma : 'MULTIPLO',
       desconto_geral: Number(this.descontoGeral || 0),
-      valor_recebido: Number(this.valorRecebido || 0),
+      valor_recebido: Number(this.totalPago || 0),
+      pagamentos,
       itens: this.carrinho.map(item => ({
         ean: item.ean,
         descricao: item.descricao,
@@ -477,6 +590,7 @@ export class PdvComponent implements OnInit {
     this.selecionarProduto(null);
     this.descontoGeral = 0;
     this.valorRecebido = 0;
+    this.pagamentos = [this.novoPagamento('DINHEIRO')];
     this.load();
   }
 
@@ -491,6 +605,18 @@ export class PdvComponent implements OnInit {
     this.cadastroClienteAberto = false;
     this.clienteId = this.clientePadraoId();
     this.vendedorId = null;
+    this.pagamentos = [this.novoPagamento('DINHEIRO')];
+  }
+
+  pagamentoDescricao(forma: string): string {
+    const labels: Record<string, string> = {
+      DINHEIRO: 'Dinheiro',
+      DEBITO: 'Cartão débito',
+      CREDITO: 'Cartão crédito',
+      PIX: 'Pix',
+      OUTRO: 'Outro'
+    };
+    return labels[forma] || forma;
   }
 
   caixaDescricao(id: number | null): string {
@@ -548,7 +674,7 @@ export class PdvComponent implements OnInit {
   }
 
   vendedorNome(id: number | null): string {
-    return this.funcionarios.find(f => f.id === id)?.nomefuncionario || '';
+    return this.vendedoresDaLoja.find(f => f.id === id)?.nomefuncionario || '';
   }
 
   abertoEmFormatado(): string {
@@ -586,6 +712,41 @@ export class PdvComponent implements OnInit {
 
   private usuarioTipoNormalizado(): string {
     return (this.auth.getUserType() || this.operadorTipo || '').toLowerCase().trim();
+  }
+
+  private novoPagamento(forma: string): PagamentoVenda {
+    return { forma, descricao: this.pagamentoDescricao(forma), valor: 0, autorizacao: '' };
+  }
+
+  private encontrarSkuPorCodigo(codigo: string): ProdutoSku | undefined {
+    const skuDireto = this.skus.find(s =>
+      (s.ean13 || '').toLowerCase() === codigo ||
+      (s.codigo_item_ref || '').toLowerCase() === codigo
+    );
+    if (skuDireto) return skuDireto;
+
+    const produto = this.produtos.find(p =>
+      String(p.Idproduto || '').toLowerCase() === codigo ||
+      (p.referencia || '').toLowerCase() === codigo ||
+      (p.descricao_reduzida || '').toLowerCase() === codigo
+    );
+    return produto ? this.primeiroSkuDisponivel(produto.Idproduto) : undefined;
+  }
+
+  private primeiroSkuDisponivel(produtoId?: number): ProdutoSku | undefined {
+    const skusProduto = this.skus.filter(s => s.produto === produtoId);
+    return skusProduto.find(s => this.disponivelSku(s) > 0) ?? skusProduto[0];
+  }
+
+  private pagamentosValidos(): VendaPdvPagamentoPayload[] {
+    return this.pagamentos
+      .map(pagamento => ({
+        forma: String(pagamento.forma || '').toUpperCase(),
+        descricao: this.pagamentoDescricao(String(pagamento.forma || '').toUpperCase()),
+        valor: Number(pagamento.valor || 0),
+        autorizacao: String(pagamento.autorizacao || '').trim()
+      }))
+      .filter(pagamento => pagamento.forma && pagamento.valor > 0);
   }
 
 }

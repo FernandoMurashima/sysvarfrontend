@@ -81,8 +81,9 @@ export const routes: Routes = [
       { path: 'financeiro/caixa', component: CaixasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'] } },
       { path: 'financeiro/contas', component: ContasBancariasComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] } },
-      { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
-      { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
+      { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { modo: 'matriz', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
+      { path: 'estoque/consulta-movimentacao-referencia', component: EstoqueConsultaComponent, data: { modo: 'movimentos', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
+      { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
       { path: 'estoque/movimentacoes', component: EstoqueMovimentacoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
       { path: 'estoque/inventario', component: EstoqueInventarioComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
 

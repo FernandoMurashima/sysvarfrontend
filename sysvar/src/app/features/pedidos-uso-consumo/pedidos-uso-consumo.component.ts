@@ -94,6 +94,11 @@ export class PedidosUsoConsumoComponent implements OnInit {
   savingItem = false;
 
   produtoDescricaoAtual = '';
+  consultaProdutoAberta = false;
+  produtoConsultaBusca = '';
+  produtosConsulta: any[] = [];
+  produtoConsultaId: number | null = null;
+  carregandoProdutosConsulta = false;
 
   // ===== lista de pedidos (Uso/Consumo – tipo=2) =====
   search = '';
@@ -400,11 +405,11 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
 
   private buscarProdutoPorDescricao(texto: string) {
-    this.produtosApi.list({ search: texto, page_size: 5 }).subscribe({
+    this.produtosApi.list({ search: texto, page_size: 5, ativo: 'true', tipo_produto: '2' }).subscribe({
       next: (resp: any) => {
-        const arr = this.arrayOrResults<any>(resp);
+        const arr = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
         if (!arr.length) {
-          alert('Produto não encontrado.');
+          alert('Produto de uso/consumo não encontrado.');
           this.itemForm.patchValue({ produto: null }, { emitEvent: false });
           this.produtoDescricaoAtual = '';
           return;
@@ -417,7 +422,40 @@ export class PedidosUsoConsumoComponent implements OnInit {
     });
   }
 
+  buscarProdutosConsulta(): void {
+    this.carregandoProdutosConsulta = true;
+    const search = (this.produtoConsultaBusca || '').trim();
+
+    this.produtosApi.list({ search, page_size: 30, ativo: 'true', tipo_produto: '2' }).subscribe({
+      next: (resp: any) => {
+        this.produtosConsulta = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
+        this.carregandoProdutosConsulta = false;
+      },
+      error: () => {
+        this.produtosConsulta = [];
+        this.carregandoProdutosConsulta = false;
+        alert('Erro ao buscar produtos de uso/consumo.');
+      },
+    });
+  }
+
+  usarProdutoConsulta(): void {
+    const prod = this.produtosConsulta.find(p => (p.Idproduto ?? p.id) === this.produtoConsultaId);
+    if (!prod) {
+      alert('Selecione um produto da consulta.');
+      return;
+    }
+    this.setProdutoFromApi(prod);
+  }
+
   private setProdutoFromApi(prod: any) {
+    if ((prod.tipo_produto ?? '').toString() !== '2') {
+      alert('Este produto não é de uso/consumo.');
+      this.itemForm.patchValue({ produto: null }, { emitEvent: false });
+      this.produtoDescricaoAtual = '';
+      return;
+    }
+
     const id = (prod.Idproduto ?? prod.id) as number;
     const descricao = (prod.descricao ?? '').toString();
 
@@ -474,6 +512,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
       observacoes: '',
     });
     this.produtoDescricaoAtual = '';
+    this.produtoConsultaId = null;
   }
 
   editarItem(it: PedidoUsoItemUI) {
