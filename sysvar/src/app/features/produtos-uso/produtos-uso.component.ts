@@ -73,6 +73,7 @@ export class ProdutosUsoComponent {
   editingId: number | null = null;
 
   form: FormGroup = this.fb.group({
+    tipo_produto: ['2', [Validators.required]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
     descricao_reduzida: [null, [Validators.maxLength(60)]],
 
@@ -229,6 +230,7 @@ export class ProdutosUsoComponent {
     this.editingId = null;
     this.submitted = false;
     this.form.reset({
+      tipo_produto: '2',
       descricao: '',
       descricao_reduzida: null,
       unidade: null,
@@ -248,6 +250,7 @@ export class ProdutosUsoComponent {
     this.submitted = false;
 
     this.form.reset({
+      tipo_produto: '2',
       descricao: row.descricao ?? '',
       descricao_reduzida: row.descricao_reduzida ?? null,
       unidade: row.unidade ?? null,

@@ -7,6 +7,8 @@ import { Observable, Subscription } from 'rxjs';
 
 import { ProdutosService } from '../../core/services/produtos.service';
 import { Produto } from '../../core/models/produto';
+import { Estoque } from '../../core/models/estoque';
+import { Loja } from '../../core/models/loja';
 
 import { ColecoesService } from '../../core/services/colecoes.service';
 import { GruposService } from '../../core/services/grupos.service';
@@ -25,6 +27,9 @@ import { CoresService } from '../../core/services/cores.service';
 
 // preço
 import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/services/tabelapreco-produto.service';
+import { EstoqueService } from '../../core/services/estoque.service';
+import { LojasService } from '../../core/services/lojas.service';
+import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 
 type ItemRef = { id: number; label: string };
 
@@ -61,6 +66,9 @@ export class ProdutosComponent {
 
   // preço
   private prodPrecoApi = inject(TabelaprecoProdutoService);
+  private estoqueApi = inject(EstoqueService);
+  private lojasApi = inject(LojasService);
+  private skusApi = inject(ProdutoDetalheService);
 
   // navegação
   view = signal<'list' | 'form'>('list');
@@ -82,6 +90,7 @@ export class ProdutosComponent {
   pageSize = signal(20);
 
   // LOJAS (ids)
+  lojasDisponiveis: Loja[] = [];
   lojasSelecionadasIds = signal<number[]>([]);
   lojasModalAberto = signal(false);
   abrirModalLojas() { this.lojasModalAberto.set(true); }
@@ -95,6 +104,7 @@ export class ProdutosComponent {
   // CORES (lista + ids + modal)
   coresDisponiveis: CorRow[] = [];
   coresSelecionadasIds = signal<number[]>([]);
+  coresOriginaisIds = signal<number[]>([]);
   coresModalAberto = signal(false);
   corFiltro = signal<string>(''); // opcional (não precisa usar no TS se não quiser)
 
@@ -174,6 +184,8 @@ export class ProdutosComponent {
 
   // lookups
   private loadLookups() {
+    this.loadLojas();
+
     // Coleções
     this.colecoesApi.list('').subscribe({
       next: (rows: any) => {
@@ -254,6 +266,17 @@ export class ProdutosComponent {
     this.loadSubgrupos(null);
   }
 
+  private loadLojas() {
+    this.lojasApi.list({ ordering: 'nome_loja', page_size: 500 }).subscribe({
+      next: (rows: any) => {
+        this.lojasDisponiveis = this.arrayOrResults<Loja>(rows)
+          .slice()
+          .sort((a, b) => this.lojaLabel(a).localeCompare(this.lojaLabel(b)));
+      },
+      error: () => { this.lojasDisponiveis = []; }
+    });
+  }
+
   // Grupo -> Subgrupo
   private wireGrupoToSubgrupo() {
     this.subGrupoSub?.unsubscribe();
@@ -304,9 +327,10 @@ export class ProdutosComponent {
   // lista/pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', page_size: 100 }).subscribe({
+    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1', page_size: 100 }).subscribe({
       next: (data: any) => {
-        const rows = this.arrayOrResults<Produto>(data);
+        const rows = this.arrayOrResults<Produto>(data)
+          .filter(p => p.tipo_produto === '1');
         this.produtos.set(rows);
         this.page.set(1);
       },
@@ -331,6 +355,54 @@ export class ProdutosComponent {
   colecaoLabel(id?: number | null) {
     if (!id) return '';
     return this.colecaoMap.get(id) ?? String(id);
+  }
+
+  lojaId(loja: Loja | any): number | null {
+    const id = loja?.Idloja ?? loja?.id;
+    return typeof id === 'number' ? id : null;
+  }
+
+  lojaLabel(loja: Loja | any): string {
+    return loja?.apelido_loja || loja?.Apelido_loja || loja?.nome_loja || loja?.Nome_loja || '';
+  }
+
+  lojasSelecionadasResumo(): string[] {
+    const ids = new Set(this.lojasSelecionadasIds());
+    const labels = this.lojasDisponiveis
+      .filter(loja => {
+        const id = this.lojaId(loja);
+        return id != null && ids.has(id);
+      })
+      .map(loja => this.lojaLabel(loja))
+      .filter(Boolean);
+
+    const encontrados = new Set(
+      this.lojasDisponiveis
+        .map(loja => this.lojaId(loja))
+        .filter((id): id is number => id != null && ids.has(id))
+    );
+
+    this.lojasSelecionadasIds()
+      .filter(id => !encontrados.has(id))
+      .forEach(id => labels.push(`Loja ${id}`));
+
+    return labels;
+  }
+
+  corLabel(id: number): string {
+    const cor = this.coresDisponiveis.find(c => Number(c.Idcor) === Number(id));
+    if (!cor) return `Cor ${id}`;
+    const codigo = cor.Codigo ? `${cor.Codigo} - ` : '';
+    return `${codigo}${cor.Descricao || `Cor ${id}`}`;
+  }
+
+  coresSelecionadasResumo(): string[] {
+    return this.coresSelecionadasIds().map(id => this.corLabel(id));
+  }
+
+  coresNovasSelecionadas(): number[] {
+    const originais = new Set(this.coresOriginaisIds());
+    return this.coresSelecionadasIds().filter(id => !originais.has(id));
   }
 
   // form
@@ -358,6 +430,7 @@ export class ProdutosComponent {
     // limpa seleções auxiliares
     this.lojasSelecionadasIds.set([]);
     this.coresSelecionadasIds.set([]);
+    this.coresOriginaisIds.set([]);
   }
 
   editar(row: Produto) {
@@ -397,9 +470,7 @@ export class ProdutosComponent {
       });
     }
 
-    // zera seleções auxiliares ao entrar no editar (ajuste se quiser carregar do backend depois)
-    this.lojasSelecionadasIds.set([]);
-    this.coresSelecionadasIds.set([]);
+    this.carregarVinculosProduto(row.Idproduto);
   }
 
   cancelarEdicao() {
@@ -411,6 +482,17 @@ export class ProdutosComponent {
   salvar() {
     this.submitted = true;
     if (this.form.invalid) { this.openErrorOverlay(); return; }
+
+    const coresNovas = this.coresNovasSelecionadas();
+    if (coresNovas.length) {
+      const nomes = coresNovas.map(id => this.corLabel(id)).join(', ');
+      const confirma = confirm(
+        `Você incluiu nova(s) cor(es): ${nomes}.\n\n` +
+        'Ao salvar, o sistema vai criar os SKUs e os códigos EAN correspondentes para todos os tamanhos da grade deste produto.\n\n' +
+        'Confirma a criação desses SKUs/EANs?'
+      );
+      if (!confirma) return;
+    }
 
     const body: Partial<Produto> = {
       ...this.form.value,
@@ -492,6 +574,48 @@ export class ProdutosComponent {
       error: (err) => {
         alert(String(err?.error?.detail || 'Produto salvo, mas falhou ao gerar SKUs.'));
         this.finishSave();
+      }
+    });
+  }
+
+  private carregarVinculosProduto(prodId?: number | null) {
+    this.lojasSelecionadasIds.set([]);
+    this.coresSelecionadasIds.set([]);
+    this.coresOriginaisIds.set([]);
+    if (!prodId) return;
+
+    this.skusApi.list({ produto: prodId, page_size: 5000 }).subscribe({
+      next: (res: any) => {
+        const skus = this.arrayOrResults<ProdutoSku>(res);
+        const cores = Array.from(new Set(
+          skus
+            .map(sku => Number(sku.idcor || 0))
+            .filter(id => id > 0)
+        ));
+        this.coresSelecionadasIds.set(cores);
+        this.coresOriginaisIds.set(cores);
+
+        const eans = new Set(skus.map(sku => sku.ean13).filter(Boolean));
+        if (!eans.size) return;
+
+        this.estoqueApi.list({ page_size: 5000 }).subscribe({
+          next: (estoqueRes: any) => {
+            const estoques = this.arrayOrResults<Estoque>(estoqueRes);
+            const lojas = Array.from(new Set(
+              estoques
+                .filter(e => eans.has(e.CodigodeBarra))
+                .map(e => Number(e.Idloja || 0))
+                .filter(id => id > 0)
+            ));
+            this.lojasSelecionadasIds.set(lojas);
+          },
+          error: () => this.lojasSelecionadasIds.set([])
+        });
+      },
+      error: () => {
+        this.coresSelecionadasIds.set([]);
+        this.coresOriginaisIds.set([]);
+        this.lojasSelecionadasIds.set([]);
       }
     });
   }

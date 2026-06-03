@@ -34,17 +34,6 @@
   display: none;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  height: 44px;
-  margin-bottom: 12px;
-}
-.logo {
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
 .menu {
   flex: 1 1 auto;
   overflow: auto;            /* mantém o scroll */
@@ -78,11 +67,6 @@
   background: rgba(255,255,255,0.12);
   color: #ffffff;
 }
-.nav-link.logout {
-  margin-top: 8px;
-  color: #fca5a5;               /* vermelho suave */
-}
-
 /* ===== Rodapé da sidebar: usuário ===== */
 .sidebar-footer {
   margin-top: auto;
@@ -110,7 +94,8 @@
 }
 
 .topbar {
-  min-height: 44px;
+  position: relative;
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -136,6 +121,40 @@
 
 .btn-toggle:hover {
   background: #f1f5f9;
+}
+
+.topbar-brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.topbar-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.topbar-brand strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.94rem;
+  line-height: 1.1;
+}
+
+.topbar-brand span {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.1;
 }
 
 .page-title {
@@ -168,6 +187,27 @@
   white-space: nowrap;
 }
 
+.topbar-logout {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #991b1b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.topbar-logout:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
 .content {
   min-width: 0;
   flex: 1 1 auto;
@@ -186,6 +226,10 @@
 
   .btn-toggle span,
   .topbar-user span {
+    display: none;
+  }
+
+  .topbar-brand span {
     display: none;
   }
 }

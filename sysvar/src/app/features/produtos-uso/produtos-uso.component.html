@@ -44,6 +44,7 @@
         <thead>
           <tr>
             <th class="col-descricao">Descrição</th>
+            <th>Tipo</th>
             <th class="col-unidade">Unidade</th>
             <th class="col-ncm">NCM</th>
             <th class="col-status">Status</th>
@@ -53,6 +54,7 @@
         <tbody>
           <tr *ngFor="let p of paged()">
             <td>{{ p.descricao }}</td>
+            <td><span class="badge badge-info">Uso/Consumo</span></td>
             <td>{{ unidadeLabel(p.unidade ?? null) }}</td>
             <td>{{ p.ncm || '—' }}</td>
             <td>
@@ -102,7 +104,14 @@
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
         <!-- Linha 1 -->
-        <label class="input-item col-span-5"
+        <label class="input-item col-span-2">
+          Tipo
+          <select formControlName="tipo_produto">
+            <option value="2">Uso/Consumo</option>
+          </select>
+        </label>
+
+        <label class="input-item col-span-4"
                [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
           Descrição*
           <input type="text" formControlName="descricao" />
@@ -127,7 +136,7 @@
           </span>
         </label>
 
-        <label class="input-item col-span-4"
+        <label class="input-item col-span-3"
                [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">
           Unidade*
           <select formControlName="unidade">

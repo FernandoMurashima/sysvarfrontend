@@ -1,20 +1,11 @@
 <div class="layout" [class.sidebar-collapsed]="!sidebarOpen" [class.focus-mode]="focusMode">
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">
-      <span class="logo">SYSVAR</span>
-    </div>
-
     <nav class="menu">
       <app-nav-item
         *ngFor="let item of menuItems"
         [item]="item">
       </app-nav-item>
-
-      <button class="nav-link logout" (click)="sair()">
-        <i class="bi bi-box-arrow-right me-2"></i>
-        Sair
-      </button>
     </nav>
 
     <!-- Rodapé da sidebar: usuário -->
@@ -38,12 +29,22 @@
         {{ currentPageTitle }}
       </div>
 
+      <div class="topbar-brand">
+        <img class="topbar-logo" src="assets/logosysvar.png" alt="Sysvar" />
+        <div>
+          <strong>Sysvar</strong>
+          <span>ERP Varejo</span>
+        </div>
+      </div>
+
       <div class="spacer"></div>
 
       <div class="topbar-user">
         <i class="bi bi-person-circle"></i>
         <span>{{ userName }} ({{ userType }})</span>
       </div>
+
+      <button class="topbar-logout" type="button" (click)="sair()">Sair</button>
     </header>
 
     <section class="content">

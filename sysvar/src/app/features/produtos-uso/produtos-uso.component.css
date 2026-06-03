@@ -82,6 +82,7 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; line-height:20px; color:#fff; }
 .badge-ok { background:#16a34a; } 
 .badge-off { background:#94a3b8; }
+.badge-info { background:#2563eb; }
 
 /* Alerts */
 .alert { padding:10px 12px; border-radius:8px; }

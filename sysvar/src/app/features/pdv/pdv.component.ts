@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
@@ -108,6 +108,7 @@ export class PdvComponent implements OnInit {
   valorRecebido = 0;
   pagamentos: PagamentoVenda[] = [];
   cupom: CupomPdv | null = null;
+  telaCheia = false;
 
   lojaId: number | null = null;
   clienteId: number | null = null;
@@ -139,6 +140,24 @@ export class PdvComponent implements OnInit {
   skuSelecionado: ProdutoSku | null = null;
   carrinho: CarrinhoItem[] = [];
 
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.telaCheia = !!document.fullscreenElement;
+  }
+
+  async alternarTelaCheia(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      await document.documentElement.requestFullscreen();
+    } catch {
+      this.errorMsg = 'Não foi possível ativar a tela cheia neste navegador.';
+    }
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -152,19 +171,23 @@ export class PdvComponent implements OnInit {
   }
 
   get total(): number {
-    return Math.max(0, this.subtotal - this.descontoItens - Number(this.descontoGeral || 0));
+    return this.moeda(Math.max(0, this.subtotal - this.descontoItens - Number(this.descontoGeral || 0)));
   }
 
   get troco(): number {
-    return Math.max(0, this.totalPago - this.total);
+    return this.moeda(Math.max(0, this.totalPago - this.total));
   }
 
   get totalPago(): number {
-    return this.pagamentos.reduce((sum, pagamento) => sum + Number(pagamento.valor || 0), 0);
+    return this.moeda(this.pagamentos.reduce((sum, pagamento) => sum + Number(pagamento.valor || 0), 0));
   }
 
   get saldoPendente(): number {
-    return Math.max(0, this.total - this.totalPago);
+    return this.moeda(Math.max(0, this.total - this.totalPago));
+  }
+
+  get podeFinalizarVenda(): boolean {
+    return !this.finalizando && this.carrinho.length > 0 && this.totalPago + 0.009 >= this.total;
   }
 
   get catalogoFiltrado(): CatalogoItem[] {
@@ -515,7 +538,9 @@ export class PdvComponent implements OnInit {
   }
 
   adicionarPagamento(): void {
-    this.pagamentos.push(this.novoPagamento('DINHEIRO'));
+    const pagamento = this.novoPagamento('DINHEIRO');
+    pagamento.valor = Number(this.saldoPendente.toFixed(2));
+    this.pagamentos.push(pagamento);
   }
 
   removerPagamento(index: number): void {
@@ -528,12 +553,19 @@ export class PdvComponent implements OnInit {
 
   preencherSaldoPagamento(index: number): void {
     const pagosOutros = this.pagamentos.reduce((sum, pagamento, i) => i === index ? sum : sum + Number(pagamento.valor || 0), 0);
-    this.pagamentos[index].valor = Math.max(0, Number((this.total - pagosOutros).toFixed(2)));
+    this.pagamentos[index].valor = this.moeda(Math.max(0, this.total - pagosOutros));
   }
 
   sugerirPagamentoTotal(): void {
     if (this.pagamentos.length !== 1) return;
-    this.pagamentos[0].valor = Number(this.total.toFixed(2));
+    this.pagamentos[0].valor = this.moeda(this.total);
+  }
+
+  atualizarDescontoCupom(): void {
+    this.descontoGeral = this.moeda(Math.max(0, Number(this.descontoGeral || 0)));
+    if (!this.pagamentos.length) return;
+    const index = this.pagamentos.length === 1 ? 0 : this.pagamentos.length - 1;
+    this.preencherSaldoPagamento(index);
   }
 
   finalizar(): void {
@@ -546,7 +578,7 @@ export class PdvComponent implements OnInit {
       this.errorMsg = 'Informe pelo menos uma forma de pagamento com valor.';
       return;
     }
-    if (this.totalPago < this.total) {
+    if (!this.podeFinalizarVenda) {
       this.errorMsg = 'O valor pago pelo cliente ainda não cobre o total da venda.';
       return;
     }
@@ -747,6 +779,10 @@ export class PdvComponent implements OnInit {
         autorizacao: String(pagamento.autorizacao || '').trim()
       }))
       .filter(pagamento => pagamento.forma && pagamento.valor > 0);
+  }
+
+  private moeda(value: number): number {
+    return Number(Number(value || 0).toFixed(2));
   }
 
 }

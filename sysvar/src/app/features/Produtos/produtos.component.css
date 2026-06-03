@@ -54,6 +54,7 @@ td.actions .btn { padding:6px 10px; flex:0 0 auto; }
 .col-span-3 { grid-column: span 3 / span 3; }
 .col-span-4 { grid-column: span 4 / span 4; }
 .col-span-5 { grid-column: span 5 / span 5; }
+.col-span-12 { grid-column: span 12 / span 12; }
 
 label { display:grid; gap:6px; font-size:14px; min-width:0; }
 .input-item > * { min-width:0; }
@@ -63,6 +64,65 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 .input-item.invalid textarea,
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .field-error { color:#b91c1c; font-size:12px; min-height:16px; }
+
+.vinculos-grid {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.vinculo-box {
+  background:#f8fafc;
+  border:1px solid #dbe4ef;
+  border-radius:8px;
+  padding:10px;
+  min-width:0;
+}
+
+.vinculo-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.vinculo-head small {
+  display:block;
+  color:#64748b;
+  margin-top:2px;
+}
+
+.vinculo-title {
+  display:block;
+  color:#111827;
+  font-weight:700;
+}
+
+.chips {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  min-height:30px;
+}
+
+.chip {
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#e0f2fe;
+  border:1px solid #bae6fd;
+  color:#0f172a;
+  font-size:12px;
+}
+
+.empty-inline {
+  color:#64748b;
+  font-size:13px;
+  padding:5px 0;
+}
 
 /* NCM select mais curto */
 #ncm-box .ncm-select { max-width: 100%; }
@@ -82,6 +142,7 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; line-height:20px; color:#fff; }
 .badge-ok { background:#16a34a; } 
 .badge-off { background:#94a3b8; }
+.badge-info { background:#2563eb; }
 
 /* Alerts */
 .alert { padding:10px 12px; border-radius:8px; }
@@ -107,6 +168,7 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 }
 @media (max-width: 700px){
   .grid-12 { grid-template-columns:1fr; }
+  .vinculos-grid { grid-template-columns:1fr; }
   .toolbar-right input { min-width:200px; }
   th.actions, td.actions { width: 240px; }
 }

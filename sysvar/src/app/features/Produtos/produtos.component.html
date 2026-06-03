@@ -45,6 +45,7 @@
           <tr>
             <th class="col-descricao">Descrição</th>
             <th class="col-referencia">Referência</th>
+            <th>Tipo</th>
             <th class="col-colecao">Coleção</th>
             <th class="col-status">Status</th>
             <th class="actions">Ações</th>
@@ -54,6 +55,7 @@
           <tr *ngFor="let p of paged()">
             <td>{{ p.descricao }}</td>
             <td>{{ p.referencia || '—' }}</td>
+            <td><span class="badge badge-info">Revenda</span></td>
             <td>{{ colecaoLabel(p.colecao ?? null) }}</td>
             <td>
               <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
@@ -102,7 +104,14 @@
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
         <!-- Linha 1 -->
-        <label class="input-item col-span-5"
+        <label class="input-item col-span-2">
+          Tipo
+          <select formControlName="tipo_produto">
+            <option value="1">Revenda</option>
+          </select>
+        </label>
+
+        <label class="input-item col-span-4"
                [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
           Descrição*
           <input type="text" formControlName="descricao"
@@ -124,7 +133,7 @@
           </span>
         </label>
 
-        <label class="input-item col-span-4"
+        <label class="input-item col-span-3"
                [class.invalid]="form.get('colecao')?.invalid && (form.get('colecao')?.touched || submitted)">
           Coleção*
           <select formControlName="colecao">
@@ -216,37 +225,41 @@
 
         <div class="col-span-3"></div>
 
-        <!-- Linha 4: botões (Lojas / Cores) + contadores -->
-        <div class="col-span-12" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-          <!-- Lojas -->
-          <div style="display:flex;align-items:center;gap:8px;">
-            <button class="btn" type="button" (click)="abrirModalLojas()">Selecionar lojas…</button>
-            <span class="muted" style="white-space: nowrap;">
-              —
-              {{
-                lojasSelecionadasIds().length === 0
-                  ? 'nenhuma selecionada'
-                  : (lojasSelecionadasIds().length === 1
-                      ? '1 selecionada'
-                      : lojasSelecionadasIds().length + ' selecionadas')
-              }}
-            </span>
-          </div>
+        <!-- Linha 4: vínculos já existentes -->
+        <div class="col-span-12 vinculos-grid">
+          <section class="vinculo-box">
+            <div class="vinculo-head">
+              <div>
+                <span class="vinculo-title">Lojas vinculadas</span>
+                <small>{{ lojasSelecionadasIds().length || 0 }} selecionada(s)</small>
+              </div>
+              <button class="btn" type="button" (click)="abrirModalLojas()">Alterar lojas</button>
+            </div>
 
-          <!-- Cores -->
-          <div style="display:flex;align-items:center;gap:8px;">
-            <button class="btn" type="button" (click)="abrirModalCores()">Selecionar cores…</button>
-            <span class="muted" style="white-space: nowrap;">
-              —
-              {{
-                coresSelecionadasIds().length === 0
-                  ? 'nenhuma selecionada'
-                  : (coresSelecionadasIds().length === 1
-                      ? '1 selecionada'
-                      : coresSelecionadasIds().length + ' selecionadas')
-              }}
-            </span>
-          </div>
+            <div class="chips" *ngIf="lojasSelecionadasResumo().length > 0; else semLojasTpl">
+              <span class="chip" *ngFor="let loja of lojasSelecionadasResumo()">{{ loja }}</span>
+            </div>
+            <ng-template #semLojasTpl>
+              <div class="empty-inline">Nenhuma loja selecionada.</div>
+            </ng-template>
+          </section>
+
+          <section class="vinculo-box">
+            <div class="vinculo-head">
+              <div>
+                <span class="vinculo-title">Cores vinculadas</span>
+                <small>{{ coresSelecionadasIds().length || 0 }} selecionada(s)</small>
+              </div>
+              <button class="btn" type="button" (click)="abrirModalCores()">Incluir/remover cores</button>
+            </div>
+
+            <div class="chips" *ngIf="coresSelecionadasResumo().length > 0; else semCoresTpl">
+              <span class="chip" *ngFor="let cor of coresSelecionadasResumo()">{{ cor }}</span>
+            </div>
+            <ng-template #semCoresTpl>
+              <div class="empty-inline">Nenhuma cor selecionada.</div>
+            </ng-template>
+          </section>
         </div>
       </div>
 
