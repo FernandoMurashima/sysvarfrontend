@@ -1,1 +1,526 @@
-.reports-page{height:calc(100vh - 78px);overflow:auto;background:#eef2f7;padding:14px;color:#111827;display:grid;gap:12px}.reports-header{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:14px}.reports-header span{font-size:12px;text-transform:uppercase;color:#64748b;font-weight:700}.reports-header h2{margin:2px 0 0;font-size:26px}.btn{padding:9px 13px;border:1px solid #d1d5db;background:#fff;border-radius:8px;cursor:pointer}.btn.primary{background:#111827;color:#fff;border-color:#111827}.btn:disabled{background:#94a3b8;border-color:#94a3b8;cursor:not-allowed}.filters{display:grid;grid-template-columns:1.4fr 1.4fr repeat(2, minmax(130px,.6fr));gap:10px;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:12px}.filters label{display:grid;gap:5px;font-size:12px;color:#475569;font-weight:700}input,select{padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#111827}.alert{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:10px}.kpis{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:10px}.kpis div{display:grid;gap:6px;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:13px}.kpis span{font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700}.kpis strong{font-size:22px}.kpis div:first-child strong{font-size:30px}.report-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;align-items:start}.panel{background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:12px;display:grid;gap:10px}.panel-title{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #e5e7eb;padding-bottom:8px}.panel-title h3{margin:0;font-size:18px}.panel-title span,.empty{color:#64748b}.seller-row{display:grid;grid-template-columns:1fr 1.2fr 110px;gap:10px;align-items:center;border-bottom:1px solid #f1f5f9;padding:9px 0}.seller-row:last-child,.rank-row:last-child,.collection-row:last-child{border-bottom:0}.seller-info{display:grid;gap:3px}.seller-info span,.collection-row span,.rank-row small{color:#64748b;font-size:12px}.bar-cell{display:grid;gap:5px}.bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:#2563eb;border-radius:999px}.commission{display:grid;gap:3px;text-align:right}.commission span{font-size:12px;color:#64748b}.rank-row{display:grid;grid-template-columns:32px 1fr auto;gap:9px;align-items:center;border-bottom:1px solid #f1f5f9;padding:9px 0}.rank{display:grid;place-items:center;width:28px;height:28px;background:#f1f5f9;border-radius:8px;font-weight:700}.rank-row div{display:grid;gap:4px}.collection-row{display:grid;grid-template-columns:1fr 150px;gap:10px;align-items:center;border-bottom:1px solid #f1f5f9;padding:9px 0}.collection-row>div:first-child{display:grid;gap:3px}.collection-meter{display:grid;gap:5px;text-align:right}@media(max-width:1180px){.filters,.kpis,.report-grid{grid-template-columns:1fr}.seller-row,.rank-row,.collection-row{grid-template-columns:1fr}.commission,.collection-meter{text-align:left}}
+.reports-page {
+  background: #eef2f7;
+  color: #111827;
+  display: grid;
+  /* AJUSTE ALTURA GERAL: espaco entre cabecalho, filtros, indicadores, abas e resultado */
+  gap: 3px;
+  height: calc(100vh - 78px);
+  overflow: auto;
+  /* AJUSTE ALTURA GERAL: margem interna da tela toda */
+  padding: 4px;
+}
+
+.reports-page.reports-fullscreen {
+  height: 100vh;
+  inset: 0;
+  /* AJUSTE ALTURA GERAL EM TELA CHEIA */
+  padding: 4px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.reports-header,
+.filters,
+.kpis,
+.report-tabs,
+.panel {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.reports-header {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  /* AJUSTE CABECALHO: diminua/aumente a altura da barra superior */
+  min-height: 24px;
+  /* AJUSTE CABECALHO: padding vertical controla muito a altura */
+  padding: 2px 6px;
+}
+
+.reports-header > div:first-child {
+  grid-column: 2;
+  text-align: center;
+}
+
+.reports-header h2 {
+  /* AJUSTE CABECALHO: tamanho do titulo "Consulta de vendas" */
+  font-size: 12px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+  grid-column: 3;
+  justify-content: flex-end;
+}
+
+.btn {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  cursor: pointer;
+  /* AJUSTE BOTOES TOPO: altura dos botoes Tela cheia e Atualizar */
+  font-size: 11px;
+  min-height: 10px;
+  /* AJUSTE BOTOES TOPO: padding vertical tambem altera a altura */
+  padding: 1px 3px;
+  white-space: nowrap;
+}
+
+.btn.primary {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
+.btn:disabled {
+  background: #94a3b8;
+  border-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.filters {
+  display: grid;
+  /* AJUSTE FILTROS: espaco entre Loja, Vendedor, De, Ate */
+  gap: 4px;
+  grid-template-columns: 1.4fr 1.4fr repeat(2, minmax(130px, .6fr));
+  /* AJUSTE FILTROS: padding vertical controla a altura da barra de filtros */
+  padding: 2px 5px;
+}
+
+.filters label {
+  color: #475569;
+  display: grid;
+  /* AJUSTE FILTROS: tamanho do texto "Loja", "Vendedor", "De", "Ate" */
+  font-size: 9px;
+  font-weight: 700;
+  /* AJUSTE FILTROS: distancia entre label e campo */
+  gap: 2px;
+}
+
+input,
+select {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #111827;
+  /* AJUSTE CAMPOS FILTRO: tamanho do texto dentro dos campos */
+  font-size: 11px;
+  /* AJUSTE CAMPOS FILTRO: altura dos selects e datas */
+  min-height: 18px;
+  /* AJUSTE CAMPOS FILTRO: padding vertical influencia a altura final */
+  padding: 0 5px;
+}
+
+.alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #991b1b;
+  padding: 5px 8px;
+}
+
+.kpis {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(8, minmax(110px, 1fr));
+  overflow: hidden;
+}
+
+.kpis div {
+  border-right: 1px solid #e5e7eb;
+  display: grid;
+  /* AJUSTE INDICADORES: distancia entre legenda e valor */
+  gap: 1px;
+  /* AJUSTE INDICADORES: altura do bloco Total vendido, Vendas, Itens etc. */
+  min-height: 24px;
+  /* AJUSTE INDICADORES: padding vertical controla a altura */
+  padding: 2px 5px;
+}
+
+.kpis div:last-child {
+  border-right: 0;
+}
+
+.kpis span {
+  color: #64748b;
+  /* AJUSTE INDICADORES: tamanho da legenda dos cards */
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.kpis strong {
+  /* AJUSTE INDICADORES: tamanho dos valores */
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.kpis div:first-child strong {
+  /* AJUSTE INDICADORES: valor do primeiro card, Total vendido */
+  font-size: 12px;
+}
+
+.report-tabs {
+  display: grid;
+  /* AJUSTE ABAS: distancia entre botoes Por loja, Por vendedor etc. */
+  gap: 3px;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  /* AJUSTE ABAS: padding da barra de botoes */
+  padding: 2px;
+}
+
+.report-tabs button {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  color: #334155;
+  cursor: pointer;
+  /* AJUSTE ABAS: tamanho do texto dos botoes */
+  font-size: 11px;
+  font-weight: 700;
+  /* AJUSTE ABAS: altura dos botoes de consulta */
+  min-height: 19px;
+  /* AJUSTE ABAS: padding vertical dos botoes */
+  padding: 0 5px;
+}
+
+.report-tabs button.active {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
+.report-focus {
+  display: grid;
+}
+
+.panel {
+  display: grid;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.panel-title {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-bottom: 3px;
+}
+
+.panel-title h3 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.panel-title span,
+.empty,
+.seller-info span,
+.collection-row span,
+.rank-row small {
+  color: #64748b;
+}
+
+.seller-row,
+.rank-row,
+.collection-row {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.seller-row:last-child,
+.rank-row:last-child,
+.collection-row:last-child {
+  border-bottom: 0;
+}
+
+.seller-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 140px;
+}
+
+.seller-info {
+  display: grid;
+  gap: 3px;
+}
+
+.bar-cell {
+  display: grid;
+  gap: 5px;
+}
+
+.bar {
+  background: #e5e7eb;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.bar i {
+  background: #2563eb;
+  border-radius: 999px;
+  display: block;
+  height: 100%;
+}
+
+.commission {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+}
+
+.commission span,
+.collection-row span,
+.rank-row small {
+  font-size: 12px;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+}
+
+.rank {
+  background: #f1f5f9;
+  border-radius: 6px;
+  display: grid;
+  font-weight: 700;
+  height: 26px;
+  place-items: center;
+  width: 26px;
+}
+
+.rank-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.collection-row {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+}
+
+.collection-row > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.collection-row.clickable {
+  border-radius: 6px;
+  cursor: pointer;
+  padding-left: 7px;
+  padding-right: 7px;
+}
+
+.collection-row.clickable:hover,
+.collection-row.clickable.selected {
+  background: #eff6ff;
+}
+
+.collection-meter {
+  display: grid;
+  gap: 5px;
+  text-align: right;
+}
+
+.sub-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 9px;
+}
+
+.report-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.report-table th,
+.report-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 5px 7px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.report-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-table td {
+  font-size: 12px;
+}
+
+.report-table td:first-child {
+  width: 34%;
+}
+
+.report-table th:nth-child(n+2),
+.report-table td:nth-child(n+2) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.report-table td:not(:first-child),
+.report-table th:not(:first-child) {
+  white-space: nowrap;
+}
+
+.report-table td:first-child strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-table .clickable-row {
+  cursor: pointer;
+}
+
+.report-table .clickable-row:hover,
+.report-table .clickable-row.selected {
+  background: #eff6ff;
+}
+
+@media (max-width: 1180px) {
+  .filters,
+  .kpis,
+  .report-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-header {
+    align-items: stretch;
+    flex-direction: column;
+    display: flex;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+  }
+
+  .seller-row,
+  .rank-row,
+  .collection-row {
+    grid-template-columns: 1fr;
+  }
+
+  .commission,
+  .collection-meter {
+    text-align: left;
+  }
+}
+
+/* AJUSTE RADICAL ALTURA: bloco final sobrescreve as regras acima */
+.reports-page {
+  align-content: start;
+  gap: 5px;
+  grid-auto-rows: max-content;
+  padding: 6px;
+}
+
+.reports-page.reports-fullscreen {
+  padding: 6px;
+}
+
+.reports-header {
+  height: 28px;
+  min-height: 28px;
+  padding: 3px 8px;
+}
+
+.reports-header h2 {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.header-actions {
+  gap: 5px;
+}
+
+.btn {
+  border-radius: 4px;
+  font-size: 11px;
+  height: 22px;
+  line-height: 1;
+  min-height: 22px;
+  padding: 0 7px;
+}
+
+.filters {
+  align-items: end;
+  gap: 6px;
+  padding: 5px 7px;
+}
+
+.filters label {
+  font-size: 10px;
+  gap: 2px;
+}
+
+input,
+select {
+  border-radius: 4px;
+  font-size: 11px;
+  height: 22px;
+  line-height: 1;
+  min-height: 22px;
+  padding: 0 6px;
+}
+
+.kpis div {
+  gap: 2px;
+  height: 34px;
+  min-height: 34px;
+  padding: 4px 6px;
+}
+
+.kpis span {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.kpis strong,
+.kpis div:first-child strong {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.report-tabs {
+  gap: 4px;
+  padding: 4px;
+}
+
+.report-tabs button {
+  border-radius: 4px;
+  font-size: 11px;
+  height: 24px;
+  line-height: 1;
+  min-height: 24px;
+  padding: 0 6px;
+}
+
+.report-focus {
+  align-content: start;
+}
+
+.report-table th,
+.report-table td {
+  padding: 5px 6px;
+}

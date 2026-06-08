@@ -98,9 +98,11 @@ export class ShellComponent {
       label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'],
       children: [
         { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles },
-        { label: 'Relatórios de vendas' , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles },
+        { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles },
+        { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles },
+        { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles },
         { label: 'Nota Fiscal'          , link: '/vendas/nota',       icon: 'bi bi-cash',                   roles: this.vendasGestaoRoles },
-        { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles },
+        { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles },
         { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles },
       ]
     },
@@ -164,15 +166,28 @@ export class ShellComponent {
 
   focusMode = false;
   currentPageTitle = 'Home';
+  telaCheia = false;
 
   constructor() {
     this.applyRouteState(this.router.url);
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe(event => this.applyRouteState(event.urlAfterRedirects));
+
+    document.addEventListener('fullscreenchange', () => {
+      this.telaCheia = !!document.fullscreenElement;
+    });
   }
 
   toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; }
+
+  alternarTelaCheia() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+      return;
+    }
+    document.exitFullscreen?.();
+  }
 
   sair() {
     this.auth.clearToken();

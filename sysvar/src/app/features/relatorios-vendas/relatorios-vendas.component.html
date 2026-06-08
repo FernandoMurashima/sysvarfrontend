@@ -1,17 +1,21 @@
-<section class="reports-page">
+<section class="reports-page" [class.reports-fullscreen]="telaCheia">
   <header class="reports-header">
     <div>
-      <span>Relatórios</span>
-      <h2>Vendas</h2>
+      <h2>Consulta de vendas</h2>
     </div>
-    <button class="btn primary" type="button" (click)="carregar()" [disabled]="loading">
-      {{ loading ? 'Atualizando...' : 'Atualizar' }}
-    </button>
+    <div class="header-actions">
+      <button class="btn" type="button" (click)="alternarTelaCheia()">
+        {{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}
+      </button>
+      <button class="btn primary" type="button" (click)="carregar()" [disabled]="loading">
+        {{ loading ? 'Atualizando...' : 'Atualizar' }}
+      </button>
+    </div>
   </header>
 
   <div class="filters">
     <label>Loja
-      <select [(ngModel)]="lojaId">
+      <select [(ngModel)]="lojaId" (ngModelChange)="onLojaChange()">
         <option [ngValue]="null">Todas</option>
         <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
       </select>
@@ -19,7 +23,7 @@
     <label>Vendedor
       <select [(ngModel)]="vendedorId">
         <option [ngValue]="null">Todos</option>
-        <option *ngFor="let vendedor of vendedores" [ngValue]="vendedor.id">{{ vendedor.nomefuncionario }}</option>
+        <option *ngFor="let vendedor of vendedoresFiltrados" [ngValue]="vendedor.id">{{ vendedor.nomefuncionario }}</option>
       </select>
     </label>
     <label>De
@@ -39,63 +43,238 @@
       <div><span>Itens vendidos</span><strong>{{ r.resumo.itens }}</strong></div>
       <div><span>Ticket médio</span><strong>{{ r.resumo.ticket_medio | currency:'BRL' }}</strong></div>
       <div><span>Comissão total</span><strong>{{ r.resumo.comissao_total | currency:'BRL' }}</strong></div>
+      <div><span>Descontos</span><strong>{{ r.resumo.descontos | currency:'BRL' }}</strong></div>
+      <div><span>Cashback gerado</span><strong>{{ r.resumo.cashback_gerado | currency:'BRL' }}</strong></div>
+      <div><span>Cashback usado</span><strong>{{ r.resumo.cashback_usado | currency:'BRL' }}</strong></div>
     </section>
 
-    <section class="report-grid">
-      <article class="panel seller-panel">
+    <nav class="report-tabs">
+      <button type="button" [class.active]="abaAtiva === 'lojas'" (click)="selecionarAba('lojas')">Por loja</button>
+      <button type="button" [class.active]="abaAtiva === 'vendedores'" (click)="selecionarAba('vendedores')">Por vendedor</button>
+      <button type="button" [class.active]="abaAtiva === 'pagamentos'" (click)="selecionarAba('pagamentos')">Pagamento</button>
+      <button type="button" [class.active]="abaAtiva === 'produtos'" (click)="selecionarAba('produtos')">Produtos</button>
+      <button type="button" [class.active]="abaAtiva === 'colecoes'" (click)="selecionarAba('colecoes')">Coleção</button>
+      <button type="button" [class.active]="abaAtiva === 'grupos'" (click)="selecionarAba('grupos')">Grupo/Subgrupo</button>
+    </nav>
+
+    <section class="report-focus">
+      <article class="panel" *ngIf="abaAtiva === 'lojas'">
+        <div class="panel-title">
+          <h3>Venda por loja</h3>
+          <span>{{ r.lojas.length }} loja(s)</span>
+        </div>
+        <div class="empty" *ngIf="!r.lojas.length">Nenhuma loja encontrada.</div>
+        <table class="report-table" *ngIf="r.lojas.length">
+          <thead>
+            <tr>
+              <th>Loja</th>
+              <th>Vendas</th>
+              <th>Itens</th>
+              <th>Ticket médio</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let loja of r.lojas">
+              <td><strong>{{ loja.loja }}</strong></td>
+              <td>{{ loja.vendas }}</td>
+              <td>{{ loja.itens }}</td>
+              <td>{{ loja.ticket_medio | currency:'BRL' }}</td>
+              <td>{{ loja.total | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel seller-panel" *ngIf="abaAtiva === 'vendedores'">
         <div class="panel-title">
           <h3>Venda por vendedor</h3>
           <span>{{ r.vendedores.length }} vendedor(es)</span>
         </div>
         <div class="empty" *ngIf="!r.vendedores.length">Nenhuma venda encontrada.</div>
-        <div class="seller-row" *ngFor="let vendedor of r.vendedores">
-          <div class="seller-info">
-            <strong>{{ vendedor.vendedor }}</strong>
-            <span>{{ vendedor.vendas }} venda(s) · {{ vendedor.itens }} item(ns)</span>
-          </div>
-          <div class="bar-cell">
-            <div class="bar"><i [style.width.%]="percent(vendedor.total, maxVendedor())"></i></div>
-            <strong>{{ vendedor.total | currency:'BRL' }}</strong>
-          </div>
-          <div class="commission">
-            <span>Comissão {{ vendedor.comissao_percentual }}%</span>
-            <strong>{{ vendedor.comissao | currency:'BRL' }}</strong>
-          </div>
-        </div>
+        <table class="report-table" *ngIf="r.vendedores.length">
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th>Vendas</th>
+              <th>Itens</th>
+              <th>Ticket médio</th>
+              <th>Total</th>
+              <th>Comissão %</th>
+              <th>Comissão</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let vendedor of r.vendedores">
+              <td><strong>{{ vendedor.vendedor }}</strong></td>
+              <td>{{ vendedor.vendas }}</td>
+              <td>{{ vendedor.itens }}</td>
+              <td>{{ vendedor.ticket_medio | currency:'BRL' }}</td>
+              <td>{{ vendedor.total | currency:'BRL' }}</td>
+              <td>{{ vendedor.comissao_percentual }}%</td>
+              <td>{{ vendedor.comissao | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </article>
 
-      <article class="panel">
+      <article class="panel" *ngIf="abaAtiva === 'pagamentos'">
+        <div class="panel-title">
+          <h3>Formas de pagamento</h3>
+          <span>{{ r.pagamentos.length }} forma(s)</span>
+        </div>
+        <div class="empty" *ngIf="!r.pagamentos.length">Nenhum pagamento encontrado.</div>
+        <table class="report-table" *ngIf="r.pagamentos.length">
+          <thead>
+            <tr>
+              <th>Forma</th>
+              <th>Código</th>
+              <th>Vendas</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pagamento of r.pagamentos">
+              <td><strong>{{ pagamento.descricao || pagamento.forma }}</strong></td>
+              <td>{{ pagamento.forma }}</td>
+              <td>{{ pagamento.vendas }}</td>
+              <td>{{ pagamento.total | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel" *ngIf="abaAtiva === 'produtos'">
         <div class="panel-title">
           <h3>Produtos mais vendidos</h3>
           <span>Top {{ r.produtos.length }}</span>
         </div>
         <div class="empty" *ngIf="!r.produtos.length">Nenhum produto encontrado.</div>
-        <div class="rank-row" *ngFor="let produto of r.produtos; let i = index">
-          <span class="rank">{{ i + 1 }}</span>
-          <div>
-            <strong>{{ produto.produto }}</strong>
-            <small>{{ produto.referencia || 'Sem referência' }} · {{ produto.quantidade }} un.</small>
-            <div class="bar"><i [style.width.%]="percent(produto.total, maxProduto())"></i></div>
-          </div>
-          <strong>{{ produto.total | currency:'BRL' }}</strong>
-        </div>
+        <table class="report-table" *ngIf="r.produtos.length">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Coleção</th>
+              <th>Grupo</th>
+              <th>Subgrupo</th>
+              <th>Referência</th>
+              <th>Quantidade</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let produto of r.produtos">
+              <td><strong>{{ produto.produto }}</strong></td>
+              <td>{{ produto.colecao }}</td>
+              <td>{{ produto.grupo }}</td>
+              <td>{{ produto.subgrupo }}</td>
+              <td>{{ produto.referencia || 'Sem referência' }}</td>
+              <td>{{ produto.quantidade }}</td>
+              <td>{{ produto.total | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </article>
 
-      <article class="panel">
+      <article class="panel" *ngIf="abaAtiva === 'colecoes'">
         <div class="panel-title">
           <h3>Venda por coleção</h3>
           <span>{{ r.colecoes.length }} coleção(ões)</span>
         </div>
         <div class="empty" *ngIf="!r.colecoes.length">Nenhuma coleção encontrada.</div>
-        <div class="collection-row" *ngFor="let colecao of r.colecoes">
-          <div>
-            <strong>{{ colecao.colecao }}</strong>
-            <span>{{ colecao.quantidade }} item(ns)</span>
+        <table class="report-table" *ngIf="r.colecoes.length">
+          <thead>
+            <tr>
+              <th>Coleção</th>
+              <th>Quantidade</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="clickable-row" *ngFor="let colecao of r.colecoes" [class.selected]="colecaoSelecionada === colecao.colecao" (click)="selecionarColecao(colecao.colecao)">
+              <td><strong>{{ colecao.colecao }}</strong></td>
+              <td>{{ colecao.quantidade }}</td>
+              <td>{{ colecao.total | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="sub-panel" *ngIf="colecaoSelecionada">
+          <div class="panel-title">
+            <h3>Produtos da coleção {{ colecaoSelecionada }}</h3>
+            <span>{{ produtosDaColecao.length }} produto(s)</span>
           </div>
-          <div class="collection-meter">
-            <div class="bar"><i [style.width.%]="percent(colecao.total, maxColecao())"></i></div>
-            <strong>{{ colecao.total | currency:'BRL' }}</strong>
+          <div class="empty" *ngIf="!produtosDaColecao.length">Nenhum produto encontrado para esta coleção.</div>
+          <table class="report-table" *ngIf="produtosDaColecao.length">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Grupo</th>
+                <th>Subgrupo</th>
+                <th>Referência</th>
+                <th>Quantidade</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let produto of produtosDaColecao">
+                <td><strong>{{ produto.produto }}</strong></td>
+                <td>{{ produto.grupo }}</td>
+                <td>{{ produto.subgrupo }}</td>
+                <td>{{ produto.referencia || 'Sem referência' }}</td>
+                <td>{{ produto.quantidade }}</td>
+                <td>{{ produto.total | currency:'BRL' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel" *ngIf="abaAtiva === 'grupos'">
+        <div class="panel-title">
+          <h3>Venda por grupo</h3>
+          <span>Clique em um grupo para abrir os subgrupos</span>
+        </div>
+        <div class="empty" *ngIf="!r.grupos.length">Nenhum grupo encontrado.</div>
+        <table class="report-table" *ngIf="r.grupos.length">
+          <thead>
+            <tr>
+              <th>Grupo</th>
+              <th>Quantidade</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="clickable-row" *ngFor="let grupo of r.grupos" [class.selected]="grupoSelecionado === grupo.grupo" (click)="selecionarGrupo(grupo.grupo)">
+              <td><strong>{{ grupo.grupo }}</strong></td>
+              <td>{{ grupo.quantidade }}</td>
+              <td>{{ grupo.total | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="sub-panel" *ngIf="grupoSelecionado">
+          <div class="panel-title">
+            <h3>Subgrupos de {{ grupoSelecionado }}</h3>
+            <span>{{ subgruposDoGrupo.length }} subgrupo(s)</span>
           </div>
+          <div class="empty" *ngIf="!subgruposDoGrupo.length">Nenhum subgrupo encontrado para este grupo.</div>
+          <table class="report-table" *ngIf="subgruposDoGrupo.length">
+            <thead>
+              <tr>
+                <th>Subgrupo</th>
+                <th>Quantidade</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let subgrupo of subgruposDoGrupo">
+                <td><strong>{{ subgrupo.subgrupo }}</strong></td>
+                <td>{{ subgrupo.quantidade }}</td>
+                <td>{{ subgrupo.total | currency:'BRL' }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </article>
     </section>

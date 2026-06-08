@@ -1,1 +1,301 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* ===== Sysvar layout unificado ===== */
+:root {
+  --sys-bg: #f1f5f9;
+  --sys-surface: #ffffff;
+  --sys-surface-soft: #f8fafc;
+  --sys-border: #d7dee8;
+  --sys-border-soft: #e2e8f0;
+  --sys-text: #0f172a;
+  --sys-muted: #64748b;
+  --sys-primary: #0f172a;
+  --sys-danger: #b91c1c;
+  --sys-radius: 8px;
+  --sys-gap: 10px;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--sys-bg);
+  color: var(--sys-text);
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.clientes-page,
+.grupos-page,
+.pc-page,
+.financeiro-page,
+.estoque-page,
+.nfe-page,
+.cashback-page,
+.promocoes-page,
+.returns-page {
+  min-height: calc(100vh - 68px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--sys-gap) !important;
+  padding: 8px !important;
+  color: var(--sys-text) !important;
+}
+
+body .clientes-page,
+body .grupos-page,
+body .pc-page,
+body .financeiro-page,
+body .estoque-page,
+body .nfe-page,
+body .cashback-page,
+body .promocoes-page,
+body .returns-page {
+  border: 0 !important;
+  border-style: none !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.toolbar,
+.page-head,
+.reports-header,
+.pdv-topbar {
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 6px 10px !important;
+  border: 1px solid var(--sys-border) !important;
+  border-radius: var(--sys-radius) !important;
+  background: var(--sys-surface) !important;
+  color: var(--sys-text) !important;
+}
+
+.toolbar h2,
+.page-head h2,
+.reports-header h2,
+.pdv-topbar h2 {
+  margin: 0 !important;
+  font-size: 16px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+}
+
+.toolbar span,
+.page-head span,
+.reports-header span,
+.pdv-topbar span,
+.panel-head span {
+  color: var(--sys-muted) !important;
+  font-size: 12px !important;
+}
+
+.toolbar-actions,
+.toolbar-right,
+.head-actions,
+.header-actions,
+.actions,
+.form-actions,
+.quick-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+  gap: 7px !important;
+}
+
+.panel,
+.card,
+.list-panel,
+.sale-panel,
+.done-panel,
+.search-panel,
+.config-panel,
+.statement-panel,
+.matrix-panel,
+.filters,
+.kpis,
+.report-tabs {
+  border: 1px solid var(--sys-border) !important;
+  border-radius: var(--sys-radius) !important;
+  background: var(--sys-surface) !important;
+}
+
+.panel,
+.card,
+.list-panel,
+.sale-panel,
+.done-panel,
+.search-panel,
+.config-panel,
+.statement-panel,
+.matrix-panel {
+  padding: 10px !important;
+}
+
+label {
+  color: #334155;
+  font-size: 12px;
+}
+
+input,
+select,
+textarea {
+  min-height: 30px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 5px 8px !important;
+  background: #fff !important;
+  color: var(--sys-text) !important;
+  font: inherit !important;
+  font-size: 13px !important;
+}
+
+textarea {
+  min-height: 72px !important;
+}
+
+.btn,
+button.btn,
+.btn-toggle {
+  min-height: 30px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: var(--sys-text) !important;
+  padding: 5px 10px !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  cursor: pointer !important;
+}
+
+.btn.primary,
+button.btn.primary {
+  background: var(--sys-primary) !important;
+  border-color: var(--sys-primary) !important;
+  color: #fff !important;
+}
+
+.btn.danger,
+button.btn.danger {
+  background: #fff !important;
+  border-color: #fecaca !important;
+  color: var(--sys-danger) !important;
+}
+
+.btn.sm {
+  min-height: 26px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+
+.btn:disabled,
+button:disabled {
+  opacity: .55 !important;
+  cursor: not-allowed !important;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #94a3b8;
+  color: #fff;
+  font-size: 12px;
+}
+
+.badge-ok {
+  background: #16a34a;
+}
+
+.badge-off {
+  background: #64748b;
+}
+
+.alert {
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+}
+
+.alert.error {
+  border: 1px solid #fecaca !important;
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.alert.success {
+  border: 1px solid #bbf7d0 !important;
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.table-wrapper,
+.table-wrap {
+  width: 100% !important;
+  overflow: auto !important;
+  border: 1px solid var(--sys-border-soft) !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+}
+
+table,
+.table,
+.returns-table,
+.sales-table,
+.report-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--sys-border-soft) !important;
+  padding: 6px 8px !important;
+  vertical-align: middle !important;
+}
+
+th {
+  background: var(--sys-surface-soft) !important;
+  color: #334155 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+td.actions,
+th.actions {
+  white-space: nowrap !important;
+}
+
+td.actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+}
+
+td.actions .btn,
+td.actions button {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}

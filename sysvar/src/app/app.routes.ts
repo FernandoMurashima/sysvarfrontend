@@ -38,6 +38,9 @@ import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/
 import { EstoqueInventarioComponent } from './features/estoque-inventario/estoque-inventario.component';
 import { PdvComponent } from './features/pdv/pdv.component';
 import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatorios-vendas.component';
+import { CashbackComponent } from './features/cashback/cashback.component';
+import { PromocoesComponent } from './features/promocoes/promocoes.component';
+import { DevolucoesVendasComponent } from './features/devolucoes-vendas/devolucoes-vendas.component';
 
 
 
@@ -69,6 +72,9 @@ export const routes: Routes = [
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
       { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'] } },
       { path: 'vendas/relatorios', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'] } },
+      { path: 'vendas/cashback', component: CashbackComponent, data: { roles: ['Diretor', 'Gerente'] } },
+      { path: 'vendas/promocoes', component: PromocoesComponent, data: { roles: ['Diretor', 'Gerente'] } },
+      { path: 'vendas/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'] } },
       { path: 'relatorios/vendas', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'vendas/tabelas', component: TabelaprecoComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'fiscal/ncm', component: NcmsComponent, data: { roles: ['Diretor', 'Gerente'] } },

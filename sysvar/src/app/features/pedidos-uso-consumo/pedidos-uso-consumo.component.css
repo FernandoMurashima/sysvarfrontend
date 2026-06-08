@@ -74,36 +74,84 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .field-error { color:#b91c1c; font-size:12px; min-height:16px; }
 
-.quick-product-lookup {
-  grid-column: 1 / -1;
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #eef6fb;
-}
-.lookup-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-.lookup-toggle input {
-  width: auto;
-}
-.lookup-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+.itens-grid {
+  grid-template-columns: minmax(420px, 1fr) 118px 136px 136px 136px;
   align-items: start;
 }
-.lookup-body select {
-  grid-column: 1 / -1;
-  min-height: 148px;
+
+.itens-grid .input-item {
+  grid-column: auto !important;
 }
-.lookup-body .btn.primary {
-  justify-self: start;
+
+.itens-grid input {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 5px 8px !important;
+  border-width: 1px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.itens-grid input:focus {
+  height: 32px !important;
+  min-height: 32px !important;
+  border-width: 1px !important;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, .08) !important;
+  transform: none !important;
+}
+
+.numeric-entry input {
+  text-align: right;
+}
+
+.product-entry {
+  position: relative;
+}
+
+.product-suggestions {
+  position: absolute;
+  z-index: 30;
+  top: 54px;
+  left: 0;
+  right: 0;
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .16);
+}
+
+.suggestion-item {
+  width: 100%;
+  min-height: 36px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #edf2f7 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  text-align: left;
+}
+
+.suggestion-item:hover {
+  background: #f1f5f9 !important;
+}
+
+.suggestion-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-item span {
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* Ações (botões) */
@@ -145,9 +193,10 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 }
 @media (max-width: 900px) {
   .toolbar-right input { width: 320px; max-width: 56vw; }
-  .lookup-body { grid-template-columns: 1fr; }
+  .itens-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 700px){
   .grid-12 { grid-template-columns:1fr; }
+  .itens-grid { grid-template-columns: 1fr; }
   .toolbar-right input { min-width:200px; }
 }

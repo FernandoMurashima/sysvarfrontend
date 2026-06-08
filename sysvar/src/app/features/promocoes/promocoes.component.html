@@ -1,0 +1,165 @@
+<div class="promocoes-page">
+  <header class="toolbar">
+    <div>
+      <h2>Promoções</h2>
+      <span>Regras comerciais aplicadas ao PDV</span>
+    </div>
+    <button class="btn" type="button" (click)="novo()">Nova promoção</button>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="grid">
+    <form class="panel form-panel" (ngSubmit)="salvar()">
+      <div class="panel-head">
+        <span>{{ editingId ? 'Editando' : 'Nova regra' }}</span>
+        <strong>{{ form.ativo ? 'Ativa' : 'Inativa' }}</strong>
+      </div>
+
+      <label>Nome
+        <input type="text" [(ngModel)]="form.nome" name="nome" />
+      </label>
+
+      <div class="row">
+        <label>Tipo
+          <select [(ngModel)]="form.tipo" name="tipo">
+            <option *ngFor="let tipo of tipos" [ngValue]="tipo.value">{{ tipo.label }}</option>
+          </select>
+        </label>
+        <label>Valor
+          <input type="number" min="0" step="0.01" [(ngModel)]="form.valor" name="valor" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Início
+          <input type="date" [(ngModel)]="form.data_inicio" name="data_inicio" />
+        </label>
+        <label>Fim
+          <input type="date" [(ngModel)]="form.data_fim" name="data_fim" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Escopo
+          <select [(ngModel)]="form.escopo" name="escopo" (ngModelChange)="alterarEscopo()">
+            <option *ngFor="let escopo of escopos" [ngValue]="escopo.value">{{ escopo.label }}</option>
+          </select>
+        </label>
+        <label>Prioridade
+          <input type="number" min="1" step="1" [(ngModel)]="form.prioridade" name="prioridade" />
+        </label>
+      </div>
+
+      <div class="checks">
+        <label><input type="checkbox" [(ngModel)]="form.ativo" name="ativo" /> Promoção ativa</label>
+        <label><input type="checkbox" [(ngModel)]="form.acumula_cashback" name="acumula_cashback" /> Acumula cashback</label>
+      </div>
+
+      <label>Observação
+        <textarea rows="2" [(ngModel)]="form.observacao" name="observacao"></textarea>
+      </label>
+
+      <div class="chooser">
+        <span>Lojas participantes</span>
+        <label class="inline-check">
+          <input type="checkbox" [(ngModel)]="todasLojas" name="todasLojas" (ngModelChange)="alternarTodasLojas()" />
+          Todas as lojas
+        </label>
+        <div class="chips" *ngIf="!todasLojas">
+          <button type="button" class="chip" *ngFor="let loja of lojas" [class.selected]="selecionado('lojas', loja.id)" (click)="toggleLista('lojas', loja.id)">
+            {{ loja.nome_loja }}
+          </button>
+        </div>
+        <small *ngIf="!todasLojas">Selecione uma ou mais lojas para limitar a promoção.</small>
+      </div>
+
+      <div class="chooser" *ngIf="form.escopo === 'PRODUTO'">
+        <span>Produtos da promoção</span>
+        <div class="product-add-row">
+          <input type="text" placeholder="Buscar por descrição, referência ou código" [(ngModel)]="produtoBusca" name="produtoBusca" />
+          <select [(ngModel)]="produtoAdicionarId" name="produtoAdicionarId">
+            <option [ngValue]="null">Selecione um produto</option>
+            <option *ngFor="let produto of produtosBusca" [ngValue]="produto.Idproduto">
+              {{ produto.referencia || produto.Idproduto }} - {{ produto.descricao }}
+            </option>
+          </select>
+          <button class="btn" type="button" (click)="adicionarProduto()">Adicionar</button>
+        </div>
+        <div class="selected-list" *ngIf="produtosSelecionados.length; else semProdutosTpl">
+          <button type="button" class="selected-chip" *ngFor="let produto of produtosSelecionados" (click)="removerProduto(produto.Idproduto)">
+            <span>{{ produto.referencia || produto.Idproduto }} - {{ produto.descricao }}</span>
+            <strong>Remover</strong>
+          </button>
+        </div>
+        <ng-template #semProdutosTpl>
+          <small>Nenhum produto incluído.</small>
+        </ng-template>
+      </div>
+
+      <div class="chooser" *ngIf="form.escopo === 'GRUPO'">
+        <span>Grupos</span>
+        <div class="chips">
+          <button type="button" class="chip" *ngFor="let grupo of grupos" [class.selected]="selecionado('grupos', grupo.Idgrupo)" (click)="toggleLista('grupos', grupo.Idgrupo)">
+            {{ grupo.Descricao }}
+          </button>
+        </div>
+      </div>
+
+      <div class="chooser" *ngIf="form.escopo === 'SUBGRUPO'">
+        <span>Subgrupos</span>
+        <div class="chips">
+          <button type="button" class="chip" *ngFor="let subgrupo of subgrupos" [class.selected]="selecionado('subgrupos', subgrupo.Idsubgrupo)" (click)="toggleLista('subgrupos', subgrupo.Idsubgrupo)">
+            {{ subgrupo.Descricao }}
+          </button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" type="submit" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar promoção' }}</button>
+        <button class="btn" type="button" (click)="novo()">Limpar</button>
+      </div>
+    </form>
+
+    <section class="panel list-panel">
+      <div class="panel-head">
+        <span>Promoções cadastradas</span>
+        <strong>{{ promocoes.length }}</strong>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" *ngIf="promocoes.length; else emptyTpl">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Escopo</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Período</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let promocao of promocoes">
+              <td>{{ promocao.nome }}</td>
+              <td>{{ escopoLabel(promocao.escopo) }}</td>
+              <td>{{ tipoLabel(promocao.tipo) }}</td>
+              <td>{{ promocao.valor }}</td>
+              <td>{{ promocao.data_inicio | date:'dd/MM/yyyy' }} - {{ promocao.data_fim ? (promocao.data_fim | date:'dd/MM/yyyy') : 'sem fim' }}</td>
+              <td><span class="badge" [class.off]="!promocao.ativo">{{ promocao.ativo ? 'Ativa' : 'Inativa' }}</span></td>
+              <td class="row-actions">
+                <button class="btn sm" type="button" (click)="editar(promocao)">Editar</button>
+                <button class="btn sm danger" type="button" (click)="excluir(promocao)">Excluir</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #emptyTpl>
+          <div class="empty">{{ loading ? 'Carregando...' : 'Nenhuma promoção cadastrada.' }}</div>
+        </ng-template>
+      </div>
+    </section>
+  </section>
+</div>

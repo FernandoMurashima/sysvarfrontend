@@ -33,6 +33,7 @@
         <div><span>Total</span><strong>{{ cupom.total | currency:'BRL' }}</strong></div>
         <div><span>Recebido</span><strong>{{ cupom.valor_recebido | currency:'BRL' }}</strong></div>
         <div><span>Troco</span><strong>{{ cupom.troco | currency:'BRL' }}</strong></div>
+        <div><span>Cashback gerado</span><strong>{{ cupom.cashback_gerado | currency:'BRL' }}</strong></div>
       </div>
 
       <div class="done-actions">
@@ -78,6 +79,8 @@
           <div *ngFor="let pagamento of cupom.pagamentos"><span>{{ pagamento.descricao }}</span><strong>{{ pagamento.valor | currency:'BRL' }}</strong></div>
           <div><span>Recebido</span><strong>{{ cupom.valor_recebido | currency:'BRL' }}</strong></div>
           <div><span>Troco</span><strong>{{ cupom.troco | currency:'BRL' }}</strong></div>
+          <div *ngIf="valorCupom(cupom.cashback_usado) > 0"><span>Cashback usado</span><strong>{{ cupom.cashback_usado | currency:'BRL' }}</strong></div>
+          <div *ngIf="valorCupom(cupom.cashback_gerado) > 0"><span>Cashback gerado</span><strong>{{ cupom.cashback_gerado | currency:'BRL' }}</strong></div>
         </div>
         <div class="cupom-fiscal">
           <strong>NFC-e {{ cupom.nfce.serie }}/{{ cupom.nfce.numero }} - {{ cupom.nfce.status }}</strong>
@@ -138,7 +141,7 @@
       <div class="start-grid sale-start-grid">
         <label class="cliente-start">Cliente
           <div class="cliente-select-row">
-            <select [(ngModel)]="clienteId"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
+            <select [(ngModel)]="clienteId" (ngModelChange)="carregarSaldoCashback()"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
             <button class="btn" type="button" (click)="abrirCadastroCliente()">Novo</button>
           </div>
         </label>
@@ -213,6 +216,7 @@
             <span class="ref">Último item lançado</span>
             <h3>{{ selecionado.produto.descricao }}</h3>
             <strong>{{ selecionado.preco | currency:'BRL' }}</strong>
+            <small *ngIf="selecionado.promocao">Promoção: {{ selecionado.promocao.nome }}</small>
             <div class="scanned-details" *ngIf="skuSelecionado">
               <div><span>EAN</span><strong>{{ skuSelecionado.ean13 }}</strong></div>
               <div><span>Cor</span><strong>{{ corNome(skuSelecionado.idcor) }}</strong></div>
@@ -237,6 +241,8 @@
         <div><span>Cliente</span><strong>{{ clienteNome(clienteId) }}</strong></div>
         <div><span>Vendedor</span><strong>{{ vendedorNome(vendedorId) }}</strong></div>
         <div><span>Caixa</span><strong>{{ caixaDescricao(caixaId) }}</strong></div>
+        <div><span>Cashback</span><strong>{{ saldoCashback | currency:'BRL' }}</strong></div>
+        <div><span>{{ cashbackMensagem }}</span><strong>{{ cashbackPrevisto | currency:'BRL' }}</strong></div>
         <button class="btn sm" (click)="cancelarVenda()">Cancelar venda</button>
       </div>
 
@@ -246,6 +252,7 @@
           <div class="cart-item-info">
             <strong>{{ item.descricao }}</strong>
             <small>{{ item.cor }} · {{ item.tamanho }} · {{ item.ean }}</small>
+            <small *ngIf="item.promocao">Promoção: {{ item.promocao }}</small>
           </div>
           <div class="line-controls">
             <label>Qtd<input type="number" min="1" [(ngModel)]="item.qtd" (ngModelChange)="sugerirPagamentoTotal()" /></label>
@@ -269,11 +276,12 @@
           <div class="payment-lines">
             <div class="payment-line" *ngFor="let pagamento of pagamentos; let i = index">
               <label>Forma
-                <select [(ngModel)]="pagamento.forma" (ngModelChange)="pagamento.descricao = pagamentoDescricao(pagamento.forma)">
+                <select [(ngModel)]="pagamento.forma" (ngModelChange)="alterarFormaPagamento(i)">
                   <option value="DINHEIRO">Dinheiro</option>
                   <option value="DEBITO">Cartão débito</option>
                   <option value="CREDITO">Cartão crédito</option>
                   <option value="PIX">Pix</option>
+                  <option value="CASHBACK" [disabled]="!cashbackAtivo || saldoCashback <= 0">Cashback</option>
                   <option value="OUTRO">Outro</option>
                 </select>
               </label>
@@ -294,6 +302,8 @@
           <div><span>Pago</span><strong>{{ totalPago | currency:'BRL' }}</strong></div>
           <div><span>Pendente</span><strong>{{ saldoPendente | currency:'BRL' }}</strong></div>
           <div><span>Troco</span><strong>{{ troco | currency:'BRL' }}</strong></div>
+          <div *ngIf="cashbackUsado > 0"><span>Cashback usado</span><strong>{{ cashbackUsado | currency:'BRL' }}</strong></div>
+          <div><span>{{ cashbackMensagem }}</span><strong>{{ cashbackPrevisto | currency:'BRL' }}</strong></div>
         </div>
       </div>
 

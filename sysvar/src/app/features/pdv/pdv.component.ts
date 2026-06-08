@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { Caixa } from '../../core/models/caixa';
+import { CashbackConfig } from '../../core/models/cashback';
 import { Cliente } from '../../core/models/clientes';
 import { Cor } from '../../core/models/cor';
 import { Estoque } from '../../core/models/estoque';
@@ -11,10 +12,12 @@ import { FormaPagamento } from '../../core/models/forma-pagamento';
 import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
 import { Produto } from '../../core/models/produto';
+import { PromocaoAplicavel } from '../../core/models/promocao';
 import { TamanhoModel } from '../../core/models/tamanho';
 import { CupomPdv, VendaPdvPagamentoPayload } from '../../core/models/venda-pdv';
 import { AuthService } from '../../core/auth.service';
 import { CaixasService } from '../../core/services/caixas.service';
+import { CashbackService } from '../../core/services/cashback.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { CoresService } from '../../core/services/cores.service';
 import { EstoqueService } from '../../core/services/estoque.service';
@@ -23,6 +26,7 @@ import { FuncionariosService } from '../../core/services/funcionarios.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { ProdutosService } from '../../core/services/produtos.service';
+import { PromocoesService } from '../../core/services/promocoes.service';
 import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/services/tabelapreco-produto.service';
 import { TamanhosService } from '../../core/services/tamanhos.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
@@ -33,6 +37,7 @@ interface CatalogoItem {
   imagem: string;
   estoqueTotal: number;
   skus: ProdutoSku[];
+  promocao?: PromocaoAplicavel | null;
 }
 
 interface CarrinhoItem {
@@ -46,6 +51,7 @@ interface CarrinhoItem {
   qtd: number;
   preco: number;
   desconto: number;
+  promocao?: string;
 }
 
 interface PdvSession {
@@ -81,10 +87,12 @@ export class PdvComponent implements OnInit {
   private clientesApi = inject(ClientesService);
   private funcionariosApi = inject(FuncionariosService);
   private formasApi = inject(FormasPagamentoService);
+  private cashbackApi = inject(CashbackService);
   private caixasApi = inject(CaixasService);
   private coresApi = inject(CoresService);
   private tamanhosApi = inject(TamanhosService);
   private vendasApi = inject(VendaPdvService);
+  private promocoesApi = inject(PromocoesService);
 
   loading = false;
   finalizando = false;
@@ -106,6 +114,9 @@ export class PdvComponent implements OnInit {
   codigoRapido = '';
   descontoGeral = 0;
   valorRecebido = 0;
+  saldoCashback = 0;
+  cashbackAtivo = false;
+  cashbackConfig: CashbackConfig | null = null;
   pagamentos: PagamentoVenda[] = [];
   cupom: CupomPdv | null = null;
   telaCheia = false;
@@ -125,6 +136,7 @@ export class PdvComponent implements OnInit {
   skus: ProdutoSku[] = [];
   estoques: Estoque[] = [];
   precos: TabelaPrecoProduto[] = [];
+  promocoesAplicaveis: PromocaoAplicavel[] = [];
   cores: Cor[] = [];
   tamanhos: TamanhoModel[] = [];
   novoCliente = {
@@ -188,6 +200,29 @@ export class PdvComponent implements OnInit {
 
   get podeFinalizarVenda(): boolean {
     return !this.finalizando && this.carrinho.length > 0 && this.totalPago + 0.009 >= this.total;
+  }
+
+  get cashbackUsado(): number {
+    return this.moeda(this.pagamentos
+      .filter(pagamento => pagamento.forma === 'CASHBACK')
+      .reduce((sum, pagamento) => sum + Number(pagamento.valor || 0), 0));
+  }
+
+  get cashbackPrevisto(): number {
+    if (!this.cashbackAtivo || !this.cashbackConfig || !this.clienteId || this.clienteEhPadrao(this.clienteId)) return 0;
+    const percentual = Number(this.cashbackConfig.percentual || 0);
+    const minimo = Number(this.cashbackConfig.valor_minimo_geracao || 0);
+    const base = this.moeda(Math.max(0, this.total - this.cashbackUsado));
+    if (percentual <= 0 || base < minimo) return 0;
+    return this.moeda(base * percentual / 100);
+  }
+
+  get cashbackMensagem(): string {
+    if (!this.cashbackAtivo || !this.cashbackConfig) return 'Cashback inativo';
+    if (!this.clienteId) return 'Selecione o cliente';
+    if (this.clienteEhPadrao(this.clienteId)) return 'Cliente padrão não participa';
+    if (Number(this.cashbackConfig.percentual || 0) <= 0) return 'Percentual zerado';
+    return this.cashbackPrevisto > 0 ? 'Cashback previsto' : 'Sem cashback nesta venda';
   }
 
   get catalogoFiltrado(): CatalogoItem[] {
@@ -254,6 +289,7 @@ export class PdvComponent implements OnInit {
       clientes: this.clientesApi.list(),
       funcionarios: this.funcionariosApi.list({ page_size: 200 }),
       formas: this.formasApi.list({ ativo: true }),
+      cashback: this.cashbackApi.configAtiva(),
       produtos: this.produtosApi.list({ ativo: 'true', page_size: 500 }),
       skus: this.skusApi.list({ page_size: 5000 }),
       estoques: this.estoqueApi.list({ page_size: 5000 }),
@@ -267,6 +303,8 @@ export class PdvComponent implements OnInit {
         this.clientes = this.unwrap<Cliente>(data.clientes);
         this.funcionarios = this.unwrap<Funcionario>(data.funcionarios);
         this.formas = this.unwrap<FormaPagamento>(data.formas);
+        this.cashbackConfig = data.cashback ?? null;
+        this.cashbackAtivo = !!data.cashback?.ativo;
         this.produtos = this.unwrap<Produto>(data.produtos).filter(p => p.tipo_produto === '1' && p.ativo !== false && p.bloqueado_venda !== true);
         this.skus = this.unwrap<ProdutoSku>(data.skus).filter(s => s.ativo !== false && s.bloqueado_venda !== true);
         this.estoques = this.unwrap<Estoque>(data.estoques);
@@ -287,9 +325,11 @@ export class PdvComponent implements OnInit {
           this.abertoEm = '';
         }
         this.clienteId = this.clientePadraoId();
+        this.carregarSaldoCashback();
         this.formaCodigo = this.formas.find(forma => forma.codigo === 'AV')?.codigo ?? this.formas[0]?.codigo ?? 'AV';
         if (!this.pagamentos.length) this.pagamentos = [this.novoPagamento('DINHEIRO')];
         this.montarCatalogo();
+        this.carregarPromocoesAplicaveis();
         this.selecionarProduto(null);
         this.loading = false;
       },
@@ -323,6 +363,7 @@ export class PdvComponent implements OnInit {
     this.operadorTipo = session.operadorTipo;
     this.vendedorId = null;
     this.clienteId = this.clientePadraoId();
+    this.carregarSaldoCashback();
     this.errorMsg = '';
     this.successMsg = 'PDV aberto.';
   }
@@ -352,6 +393,7 @@ export class PdvComponent implements OnInit {
     const caixas = this.caixasDaLoja;
     this.caixaId = caixas.length === 1 ? caixas[0].Idcaixa ?? null : null;
     this.vendedorId = null;
+    this.carregarPromocoesAplicaveis();
   }
 
   selecionarProduto(item: CatalogoItem | null): void {
@@ -398,6 +440,7 @@ export class PdvComponent implements OnInit {
     this.errorMsg = '';
     this.successMsg = 'Venda iniciada.';
     this.montarCatalogo();
+    this.carregarPromocoesAplicaveis();
     this.selecionarProduto(null);
   }
 
@@ -448,6 +491,7 @@ export class PdvComponent implements OnInit {
         this.cadastroClienteAberto = false;
         this.clientes = [cliente, ...this.clientes.filter(c => c.id !== cliente.id)];
         this.clienteId = cliente.id ?? null;
+        this.carregarSaldoCashback();
         this.successMsg = 'Cliente cadastrado e selecionado.';
         this.errorMsg = '';
       },
@@ -515,7 +559,8 @@ export class PdvComponent implements OnInit {
         imagem: catalogo?.imagem ?? this.imagemProduto(produto),
         qtd: quantidade,
         preco: catalogo?.preco ?? this.precoProduto(produto.Idproduto),
-        desconto: 0
+        desconto: 0,
+        promocao: catalogo?.promocao?.nome
       });
     }
     this.sugerirPagamentoTotal();
@@ -553,7 +598,10 @@ export class PdvComponent implements OnInit {
 
   preencherSaldoPagamento(index: number): void {
     const pagosOutros = this.pagamentos.reduce((sum, pagamento, i) => i === index ? sum : sum + Number(pagamento.valor || 0), 0);
-    this.pagamentos[index].valor = this.moeda(Math.max(0, this.total - pagosOutros));
+    const pendente = this.moeda(Math.max(0, this.total - pagosOutros));
+    this.pagamentos[index].valor = this.pagamentos[index].forma === 'CASHBACK'
+      ? this.moeda(Math.min(pendente, this.saldoCashback))
+      : pendente;
   }
 
   sugerirPagamentoTotal(): void {
@@ -636,6 +684,7 @@ export class PdvComponent implements OnInit {
     this.errorMsg = '';
     this.cadastroClienteAberto = false;
     this.clienteId = this.clientePadraoId();
+    this.carregarSaldoCashback();
     this.vendedorId = null;
     this.pagamentos = [this.novoPagamento('DINHEIRO')];
   }
@@ -646,9 +695,23 @@ export class PdvComponent implements OnInit {
       DEBITO: 'Cartão débito',
       CREDITO: 'Cartão crédito',
       PIX: 'Pix',
+      CASHBACK: 'Cashback',
       OUTRO: 'Outro'
     };
     return labels[forma] || forma;
+  }
+
+  alterarFormaPagamento(index: number): void {
+    const pagamento = this.pagamentos[index];
+    pagamento.descricao = this.pagamentoDescricao(pagamento.forma);
+    if (pagamento.forma === 'CASHBACK') {
+      pagamento.autorizacao = '';
+      this.preencherSaldoPagamento(index);
+    }
+  }
+
+  valorCupom(value: string | number | null | undefined): number {
+    return Number(value || 0);
   }
 
   caixaDescricao(id: number | null): string {
@@ -659,14 +722,44 @@ export class PdvComponent implements OnInit {
   private montarCatalogo(): void {
     this.catalogo = this.produtos.map(produto => {
       const skus = this.skus.filter(s => s.produto === produto.Idproduto);
+      const precoBase = this.precoProduto(produto.Idproduto);
+      const promocao = this.promocaoProduto(produto.Idproduto);
       return {
         produto,
-        preco: this.precoProduto(produto.Idproduto),
+        preco: promocao ? this.precoComPromocao(precoBase, promocao) : precoBase,
         imagem: this.imagemProduto(produto),
         estoqueTotal: skus.reduce((sum, sku) => sum + this.disponivelSku(sku), 0),
-        skus
+        skus,
+        promocao
       };
     }).filter(item => item.skus.length > 0);
+  }
+
+  private carregarPromocoesAplicaveis(): void {
+    const ids = this.produtos.map(p => p.Idproduto).filter((id): id is number => !!id);
+    if (!ids.length) {
+      this.promocoesAplicaveis = [];
+      return;
+    }
+    this.promocoesApi.aplicaveis(this.lojaId, ids).subscribe({
+      next: res => {
+        this.promocoesAplicaveis = res.results ?? [];
+        this.montarCatalogo();
+      },
+      error: () => this.promocoesAplicaveis = []
+    });
+  }
+
+  private promocaoProduto(produtoId?: number): PromocaoAplicavel | null {
+    return this.promocoesAplicaveis.find(p => p.produto === produtoId) ?? null;
+  }
+
+  private precoComPromocao(precoBase: number, promocao: PromocaoAplicavel): number {
+    const valor = Number(promocao.valor || 0);
+    if (promocao.tipo === 'PRECO_FIXO') return this.moeda(Math.max(0, valor));
+    if (promocao.tipo === 'DESCONTO_VALOR') return this.moeda(Math.max(0, precoBase - valor));
+    if (promocao.tipo === 'DESCONTO_PERCENTUAL') return this.moeda(Math.max(0, precoBase - (precoBase * valor / 100)));
+    return precoBase;
   }
 
   disponivelSku(sku: ProdutoSku): number {
@@ -728,6 +821,21 @@ export class PdvComponent implements OnInit {
       (c.nome_cliente || '').toLowerCase().includes('consumidor final')
     );
     return padrao?.id ?? this.clientes[0]?.id ?? null;
+  }
+
+  carregarSaldoCashback(): void {
+    this.saldoCashback = 0;
+    if (!this.clienteId || !this.cashbackAtivo || this.clienteEhPadrao(this.clienteId)) return;
+    this.cashbackApi.saldo(this.clienteId).subscribe({
+      next: saldo => this.saldoCashback = this.moeda(Number(saldo.saldo || 0)),
+      error: () => this.saldoCashback = 0
+    });
+  }
+
+  private clienteEhPadrao(clienteId: number): boolean {
+    const cliente = this.clientes.find(c => c.id === clienteId);
+    const cpf = String(cliente?.cpf || '').replace(/\D/g, '');
+    return cpf === '00000000000' || String(cliente?.nome_cliente || '').toLowerCase().includes('consumidor final');
   }
 
   private readSession(): PdvSession | null {

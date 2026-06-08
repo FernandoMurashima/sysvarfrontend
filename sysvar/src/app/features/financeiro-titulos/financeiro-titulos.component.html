@@ -157,58 +157,55 @@
             <th>Loja</th>
             <th>Emissão</th>
             <th>Total</th>
-            <th>Parcelas</th>
-            <th></th>
+            <th>Parcela</th>
+            <th>Venc.</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let titulo of titulos">
-            <td>
-              <strong>{{ titulo.Titulo }}</strong>
-              <small>{{ titulo.Documento || 'Sem documento' }}</small>
-            </td>
-            <td>{{ parceiroNome(titulo) }}</td>
-            <td>{{ lojaNome(titulo.idloja) }}</td>
-            <td>{{ titulo.Data_emissao | date: 'dd/MM/yyyy' }}</td>
-            <td>{{ titulo.Valor_total | currency: 'BRL' }}</td>
-            <td>
-              <div class="parcelas-list">
-                <div class="parcela-chip" *ngFor="let parcela of (titulo.itens || [])">
-                  <span>#{{ parcela.parcela_n }}</span>
-                  <span>{{ parcela.Data_vencimento | date: 'dd/MM/yyyy' }}</span>
-                  <span>{{ parcela.valor_parcela | currency: 'BRL' }}</span>
-                  <span class="status" [ngClass]="statusClass(parcela.status)">{{ parcela.status }}</span>
-                  <button
-                    class="btn xs primary"
-                    type="button"
-                    *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
-                    (click)="baixar(parcela)"
-                  >
-                    Baixar
-                  </button>
-                  <button
-                    class="btn xs danger"
-                    type="button"
-                    *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
-                    (click)="cancelarParcela(parcela)"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    class="btn xs"
-                    type="button"
-                    *ngIf="parcela.status === 'CANCELADO'"
-                    (click)="reabrirParcela(parcela)"
-                  >
-                    Reabrir
-                  </button>
-                </div>
-              </div>
-            </td>
-            <td class="actions">
-              <button class="btn sm danger" type="button" (click)="excluir(titulo)">Excluir</button>
-            </td>
-          </tr>
+          <ng-container *ngFor="let titulo of titulos">
+            <tr *ngFor="let parcela of (titulo.itens || []); let primeira = first">
+              <td>
+                <strong>{{ primeira ? titulo.Titulo : '' }}</strong>
+              </td>
+              <td>{{ primeira ? parceiroNome(titulo) : '' }}</td>
+              <td>{{ primeira ? lojaNome(titulo.idloja) : '' }}</td>
+              <td>{{ primeira ? (titulo.Data_emissao | date: 'dd/MM/yyyy') : '' }}</td>
+              <td>{{ primeira ? (titulo.Valor_total | currency: 'BRL') : '' }}</td>
+              <td><span class="parcela-titulo">{{ parcelaTitulo(titulo, parcela) }}</span></td>
+              <td>{{ parcela.Data_vencimento | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ parcela.valor_parcela | currency: 'BRL' }}</td>
+              <td><span class="status" [ngClass]="statusClass(parcela.status)">{{ parcela.status }}</span></td>
+              <td class="parcela-actions">
+                <button
+                  class="btn xs primary parcela-action"
+                  type="button"
+                  *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
+                  (click)="baixar(parcela)"
+                >
+                  Baixar
+                </button>
+                <button
+                  class="btn xs danger parcela-action"
+                  type="button"
+                  *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
+                  (click)="cancelarParcela(parcela)"
+                >
+                  Cancelar
+                </button>
+                <button
+                  class="btn xs parcela-action"
+                  type="button"
+                  *ngIf="parcela.status === 'CANCELADO'"
+                  (click)="reabrirParcela(parcela)"
+                >
+                  Reabrir
+                </button>
+              </td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
       <ng-template #vazioTpl>

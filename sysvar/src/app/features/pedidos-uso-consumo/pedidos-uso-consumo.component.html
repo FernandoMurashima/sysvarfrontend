@@ -208,66 +208,47 @@
     <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()">
       <div class="grid-12 itens-grid">
         <!-- Linha única: produto, quantidade, preço, desconto, total -->
-        <label class="input-item col-span-4">
-          Produto (ID ou descrição)*
-          <input type="text" formControlName="produto_input" (blur)="onProdutoBlur()" />
-          <small *ngIf="produtoDescricaoAtual">
-            {{ produtoDescricaoAtual }}
-          </small>
-        </label>
-
-        <div class="quick-product-lookup col-span-12">
-          <label class="lookup-toggle">
-            <input
-              type="checkbox"
-              [(ngModel)]="consultaProdutoAberta"
-              [ngModelOptions]="{ standalone: true }"
-            />
-            Consulta rápida de produtos de uso/consumo
-          </label>
-
-          <div class="lookup-body" *ngIf="consultaProdutoAberta">
-            <input
-              type="text"
-              placeholder="Buscar descrição, referência ou código"
-              [(ngModel)]="produtoConsultaBusca"
-              [ngModelOptions]="{ standalone: true }"
-              (keyup.enter)="buscarProdutosConsulta()"
-            />
-            <button class="btn" type="button" (click)="buscarProdutosConsulta()" [disabled]="carregandoProdutosConsulta">
-              {{ carregandoProdutosConsulta ? 'Buscando...' : 'Buscar' }}
-            </button>
-            <select
-              size="6"
-              [(ngModel)]="produtoConsultaId"
-              [ngModelOptions]="{ standalone: true }"
+        <label class="input-item product-entry">
+          Produto*
+          <input
+            type="text"
+            formControlName="produto_input"
+            autocomplete="off"
+            placeholder="Digite descrição, referência ou código"
+            (input)="buscarSugestoesProduto()"
+            (focus)="buscarSugestoesProduto()"
+            (blur)="fecharSugestoesProdutoComAtraso()"
+            (keyup.enter)="onProdutoBlur()"
+          />
+          <div class="product-suggestions" *ngIf="produtoSugestoesAbertas && produtosSugestoes.length">
+            <button
+              type="button"
+              class="suggestion-item"
+              *ngFor="let p of produtosSugestoes"
+              (mousedown)="selecionarProdutoSugestao(p)"
             >
-              <option *ngFor="let p of produtosConsulta" [ngValue]="p.Idproduto ?? p.id">
-                {{ p.referencia || (p.Idproduto ?? p.id) }} - {{ p.descricao }}
-              </option>
-            </select>
-            <button class="btn primary" type="button" [disabled]="!produtoConsultaId" (click)="usarProdutoConsulta()">
-              Usar produto selecionado
+              <strong>{{ p.descricao }}</strong>
+              <span>{{ p.referencia || (p.Idproduto ?? p.id) }}</span>
             </button>
           </div>
-        </div>
+        </label>
 
-        <label class="input-item col-span-2">
+        <label class="input-item numeric-entry">
           Quantidade*
           <input type="number" formControlName="quantidade" min="1" />
         </label>
 
-        <label class="input-item col-span-2">
+        <label class="input-item numeric-entry">
           Preço unitário*
           <input type="number" formControlName="preco_unit" step="0.01" />
         </label>
 
-        <label class="input-item col-span-2">
+        <label class="input-item numeric-entry">
           Desconto (R$)
           <input type="number" formControlName="desconto_valor" step="0.01" />
         </label>
 
-        <label class="input-item col-span-2">
+        <label class="input-item numeric-entry">
           Total
           <input type="number" formControlName="total_item" readonly />
         </label>
@@ -297,7 +278,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let it of itens">
-            <td>{{ it.produto_label }}</td>
+            <td>{{ it.produto_label || '—' }}</td>
             <td>{{ it.quantidade | number : '1.0-0' }}</td>
             <td>{{ it.preco_unit | number : '1.2-2' }}</td>
             <td>{{ it.desconto_valor | number : '1.2-2' }}</td>

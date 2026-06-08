@@ -193,7 +193,7 @@ export class ProdutosUsoComponent {
   // lista / pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', page_size: 100 }).subscribe({
+    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2', page_size: 100 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
           .filter(p => p.tipo_produto === '2'); // só uso/consumo

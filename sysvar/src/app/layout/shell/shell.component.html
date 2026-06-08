@@ -44,6 +44,10 @@
         <span>{{ userName }} ({{ userType }})</span>
       </div>
 
+      <button class="topbar-fullscreen" type="button" (click)="alternarTelaCheia()">
+        {{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}
+      </button>
+
       <button class="topbar-logout" type="button" (click)="sair()">Sair</button>
     </header>
 

@@ -303,6 +303,23 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`;
   }
 
+  parcelaTitulo(titulo: TituloFinanceiro, parcela: ParcelaFinanceira): string {
+    const base = this.tituloBase(titulo);
+    return `${base}-${parcela.parcela_n || 1}`;
+  }
+
+  private tituloBase(titulo: TituloFinanceiro): string {
+    const documento = (titulo.Documento || '').trim();
+    if (documento) {
+      const partes = documento.split('/').filter(Boolean);
+      return partes[partes.length - 1] || documento;
+    }
+
+    const tituloTexto = (titulo.Titulo || '').trim();
+    const match = tituloTexto.match(/^(.+)-\d+$/);
+    return match?.[1] || tituloTexto || String(this.tituloId(titulo) || '');
+  }
+
   statusClass(status: string): string {
     return `status-${status.toLowerCase()}`;
   }

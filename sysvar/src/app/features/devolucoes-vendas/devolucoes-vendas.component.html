@@ -1,0 +1,174 @@
+<div class="returns-page">
+  <header class="page-head">
+    <div>
+      <h2>Devolução de vendas</h2>
+      <span>Localize a venda, selecione os itens e gere o crédito do cliente.</span>
+    </div>
+    <div class="head-actions">
+      <button class="btn" type="button" (click)="irHome()">Home</button>
+      <button class="btn" type="button" (click)="limpar()">Nova devolução</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="search-panel">
+    <label>Loja
+      <select [(ngModel)]="lojaId" (ngModelChange)="filtrarVendas()">
+        <option [ngValue]="null">Todas</option>
+        <option *ngFor="let loja of lojas" [ngValue]="loja.id || loja.Idloja">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+
+    <label>Cliente
+      <select [(ngModel)]="clienteId" (ngModelChange)="filtrarVendas()">
+        <option [ngValue]="null">Todos</option>
+        <option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option>
+      </select>
+    </label>
+
+    <label>Documento da venda
+      <input
+        type="text"
+        [(ngModel)]="documento"
+        (keyup.enter)="filtrarVendas()"
+        placeholder="Ex.: PDV-202606..."
+      />
+    </label>
+
+    <label>Código de barras
+      <input
+        type="text"
+        [(ngModel)]="codigoBarra"
+        (keyup.enter)="buscarPorCodigoBarra()"
+        placeholder="Bipe ou digite o EAN"
+      />
+    </label>
+    <button class="btn primary" type="button" (click)="filtrarVendas()" [disabled]="loading">
+      {{ loading ? 'Consultando...' : 'Consultar' }}
+    </button>
+    <button class="btn" type="button" (click)="buscarPorCodigoBarra()" [disabled]="loading">
+      Buscar EAN
+    </button>
+  </section>
+
+  <section class="list-panel">
+    <div class="panel-title">
+      <strong>Vendas disponíveis para devolução</strong>
+      <span>{{ vendas.length }} venda(s)</span>
+    </div>
+
+    <div class="table-wrap" *ngIf="vendas.length; else emptySalesTpl">
+      <table class="sales-table">
+        <thead>
+          <tr>
+            <th>Venda</th>
+            <th>Data</th>
+            <th>Loja</th>
+            <th>Cliente</th>
+            <th>Vendedor</th>
+            <th>Itens disp.</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let row of vendas"
+            (click)="carregarVenda(row)"
+            [class.selected]="venda?.id === row.id"
+          >
+            <td>{{ row.documento }}</td>
+            <td>{{ row.data_venda | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ row.loja_nome }}</td>
+            <td>{{ row.cliente_nome }}</td>
+            <td>{{ row.vendedor_nome }}</td>
+            <td>{{ saldoDisponivelVenda(row) }}</td>
+            <td>{{ row.total | currency:'BRL' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #emptySalesTpl>
+      <div class="empty-hint">
+        {{ loading || loadingBase ? 'Carregando...' : 'Nenhuma venda disponível para devolução nos filtros atuais.' }}
+      </div>
+    </ng-template>
+  </section>
+
+  <section class="sale-panel" *ngIf="venda">
+    <div class="sale-summary">
+      <div><span>Venda</span><strong>{{ venda.documento }}</strong></div>
+      <div><span>Loja</span><strong>{{ venda.loja_nome }}</strong></div>
+      <div><span>Cliente</span><strong>{{ venda.cliente_nome }}</strong></div>
+      <div><span>Vendedor</span><strong>{{ venda.vendedor_nome }}</strong></div>
+      <div><span>Total original</span><strong>{{ venda.total | currency:'BRL' }}</strong></div>
+      <div><span>NFC-e</span><strong>{{ venda.nfce?.numero || '-' }}</strong></div>
+    </div>
+
+    <label class="reason">Motivo da devolução
+      <input type="text" [(ngModel)]="motivo" placeholder="Ex.: troca, arrependimento, defeito..." />
+    </label>
+
+    <div class="table-wrap">
+      <table class="returns-table">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Referência</th>
+            <th>Cor</th>
+            <th>Tamanho</th>
+            <th>Vendido</th>
+            <th>Já devolvido</th>
+            <th>Disponível</th>
+            <th>Devolver</th>
+            <th>Crédito</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of venda.itens" [class.unavailable]="!itemDisponivel(item)">
+            <td>{{ item.descricao }}</td>
+            <td>{{ item.referencia }}</td>
+            <td>{{ item.cor || '-' }}</td>
+            <td>{{ item.tamanho || '-' }}</td>
+            <td>{{ item.quantidade }}</td>
+            <td>{{ item.quantidade_devolvida }}</td>
+            <td>{{ item.quantidade_disponivel }}</td>
+            <td>
+              <input
+                type="number"
+                min="0"
+                [max]="item.quantidade_disponivel"
+                step="1"
+                [(ngModel)]="quantidades[item.id]"
+                [disabled]="!itemDisponivel(item)"
+              />
+            </td>
+            <td>{{ totalItemSelecionado(item) | currency:'BRL' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="return-footer">
+      <div>
+        <span>Crédito a gerar para o cliente</span>
+        <strong>{{ totalSelecionado() | currency:'BRL' }}</strong>
+      </div>
+      <button class="btn danger" type="button" (click)="cancelar()" [disabled]="saving">
+        Cancelar
+      </button>
+      <button class="btn primary" type="button" (click)="finalizar()" [disabled]="saving || totalSelecionado() <= 0">
+        {{ saving ? 'Finalizando...' : 'Finalizar devolução' }}
+      </button>
+    </footer>
+  </section>
+
+  <section class="done-panel" *ngIf="devolucao">
+    <div><span>Devolução</span><strong>{{ devolucao.documento }}</strong></div>
+    <div><span>Crédito</span><strong>{{ devolucao.credito_cliente | currency:'BRL' }}</strong></div>
+    <div><span>NF-e devolução</span><strong>{{ devolucao.nfe_devolucao?.status || 'Digitada' }}</strong></div>
+    <p>{{ devolucao.nfe_devolucao?.retorno_mensagem }}</p>
+  </section>
+</div>

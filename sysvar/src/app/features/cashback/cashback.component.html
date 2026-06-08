@@ -1,0 +1,96 @@
+<div class="cashback-page">
+  <header class="toolbar">
+    <div>
+      <h2>Cashback</h2>
+      <span>Regra comercial e extrato por cliente</span>
+    </div>
+    <button class="btn" type="button" (click)="load()">Atualizar</button>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="cashback-grid">
+    <form class="panel config-panel" (ngSubmit)="salvarConfig()">
+      <div class="panel-head">
+        <span>Configuração</span>
+        <strong>{{ config.ativo ? 'Ativo' : 'Inativo' }}</strong>
+      </div>
+
+      <label>Nome da regra
+        <input type="text" [(ngModel)]="config.nome" name="nome" />
+      </label>
+
+      <div class="form-row">
+        <label>Percentual %
+          <input type="number" min="0" max="100" step="0.01" [(ngModel)]="config.percentual" name="percentual" />
+        </label>
+        <label>Validade em dias
+          <input type="number" min="0" step="1" [(ngModel)]="config.validade_dias" name="validade_dias" />
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>Mínimo para gerar
+          <input type="number" min="0" step="0.01" [(ngModel)]="config.valor_minimo_geracao" name="valor_minimo_geracao" />
+        </label>
+        <label>Mínimo para usar
+          <input type="number" min="0" step="0.01" [(ngModel)]="config.valor_minimo_uso" name="valor_minimo_uso" />
+        </label>
+      </div>
+
+      <label>Limite de uso por venda %
+        <input type="number" min="0" max="100" step="0.01" [(ngModel)]="config.limite_uso_percentual" name="limite_uso_percentual" />
+      </label>
+
+      <div class="checks">
+        <label><input type="checkbox" [(ngModel)]="config.ativo" name="ativo" /> Regra ativa</label>
+        <label><input type="checkbox" [(ngModel)]="config.consumidor_final_participa" name="consumidor_final_participa" /> Consumidor final participa</label>
+      </div>
+
+      <button class="btn primary" type="submit" [disabled]="saving">
+        {{ saving ? 'Salvando...' : 'Salvar regra' }}
+      </button>
+    </form>
+
+    <section class="panel statement-panel">
+      <div class="panel-head">
+        <span>Extrato do cliente</span>
+        <strong>{{ saldo | currency:'BRL' }}</strong>
+      </div>
+
+      <label>Cliente
+        <select [(ngModel)]="clienteId" (ngModelChange)="carregarExtrato()">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option>
+        </select>
+      </label>
+
+      <div class="table-wrapper">
+        <table class="table" *ngIf="movimentos.length; else emptyTpl">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Documento</th>
+              <th>Validade</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mov of movimentos">
+              <td>{{ mov.criado_em | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td><span class="badge" [class.debit]="mov.tipo !== 'CREDITO'">{{ tipoLabel(mov.tipo) }}</span></td>
+              <td>{{ documento(mov) }}</td>
+              <td>{{ mov.validade ? (mov.validade | date:'dd/MM/yyyy') : '-' }}</td>
+              <td [class.negative]="mov.tipo !== 'CREDITO'">{{ mov.valor | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #emptyTpl>
+          <div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhum movimento para este cliente.' }}</div>
+        </ng-template>
+      </div>
+    </section>
+  </section>
+</div>

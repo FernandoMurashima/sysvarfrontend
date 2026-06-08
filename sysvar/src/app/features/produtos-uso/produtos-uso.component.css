@@ -25,21 +25,23 @@
 .list-bar label{ font-size:14px; }
 
 /* ===== Tabela ===== */
-.table-wrapper { max-height:480px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; }
+.table-wrapper { max-height:480px; overflow-y:auto; overflow-x:hidden; border:1px solid #e5e7eb; border-radius:8px; }
 .table { width:100%; border-collapse:collapse; table-layout:fixed; }
 .table thead th { position:sticky; top:0; z-index:1; background:#a2c4e7; border-bottom:1px solid #e5e7eb; font-weight:600; text-align:left; padding:10px 12px; }
 .table td { border-bottom:1px solid #f1f5f9; padding:10px 12px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; }
 
 /* Larguras para caber 4 botões sem quebrar */
-.col-descricao  { width: 38%; }
-.col-referencia { width: 18%; }
-.col-colecao    { width: 22%; }
+.col-descricao  { width: 23%; }
+.col-reduzida   { width: 13%; }
+.col-referencia { width: 9%; }
+.col-unidade    { width: 9%; }
+.col-ncm        { width: 9%; }
 .col-status     { width: 8%;  }
-th.actions, td.actions { width: 300px; }
+th.actions, td.actions { width: 230px; }
 
 /* Ações em linha, sem quebra/scroll local */
-td.actions { display:flex; align-items:center; gap:8px; white-space:nowrap; overflow:visible; }
-td.actions .btn { padding:6px 10px; flex:0 0 auto; }
+td.actions { display:flex; align-items:center; justify-content:flex-end; gap:4px; white-space:nowrap; overflow:hidden; flex-wrap:nowrap; }
+td.actions .btn { min-height:24px !important; padding:3px 5px !important; flex:0 0 auto; font-size:11px !important; border-radius:6px !important; }
 
 /* Pager */
 .pager { margin-top:10px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; }
@@ -98,18 +100,18 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 
 /* Responsivo */
 @media (max-width: 1200px) {
-  th.actions, td.actions { width: 280px; }
-  .col-descricao { width: 36%; } 
-  .col-colecao { width: 20%; }
+  th.actions, td.actions { width: 220px; }
+  .col-descricao { width: 22%; }
+  .col-reduzida { width: 13%; }
 }
 @media (max-width: 900px) {
   .toolbar-right input { width: 320px; max-width: 56vw; }
-  th.actions, td.actions { width: 260px; }
+  th.actions, td.actions { width: 210px; }
 }
 @media (max-width: 700px){
   .grid-12 { grid-template-columns:1fr; }
   .toolbar-right input { min-width:200px; }
-  th.actions, td.actions { width: 240px; }
+  th.actions, td.actions { width: 200px; }
 }
 
 /* ===== Pricebar ===== */

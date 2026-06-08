@@ -94,11 +94,9 @@ export class PedidosUsoConsumoComponent implements OnInit {
   savingItem = false;
 
   produtoDescricaoAtual = '';
-  consultaProdutoAberta = false;
-  produtoConsultaBusca = '';
-  produtosConsulta: any[] = [];
-  produtoConsultaId: number | null = null;
-  carregandoProdutosConsulta = false;
+  produtosSugestoes: any[] = [];
+  produtoSugestoesAbertas = false;
+  carregandoProdutosSugestoes = false;
 
   // ===== lista de pedidos (Uso/Consumo – tipo=2) =====
   search = '';
@@ -422,30 +420,49 @@ export class PedidosUsoConsumoComponent implements OnInit {
     });
   }
 
-  buscarProdutosConsulta(): void {
-    this.carregandoProdutosConsulta = true;
-    const search = (this.produtoConsultaBusca || '').trim();
+  buscarSugestoesProduto(): void {
+    const search = (this.itemForm.get('produto_input')?.value || '').toString().trim();
+    const produtoAtual = this.itemForm.get('produto')?.value;
+    if (search.length < 2) {
+      this.produtosSugestoes = [];
+      this.produtoSugestoesAbertas = false;
+      if (!search) {
+        this.itemForm.patchValue({ produto: null }, { emitEvent: false });
+        this.produtoDescricaoAtual = '';
+      }
+      return;
+    }
 
-    this.produtosApi.list({ search, page_size: 30, ativo: 'true', tipo_produto: '2' }).subscribe({
+    if (produtoAtual && search === this.produtoDescricaoAtual) {
+      this.produtoSugestoesAbertas = false;
+      return;
+    }
+
+    this.carregandoProdutosSugestoes = true;
+    this.produtosApi.list({ search, page_size: 8, ativo: 'true', tipo_produto: '2' }).subscribe({
       next: (resp: any) => {
-        this.produtosConsulta = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
-        this.carregandoProdutosConsulta = false;
+        this.produtosSugestoes = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
+        this.produtoSugestoesAbertas = this.produtosSugestoes.length > 0;
+        this.carregandoProdutosSugestoes = false;
       },
       error: () => {
-        this.produtosConsulta = [];
-        this.carregandoProdutosConsulta = false;
-        alert('Erro ao buscar produtos de uso/consumo.');
+        this.produtosSugestoes = [];
+        this.produtoSugestoesAbertas = false;
+        this.carregandoProdutosSugestoes = false;
       },
     });
   }
 
-  usarProdutoConsulta(): void {
-    const prod = this.produtosConsulta.find(p => (p.Idproduto ?? p.id) === this.produtoConsultaId);
-    if (!prod) {
-      alert('Selecione um produto da consulta.');
-      return;
-    }
+  selecionarProdutoSugestao(prod: any): void {
     this.setProdutoFromApi(prod);
+    this.produtosSugestoes = [];
+    this.produtoSugestoesAbertas = false;
+  }
+
+  fecharSugestoesProdutoComAtraso(): void {
+    window.setTimeout(() => {
+      this.produtoSugestoesAbertas = false;
+    }, 150);
   }
 
   private setProdutoFromApi(prod: any) {
@@ -462,7 +479,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     this.itemForm.patchValue(
       {
         produto: id,
-        produto_input: String(id),
+        produto_input: descricao,
       },
       { emitEvent: false }
     );
@@ -512,13 +529,14 @@ export class PedidosUsoConsumoComponent implements OnInit {
       observacoes: '',
     });
     this.produtoDescricaoAtual = '';
-    this.produtoConsultaId = null;
+    this.produtosSugestoes = [];
+    this.produtoSugestoesAbertas = false;
   }
 
   editarItem(it: PedidoUsoItemUI) {
     this.itemForm.reset({
       id: it.id,
-      produto_input: String(it.produto || ''),
+      produto_input: it.produto_label || '',
       produto: it.produto,
       quantidade: it.quantidade,
       preco_unit: it.preco_unit,
@@ -611,6 +629,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     const payload: any = {
       pedido: pedidoId,
       produto: raw.produto,
+      descricao_livre: this.produtoDescricaoAtual || raw.produto_input || null,
       qtd: raw.quantidade,
       preco_unit: raw.preco_unit || 0,
       desconto_valor: raw.desconto_valor || 0,
@@ -648,7 +667,8 @@ export class PedidosUsoConsumoComponent implements OnInit {
 
           const ref = (it.produto_referencia ?? it.referencia ?? '') as string;
           const desc = (it.produto_descricao ?? it.descricao ?? '') as string;
-          const label = ref ? `${ref} - ${desc || ''}`.trim() : (desc || String(produtoId || ''));
+          const livre = (it.descricao_livre ?? '') as string;
+          const label = livre || desc || ref || String(produtoId || '');
 
           return {
             id: it.id,

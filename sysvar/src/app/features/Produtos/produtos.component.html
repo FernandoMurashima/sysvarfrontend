@@ -44,6 +44,7 @@
         <thead>
           <tr>
             <th class="col-descricao">Descrição</th>
+            <th class="col-reduzida">Código reduzido</th>
             <th class="col-referencia">Referência</th>
             <th>Tipo</th>
             <th class="col-colecao">Coleção</th>
@@ -54,6 +55,7 @@
         <tbody>
           <tr *ngFor="let p of paged()">
             <td>{{ p.descricao }}</td>
+            <td>{{ p.descricao_reduzida || '—' }}</td>
             <td>{{ p.referencia || '—' }}</td>
             <td><span class="badge badge-info">Revenda</span></td>
             <td>{{ colecaoLabel(p.colecao ?? null) }}</td>
