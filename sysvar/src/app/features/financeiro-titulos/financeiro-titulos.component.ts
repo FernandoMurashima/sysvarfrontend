@@ -308,7 +308,7 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     return `${base}-${parcela.parcela_n || 1}`;
   }
 
-  private tituloBase(titulo: TituloFinanceiro): string {
+  tituloBase(titulo: TituloFinanceiro): string {
     const documento = (titulo.Documento || '').trim();
     if (documento) {
       const partes = documento.split('/').filter(Boolean);

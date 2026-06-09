@@ -168,7 +168,7 @@
           <ng-container *ngFor="let titulo of titulos">
             <tr *ngFor="let parcela of (titulo.itens || []); let primeira = first">
               <td>
-                <strong>{{ primeira ? titulo.Titulo : '' }}</strong>
+                <strong>{{ primeira ? tituloBase(titulo) : '' }}</strong>
               </td>
               <td>{{ primeira ? parceiroNome(titulo) : '' }}</td>
               <td>{{ primeira ? lojaNome(titulo.idloja) : '' }}</td>
