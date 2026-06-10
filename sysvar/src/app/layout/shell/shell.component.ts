@@ -130,6 +130,7 @@ export class ShellComponent {
         { label: 'Caixa',                     link: '/financeiro/caixa',         icon: 'bi bi-safe',             roles: this.caixaRoles },
         { label: 'Contas Bancárias',          link: '/financeiro/contas',        icon: 'bi bi-bank',             roles: this.financeiroRoles },
         { label: 'Movimentações Financeiras', link: '/financeiro/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] },
+        { label: 'Vales-troca',               link: '/financeiro/vales-troca',   icon: 'bi bi-ticket-perforated', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber'] },
         { label: 'Formas de Pagamentos'     , link: 'financeiro/formas-pagamento', icon: 'bi bi-arrow-left-right', roles: this.vendasGestaoRoles },
       ]
     },

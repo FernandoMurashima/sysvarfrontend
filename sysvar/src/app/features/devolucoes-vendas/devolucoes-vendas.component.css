@@ -8,12 +8,92 @@
 
 .page-head,
 .search-panel,
+.voucher-panel,
 .list-panel,
 .sale-panel,
 .done-panel {
   border: 1px solid #d7dee8;
   border-radius: 8px;
   background: #fff;
+}
+
+.voucher-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.voucher-search {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(220px, 320px) 130px;
+  gap: 10px;
+  align-items: end;
+}
+
+.voucher-search div {
+  display: grid;
+  gap: 2px;
+}
+
+.voucher-search span,
+.voucher-detail span,
+.voucher-row span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.voucher-list {
+  display: grid;
+  gap: 5px;
+  max-height: 168px;
+  overflow: auto;
+}
+
+.voucher-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(130px, 1fr) minmax(170px, 1.2fr) minmax(150px, 1fr) 100px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.voucher-row.selected {
+  border-color: #0f172a;
+  background: #eef2ff;
+}
+
+.voucher-row em {
+  color: #111827;
+  font-style: normal;
+  font-weight: 700;
+  text-align: right;
+}
+
+.voucher-detail {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.voucher-detail div {
+  display: grid;
+  gap: 3px;
+  min-height: 44px;
+  padding: 7px 9px;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.voucher-detail div:last-child {
+  border-right: 0;
 }
 
 .page-head {
@@ -268,6 +348,9 @@ select {
 @media (max-width: 900px) {
   .search-panel,
   .sale-summary,
+  .voucher-search,
+  .voucher-row,
+  .voucher-detail,
   .done-panel {
     grid-template-columns: 1fr;
   }

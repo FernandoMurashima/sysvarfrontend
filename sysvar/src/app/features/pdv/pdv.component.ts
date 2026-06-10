@@ -14,7 +14,8 @@ import { Loja } from '../../core/models/loja';
 import { Produto } from '../../core/models/produto';
 import { PromocaoAplicavel } from '../../core/models/promocao';
 import { TamanhoModel } from '../../core/models/tamanho';
-import { CupomPdv, VendaPdvPagamentoPayload } from '../../core/models/venda-pdv';
+import { CupomPdv, VendaDevolucaoConsulta, VendaDevolucaoItemConsulta, VendaPdvPagamentoPayload } from '../../core/models/venda-pdv';
+import { ValeTroca } from '../../core/models/vale-troca';
 import { AuthService } from '../../core/auth.service';
 import { CaixasService } from '../../core/services/caixas.service';
 import { CashbackService } from '../../core/services/cashback.service';
@@ -30,6 +31,7 @@ import { PromocoesService } from '../../core/services/promocoes.service';
 import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/services/tabelapreco-produto.service';
 import { TamanhosService } from '../../core/services/tamanhos.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
+import { ValeTrocaService } from '../../core/services/vale-troca.service';
 
 interface CatalogoItem {
   produto: Produto;
@@ -93,6 +95,7 @@ export class PdvComponent implements OnInit {
   private tamanhosApi = inject(TamanhosService);
   private vendasApi = inject(VendaPdvService);
   private promocoesApi = inject(PromocoesService);
+  private valeTrocaApi = inject(ValeTrocaService);
 
   loading = false;
   finalizando = false;
@@ -115,11 +118,21 @@ export class PdvComponent implements OnInit {
   descontoGeral = 0;
   valorRecebido = 0;
   saldoCashback = 0;
+  saldoValeTroca = 0;
   cashbackAtivo = false;
   cashbackConfig: CashbackConfig | null = null;
   pagamentos: PagamentoVenda[] = [];
   cupom: CupomPdv | null = null;
   telaCheia = false;
+  trocaAberta = false;
+  trocaDocumento = '';
+  trocaCodigoBarra = '';
+  trocaMotivo = 'Troca no PDV';
+  trocaLoading = false;
+  trocaSaving = false;
+  trocaVenda: VendaDevolucaoConsulta | null = null;
+  trocaVendas: VendaDevolucaoConsulta[] = [];
+  trocaQuantidades: Record<number, number> = {};
 
   lojaId: number | null = null;
   clienteId: number | null = null;
@@ -132,6 +145,7 @@ export class PdvComponent implements OnInit {
   clientes: Cliente[] = [];
   funcionarios: Funcionario[] = [];
   formas: FormaPagamento[] = [];
+  valesTroca: ValeTroca[] = [];
   produtos: Produto[] = [];
   skus: ProdutoSku[] = [];
   estoques: Estoque[] = [];
@@ -223,6 +237,10 @@ export class PdvComponent implements OnInit {
     if (this.clienteEhPadrao(this.clienteId)) return 'Cliente padrão não participa';
     if (Number(this.cashbackConfig.percentual || 0) <= 0) return 'Percentual zerado';
     return this.cashbackPrevisto > 0 ? 'Cashback previsto' : 'Sem cashback nesta venda';
+  }
+
+  get valesTrocaValidos(): ValeTroca[] {
+    return this.valesTroca.filter(vale => vale.status === 'ABERTO' && Number(vale.saldo || 0) > 0);
   }
 
   get catalogoFiltrado(): CatalogoItem[] {
@@ -325,7 +343,7 @@ export class PdvComponent implements OnInit {
           this.abertoEm = '';
         }
         this.clienteId = this.clientePadraoId();
-        this.carregarSaldoCashback();
+        this.carregarCreditosCliente();
         this.formaCodigo = this.formas.find(forma => forma.codigo === 'AV')?.codigo ?? this.formas[0]?.codigo ?? 'AV';
         if (!this.pagamentos.length) this.pagamentos = [this.novoPagamento('DINHEIRO')];
         this.montarCatalogo();
@@ -363,7 +381,7 @@ export class PdvComponent implements OnInit {
     this.operadorTipo = session.operadorTipo;
     this.vendedorId = null;
     this.clienteId = this.clientePadraoId();
-    this.carregarSaldoCashback();
+    this.carregarCreditosCliente();
     this.errorMsg = '';
     this.successMsg = 'PDV aberto.';
   }
@@ -491,7 +509,7 @@ export class PdvComponent implements OnInit {
         this.cadastroClienteAberto = false;
         this.clientes = [cliente, ...this.clientes.filter(c => c.id !== cliente.id)];
         this.clienteId = cliente.id ?? null;
-        this.carregarSaldoCashback();
+        this.carregarCreditosCliente();
         this.successMsg = 'Cliente cadastrado e selecionado.';
         this.errorMsg = '';
       },
@@ -582,6 +600,195 @@ export class PdvComponent implements OnInit {
     this.pagamentos = [this.novoPagamento('DINHEIRO')];
   }
 
+  abrirTroca(): void {
+    if (!this.clienteId || this.clienteEhPadrao(this.clienteId)) {
+      this.errorMsg = 'Troca exige cliente identificado.';
+      return;
+    }
+    this.trocaAberta = !this.trocaAberta;
+    this.errorMsg = '';
+  }
+
+  buscarTrocaPorDocumento(): void {
+    const documento = this.trocaDocumento.trim();
+    if (!documento) {
+      this.errorMsg = 'Informe o cupom da venda original.';
+      return;
+    }
+    this.trocaLoading = true;
+    this.errorMsg = '';
+    this.vendasApi.buscarVendaParaDevolucao(documento).subscribe({
+      next: venda => {
+        if (venda.cliente !== this.clienteId) {
+          this.trocaLoading = false;
+          this.errorMsg = 'Venda encontrada, mas não pertence ao cliente selecionado.';
+          return;
+        }
+        this.prepararTrocaVenda(venda);
+        this.trocaLoading = false;
+      },
+      error: err => {
+        this.trocaLoading = false;
+        this.trocaVenda = null;
+        this.trocaQuantidades = {};
+        this.errorMsg = err?.error?.detail || 'Venda não encontrada para troca.';
+      }
+    });
+  }
+
+  buscarTrocaPorCodigo(): void {
+    const ean = this.trocaCodigoBarra.trim();
+    if (!this.clienteId || this.clienteEhPadrao(this.clienteId)) {
+      this.errorMsg = 'Informe um cliente identificado antes de buscar a troca.';
+      return;
+    }
+    if (!ean) {
+      this.errorMsg = 'Informe ou bipe o código de barras da peça devolvida.';
+      return;
+    }
+    this.trocaLoading = true;
+    this.errorMsg = '';
+    this.vendasApi.vendasDevolviveis({
+      loja: this.lojaId,
+      cliente: this.clienteId,
+      ean
+    }).subscribe({
+      next: vendas => {
+        this.trocaVendas = vendas;
+        this.trocaLoading = false;
+        if (!vendas.length) {
+          this.trocaVenda = null;
+          this.trocaQuantidades = {};
+          this.errorMsg = 'Referência não consta para o cliente.';
+          return;
+        }
+        this.carregarVendaTroca(vendas[0], ean);
+      },
+      error: () => {
+        this.trocaLoading = false;
+        this.trocaVendas = [];
+        this.trocaVenda = null;
+        this.trocaQuantidades = {};
+        this.errorMsg = 'Referência não consta para o cliente.';
+      }
+    });
+  }
+
+  carregarVendaTroca(venda: VendaDevolucaoConsulta, eanSelecionado = ''): void {
+    this.trocaLoading = true;
+    this.errorMsg = '';
+    this.vendasApi.buscarVendaParaDevolucao(venda.documento, venda.id).subscribe({
+      next: vendaAtualizada => {
+        this.prepararTrocaVenda(vendaAtualizada, eanSelecionado);
+        this.trocaLoading = false;
+      },
+      error: err => {
+        this.trocaLoading = false;
+        this.errorMsg = err?.error?.detail || 'Falha ao carregar venda para troca.';
+      }
+    });
+  }
+
+  finalizarTroca(): void {
+    if (!this.trocaVenda) return;
+    const itens = this.trocaVenda.itens
+      .map(item => ({ venda_item: item.id, quantidade: Math.trunc(Number(this.trocaQuantidades[item.id] || 0)) }))
+      .filter(item => item.quantidade > 0);
+    if (!itens.length) {
+      this.errorMsg = 'Informe a quantidade de ao menos uma peça para troca.';
+      return;
+    }
+    const invalido = itens.some(row => {
+      const item = this.trocaVenda?.itens.find(i => i.id === row.venda_item);
+      return !item || row.quantidade > item.quantidade_disponivel;
+    });
+    if (invalido) {
+      this.errorMsg = 'Existe item com quantidade maior que o saldo disponível para troca.';
+      return;
+    }
+    this.trocaSaving = true;
+    this.errorMsg = '';
+    this.vendasApi.finalizarDevolucao({
+      venda: this.trocaVenda.id,
+      motivo: this.trocaMotivo,
+      itens
+    }).subscribe({
+      next: devolucao => {
+        this.trocaSaving = false;
+        this.successMsg = `Troca ${devolucao.vale_troca?.documento || devolucao.documento} gerada.`;
+        this.trocaAberta = false;
+        this.trocaVenda = null;
+        this.trocaQuantidades = {};
+        this.trocaDocumento = '';
+        this.trocaCodigoBarra = '';
+        const creditoGerado = this.moeda(Number(devolucao.vale_troca?.saldo || devolucao.credito_cliente || 0));
+        this.saldoValeTroca = this.moeda(this.saldoValeTroca + creditoGerado);
+        if (devolucao.vale_troca && this.clienteId && this.lojaId) {
+          this.valesTroca = [{
+            Idvaletroca: devolucao.vale_troca.id,
+            documento: devolucao.vale_troca.documento,
+            cliente: this.clienteId,
+            cliente_nome: this.clienteNome(this.clienteId),
+            loja: this.lojaId,
+            loja_nome: this.lojaNome(this.lojaId),
+            devolucao: devolucao.id,
+            devolucao_documento: devolucao.documento,
+            valor_original: devolucao.vale_troca.valor_original,
+            saldo: devolucao.vale_troca.saldo,
+            status: devolucao.vale_troca.status
+          }, ...this.valesTroca.filter(vale => vale.Idvaletroca !== devolucao.vale_troca?.id)];
+        }
+        this.carregarCreditosCliente();
+        this.aplicarPagamentoTroca(creditoGerado);
+      },
+      error: err => {
+        this.trocaSaving = false;
+        this.errorMsg = err?.error?.detail || 'Falha ao gerar troca.';
+      }
+    });
+  }
+
+  totalTrocaSelecionado(): number {
+    if (!this.trocaVenda) return 0;
+    return this.trocaVenda.itens.reduce((total, item) => total + this.totalTrocaItemSelecionado(item), 0);
+  }
+
+  totalTrocaItemSelecionado(item: VendaDevolucaoItemConsulta): number {
+    const quantidade = Math.max(0, Math.trunc(Number(this.trocaQuantidades[item.id] || 0)));
+    if (!quantidade) return 0;
+    const valorUnitarioLiquido = Number(item.total_item || 0) / Math.max(1, Number(item.quantidade || 1));
+    return this.moeda(quantidade * valorUnitarioLiquido);
+  }
+
+  private prepararTrocaVenda(venda: VendaDevolucaoConsulta, eanSelecionado = ''): void {
+    this.trocaVenda = venda;
+    this.trocaQuantidades = {};
+    venda.itens.forEach(item => {
+      const selecionado = !eanSelecionado || item.ean === eanSelecionado;
+      this.trocaQuantidades[item.id] = item.quantidade_disponivel > 0 && selecionado ? 1 : 0;
+    });
+  }
+
+  private aplicarPagamentoTroca(valorDisponivel: number): void {
+    const valorTroca = this.moeda(Math.min(this.total, valorDisponivel));
+    if (valorTroca <= 0) return;
+    let pagamentoTroca = this.pagamentos.find(p => p.forma === 'TROCA');
+    if (!pagamentoTroca) {
+      pagamentoTroca = this.novoPagamento('TROCA');
+      this.pagamentos.push(pagamentoTroca);
+    }
+    pagamentoTroca.autorizacao = this.valesTrocaValidos[0]?.documento || pagamentoTroca.autorizacao;
+    pagamentoTroca.valor = this.moeda(Math.min(valorTroca, this.saldoValeTrocaPagamento(pagamentoTroca)));
+
+    let excesso = this.moeda(this.totalPago - this.total);
+    for (const pagamento of this.pagamentos) {
+      if (excesso <= 0 || pagamento.forma === 'TROCA') continue;
+      const reducao = this.moeda(Math.min(Number(pagamento.valor || 0), excesso));
+      pagamento.valor = this.moeda(Number(pagamento.valor || 0) - reducao);
+      excesso = this.moeda(excesso - reducao);
+    }
+  }
+
   adicionarPagamento(): void {
     const pagamento = this.novoPagamento('DINHEIRO');
     pagamento.valor = Number(this.saldoPendente.toFixed(2));
@@ -599,9 +806,15 @@ export class PdvComponent implements OnInit {
   preencherSaldoPagamento(index: number): void {
     const pagosOutros = this.pagamentos.reduce((sum, pagamento, i) => i === index ? sum : sum + Number(pagamento.valor || 0), 0);
     const pendente = this.moeda(Math.max(0, this.total - pagosOutros));
-    this.pagamentos[index].valor = this.pagamentos[index].forma === 'CASHBACK'
-      ? this.moeda(Math.min(pendente, this.saldoCashback))
-      : pendente;
+    if (this.pagamentos[index].forma === 'CASHBACK') {
+      this.pagamentos[index].valor = this.moeda(Math.min(pendente, this.saldoCashback));
+      return;
+    }
+    if (this.pagamentos[index].forma === 'TROCA') {
+      this.pagamentos[index].valor = this.moeda(Math.min(pendente, this.saldoValeTrocaPagamento(this.pagamentos[index])));
+      return;
+    }
+    this.pagamentos[index].valor = pendente;
   }
 
   sugerirPagamentoTotal(): void {
@@ -653,9 +866,9 @@ export class PdvComponent implements OnInit {
       }))
     }).subscribe({
       next: venda => this.finalizarOk(venda.documento, venda.cupom ?? null),
-      error: () => {
+      error: err => {
         this.finalizando = false;
-        this.errorMsg = 'Falha ao finalizar a venda e emitir a NFC-e.';
+        this.errorMsg = err?.error?.detail || 'Falha ao finalizar a venda e emitir a NFC-e.';
       }
     });
   }
@@ -684,7 +897,7 @@ export class PdvComponent implements OnInit {
     this.errorMsg = '';
     this.cadastroClienteAberto = false;
     this.clienteId = this.clientePadraoId();
-    this.carregarSaldoCashback();
+    this.carregarCreditosCliente();
     this.vendedorId = null;
     this.pagamentos = [this.novoPagamento('DINHEIRO')];
   }
@@ -696,6 +909,7 @@ export class PdvComponent implements OnInit {
       CREDITO: 'Cartão crédito',
       PIX: 'Pix',
       CASHBACK: 'Cashback',
+      TROCA: 'Troca',
       OUTRO: 'Outro'
     };
     return labels[forma] || forma;
@@ -708,6 +922,20 @@ export class PdvComponent implements OnInit {
       pagamento.autorizacao = '';
       this.preencherSaldoPagamento(index);
     }
+    if (pagamento.forma === 'TROCA') {
+      pagamento.autorizacao = this.valesTrocaValidos[0]?.documento || '';
+      this.preencherSaldoPagamento(index);
+    }
+  }
+
+  alterarCupomTrocaPagamento(index: number): void {
+    this.preencherSaldoPagamento(index);
+  }
+
+  saldoValeTrocaPagamento(pagamento: PagamentoVenda): number {
+    if (!pagamento.autorizacao) return this.saldoValeTroca;
+    const vale = this.valesTrocaValidos.find(item => item.documento === pagamento.autorizacao);
+    return this.moeda(Number(vale?.saldo || 0));
   }
 
   valorCupom(value: string | number | null | undefined): number {
@@ -823,12 +1051,31 @@ export class PdvComponent implements OnInit {
     return padrao?.id ?? this.clientes[0]?.id ?? null;
   }
 
+  carregarCreditosCliente(): void {
+    this.carregarSaldoCashback();
+    this.carregarSaldoValeTroca();
+  }
+
   carregarSaldoCashback(): void {
     this.saldoCashback = 0;
     if (!this.clienteId || !this.cashbackAtivo || this.clienteEhPadrao(this.clienteId)) return;
     this.cashbackApi.saldo(this.clienteId).subscribe({
       next: saldo => this.saldoCashback = this.moeda(Number(saldo.saldo || 0)),
       error: () => this.saldoCashback = 0
+    });
+  }
+
+  carregarSaldoValeTroca(): void {
+    this.saldoValeTroca = 0;
+    this.valesTroca = [];
+    if (!this.clienteId || this.clienteEhPadrao(this.clienteId)) return;
+    this.valeTrocaApi.saldo(this.clienteId).subscribe({
+      next: saldo => this.saldoValeTroca = this.moeda(Number(saldo.saldo || 0)),
+      error: () => this.saldoValeTroca = 0
+    });
+    this.valeTrocaApi.disponiveis(this.clienteId).subscribe({
+      next: vales => this.valesTroca = vales ?? [],
+      error: () => this.valesTroca = []
     });
   }
 

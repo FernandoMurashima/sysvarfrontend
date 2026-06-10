@@ -1,0 +1,275 @@
+.vouchers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  color: #111827;
+}
+
+.toolbar,
+.filter-panel,
+.summary-panel,
+.list-panel,
+.detail-panel {
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+.toolbar h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.toolbar span,
+label,
+.summary-panel span,
+.detail-grid span,
+.detail-head span,
+.panel-title span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-panel {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(210px, 1.4fr) 130px minmax(190px, 1fr) 100px 90px;
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+input,
+select {
+  min-height: 31px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font: inherit;
+}
+
+.btn {
+  min-height: 31px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.alert {
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.summary-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  overflow: hidden;
+}
+
+.summary-panel div,
+.detail-grid div {
+  display: grid;
+  gap: 2px;
+  min-height: 42px;
+  padding: 7px 9px;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.summary-panel div:last-child,
+.detail-grid div:nth-child(4n) {
+  border-right: 0;
+}
+
+.summary-panel strong {
+  font-size: 16px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(620px, 1fr) minmax(420px, .75fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.list-panel,
+.detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.voucher-table,
+.movement-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.voucher-table th,
+.voucher-table td,
+.movement-table th,
+.movement-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voucher-table th,
+.movement-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+}
+
+.voucher-table th:nth-child(5),
+.voucher-table td:nth-child(5),
+.movement-table th:nth-child(n+4),
+.movement-table td:nth-child(n+4) {
+  text-align: right;
+}
+
+.voucher-table tbody tr {
+  cursor: pointer;
+}
+
+.voucher-table tbody tr:hover,
+.voucher-table tbody tr.selected {
+  background: #eef2ff;
+}
+
+.status {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 74px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status.closed {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.detail-head strong {
+  font-size: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.movements {
+  display: grid;
+  gap: 8px;
+}
+
+.empty-hint {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  padding: 20px;
+  text-align: center;
+}
+
+.empty-hint.compact {
+  padding: 12px;
+}
+
+.placeholder {
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  text-align: center;
+}
+
+.placeholder span {
+  color: #64748b;
+}
+
+@media (max-width: 1100px) {
+  .filter-panel,
+  .summary-panel,
+  .content-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-panel div,
+  .detail-grid div {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+}

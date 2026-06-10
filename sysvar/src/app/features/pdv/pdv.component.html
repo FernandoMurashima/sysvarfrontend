@@ -141,7 +141,7 @@
       <div class="start-grid sale-start-grid">
         <label class="cliente-start">Cliente
           <div class="cliente-select-row">
-            <select [(ngModel)]="clienteId" (ngModelChange)="carregarSaldoCashback()"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
+            <select [(ngModel)]="clienteId" (ngModelChange)="carregarCreditosCliente()"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
             <button class="btn" type="button" (click)="abrirCadastroCliente()">Novo</button>
           </div>
         </label>
@@ -179,6 +179,55 @@
           </label>
           <button class="btn primary scan-button" type="button" (click)="adicionarCodigoRapido()">Lançar item</button>
         </div>
+
+        <section class="exchange-panel" *ngIf="trocaAberta">
+          <div class="exchange-head">
+            <div>
+              <span>Troca do cliente</span>
+              <strong>{{ clienteNome(clienteId) }}</strong>
+            </div>
+            <button class="btn sm" type="button" (click)="trocaAberta=false">Fechar</button>
+          </div>
+          <div class="exchange-search">
+            <label>Cupom
+              <input type="text" [(ngModel)]="trocaDocumento" (keyup.enter)="buscarTrocaPorDocumento()" placeholder="Documento da venda original" />
+            </label>
+            <button class="btn primary" type="button" (click)="buscarTrocaPorDocumento()" [disabled]="trocaLoading">Buscar cupom</button>
+            <label>Código de barras
+              <input type="text" [(ngModel)]="trocaCodigoBarra" (keyup.enter)="buscarTrocaPorCodigo()" placeholder="Bipe a peça devolvida" />
+            </label>
+            <button class="btn primary" type="button" (click)="buscarTrocaPorCodigo()" [disabled]="trocaLoading">Buscar peça</button>
+          </div>
+          <div class="exchange-options" *ngIf="trocaVendas.length > 1">
+            <button class="exchange-sale" type="button" *ngFor="let vendaTroca of trocaVendas" (click)="carregarVendaTroca(vendaTroca, trocaCodigoBarra)">
+              <strong>{{ vendaTroca.documento }}</strong>
+              <span>{{ vendaTroca.data_venda | date:'dd/MM/yyyy' }} · {{ vendaTroca.total | currency:'BRL' }}</span>
+            </button>
+          </div>
+          <div class="exchange-items" *ngIf="trocaVenda">
+            <div class="exchange-sale-title">
+              <strong>{{ trocaVenda.documento }}</strong>
+              <span>{{ trocaVenda.data_venda | date:'dd/MM/yyyy' }} · {{ trocaVenda.total | currency:'BRL' }}</span>
+            </div>
+            <div class="exchange-item" *ngFor="let item of trocaVenda.itens">
+              <div>
+                <strong>{{ item.descricao }}</strong>
+                <small>{{ item.cor }} · {{ item.tamanho }} · {{ item.ean }} · Disp. {{ item.quantidade_disponivel }}</small>
+              </div>
+              <input type="number" min="0" [max]="item.quantidade_disponivel" [(ngModel)]="trocaQuantidades[item.id]" [disabled]="item.quantidade_disponivel <= 0" />
+              <span>{{ totalTrocaItemSelecionado(item) | currency:'BRL' }}</span>
+            </div>
+            <div class="exchange-finish">
+              <label>Motivo
+                <input type="text" [(ngModel)]="trocaMotivo" />
+              </label>
+              <strong>{{ totalTrocaSelecionado() | currency:'BRL' }}</strong>
+              <button class="btn primary" type="button" (click)="finalizarTroca()" [disabled]="trocaSaving || totalTrocaSelecionado() <= 0">
+                {{ trocaSaving ? 'Gerando...' : 'Gerar vale-troca' }}
+              </button>
+            </div>
+          </div>
+        </section>
 
         <section class="quick-product-lookup">
           <label class="lookup-toggle"><input type="checkbox" [(ngModel)]="consultaProdutoAberta" /> Consulta rápida de produto</label>
@@ -242,7 +291,9 @@
         <div><span>Vendedor</span><strong>{{ vendedorNome(vendedorId) }}</strong></div>
         <div><span>Caixa</span><strong>{{ caixaDescricao(caixaId) }}</strong></div>
         <div><span>Cashback</span><strong>{{ saldoCashback | currency:'BRL' }}</strong></div>
+        <div><span>Troca</span><strong>{{ saldoValeTroca | currency:'BRL' }}</strong></div>
         <div><span>{{ cashbackMensagem }}</span><strong>{{ cashbackPrevisto | currency:'BRL' }}</strong></div>
+        <button class="btn sm" type="button" (click)="abrirTroca()">Troca</button>
         <button class="btn sm" (click)="cancelarVenda()">Cancelar venda</button>
       </div>
 
@@ -282,11 +333,20 @@
                   <option value="CREDITO">Cartão crédito</option>
                   <option value="PIX">Pix</option>
                   <option value="CASHBACK" [disabled]="!cashbackAtivo || saldoCashback <= 0">Cashback</option>
+                  <option value="TROCA" [disabled]="saldoValeTroca <= 0">Troca</option>
                   <option value="OUTRO">Outro</option>
                 </select>
               </label>
               <label>Valor<input type="number" min="0" step="0.01" [(ngModel)]="pagamento.valor" /></label>
-              <label>Autorização<input type="text" [(ngModel)]="pagamento.autorizacao" /></label>
+              <label *ngIf="pagamento.forma !== 'TROCA'">Autorização<input type="text" [(ngModel)]="pagamento.autorizacao" /></label>
+              <label *ngIf="pagamento.forma === 'TROCA'">Cupom troca
+                <select [(ngModel)]="pagamento.autorizacao" (ngModelChange)="alterarCupomTrocaPagamento(i)">
+                  <option value="">Selecionar cupom</option>
+                  <option *ngFor="let vale of valesTrocaValidos" [value]="vale.documento">
+                    {{ vale.documento }} - {{ vale.saldo | currency:'BRL' }}
+                  </option>
+                </select>
+              </label>
               <button class="btn sm" type="button" (click)="preencherSaldoPagamento(i)">Saldo</button>
               <button class="btn sm danger" type="button" (click)="removerPagamento(i)">Remover</button>
             </div>

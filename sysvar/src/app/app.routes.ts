@@ -41,6 +41,7 @@ import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatori
 import { CashbackComponent } from './features/cashback/cashback.component';
 import { PromocoesComponent } from './features/promocoes/promocoes.component';
 import { DevolucoesVendasComponent } from './features/devolucoes-vendas/devolucoes-vendas.component';
+import { ValesTrocaComponent } from './features/vales-troca/vales-troca.component';
 
 
 
@@ -87,6 +88,7 @@ export const routes: Routes = [
       { path: 'financeiro/caixa', component: CaixasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'] } },
       { path: 'financeiro/contas', component: ContasBancariasComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] } },
+      { path: 'financeiro/vales-troca', component: ValesTrocaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber'] } },
       { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { modo: 'matriz', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
       { path: 'estoque/consulta-movimentacao-referencia', component: EstoqueConsultaComponent, data: { modo: 'movimentos', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
       { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },

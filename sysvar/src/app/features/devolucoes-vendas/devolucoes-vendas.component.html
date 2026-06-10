@@ -53,6 +53,51 @@
     </button>
   </section>
 
+  <section class="voucher-panel">
+    <div class="voucher-search">
+      <div>
+        <strong>Consulta cupom de troca</strong>
+        <span>Localize vales válidos por loja, cliente ou número do cupom.</span>
+      </div>
+      <label>Cupom de troca
+        <input
+          type="text"
+          [(ngModel)]="cupomTrocaBusca"
+          (keyup.enter)="consultarCuponsTroca()"
+          placeholder="Ex.: VT-DEV-..."
+        />
+      </label>
+      <button class="btn primary" type="button" (click)="consultarCuponsTroca()" [disabled]="loading">
+        Consultar troca
+      </button>
+    </div>
+
+    <div class="voucher-list" *ngIf="valesTroca.length">
+      <button
+        class="voucher-row"
+        type="button"
+        *ngFor="let vale of valesTroca"
+        [class.selected]="valeTrocaSelecionado?.Idvaletroca === vale.Idvaletroca"
+        (click)="selecionarValeTroca(vale)"
+      >
+        <strong>{{ vale.documento }}</strong>
+        <span>{{ vale.loja_nome }}</span>
+        <span>{{ vale.cliente_nome }}</span>
+        <span>{{ vale.venda_origem_documento || vale.devolucao_documento }}</span>
+        <em>{{ vale.saldo | currency:'BRL' }}</em>
+      </button>
+    </div>
+
+    <div class="voucher-detail" *ngIf="valeTrocaSelecionado">
+      <div><span>Cupom</span><strong>{{ valeTrocaSelecionado.documento }}</strong></div>
+      <div><span>Loja</span><strong>{{ valeTrocaSelecionado.loja_nome }}</strong></div>
+      <div><span>Cliente</span><strong>{{ valeTrocaSelecionado.cliente_nome }}</strong></div>
+      <div><span>Venda origem</span><strong>{{ valeTrocaSelecionado.venda_origem_documento || '-' }}</strong></div>
+      <div><span>Valor original</span><strong>{{ valeTrocaSelecionado.valor_original | currency:'BRL' }}</strong></div>
+      <div><span>Saldo</span><strong>{{ valeTrocaSelecionado.saldo | currency:'BRL' }}</strong></div>
+    </div>
+  </section>
+
   <section class="list-panel">
     <div class="panel-title">
       <strong>Vendas disponíveis para devolução</strong>
@@ -168,6 +213,7 @@
   <section class="done-panel" *ngIf="devolucao">
     <div><span>Devolução</span><strong>{{ devolucao.documento }}</strong></div>
     <div><span>Crédito</span><strong>{{ devolucao.credito_cliente | currency:'BRL' }}</strong></div>
+    <div><span>Vale-troca</span><strong>{{ devolucao.vale_troca?.documento || 'Gerado' }}</strong></div>
     <div><span>NF-e devolução</span><strong>{{ devolucao.nfe_devolucao?.status || 'Digitada' }}</strong></div>
     <p>{{ devolucao.nfe_devolucao?.retorno_mensagem }}</p>
   </section>

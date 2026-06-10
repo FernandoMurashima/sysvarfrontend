@@ -6,9 +6,11 @@ import { forkJoin } from 'rxjs';
 
 import { Cliente } from '../../core/models/clientes';
 import { Loja } from '../../core/models/loja';
+import { ValeTroca } from '../../core/models/vale-troca';
 import { VendaDevolucao, VendaDevolucaoConsulta, VendaDevolucaoItemConsulta } from '../../core/models/venda-pdv';
 import { ClientesService } from '../../core/services/clientes.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { ValeTrocaService } from '../../core/services/vale-troca.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 
 @Component({
@@ -22,6 +24,7 @@ export class DevolucoesVendasComponent implements OnInit {
   private vendasApi = inject(VendaPdvService);
   private lojasApi = inject(LojasService);
   private clientesApi = inject(ClientesService);
+  private valeTrocaApi = inject(ValeTrocaService);
   private router = inject(Router);
 
   documento = '';
@@ -35,6 +38,9 @@ export class DevolucoesVendasComponent implements OnInit {
   vendas: VendaDevolucaoConsulta[] = [];
   venda: VendaDevolucaoConsulta | null = null;
   devolucao: VendaDevolucao | null = null;
+  cupomTrocaBusca = '';
+  valesTroca: ValeTroca[] = [];
+  valeTrocaSelecionado: ValeTroca | null = null;
   quantidades: Record<number, number> = {};
   loading = false;
   loadingBase = false;
@@ -112,6 +118,34 @@ export class DevolucoesVendasComponent implements OnInit {
         this.errorMsg = err?.error?.detail || 'Venda não encontrada.';
       }
     });
+  }
+
+  consultarCuponsTroca(): void {
+    this.loading = true;
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.valeTrocaSelecionado = null;
+    this.valeTrocaApi.list({
+      loja: this.lojaId,
+      cliente: this.clienteId,
+      documento: this.cupomTrocaBusca.trim(),
+      status: 'ABERTO'
+    }).subscribe({
+      next: resp => {
+        this.valesTroca = this.unwrap<ValeTroca>(resp);
+        this.valeTrocaSelecionado = this.valesTroca[0] ?? null;
+        this.loading = false;
+      },
+      error: err => {
+        this.valesTroca = [];
+        this.loading = false;
+        this.errorMsg = err?.error?.detail || 'Falha ao consultar cupons de troca.';
+      }
+    });
+  }
+
+  selecionarValeTroca(vale: ValeTroca): void {
+    this.valeTrocaSelecionado = vale;
   }
 
   buscarPorCodigoBarra(): void {
@@ -215,6 +249,9 @@ export class DevolucoesVendasComponent implements OnInit {
 
   limpar(): void {
     this.documento = '';
+    this.cupomTrocaBusca = '';
+    this.valesTroca = [];
+    this.valeTrocaSelecionado = null;
     this.codigoBarra = '';
     this.eanSelecionado = '';
     this.lojaId = null;

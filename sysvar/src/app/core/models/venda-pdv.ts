@@ -145,6 +145,13 @@ export interface VendaDevolucao {
     status: string;
     retorno_mensagem: string;
   };
+  vale_troca?: {
+    id: number;
+    documento: string;
+    valor_original: string;
+    saldo: string;
+    status: string;
+  } | null;
   venda_origem?: VendaDevolucaoConsulta;
 }
 

@@ -1,0 +1,157 @@
+<div class="vouchers-page">
+  <header class="toolbar">
+    <div>
+      <h2>Vales-troca</h2>
+      <span>Consulta de cupons gerados por devolução e usados no PDV.</span>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn" type="button" (click)="irHome()">Home</button>
+      <button class="btn primary" type="button" (click)="consultar()" [disabled]="loading">
+        {{ loading ? 'Atualizando...' : 'Atualizar' }}
+      </button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="filter-panel">
+    <label>Loja
+      <select [(ngModel)]="lojaId">
+        <option [ngValue]="null">Todas</option>
+        <option *ngFor="let loja of lojas" [ngValue]="loja.id || loja.Idloja">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+
+    <label>Cliente
+      <select [(ngModel)]="clienteId">
+        <option [ngValue]="null">Todos</option>
+        <option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option>
+      </select>
+    </label>
+
+    <label>Status
+      <select [(ngModel)]="status">
+        <option value="">Todos</option>
+        <option value="ABERTO">Aberto</option>
+        <option value="USADO">Usado</option>
+        <option value="CANCELADO">Cancelado</option>
+        <option value="EXPIRADO">Expirado</option>
+      </select>
+    </label>
+
+    <label>Cupom
+      <input type="text" [(ngModel)]="documento" (keyup.enter)="consultar()" placeholder="Ex.: VT-DEV-..." />
+    </label>
+
+    <button class="btn primary" type="button" (click)="consultar()" [disabled]="loading">
+      Consultar
+    </button>
+    <button class="btn" type="button" (click)="limpar()" [disabled]="loading">
+      Limpar
+    </button>
+  </section>
+
+  <section class="summary-panel">
+    <div><span>Cupons</span><strong>{{ vales.length }}</strong></div>
+    <div><span>Saldo em aberto</span><strong>{{ totalSaldo() | currency:'BRL' }}</strong></div>
+    <div><span>Filtro</span><strong>{{ status || 'Todos' }}</strong></div>
+  </section>
+
+  <section class="content-grid">
+    <div class="list-panel">
+      <div class="panel-title">
+        <strong>Cupons de troca</strong>
+        <span>{{ loading || loadingBase ? 'Carregando...' : vales.length + ' registro(s)' }}</span>
+      </div>
+
+      <div class="table-wrap" *ngIf="vales.length; else emptyTpl">
+        <table class="voucher-table">
+          <thead>
+            <tr>
+              <th>Cupom</th>
+              <th>Cliente</th>
+              <th>Loja</th>
+              <th>Origem</th>
+              <th>Saldo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let vale of vales"
+              (click)="selecionar(vale)"
+              [class.selected]="selecionado?.Idvaletroca === vale.Idvaletroca"
+            >
+              <td><strong>{{ vale.documento }}</strong></td>
+              <td>{{ vale.cliente_nome }}</td>
+              <td>{{ vale.loja_nome }}</td>
+              <td>{{ vale.venda_origem_documento || vale.devolucao_documento || '-' }}</td>
+              <td>{{ vale.saldo | currency:'BRL' }}</td>
+              <td><span class="status" [class.closed]="vale.status !== 'ABERTO'">{{ vale.status }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyTpl>
+        <div class="empty-hint">{{ loading || loadingBase ? 'Carregando...' : 'Nenhum cupom encontrado.' }}</div>
+      </ng-template>
+    </div>
+
+    <aside class="detail-panel" *ngIf="selecionado; else selectTpl">
+      <div class="detail-head">
+        <span>Cupom selecionado</span>
+        <strong>{{ selecionado.documento }}</strong>
+      </div>
+
+      <div class="detail-grid">
+        <div><span>Loja</span><strong>{{ selecionado.loja_nome }}</strong></div>
+        <div><span>Cliente</span><strong>{{ selecionado.cliente_nome }}</strong></div>
+        <div><span>Venda origem</span><strong>{{ selecionado.venda_origem_documento || '-' }}</strong></div>
+        <div><span>Devolução</span><strong>{{ selecionado.devolucao_documento || '-' }}</strong></div>
+        <div><span>Valor original</span><strong>{{ selecionado.valor_original | currency:'BRL' }}</strong></div>
+        <div><span>Saldo</span><strong>{{ selecionado.saldo | currency:'BRL' }}</strong></div>
+        <div><span>Status</span><strong>{{ selecionado.status }}</strong></div>
+        <div><span>Gerado em</span><strong>{{ selecionado.criado_em | date:'dd/MM/yyyy HH:mm' }}</strong></div>
+      </div>
+
+      <div class="movements">
+        <div class="panel-title">
+          <strong>Movimentos</strong>
+          <span>{{ selecionado.movimentos?.length || 0 }} lançamento(s)</span>
+        </div>
+        <table class="movement-table" *ngIf="selecionado.movimentos?.length; else noMovTpl">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Venda uso</th>
+              <th>Valor</th>
+              <th>Saldo após</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mov of selecionado.movimentos">
+              <td>{{ mov.criado_em | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td><span class="status" [class.closed]="mov.tipo !== 'CREDITO'">{{ tipoMovimentoLabel(mov.tipo) }}</span></td>
+              <td>{{ documentoMovimento(mov) }}</td>
+              <td>{{ mov.valor | currency:'BRL' }}</td>
+              <td>{{ mov.saldo_apos | currency:'BRL' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noMovTpl>
+          <div class="empty-hint compact">Sem movimentos para este cupom.</div>
+        </ng-template>
+      </div>
+    </aside>
+
+    <ng-template #selectTpl>
+      <aside class="detail-panel placeholder">
+        <strong>Selecione um cupom</strong>
+        <span>Os dados de origem, cliente, saldo e movimentos aparecem aqui.</span>
+      </aside>
+    </ng-template>
+  </section>
+</div>
