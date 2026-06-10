@@ -7,6 +7,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { ShellComponent } from './layout/shell/shell.component';
 
 import { ClientesComponent } from './features/clientes/clientes.component';
+import { EmpresasComponent } from './features/empresas/empresas.component';
 import { LojasComponent } from './features/lojas/lojas.component';
 import { FornecedoresComponent } from './features/fornecedores/fornecedores.component';
 import { FuncionariosComponent } from './features/funcionarios/funcionarios.component';
@@ -58,6 +59,7 @@ export const routes: Routes = [
     children: [
       { path: 'home', component: HomeComponent },
 
+      { path: 'empresas', component: EmpresasComponent, data: { roles: ['Admin', 'Diretor'] } },
       { path: 'clientes', component: ClientesComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'] } },
       { path: 'lojas', component: LojasComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'] } },

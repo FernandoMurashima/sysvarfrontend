@@ -42,6 +42,7 @@ export class ShellComponent {
     {
       label: 'Cadastros', icon: 'bi bi-journal-text', roles: this.cadastrosRoles,
       children: [
+        { label: 'Empresas',            link: '/empresas',      icon: 'bi bi-buildings',     roles: ['Admin', 'Diretor'] },
         { label: 'Lojas',               link: '/lojas',         icon: 'bi bi-shop',          roles: this.cadastrosRoles },
         { label: 'Clientes',            link: '/clientes',      icon: 'bi bi-people',        roles: this.clientesRoles },
         { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: this.comprasRoles },

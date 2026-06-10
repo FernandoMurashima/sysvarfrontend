@@ -1,0 +1,113 @@
+<div class="page">
+  <header class="toolbar">
+    <h2>Empresas</h2>
+    <div class="toolbar-actions">
+      <input
+        type="text"
+        placeholder="Buscar por razão social, fantasia ou documento..."
+        [(ngModel)]="search"
+        (keyup)="onSearchKeyup($event)"
+      />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Nova</button>
+      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>{{ editingId ? 'Editar empresa' : 'Nova empresa' }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label class="field wide" [class.invalid]="form.get('nome')?.invalid && (form.get('nome')?.touched || submitted)">
+        Razão social*
+        <input type="text" formControlName="nome" />
+      </label>
+      <label class="field wide">
+        Nome fantasia
+        <input type="text" formControlName="nome_fantasia" />
+      </label>
+      <label class="field">
+        Documento
+        <input type="text" formControlName="documento" />
+      </label>
+      <label class="field">
+        Status
+        <select formControlName="ativo">
+          <option [ngValue]="true">Ativa</option>
+          <option [ngValue]="false">Inativa</option>
+        </select>
+      </label>
+      <div class="form-actions">
+        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel hint" *ngIf="!showForm">
+    <span>Para cadastrar uma empresa, clique em <strong>Nova</strong>. Para editar, localize na lista e clique em <strong>Editar</strong>.</span>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Total: {{ total }}</strong>
+      <label>
+        Itens por página
+        <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </label>
+    </div>
+
+    <table class="table" *ngIf="empresas.length; else emptyTpl">
+      <thead>
+        <tr>
+          <th>Razão social</th>
+          <th>Nome fantasia</th>
+          <th>Documento</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let empresa of empresas">
+          <td>{{ empresa.nome }}</td>
+          <td>{{ empresa.nome_fantasia || '-' }}</td>
+          <td>{{ empresa.documento || '-' }}</td>
+          <td>
+            <span class="badge" [class.off]="empresa.ativo === false">
+              {{ empresa.ativo === false ? 'Inativa' : 'Ativa' }}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="btn sm" type="button" (click)="editar(empresa)">Editar</button>
+            <button class="btn sm" type="button" (click)="alternarAtivo(empresa)">
+              {{ empresa.ativo === false ? 'Ativar' : 'Inativar' }}
+            </button>
+            <button class="btn sm danger" type="button" (click)="excluir(empresa)">Excluir</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #emptyTpl>
+      <div class="empty" *ngIf="!loading">Nenhuma empresa encontrada.</div>
+      <div class="empty" *ngIf="loading">Carregando...</div>
+    </ng-template>
+
+    <div class="pager" *ngIf="total > 0">
+      <div>
+        <button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
+        <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
+      </div>
+      <span>Página {{ page }} de {{ totalPages }} — Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span>
+      <div>
+        <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
+        <button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button>
+      </div>
+    </div>
+  </section>
+</div>
