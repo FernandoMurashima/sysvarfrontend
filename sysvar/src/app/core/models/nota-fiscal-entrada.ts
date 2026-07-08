@@ -35,8 +35,12 @@ export interface NotaFiscalEntradaPedidoItem {
   pedido_item: number;
   nota_item: number | null;
   produto: number | null;
+  produto_descricao?: string | null;
+  produto_referencia?: string | null;
   cor: number | null;
+  cor_nome?: string | null;
   pack: number | null;
+  pack_nome?: string | null;
   descricao_livre: string | null;
   qtd_pedido: string;
   qtd_recebida_outras_notas: string;
@@ -44,4 +48,7 @@ export interface NotaFiscalEntradaPedidoItem {
   saldo_total_recebivel: string;
   saldo_pendente: string;
   preco_unit_pedido: string;
+  qtd_pack?: string | null;
+  n_packs?: number | null;
+  quantidades_validas?: string[];
 }

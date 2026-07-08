@@ -5,6 +5,11 @@ import { RouterLink } from '@angular/router';
 
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { NatLancamento } from '../../core/models/natureza-lancamento';
+import { EmpresasService } from '../../core/services/empresas.service';
+import { Empresa } from '../../core/models/empresa';
+import { AuthService } from '../../core/auth.service';
+import { PlanoContabil } from '../../core/models/plano-contabil';
+import { PlanoContabilService } from '../../core/services/plano-contabil.service';
 
 @Component({
   selector: 'app-nat-lancamentos',
@@ -16,6 +21,9 @@ import { NatLancamento } from '../../core/models/natureza-lancamento';
 export class NatLancamentosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(NatLancamentosService);
+  private empresasApi = inject(EmpresasService);
+  private auth = inject(AuthService);
+  private planoApi = inject(PlanoContabilService);
 
   search = '';
   loading = false;
@@ -27,9 +35,39 @@ export class NatLancamentosComponent implements OnInit {
 
   successMsg = '';
   errorMsg = '';
+  excluirModal: NatLancamento | null = null;
   errorOverlayOpen = false;
+  empresas: Empresa[] = [];
+  planoContabil: PlanoContabil[] = [];
+
+  readonly operacoes = [
+    { value: 'RECEITA', label: 'Receita' },
+    { value: 'DESPESA', label: 'Despesa' },
+    { value: 'TRANSFERENCIA', label: 'Transferência' },
+    { value: 'AJUSTE', label: 'Ajuste' },
+  ];
+  readonly tiposNatureza = [
+    { value: 'CREDITO', label: 'Crédito' },
+    { value: 'DEBITO', label: 'Débito' },
+    { value: 'NEUTRO', label: 'Neutro' },
+  ];
+  readonly statusOptions = [
+    { value: 'ATIVO', label: 'Ativo' },
+    { value: 'INATIVO', label: 'Inativo' },
+  ];
+  readonly tiposOptions = [
+    { value: 'OPERACIONAL', label: 'Operacional' },
+    { value: 'FINANCEIRO', label: 'Financeiro' },
+    { value: 'INVESTIMENTO', label: 'Investimento' },
+    { value: 'FISCAL', label: 'Fiscal/Impostos' },
+    { value: 'TRANSFERENCIA', label: 'Transferência' },
+    { value: 'AJUSTE', label: 'Ajuste' },
+    { value: 'RECEITA', label: 'Receita' },
+    { value: 'DESPESA', label: 'Despesa' },
+  ];
 
   form: FormGroup = this.fb.group({
+    empresa: [null as number | null],
     codigo: ['', [Validators.required, Validators.maxLength(10)]],
     categoria_principal: ['', [Validators.required, Validators.maxLength(50)]],
     subcategoria: ['', [Validators.required, Validators.maxLength(50)]],
@@ -37,6 +75,13 @@ export class NatLancamentosComponent implements OnInit {
     tipo: ['', [Validators.required, Validators.maxLength(20)]],
     status: ['', [Validators.required, Validators.maxLength(10)]],
     tipo_natureza: ['', [Validators.required, Validators.maxLength(10)]],
+    natureza_operacao: ['DESPESA', [Validators.required, Validators.maxLength(20)]],
+    categoria_gerencial: ['', [Validators.maxLength(50)]],
+    movimenta_financeiro: [true],
+    entra_dre: [true],
+    plano_contabil: [null as number | null],
+    conta_contabil: ['', [Validators.maxLength(50)]],
+    ativo: [true],
   });
 
   // lista + paginação client-side
@@ -51,7 +96,43 @@ export class NatLancamentosComponent implements OnInit {
   get pageStart(): number { return this.total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
 
-  ngOnInit(): void { this.load(); }
+  get isSuperUser(): boolean { return !!this.auth.getCurrentUser()?.is_superuser; }
+
+  ngOnInit(): void {
+    this.loadEmpresas();
+    this.loadPlanoContabil();
+    this.load();
+  }
+
+  loadEmpresas(): void {
+    this.empresasApi.list({ page_size: 500, ordering: 'nome' }).subscribe({
+      next: res => {
+        this.empresas = Array.isArray(res) ? res : (res?.results ?? []);
+        if (this.isSuperUser && !this.form.get('empresa')?.value && this.empresas.length === 1) {
+          this.form.patchValue({ empresa: this.empresas[0].id ?? null });
+        }
+      },
+      error: () => { this.empresas = []; }
+    });
+  }
+
+  loadPlanoContabil(): void {
+    this.planoApi.list({ page_size: 3000, ordering: 'codigo', ativa: true }).subscribe({
+      next: res => {
+        this.planoContabil = Array.isArray(res) ? res : (res?.results ?? []);
+      },
+      error: () => { this.planoContabil = []; }
+    });
+  }
+
+  contasContabeisDisponiveis(): PlanoContabil[] {
+    const empresa = this.form.get('empresa')?.value;
+    return this.planoContabil.filter(conta =>
+      conta.ativa !== false &&
+      conta.analitica !== false &&
+      (!this.isSuperUser || !empresa || Number(conta.empresa) === Number(empresa))
+    );
+  }
 
   load(): void {
     this.loading = true;
@@ -95,7 +176,10 @@ export class NatLancamentosComponent implements OnInit {
     this.successMsg = '';
     this.form.reset({
       codigo: '', categoria_principal: '', subcategoria: '',
-      descricao: '', tipo: '', status: '', tipo_natureza: ''
+      descricao: '', tipo: 'OPERACIONAL', status: 'ATIVO', tipo_natureza: 'DEBITO',
+      natureza_operacao: 'DESPESA', categoria_gerencial: '', movimenta_financeiro: true,
+      entra_dre: true, plano_contabil: null, conta_contabil: '', ativo: true,
+      empresa: this.isSuperUser && this.empresas.length === 1 ? this.empresas[0].id ?? null : null
     });
   }
 
@@ -111,7 +195,15 @@ export class NatLancamentosComponent implements OnInit {
       descricao: row.descricao ?? '',
       tipo: row.tipo ?? '',
       status: row.status ?? '',
-      tipo_natureza: row.tipo_natureza ?? ''
+      tipo_natureza: row.tipo_natureza ?? '',
+      natureza_operacao: row.natureza_operacao ?? 'DESPESA',
+      categoria_gerencial: row.categoria_gerencial ?? '',
+      movimenta_financeiro: row.movimenta_financeiro ?? true,
+      entra_dre: row.entra_dre ?? true,
+      plano_contabil: row.plano_contabil ?? null,
+      conta_contabil: row.conta_contabil ?? '',
+      ativo: row.ativo ?? true,
+      empresa: row.empresa ?? null
     });
   }
 
@@ -124,9 +216,13 @@ export class NatLancamentosComponent implements OnInit {
 
   salvar(): void {
     this.submitted = true;
+    if (this.isSuperUser && !this.form.get('empresa')?.value) {
+      this.form.get('empresa')?.setErrors({ required: true });
+    }
     if (this.form.invalid) { this.openErrorOverlayIfNeeded(); return; }
 
     const payload = this.form.value as NatLancamento;
+    if (!this.isSuperUser) delete (payload as any).empresa;
     this.saving = true;
 
     const req$ = this.editingId
@@ -162,10 +258,16 @@ export class NatLancamentosComponent implements OnInit {
   excluir(row: NatLancamento): void {
     const id = row.idnatureza;
     if (!id) return;
-    if (!confirm(`Excluir a natureza "${row.codigo} - ${row.descricao}"?`)) return;
+    this.excluirModal = row;
+  }
 
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    const id = row?.idnatureza;
+    if (!id) return;
     this.api.delete(id).subscribe({
       next: () => { 
+        this.excluirModal = null;
         const eraUltimo = this.itens.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
         this.load();
@@ -174,6 +276,10 @@ export class NatLancamentosComponent implements OnInit {
       },
       error: () => { this.errorMsg = 'Falha ao excluir.'; }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   getFormErrors(): string[] {
@@ -193,7 +299,16 @@ export class NatLancamentosComponent implements OnInit {
     req('tipo', 'Tipo', 20);
     req('status', 'Status', 10);
     req('tipo_natureza', 'Tipo de Natureza', 10);
+    req('natureza_operacao', 'Operação', 20);
+    req('categoria_gerencial', 'Categoria gerencial', 50);
+    req('conta_contabil', 'Conta contábil', 50);
+    if (this.isSuperUser) req('empresa', 'Empresa');
     return msgs;
+  }
+
+  contaLabel(n: NatLancamento): string {
+    if (n.plano_contabil_codigo) return `${n.plano_contabil_codigo} - ${n.plano_contabil_descricao || ''}`.trim();
+    return n.conta_contabil || '-';
   }
 
   openErrorOverlayIfNeeded(): void { this.errorOverlayOpen = this.getFormErrors().length > 0; }

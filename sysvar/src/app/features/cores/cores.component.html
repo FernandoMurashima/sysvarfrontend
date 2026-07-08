@@ -19,6 +19,17 @@
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
 
+  <div class="overlay" *ngIf="excluirModal as cor">
+    <div class="overlay-card">
+      <h4>Excluir cor</h4>
+      <p>Confirma a exclusão da cor <strong>{{ cor.Descricao }}</strong>?</p>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
   <div class="content">
     <!-- Placeholder -->
     <section class="card form-placeholder" *ngIf="!showForm">
@@ -31,11 +42,6 @@
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
       <h3>{{ editingId ? 'Editar Cor' : 'Nova Cor' }}</h3>
-
-      <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
-        Existem {{ getFormErrors().length }} campo(s) com problema.
-      </div>
-
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1 -->
@@ -77,6 +83,12 @@
             <input type="text" formControlName="Status" />
             <span class="field-error" *ngIf="form.get('Status')?.errors?.['server']">{{ form.get('Status')?.errors?.['server'] }}</span>
           </label>
+        </div>
+        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+          <strong>Pendências</strong>
+          <ul>
+            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+          </ul>
         </div>
 
         <div class="actions-form">
@@ -154,19 +166,5 @@
         </div>
       </div>
     </section>
-  </div>
-
-  <!-- OVERLAY ERROS -->
-  <div class="overlay" *ngIf="errorOverlayOpen" role="alertdialog" aria-modal="true">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
-      <ul>
-        <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-      </ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
-      </div>
-    </div>
   </div>
 </div>

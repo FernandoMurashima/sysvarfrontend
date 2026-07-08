@@ -34,6 +34,7 @@ export class FornecedoresComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Fornecedor | null = null;
   errorOverlayOpen = false;
 
   // ======== Form ========
@@ -332,10 +333,16 @@ export class FornecedoresComponent implements OnInit {
   excluir(item: Fornecedor): void {
     const id = item.id;
     if (!id) return;
-    if (!confirm(`Excluir o fornecedor "${item.nome_fornecedor}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item?.id;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Fornecedor excluído.';
         const eraUltimo = this.fornecedores.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -347,6 +354,10 @@ export class FornecedoresComponent implements OnInit {
         this.errorMsg = 'Falha ao excluir.';
       }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // ========= Overlay de erros =========

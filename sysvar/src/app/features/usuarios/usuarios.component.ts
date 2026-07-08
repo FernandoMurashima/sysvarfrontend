@@ -6,13 +6,17 @@ import { FormsModule } from '@angular/forms';
 import { UsersService } from '../../core/services/users.service';
 import { User } from '../../core/models/user';
 
-// NOVO: trazer as lojas para um <select>
 import { LojasService } from '../../core/services/lojas.service';
+import { EmpresasService } from '../../core/services/empresas.service';
+import { Empresa } from '../../core/models/empresa';
 
 import {Router} from "@angular/router";
+import { AuthService } from '../../core/auth.service';
 
 type Loja = {
-  Idloja: number;
+  id?: number;
+  Idloja?: number;
+  empresa?: number | null;
   nome_loja?: string;
   apelido_loja?: string;
 };
@@ -27,7 +31,9 @@ type Loja = {
 export class UsuariosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(UsersService);
-  private lojasApi = inject(LojasService); // NOVO
+  private auth = inject(AuthService);
+  private lojasApi = inject(LojasService);
+  private empresasApi = inject(EmpresasService);
   constructor(private router: Router) {}
 
   goHome() {
@@ -40,12 +46,16 @@ export class UsuariosComponent implements OnInit {
 
   successMsg = '';
   errorMsg = '';
+  excluirModal: User | null = null;
+  private successTimer: any = null;
 
   showForm = false;
   errorOverlayOpen = false;
 
   usuarios: User[] = [];
-  lojas: Loja[] = []; // NOVO
+  empresas: Empresa[] = [];
+  lojas: Loja[] = [];
+  usuarioAtual: User | null = null;
   search = '';
   editingId: number | null = null;
 
@@ -68,7 +78,9 @@ export class UsuariosComponent implements OnInit {
     last_name: [''],
     email: ['', [Validators.email]],
     type: ['Regular', [Validators.required]],
-    Idloja: [null],
+    Idempresa: [null as number | null],
+    Idloja: [null as number | null],
+    Idlojas: [[] as number[]],
     password: [''],          // obrigatória somente no create
     confirm_password: [''],  // só no front
   });
@@ -83,12 +95,72 @@ export class UsuariosComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
+    this.loadUsuarioAtual();
     this.load();
-    this.loadLojas(); // NOVO
+    this.loadLojas();
+  }
+
+  get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
+  get empresaBloqueada(): boolean { return !!this.usuarioAtual && !this.isSuperUsuario; }
+
+  private empresaUsuarioId(): number | null {
+    return this.usuarioAtual?.Idempresa ?? this.usuarioAtual?.empresa?.id ?? null;
+  }
+
+  private empresaDefaultId(): number | null {
+    const empresaUsuario = this.empresaUsuarioId();
+    if (!this.isSuperUsuario && empresaUsuario) return empresaUsuario;
+    return this.empresas.length === 1 && this.empresas[0].id ? this.empresas[0].id : null;
+  }
+
+  private aplicarEmpresaBloqueada(): void {
+    const defaultId = this.empresaDefaultId();
+    if (defaultId && (!this.form.get('Idempresa')?.value || this.empresaBloqueada)) {
+      this.form.patchValue({ Idempresa: defaultId });
+    }
+    const empresaCtrl = this.form.get('Idempresa');
+    if (this.empresaBloqueada) {
+      empresaCtrl?.disable({ emitEvent: false });
+    } else {
+      empresaCtrl?.enable({ emitEvent: false });
+    }
+    this.onEmpresaChange();
+  }
+
+  private loadUsuarioAtual() {
+    const cached = this.auth.getCurrentUser() as User | null;
+    if (cached) {
+      this.usuarioAtual = cached;
+      this.loadEmpresas();
+    }
+    this.auth.me().subscribe({
+      next: (user) => {
+        this.auth.setCurrentUser(user as any);
+        this.usuarioAtual = user as User;
+        this.loadEmpresas();
+      },
+      error: () => {
+        if (!cached) this.loadEmpresas();
+      }
+    });
+  }
+
+  private loadEmpresas() {
+    this.empresasApi.list({ ordering: 'nome', page_size: 1000 }).subscribe({
+      next: (res: any) => {
+        const empresas = Array.isArray(res) ? res : (res?.results ?? []);
+        const empresaUsuario = this.empresaUsuarioId();
+        this.empresas = this.isSuperUsuario || !empresaUsuario
+          ? empresas
+          : empresas.filter((empresa: Empresa) => empresa.id === empresaUsuario);
+        this.aplicarEmpresaBloqueada();
+      },
+      error: (err) => console.error(err)
+    });
   }
 
   private loadLojas() {
-    this.lojasApi.list({ ordering: 'nome_loja' }).subscribe({
+    this.lojasApi.list({ ordering: 'nome_loja', page_size: 2000 }).subscribe({
       next: (res: any) => {
         this.lojas = Array.isArray(res) ? res : (res?.results ?? []);
       },
@@ -132,10 +204,13 @@ export class UsuariosComponent implements OnInit {
       last_name: '',
       email: '',
       type: 'Regular',
+      Idempresa: this.empresaDefaultId(),
       Idloja: null,       // limpa loja
+      Idlojas: [],
       password: '',
       confirm_password: '',
     });
+    this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
   }
@@ -152,10 +227,13 @@ export class UsuariosComponent implements OnInit {
       last_name: item.last_name ?? '',
       email: item.email ?? '',
       type: item.type ?? 'Regular',
-      Idloja: (item as any).Idloja ?? null, // pré-carrega loja, se vier do backend
+      Idempresa: item.Idempresa ?? item.empresa?.id ?? null,
+      Idloja: item.Idloja ?? item.loja?.Idloja ?? null,
+      Idlojas: item.Idlojas ?? item.lojas?.map(l => l.Idloja).filter((id): id is number => !!id) ?? [],
       password: '',
       confirm_password: '',
     });
+    this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
   }
@@ -176,7 +254,11 @@ export class UsuariosComponent implements OnInit {
       email: (raw.email ?? '').trim() || undefined,
       type: raw.type as User['type'],
     };
+    if (raw.Idempresa != null && raw.Idempresa !== '') payload.Idempresa = Number(raw.Idempresa);
     if (raw.Idloja != null && raw.Idloja !== '') payload.Idloja = Number(raw.Idloja); // envia só se setado
+    const lojas = (raw.Idlojas || []).map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id));
+    if (payload.Idloja && !lojas.includes(payload.Idloja)) lojas.push(payload.Idloja);
+    payload.Idlojas = lojas;
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
     return payload;
@@ -192,6 +274,25 @@ export class UsuariosComponent implements OnInit {
       return 'Senha: obrigatória no cadastro.';
     }
     return null;
+  }
+
+  private setSuccess(message: string): void {
+    this.successMsg = message;
+    if (this.successTimer) clearTimeout(this.successTimer);
+    this.successTimer = setTimeout(() => {
+      this.successMsg = '';
+      this.successTimer = null;
+    }, 3500);
+  }
+
+  private clearPairErrors(): void {
+    for (const key of ['password', 'confirm_password']) {
+      const ctrl = this.form.get(key);
+      if (!ctrl?.errors?.['pair']) continue;
+      const next = { ...ctrl.errors };
+      delete next['pair'];
+      ctrl.setErrors(Object.keys(next).length ? next : null);
+    }
   }
 
   private applyBackendErrors(err: any) {
@@ -216,7 +317,9 @@ export class UsuariosComponent implements OnInit {
       last_name: 'Sobrenome',
       email: 'Email',
       type: 'Tipo',
+      Idempresa: 'Empresa',
       Idloja: 'Loja',
+      Idlojas: 'Lojas permitidas',
       password: 'Senha',
     };
     const msgs: string[] = [];
@@ -252,16 +355,24 @@ export class UsuariosComponent implements OnInit {
 
   salvar() {
     this.submitted = true;
+    this.clearPairErrors();
+    const raw = this.form.getRawValue();
 
     const pwdPairMsg = this.validatePasswordPair();
     if (pwdPairMsg) {
-      const current = this.form.get('password')?.errors || {};
-      this.form.get('password')?.setErrors({ ...current, pair: true });
+      for (const key of ['password', 'confirm_password']) {
+        const current = this.form.get(key)?.errors || {};
+        this.form.get(key)?.setErrors({ ...current, pair: true });
+      }
     }
 
-    if (this.tiposExigemLoja.has(this.form.value.type as User['type']) && !this.form.value.Idloja) {
+    if (this.tiposExigemLoja.has(raw.type as User['type']) && !raw.Idloja) {
       const current = this.form.get('Idloja')?.errors || {};
       this.form.get('Idloja')?.setErrors({ ...current, required: true });
+    }
+    if (!raw.Idempresa) {
+      const current = this.form.get('Idempresa')?.errors || {};
+      this.form.get('Idempresa')?.setErrors({ ...current, required: true });
     }
 
     if (this.form.invalid || !!pwdPairMsg) {
@@ -276,7 +387,7 @@ export class UsuariosComponent implements OnInit {
     this.successMsg = '';
     this.errorOverlayOpen = false;
 
-    const payload = this.normalizePayload(this.form.value);
+    const payload = this.normalizePayload(raw);
 
     const req$ = this.editingId
       ? this.api.update(this.editingId, payload)
@@ -284,7 +395,7 @@ export class UsuariosComponent implements OnInit {
 
     req$.subscribe({
       next: () => {
-        this.successMsg = this.editingId ? 'Usuário atualizado com sucesso.' : 'Usuário criado com sucesso.';
+        this.setSuccess(this.editingId ? 'Usuário atualizado com sucesso.' : 'Usuário criado com sucesso.');
         this.load();
         this.cancelarEdicao();
         this.saving = false;
@@ -303,12 +414,16 @@ export class UsuariosComponent implements OnInit {
 
   excluir(item: User) {
     if (!item.id) return;
-    const ok = confirm(`Excluir o usuário "${item.username}"?`);
-    if (!ok) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    if (!item?.id) return;
     this.api.remove(item.id).subscribe({
       next: () => {
-        this.successMsg = 'Usuário excluído.';
+        this.excluirModal = null;
+        this.setSuccess('Usuário excluído.');
         this.load();
         if (this.editingId === item.id) this.cancelarEdicao();
       },
@@ -317,5 +432,87 @@ export class UsuariosComponent implements OnInit {
         this.errorMsg = 'Falha ao excluir.';
       }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
+  lojaId(loja: Loja): number | null {
+    return loja.id ?? loja.Idloja ?? null;
+  }
+
+  lojaNome(id: number | null | undefined): string {
+    if (!id) return '-';
+    const loja = this.lojas.find(l => this.lojaId(l) === id);
+    return loja?.nome_loja || loja?.apelido_loja || `Loja #${id}`;
+  }
+
+  empresaNome(id: number | null | undefined): string {
+    if (!id) return '-';
+    const empresa = this.empresas.find(e => e.id === id);
+    return empresa?.nome_fantasia || empresa?.nome || `Empresa #${id}`;
+  }
+
+  lojasDaEmpresa(): Loja[] {
+    const empresaId = Number(this.form.getRawValue().Idempresa || 0);
+    if (!empresaId) return [];
+    return this.lojas.filter(l => Number(l.empresa || 0) === empresaId);
+  }
+
+  empresaSelecionadaId(): number | null {
+    return this.form.getRawValue().Idempresa ?? null;
+  }
+
+  onEmpresaChange(): void {
+    const permitidas = new Set(this.lojasDaEmpresa().map(l => this.lojaId(l)).filter((id): id is number => !!id));
+    const lojaPrincipal = Number(this.form.value.Idloja || 0);
+    if (lojaPrincipal && !permitidas.has(lojaPrincipal)) {
+      this.form.patchValue({ Idloja: null });
+    }
+    const lojasSelecionadas = (this.form.value.Idlojas || []).filter((id: number) => permitidas.has(Number(id)));
+    this.form.patchValue({ Idlojas: lojasSelecionadas });
+  }
+
+  onLojaPrincipalChange(): void {
+    const lojaPrincipal = Number(this.form.value.Idloja || 0);
+    if (!lojaPrincipal) return;
+    const selecionadas = new Set(this.lojasPermitidasIds());
+    selecionadas.add(lojaPrincipal);
+    this.form.patchValue({ Idlojas: Array.from(selecionadas) });
+  }
+
+  lojasPermitidasIds(): number[] {
+    return (this.form.value.Idlojas || []).map(id => Number(id)).filter(id => Number.isFinite(id));
+  }
+
+  lojaPermitidaMarcada(loja: Loja): boolean {
+    const id = this.lojaId(loja);
+    return !!id && this.lojasPermitidasIds().includes(id);
+  }
+
+  todasLojasMarcadas(): boolean {
+    const lojas = this.lojasDaEmpresa().map(l => this.lojaId(l)).filter((id): id is number => !!id);
+    const selecionadas = new Set(this.lojasPermitidasIds());
+    return lojas.length > 0 && lojas.every(id => selecionadas.has(id));
+  }
+
+  toggleTodasLojas(checked: boolean): void {
+    const ids = checked
+      ? this.lojasDaEmpresa().map(l => this.lojaId(l)).filter((id): id is number => !!id)
+      : [];
+    this.form.patchValue({ Idlojas: ids });
+  }
+
+  toggleLojaPermitida(loja: Loja, checked: boolean): void {
+    const id = this.lojaId(loja);
+    if (!id) return;
+    const selecionadas = new Set(this.lojasPermitidasIds());
+    if (checked) {
+      selecionadas.add(id);
+    } else {
+      selecionadas.delete(id);
+    }
+    this.form.patchValue({ Idlojas: Array.from(selecionadas) });
   }
 }

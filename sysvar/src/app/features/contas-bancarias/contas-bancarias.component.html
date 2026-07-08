@@ -2,9 +2,26 @@
   <header class="toolbar">
     <h2>Contas Bancárias</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
-      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
-      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
+      <details class="store-picker">
+        <summary>{{ lojaFiltroLabel() }}</summary>
+        <div class="store-picker-menu">
+          <label class="store-option">
+            <input type="checkbox" [checked]="!lojasFiltro.length" (change)="selecionarTodasLojas()" />
+            Todas as lojas
+          </label>
+          <label class="store-option" *ngFor="let loja of lojas">
+            <input
+              type="checkbox"
+              [checked]="lojaFiltroSelecionada(loja.id)"
+              (change)="alternarLojaFiltro(loja.id, $any($event.target).checked)"
+            />
+            {{ loja.nome_loja }}
+          </label>
+        </div>
+      </details>
+      <input type="text" placeholder="Buscar conta, banco, loja..." [(ngModel)]="search" (keyup.enter)="filtrarContas()" />
+      <button class="btn primary" type="button" (click)="filtrarContas()">Buscar</button>
+      <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
       <button class="btn primary" type="button" (click)="novo()">Nova conta</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
@@ -13,12 +30,91 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="modal-backdrop" *ngIf="conciliacaoModal">
+    <section class="modal-card">
+      <h3>Conciliar recebível</h3>
+      <p class="modal-doc">{{ conciliacaoModal.mov.documento || 'Sem documento' }}</p>
+      <div class="modal-grid">
+        <label>
+          Data da conciliação
+          <input type="date" [(ngModel)]="conciliacaoModal.data_conciliacao" />
+        </label>
+        <label>
+          Valor conciliado
+          <input type="number" step="0.01" min="0.01" [(ngModel)]="conciliacaoModal.valor_conciliado" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="cancelarConciliacao()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarConciliacao()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="desfazerModal">
+    <section class="modal-card">
+      <h3>Desfazer conciliação</h3>
+      <p class="modal-doc">{{ desfazerModal.documento || 'Sem documento' }}</p>
+      <p class="modal-text">
+        Esta operação volta a movimentação para prevista e estorna o saldo da conta pelo valor conciliado.
+      </p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="cancelarDesfazerConciliacao()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarDesfazerConciliacao()">Desfazer</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="conciliacaoLoteModal">
+    <section class="modal-card">
+      <h3>Conciliar recebíveis</h3>
+      <p class="modal-doc">
+        {{ conciliacaoLoteModal.quantidade }} item(ns) · {{ conciliacaoLoteModal.total | currency:'BRL' }}
+      </p>
+      <label>
+        Data da conciliação
+        <input type="date" [(ngModel)]="conciliacaoLoteModal.data_conciliacao" />
+      </label>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="cancelarConciliacaoLote()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarConciliacaoLote()" [disabled]="conciliandoLote">
+          {{ conciliandoLote ? 'Conciliando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="excluirModal as conta">
+    <section class="modal-card">
+      <h3>Excluir conta bancária</h3>
+      <p class="modal-doc">{{ conta.descricao }}</p>
+      <p class="modal-text">Confirma a exclusão desta conta?</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="cancelarExclusao()">Cancelar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </section>
+  </div>
+
   <section class="panel" *ngIf="showForm">
     <h3>{{ editingId ? 'Editar conta bancária' : 'Nova conta bancária' }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
-      <label>Loja*<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+      <label>
+        Loja*
+        <select formControlName="idloja">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+        </select>
+      </label>
       <label class="span-2">Descrição*<input type="text" formControlName="descricao" /></label>
-      <label>Tipo*<select formControlName="tipo_conta"><option value="CORRENTE">Corrente</option><option value="POUPANCA">Poupança</option><option value="PAGAMENTO">Pagamento</option></select></label>
+      <label>
+        Tipo*
+        <select formControlName="tipo_conta">
+          <option value="CORRENTE">Corrente</option>
+          <option value="POUPANCA">Poupança</option>
+          <option value="PAGAMENTO">Pagamento</option>
+        </select>
+      </label>
       <label>Banco*<input type="text" formControlName="banco" /></label>
       <label>Agência*<input type="text" formControlName="agencia" /></label>
       <label>Conta*<input type="text" formControlName="conta" /></label>
@@ -33,25 +129,228 @@
     </form>
   </section>
 
-  <section class="panel">
-    <div class="list-header"><strong>Total: {{ contas.length }}</strong><span *ngIf="loading">Carregando...</span></div>
-    <div class="table-wrapper">
-      <table class="table" *ngIf="contas.length; else vazioTpl">
-        <thead><tr><th>Descrição</th><th>Banco</th><th>Agência</th><th>Conta</th><th>Loja</th><th>Saldo atual</th><th>Ativo</th><th></th></tr></thead>
+  <section class="summary-grid" *ngIf="contaSelecionada() as conta">
+    <div class="summary-card wide">
+      <span>Conta selecionada</span>
+      <strong>{{ conta.descricao }}</strong>
+      <small>{{ lojaNome(conta.idloja) }} · {{ conta.banco }} Ag {{ conta.agencia }} Cc {{ conta.conta }}</small>
+    </div>
+    <div class="summary-card">
+      <span>Saldo atual</span>
+      <strong [class.negative]="(+conta.saldo_atual || 0) < 0">{{ conta.saldo_atual | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Entradas</span>
+      <strong class="entry">{{ totalEntradas() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Saídas</span>
+      <strong class="exit">{{ totalSaidas() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Resultado período</span>
+      <strong [class.negative]="saldoPeriodo() < 0">{{ saldoPeriodo() | currency:'BRL' }}</strong>
+    </div>
+  </section>
+
+  <section class="panel filters">
+    <strong>Período do extrato</strong>
+    <input type="date" [(ngModel)]="dataIni" aria-label="Data inicial" />
+    <input type="date" [(ngModel)]="dataFim" aria-label="Data final" />
+    <button class="btn primary" type="button" (click)="loadMovimentacoes()">Atualizar extrato</button>
+  </section>
+
+  <section class="panel conciliacao-panel">
+    <div class="conciliacao-bar">
+      <strong>Conciliação</strong>
+      <select [(ngModel)]="conciliacaoForma" aria-label="Forma de pagamento">
+        <option value="">Forma de pagamento</option>
+        <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">
+          {{ forma.codigo }} - {{ forma.descricao }}
+        </option>
+      </select>
+      <input type="date" [(ngModel)]="conciliacaoData" aria-label="Data prevista" />
+      <button class="btn primary" type="button" (click)="buscarPendentesConciliacao()" [disabled]="carregandoConciliacao">
+        {{ carregandoConciliacao ? 'Buscando...' : 'Buscar recebíveis' }}
+      </button>
+      <button class="btn" type="button" (click)="marcarTodosConciliacao()" [disabled]="!conciliacaoPendentes.length">
+        Marcar todos
+      </button>
+      <button class="btn" type="button" (click)="limparSelecaoConciliacao()" [disabled]="!quantidadeConciliacaoSelecionada()">
+        Limpar seleção
+      </button>
+      <span class="conciliacao-total">
+        {{ quantidadeConciliacaoSelecionada() }} selecionado(s) · {{ totalConciliacaoSelecionada() | currency:'BRL' }}
+      </span>
+      <button class="btn primary" type="button" (click)="abrirConciliacaoLote()" [disabled]="!quantidadeConciliacaoSelecionada()">
+        Conciliar selecionados
+      </button>
+    </div>
+
+    <div class="table-wrapper conciliation-table" *ngIf="conciliacaoPendentes.length">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="select-col"></th>
+            <th>Data prevista</th>
+            <th>Documento</th>
+            <th>Histórico</th>
+            <th>Forma</th>
+            <th class="money-col">Valor</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr *ngFor="let conta of contas">
+          <tr *ngFor="let mov of conciliacaoPendentes">
+            <td class="select-col">
+              <input
+                type="checkbox"
+                [checked]="movConciliacaoSelecionado(mov)"
+                (change)="alternarMovConciliacao(mov, $any($event.target).checked)"
+              />
+            </td>
+            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+            <td class="doc">{{ mov.documento || '-' }}</td>
+            <td>{{ mov.historico }}</td>
+            <td>{{ mov.FormaPagamento || '-' }}</td>
+            <td class="money money-col entry">{{ mov.valor | currency:'BRL' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel transfer-panel" [formGroup]="transferenciaForm">
+    <strong>Transferência</strong>
+    <select formControlName="origem_tipo" aria-label="Tipo de origem" (change)="sincronizarTransferencia()">
+      <option value="CAIXA">Caixa</option>
+      <option value="CONTA">Banco</option>
+    </select>
+    <select formControlName="origem_id" aria-label="Origem" (change)="sincronizarTransferencia()">
+      <option [ngValue]="null">Origem</option>
+      <option *ngFor="let item of endpoints(transferenciaForm.value.origem_tipo || 'CAIXA')" [ngValue]="item.id">{{ item.label }}</option>
+    </select>
+    <select formControlName="destino_tipo" aria-label="Tipo de destino" (change)="sincronizarTransferencia()">
+      <option value="CONTA">Banco</option>
+      <option value="CAIXA">Caixa</option>
+    </select>
+    <select formControlName="destino_id" aria-label="Destino" (change)="sincronizarTransferencia()">
+      <option [ngValue]="null">Destino</option>
+      <option *ngFor="let item of endpoints(transferenciaForm.value.destino_tipo || 'CONTA')" [ngValue]="item.id">{{ item.label }}</option>
+    </select>
+    <input type="text" formControlName="documento" placeholder="Documento" maxlength="50" aria-label="Documento" />
+    <input type="date" formControlName="data_movimento" aria-label="Data" />
+    <input type="number" step="0.01" min="0.01" formControlName="valor" placeholder="Valor" aria-label="Valor" />
+    <input type="text" formControlName="observacao" placeholder="Observação" aria-label="Observação" />
+    <button class="btn primary" type="button" (click)="transferir()" [disabled]="transferindo">
+      {{ transferindo ? 'Transferindo...' : 'Transferir' }}
+    </button>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Contas bancárias</strong>
+      <span *ngIf="loading">Carregando...</span>
+    </div>
+    <div class="table-wrapper compact">
+      <table class="table" *ngIf="contas.length; else vazioTpl">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Banco</th>
+            <th>Agência</th>
+            <th>Conta</th>
+            <th>Loja</th>
+            <th>Saldo atual</th>
+            <th>Ativo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let conta of contas"
+            [class.selected]="conta.Idconta === selectedContaId"
+            (click)="selecionarConta(conta)"
+          >
             <td>{{ conta.descricao }}</td>
             <td>{{ conta.banco }}</td>
             <td>{{ conta.agencia }}</td>
             <td>{{ conta.conta }}</td>
             <td>{{ lojaNome(conta.idloja) }}</td>
-            <td>{{ conta.saldo_atual | currency:'BRL' }}</td>
+            <td [class.negative]="(+conta.saldo_atual || 0) < 0">{{ conta.saldo_atual | currency:'BRL' }}</td>
             <td><span class="badge" [ngClass]="conta.ativo ? 'ok' : 'off'">{{ conta.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-            <td class="actions"><button class="btn sm" (click)="editar(conta)">Editar</button><button class="btn sm danger" (click)="excluir(conta)">Excluir</button></td>
+            <td class="actions" (click)="$event.stopPropagation()">
+              <button class="btn sm" (click)="editar(conta)">Editar</button>
+              <button class="btn sm danger" (click)="excluir(conta)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td>Total</td>
+            <td>{{ contas.length }} conta(s)</td>
+            <td colspan="3"></td>
+            <td [class.negative]="totalSaldoContas() < 0">{{ totalSaldoContas() | currency:'BRL' }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Extrato bancário</strong>
+      <span>{{ movimentacoes.length }} movimentação(ões)</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="movimentacoes.length; else semMovimentosTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Documento</th>
+            <th>Histórico</th>
+            <th>Origem</th>
+            <th class="money-col">Entrada</th>
+            <th class="money-col">Saída</th>
+            <th>Conciliado</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mov of movimentacoes">
+            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+            <td class="doc">{{ mov.documento || '-' }}</td>
+            <td>{{ mov.historico }}</td>
+            <td>{{ mov.origem }}</td>
+            <td class="money money-col entry">{{ valorEntrada(mov) !== null ? (valorEntrada(mov) | currency:'BRL') : '-' }}</td>
+            <td class="money money-col exit">{{ valorSaida(mov) !== null ? (valorSaida(mov) | currency:'BRL') : '-' }}</td>
+            <td>
+              <span *ngIf="mov.data_conciliacao; else naoConciliadoTpl">
+                {{ mov.data_conciliacao | date:'dd/MM/yyyy' }}
+                · {{ mov.valor_conciliado | currency:'BRL' }}
+              </span>
+              <ng-template #naoConciliadoTpl>-</ng-template>
+            </td>
+            <td>{{ mov.status }}</td>
+            <td class="actions">
+              <button class="btn sm primary" type="button" *ngIf="mov.status === 'PREVISTA'" (click)="conciliar(mov)">
+                Conciliar
+              </button>
+              <button
+                class="btn sm"
+                type="button"
+                *ngIf="podeDesfazerConciliacao(mov)"
+                (click)="desfazerConciliacao(mov)"
+              >
+                Desfazer
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
+      <ng-template #semMovimentosTpl><div class="empty">Nenhuma movimentação encontrada para esta conta.</div></ng-template>
     </div>
   </section>
 </div>

@@ -23,6 +23,7 @@ export class NcmsComponent {
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  excluirModal: Ncm | null = null;
 
   items = signal<Ncm[]>([]);
   page = signal(1);
@@ -113,8 +114,21 @@ export class NcmsComponent {
 
   excluir(row: Ncm) {
     if (!row.id) return;
-    if (!confirm(`Excluir o NCM "${row.ncm} - ${row.descricao.substring(0, 40)}..."?`)) return;
-    this.api.delete(row.id).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.id) return;
+    this.api.delete(row.id).subscribe(() => {
+      this.excluirModal = null;
+      this.successMsg.set('NCM excluído.');
+      this.load();
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   getFormErrors(): string[] {

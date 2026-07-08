@@ -17,6 +17,12 @@ export interface FormaPagamento {
   descricao: string;
   num_parcelas: number;
   ativo: boolean;
+  adquirente?: string | null;
+  conta_liquidacao?: number | null;
+  gera_recebivel_bancario?: boolean;
+  prazo_credito_dias?: number;
+  taxa_percentual?: string | number;
+  taxa_fixa?: string | number;
   data_cadastro?: string;
   parcelas?: FormaPagamentoParcela[];
 }

@@ -48,9 +48,18 @@ export class ProdutosUsoComponent {
   search = '';
   loading = signal(false);
   successMsg = signal<string | null>(null);
+  errorMsg = signal<string | null>(null);
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  excluirModal: Produto | null = null;
+  segurancaModal: {
+    action: 'inativar' | 'bloquear';
+    produto: Produto;
+    title: string;
+    motivo: string;
+    senha: string;
+  } | null = null;
 
   // lista / pager
   produtos = signal<Produto[]>([]);
@@ -310,31 +319,49 @@ export class ProdutosUsoComponent {
     this.saving = false;
     this.cancelarEdicao();
     this.setViewList();
-    this.successMsg.set(isEdit ? 'Alterações salvas.' : 'Produto de uso/consumo criado.');
+    this.showSuccess(isEdit ? 'Alterações salvas.' : 'Produto de uso/consumo criado.');
   }
 
   excluir(row: Produto) {
     if (!row.Idproduto) return;
-    if (!confirm(`Excluir o produto "${row.descricao}"?`)) return;
-    this.api.remove(row.Idproduto).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.Idproduto) return;
+    this.api.remove(row.Idproduto).subscribe({
+      next: () => {
+        this.excluirModal = null;
+        this.showSuccess('Produto excluído.');
+        this.load();
+      },
+      error: () => this.showError('Falha ao excluir produto.')
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // flags (reaproveita endpoints do backend)
   async toggleAtivo(row: Produto) {
     if (!row.Idproduto) return;
     if (row.ativo) {
-      const motivo = prompt('Motivo da inativação (mín. 3 caracteres):', '');
-      if (motivo === null || motivo.trim().length < 3) return;
-      const senha = prompt('Senha:', '');
-      if (!senha) return;
-      this.api.inativarProduto(row.Idproduto, motivo.trim(), senha).subscribe({
-        next: (resp) => this.replaceRow(resp as any),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao inativar'))
-      });
+      this.segurancaModal = {
+        action: 'inativar',
+        produto: row,
+        title: 'Inativar produto',
+        motivo: '',
+        senha: '',
+      };
     } else {
       this.api.ativarProduto(row.Idproduto).subscribe({
-        next: (resp) => this.replaceRow(resp as any),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao ativar'))
+        next: (resp) => {
+          this.replaceRow(resp as any);
+          this.showSuccess('Produto ativado.');
+        },
+        error: (err) => this.showError(String(err?.error?.detail || 'Falha ao ativar'))
       });
     }
   }
@@ -343,19 +370,47 @@ export class ProdutosUsoComponent {
     if (!row.Idproduto) return;
     if (row.bloqueado_venda) {
       this.api.desbloquearVenda(row.Idproduto).subscribe({
-        next: (resp: any) => this.replaceRow(resp),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao desbloquear'))
+        next: (resp: any) => {
+          this.replaceRow(resp);
+          this.showSuccess('Produto desbloqueado.');
+        },
+        error: (err) => this.showError(String(err?.error?.detail || 'Falha ao desbloquear'))
       });
     } else {
-      const motivo = prompt('Motivo do bloqueio (mín. 3 caracteres):', '');
-      if (motivo === null || motivo.trim().length < 3) return;
-      const senha = prompt('Senha:', '');
-      if (!senha) return;
-      this.api.bloquearVenda(row.Idproduto, motivo.trim(), senha).subscribe({
-        next: (resp: any) => this.replaceRow(resp),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao bloquear'))
-      });
+      this.segurancaModal = {
+        action: 'bloquear',
+        produto: row,
+        title: 'Bloquear venda do produto',
+        motivo: '',
+        senha: '',
+      };
     }
+  }
+
+  confirmarSeguranca(): void {
+    const modal = this.segurancaModal;
+    const id = modal?.produto.Idproduto;
+    if (!modal || !id) return;
+    const motivo = modal.motivo.trim();
+    if (motivo.length < 3 || !modal.senha) {
+      this.showError('Informe motivo com pelo menos 3 caracteres e a senha.');
+      return;
+    }
+    const req = modal.action === 'inativar'
+      ? this.api.inativarProduto(id, motivo, modal.senha)
+      : this.api.bloquearVenda(id, motivo, modal.senha);
+    req.subscribe({
+      next: (resp: any) => {
+        this.replaceRow(resp);
+        this.showSuccess(modal.action === 'inativar' ? 'Produto inativado.' : 'Produto bloqueado.');
+        this.segurancaModal = null;
+      },
+      error: (err) => this.showError(String(err?.error?.detail || 'Falha ao concluir a operação.'))
+    });
+  }
+
+  fecharSeguranca(): void {
+    this.segurancaModal = null;
   }
 
   private replaceRow(newRow: Produto) {
@@ -363,6 +418,16 @@ export class ProdutosUsoComponent {
     const ix = rows.findIndex(r => r.Idproduto === newRow.Idproduto);
     if (ix >= 0) rows[ix] = newRow;
     this.produtos.set(rows);
+  }
+
+  private showSuccess(message: string): void {
+    this.successMsg.set(message);
+    this.errorMsg.set(null);
+  }
+
+  private showError(message: string): void {
+    this.errorMsg.set(message);
+    this.successMsg.set(null);
   }
 
   // overlay

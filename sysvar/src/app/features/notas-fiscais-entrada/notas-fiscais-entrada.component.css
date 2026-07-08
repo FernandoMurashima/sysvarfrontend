@@ -189,6 +189,39 @@ select {
 .alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 .alert.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .45);
+}
+
+.modal-card {
+  width: min(430px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid #cbd6e2;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .22);
+}
+
+.modal-card h3 {
+  margin: 0 0 10px;
+}
+
+.modal-text {
+  margin: 0 0 14px;
+  color: #334155;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .empty-hint,
 .loading {
   padding: 12px;

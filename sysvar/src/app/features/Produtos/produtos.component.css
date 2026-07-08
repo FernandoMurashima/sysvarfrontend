@@ -64,7 +64,7 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 .input-item.invalid select,
 .input-item.invalid textarea,
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
-.field-error { color:#b91c1c; font-size:12px; min-height:16px; }
+.field-error { display:none; }
 
 .vinculos-grid {
   display:grid;
@@ -219,3 +219,20 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .modal-footer{ border-top: 1px solid #e5e7eb; border-bottom: 0; }
 .modal-body{ padding: 14px 16px; overflow: auto; }
 .btn-icon{ background: transparent; border: 0; font-size: 20px; cursor: pointer; }
+
+.confirm-modal {
+  width: min(460px, 92vw);
+}
+
+.confirm-modal .modal-body p {
+  margin: 0 0 10px;
+}
+
+.security-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
+.form-pending strong { display:block; margin-bottom:6px; }
+.form-pending ul { margin:0; padding-left:18px; }

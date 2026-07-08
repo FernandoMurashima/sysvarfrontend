@@ -26,6 +26,8 @@ export class EmpresasComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Empresa | null = null;
+  private successTimer: any = null;
 
   empresasAll: Empresa[] = [];
   empresas: Empresa[] = [];
@@ -140,7 +142,8 @@ export class EmpresasComponent implements OnInit {
     req.subscribe({
       next: () => {
         this.saving = false;
-        this.successMsg = this.editingId ? 'Empresa atualizada.' : 'Empresa cadastrada.';
+        this.setSuccess(this.editingId ? 'Empresa atualizada.' : 'Empresa cadastrada.');
+        this.search = '';
         this.cancelar();
         this.load();
       },
@@ -149,6 +152,19 @@ export class EmpresasComponent implements OnInit {
         this.errorMsg = this.errorText(err);
       }
     });
+  }
+
+  getFormErrors(): string[] {
+    const errors: string[] = [];
+    const nome = this.form.get('nome');
+    const fantasia = this.form.get('nome_fantasia');
+    const documento = this.form.get('documento');
+
+    if (nome?.errors?.['required']) errors.push('Informe a razão social.');
+    if (nome?.errors?.['maxlength']) errors.push('Razão social deve ter no máximo 120 caracteres.');
+    if (fantasia?.errors?.['maxlength']) errors.push('Nome fantasia deve ter no máximo 120 caracteres.');
+    if (documento?.errors?.['maxlength']) errors.push('Documento deve ter no máximo 18 caracteres.');
+    return errors;
   }
 
   alternarAtivo(row: Empresa): void {
@@ -161,15 +177,24 @@ export class EmpresasComponent implements OnInit {
 
   excluir(row: Empresa): void {
     if (!row.id) return;
-    const ok = confirm(`Excluir a empresa "${row.nome}"?`);
-    if (!ok) return;
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.id) return;
     this.api.remove(row.id).subscribe({
       next: () => {
-        this.successMsg = 'Empresa excluída.';
+        this.excluirModal = null;
+        this.setSuccess('Empresa excluída.');
         this.load();
       },
       error: () => this.errorMsg = 'Não foi possível excluir. Pode haver lojas ou usuários vinculados.'
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   onPageSizeChange(size: string): void {
@@ -204,6 +229,8 @@ export class EmpresasComponent implements OnInit {
   }
 
   private errorText(err: any): string {
+    if (err?.status === 403) return 'Você não tem permissão para cadastrar empresa.';
+    if (err?.status === 401) return 'Sessão expirada. Faça login novamente.';
     const data = err?.error;
     if (!data) return 'Não foi possível salvar a empresa.';
     if (typeof data === 'string') return data;
@@ -212,5 +239,14 @@ export class EmpresasComponent implements OnInit {
     if (Array.isArray(value)) return `${firstKey}: ${value.join(', ')}`;
     if (value) return `${firstKey}: ${value}`;
     return 'Não foi possível salvar a empresa.';
+  }
+
+  private setSuccess(message: string): void {
+    this.successMsg = message;
+    if (this.successTimer) clearTimeout(this.successTimer);
+    this.successTimer = setTimeout(() => {
+      this.successMsg = '';
+      this.successTimer = null;
+    }, 3500);
   }
 }

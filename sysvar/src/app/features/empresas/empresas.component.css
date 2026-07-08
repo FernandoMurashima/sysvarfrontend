@@ -79,6 +79,25 @@ select {
   background: #fff7f7;
 }
 
+.form-pending {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.form-pending strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.form-pending ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .form-actions,
 .actions,
 .pager > div {
@@ -200,6 +219,36 @@ select {
   padding: 18px;
   text-align: center;
   color: #64748b;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, .35);
+}
+
+.overlay-card {
+  width: min(520px, calc(100% - 24px));
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .18);
+}
+
+.overlay-card h4 {
+  margin: 0 0 8px;
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .pager {

@@ -47,7 +47,11 @@
 label { display: grid; gap: 6px; font-size: 14px; }
 input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; outline: none; }
 .input-item.invalid input, .input-item.invalid select, input[aria-invalid="true"] { border-color: #ef4444; background: #fef2f2; }
-.field-error { color:#b91c1c; font-size: 12px; min-height: 16px; }
+.input-item.invalid { color: #b91c1c; }
+.field-error { display: none; }
+.form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
+.form-pending strong { display:block; margin-bottom:6px; }
+.form-pending ul { margin:0; padding-left:18px; }
 
 .actions-form { margin-top: 12px; display: flex; gap: 8px; }
 
@@ -62,8 +66,9 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
 .btn.danger:hover { background: #fef2f2; }
 
 /* posicionamento 10 colunas */
-#nome-box           { grid-column: 1 / span 6; }
-#apelido-box        { grid-column: 7 / span 2; }
+#empresa-box        { grid-column: 1 / span 3; }
+#nome-box           { grid-column: 4 / span 4; }
+#apelido-box        { grid-column: 8 / span 3; }
 #cnpj-box           { grid-column: 1 / span 3; }
 #email-box          { grid-column: 4 / span 4; }
 
@@ -94,7 +99,7 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
 /* responsivo */
 @media (max-width: 600px) {
   .grid-10 { grid-template-columns: 1fr; }
-  #nome-box, #apelido-box, #cnpj-box, #email-box,
+  #empresa-box, #nome-box, #apelido-box, #cnpj-box, #email-box,
   #tipo-box, #endereco-box, #numero-box, #complemento-box,
   #cep-box, #bairro-box, #cidade-box, #estado-box,
   #telefone1-box, #telefone2-box, #abertura-box, #encerramento-box,

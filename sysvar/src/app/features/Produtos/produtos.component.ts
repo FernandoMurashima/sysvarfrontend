@@ -79,9 +79,19 @@ export class ProdutosComponent {
   search = '';
   loading = signal(false);
   successMsg = signal<string | null>(null);
+  errorMsg = signal<string | null>(null);
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  skuConfirmModal: { nomes: string } | null = null;
+  excluirModal: Produto | null = null;
+  segurancaModal: {
+    action: 'inativar' | 'bloquear';
+    produto: Produto;
+    title: string;
+    motivo: string;
+    senha: string;
+  } | null = null;
 
   // lista/pager
   produtos = signal<Produto[]>([]);
@@ -486,14 +496,22 @@ export class ProdutosComponent {
     const coresNovas = this.coresNovasSelecionadas();
     if (coresNovas.length) {
       const nomes = coresNovas.map(id => this.corLabel(id)).join(', ');
-      const confirma = confirm(
-        `Você incluiu nova(s) cor(es): ${nomes}.\n\n` +
-        'Ao salvar, o sistema vai criar os SKUs e os códigos EAN correspondentes para todos os tamanhos da grade deste produto.\n\n' +
-        'Confirma a criação desses SKUs/EANs?'
-      );
-      if (!confirma) return;
+      this.skuConfirmModal = { nomes };
+      return;
     }
+    this.executarSalvar();
+  }
 
+  confirmarCriacaoSkus(): void {
+    this.skuConfirmModal = null;
+    this.executarSalvar();
+  }
+
+  fecharCriacaoSkus(): void {
+    this.skuConfirmModal = null;
+  }
+
+  private executarSalvar() {
     const body: Partial<Produto> = {
       ...this.form.value,
       tabela_preco: undefined,
@@ -517,7 +535,7 @@ export class ProdutosComponent {
           this.prodPrecoApi.upsert(idTabela, prodId, Number(preco)).subscribe({
             next: () => this.gerarSkusPosSave(prodId, tipo),
             error: () => {
-              alert('Produto salvo, mas falhou ao gravar o preço.');
+              this.showError('Produto salvo, mas falhou ao gravar o preço.');
               this.gerarSkusPosSave(prodId, tipo);
             }
           });
@@ -566,13 +584,13 @@ export class ProdutosComponent {
             this.finishSave();
           },
           error: (err) => {
-            alert(String(err?.error?.detail || 'Produto/SKUs ok, mas falhou ao criar estoque inicial.'));
+            this.showError(String(err?.error?.detail || 'Produto/SKUs ok, mas falhou ao criar estoque inicial.'));
             this.finishSave();
           }
         });
       },
       error: (err) => {
-        alert(String(err?.error?.detail || 'Produto salvo, mas falhou ao gerar SKUs.'));
+        this.showError(String(err?.error?.detail || 'Produto salvo, mas falhou ao gerar SKUs.'));
         this.finishSave();
       }
     });
@@ -624,31 +642,49 @@ export class ProdutosComponent {
     this.saving = false;
     this.cancelarEdicao();
     this.setViewList();
-    this.successMsg.set(this.editingId ? 'Alterações salvas.' : 'Produto criado.');
+    this.showSuccess(this.editingId ? 'Alterações salvas.' : 'Produto criado.');
   }
 
   excluir(row: Produto) {
     if (!row.Idproduto) return;
-    if (!confirm(`Excluir o produto "${row.descricao}"?`)) return;
-    this.api.remove(row.Idproduto).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.Idproduto) return;
+    this.api.remove(row.Idproduto).subscribe({
+      next: () => {
+        this.excluirModal = null;
+        this.showSuccess('Produto excluído.');
+        this.load();
+      },
+      error: () => this.showError('Falha ao excluir produto.')
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // flags
   async toggleAtivo(row: Produto) {
     if (!row.Idproduto) return;
     if (row.ativo) {
-      const motivo = prompt('Motivo da inativação (mín. 3 caracteres):', '');
-      if (motivo === null || motivo.trim().length < 3) return;
-      const senha = prompt('Senha:', '');
-      if (!senha) return;
-      this.api.inativarProduto(row.Idproduto, motivo.trim(), senha).subscribe({
-        next: (resp) => this.replaceRow(resp as any),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao inativar'))
-      });
+      this.segurancaModal = {
+        action: 'inativar',
+        produto: row,
+        title: 'Inativar produto',
+        motivo: '',
+        senha: '',
+      };
     } else {
       this.api.ativarProduto(row.Idproduto).subscribe({
-        next: (resp) => this.replaceRow(resp as any),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao ativar'))
+        next: (resp) => {
+          this.replaceRow(resp as any);
+          this.showSuccess('Produto ativado.');
+        },
+        error: (err) => this.showError(String(err?.error?.detail || 'Falha ao ativar'))
       });
     }
   }
@@ -657,19 +693,47 @@ export class ProdutosComponent {
     if (!row.Idproduto) return;
     if (row.bloqueado_venda) {
       this.api.desbloquearVenda(row.Idproduto).subscribe({
-        next: (resp: any) => this.replaceRow(resp),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao desbloquear'))
+        next: (resp: any) => {
+          this.replaceRow(resp);
+          this.showSuccess('Produto desbloqueado.');
+        },
+        error: (err) => this.showError(String(err?.error?.detail || 'Falha ao desbloquear'))
       });
     } else {
-      const motivo = prompt('Motivo do bloqueio (mín. 3 caracteres):', '');
-      if (motivo === null || motivo.trim().length < 3) return;
-      const senha = prompt('Senha:', '');
-      if (!senha) return;
-      this.api.bloquearVenda(row.Idproduto, motivo.trim(), senha).subscribe({
-        next: (resp: any) => this.replaceRow(resp),
-        error: (err) => alert(String(err?.error?.detail || 'Falha ao bloquear'))
-      });
+      this.segurancaModal = {
+        action: 'bloquear',
+        produto: row,
+        title: 'Bloquear venda do produto',
+        motivo: '',
+        senha: '',
+      };
     }
+  }
+
+  confirmarSeguranca(): void {
+    const modal = this.segurancaModal;
+    const id = modal?.produto.Idproduto;
+    if (!modal || !id) return;
+    const motivo = modal.motivo.trim();
+    if (motivo.length < 3 || !modal.senha) {
+      this.showError('Informe motivo com pelo menos 3 caracteres e a senha.');
+      return;
+    }
+    const req = modal.action === 'inativar'
+      ? this.api.inativarProduto(id, motivo, modal.senha)
+      : this.api.bloquearVenda(id, motivo, modal.senha);
+    req.subscribe({
+      next: (resp: any) => {
+        this.replaceRow(resp);
+        this.showSuccess(modal.action === 'inativar' ? 'Produto inativado.' : 'Produto bloqueado.');
+        this.segurancaModal = null;
+      },
+      error: (err) => this.showError(String(err?.error?.detail || 'Falha ao concluir a operação.'))
+    });
+  }
+
+  fecharSeguranca(): void {
+    this.segurancaModal = null;
   }
 
   private replaceRow(newRow: Produto) {
@@ -677,6 +741,16 @@ export class ProdutosComponent {
     const ix = rows.findIndex(r => r.Idproduto === newRow.Idproduto);
     if (ix >= 0) rows[ix] = newRow;
     this.produtos.set(rows);
+  }
+
+  private showSuccess(message: string): void {
+    this.successMsg.set(message);
+    this.errorMsg.set(null);
+  }
+
+  private showError(message: string): void {
+    this.errorMsg.set(message);
+    this.successMsg.set(null);
   }
 
   // overlay

@@ -26,6 +26,19 @@ export class ContasBancariasService {
     return this.http.put<ContaBancaria>(`${this.base}${id}/`, payload);
   }
 
+  transferir(payload: {
+    origem_tipo: 'CAIXA' | 'CONTA';
+    origem_id: number;
+    destino_tipo: 'CAIXA' | 'CONTA';
+    destino_id: number;
+    documento?: string | null;
+    valor: number;
+    data_movimento: string;
+    observacao?: string | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}transferir/`, payload);
+  }
+
   remove(id: number): Observable<unknown> {
     return this.http.delete(`${this.base}${id}/`);
   }

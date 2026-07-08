@@ -268,6 +268,42 @@
   flex: 1;
 }
 
+.pdv-confirm-overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, .28);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 120;
+}
+
+.pdv-confirm-card {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .22);
+  color: #0f172a;
+  max-width: calc(100% - 24px);
+  padding: 16px;
+  width: 460px;
+}
+
+.pdv-confirm-card h4 {
+  margin: 0 0 8px;
+}
+
+.pdv-confirm-card p {
+  margin: 0;
+}
+
+.pdv-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 @media(max-width:1250px){
   .exchange-search{grid-template-columns:1fr}
   .exchange-item{grid-template-columns:1fr 72px 96px}

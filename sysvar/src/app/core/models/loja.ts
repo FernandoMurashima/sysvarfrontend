@@ -2,6 +2,9 @@ export interface Loja {
   id?: number;
   Idloja?: number; // compat antigo
 
+  empresa?: number | null;
+  empresa_nome?: string | null;
+
   nome_loja: string;
   apelido_loja?: string;
   Apelido_loja?: string; // compat antigo

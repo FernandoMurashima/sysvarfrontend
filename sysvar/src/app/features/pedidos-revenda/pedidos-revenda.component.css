@@ -80,7 +80,10 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 .input-item.invalid select,
 .input-item.invalid textarea,
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
-.field-error { color:#b91c1c; font-size:12px; min-height:16px; }
+.field-error { display:none; }
+.form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
+.form-pending strong { display:block; margin-bottom:6px; }
+.form-pending ul { margin:0; padding-left:18px; }
 
 .quick-product-lookup {
   grid-column: 1 / -1;
@@ -134,6 +137,40 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .alert { padding:10px 12px; border-radius:8px; }
 .alert.error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
 .alert.success { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .45);
+}
+
+.modal-card {
+  width: min(430px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid #cbd6e2;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .22);
+}
+
+.modal-card h3 {
+  margin: 0 0 10px;
+}
+
+.modal-text {
+  margin: 0 0 14px;
+  color: #334155;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
 
 /* Estados de lista */
 .empty-hint { padding:8px 0; font-size:14px; color:#333; }

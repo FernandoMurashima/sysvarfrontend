@@ -13,6 +13,17 @@
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="overlay" *ngIf="excluirModal as natureza">
+    <div class="overlay-card">
+      <h4>Excluir natureza</h4>
+      <p>Confirma a exclusão da natureza <strong>{{ natureza.codigo }} - {{ natureza.descricao }}</strong>?</p>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
   <div class="content">
     <!-- Placeholder -->
     <section class="card form-placeholder" *ngIf="!showForm">
@@ -26,11 +37,17 @@
     <section class="card form" *ngIf="showForm">
       <h3>{{ editingId ? 'Editar Natureza' : 'Nova Natureza' }}</h3>
 
-      <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
-        Existem {{ getFormErrors().length }} campo(s) com problema.
-      </div>
-
       <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="empresa-row" *ngIf="isSuperUser">
+          <label id="empresa-box" class="input-item" [class.invalid]="form.get('empresa')?.invalid && (form.get('empresa')?.touched || submitted)">
+            Empresa*
+            <select formControlName="empresa">
+              <option [ngValue]="null">Selecione</option>
+              <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.nome_fantasia || empresa.nome }}</option>
+            </select>
+          </label>
+        </div>
+
         <div class="grid-10">
           <!-- linha 1 -->
           <label id="codigo-box" class="input-item" [class.invalid]="form.get('codigo')?.invalid && (form.get('codigo')?.touched || submitted)">
@@ -46,8 +63,11 @@
 
           <label id="tipo-box" class="input-item" [class.invalid]="form.get('tipo')?.invalid && (form.get('tipo')?.touched || submitted)">
             Tipo*
-            <input type="text" formControlName="tipo"
-              [attr.aria-invalid]="form.get('tipo')?.invalid && (form.get('tipo')?.touched || submitted) ? 'true' : null" />
+            <select formControlName="tipo"
+              [attr.aria-invalid]="form.get('tipo')?.invalid && (form.get('tipo')?.touched || submitted) ? 'true' : null">
+              <option value="">Selecione</option>
+              <option *ngFor="let tipo of tiposOptions" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
             <span class="field-error" *ngIf="form.get('tipo')?.touched || submitted">
               <ng-container *ngIf="form.get('tipo')?.errors?.['required']">Obrigatório.</ng-container>
               <ng-container *ngIf="form.get('tipo')?.errors?.['maxlength']">Máx. 20.</ng-container>
@@ -57,8 +77,11 @@
 
           <label id="status-box" class="input-item" [class.invalid]="form.get('status')?.invalid && (form.get('status')?.touched || submitted)">
             Status*
-            <input type="text" formControlName="status"
-              [attr.aria-invalid]="form.get('status')?.invalid && (form.get('status')?.touched || submitted) ? 'true' : null" />
+            <select formControlName="status"
+              [attr.aria-invalid]="form.get('status')?.invalid && (form.get('status')?.touched || submitted) ? 'true' : null">
+              <option value="">Selecione</option>
+              <option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option>
+            </select>
             <span class="field-error" *ngIf="form.get('status')?.touched || submitted">
               <ng-container *ngIf="form.get('status')?.errors?.['required']">Obrigatório.</ng-container>
               <ng-container *ngIf="form.get('status')?.errors?.['maxlength']">Máx. 10.</ng-container>
@@ -91,13 +114,30 @@
 
           <label id="tipo-nat-box" class="input-item" [class.invalid]="form.get('tipo_natureza')?.invalid && (form.get('tipo_natureza')?.touched || submitted)">
             Tipo de Natureza*
-            <input type="text" formControlName="tipo_natureza"
-              [attr.aria-invalid]="form.get('tipo_natureza')?.invalid && (form.get('tipo_natureza')?.touched || submitted) ? 'true' : null" />
+            <select formControlName="tipo_natureza"
+              [attr.aria-invalid]="form.get('tipo_natureza')?.invalid && (form.get('tipo_natureza')?.touched || submitted) ? 'true' : null">
+              <option value="">Selecione</option>
+              <option *ngFor="let tipo of tiposNatureza" [value]="tipo.value">{{ tipo.label }}</option>
+            </select>
             <span class="field-error" *ngIf="form.get('tipo_natureza')?.touched || submitted">
               <ng-container *ngIf="form.get('tipo_natureza')?.errors?.['required']">Obrigatório.</ng-container>
               <ng-container *ngIf="form.get('tipo_natureza')?.errors?.['maxlength']">Máx. 10.</ng-container>
               <ng-container *ngIf="form.get('tipo_natureza')?.errors?.['server']">{{ form.get('tipo_natureza')?.errors?.['server'] }}</ng-container>
             </span>
+          </label>
+
+          <label id="operacao-box" class="input-item" [class.invalid]="form.get('natureza_operacao')?.invalid && (form.get('natureza_operacao')?.touched || submitted)">
+            Operação*
+            <select formControlName="natureza_operacao"
+              [attr.aria-invalid]="form.get('natureza_operacao')?.invalid && (form.get('natureza_operacao')?.touched || submitted) ? 'true' : null">
+              <option *ngFor="let operacao of operacoes" [value]="operacao.value">{{ operacao.label }}</option>
+            </select>
+          </label>
+
+          <label id="cat-gerencial-box" class="input-item" [class.invalid]="form.get('categoria_gerencial')?.invalid && (form.get('categoria_gerencial')?.touched || submitted)">
+            Categoria gerencial
+            <input type="text" formControlName="categoria_gerencial"
+              [attr.aria-invalid]="form.get('categoria_gerencial')?.invalid && (form.get('categoria_gerencial')?.touched || submitted) ? 'true' : null" />
           </label>
 
           <!-- linha 3 -->
@@ -111,6 +151,39 @@
               <ng-container *ngIf="form.get('descricao')?.errors?.['server']">{{ form.get('descricao')?.errors?.['server'] }}</ng-container>
             </span>
           </label>
+
+          <label id="conta-contabil-box" class="input-item" [class.invalid]="form.get('plano_contabil')?.invalid && (form.get('plano_contabil')?.touched || submitted)">
+            Conta contábil
+            <select formControlName="plano_contabil"
+              [attr.aria-invalid]="form.get('plano_contabil')?.invalid && (form.get('plano_contabil')?.touched || submitted) ? 'true' : null">
+              <option [ngValue]="null">Sem vínculo</option>
+              <option *ngFor="let conta of contasContabeisDisponiveis()" [ngValue]="conta.id">
+                {{ conta.codigo }} - {{ conta.descricao }}
+              </option>
+            </select>
+          </label>
+
+          <label id="movimenta-box" class="input-item checkbox-line">
+            <input type="checkbox" formControlName="movimenta_financeiro" />
+            Movimenta caixa/banco
+          </label>
+
+          <label id="dre-box" class="input-item checkbox-line">
+            <input type="checkbox" formControlName="entra_dre" />
+            Entra no DRE
+          </label>
+
+          <label id="ativo-box" class="input-item checkbox-line">
+            <input type="checkbox" formControlName="ativo" />
+            Ativa
+          </label>
+        </div>
+
+        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+          <strong>Pendências</strong>
+          <ul>
+            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+          </ul>
         </div>
 
         <div class="actions-form">
@@ -142,8 +215,11 @@
               <th>Categoria</th>
               <th>Subcategoria</th>
               <th>Tipo</th>
+              <th>Operação</th>
+              <th>DRE</th>
               <th>Status</th>
               <th>Tipo Natureza</th>
+              <th>Conta</th>
               <th>Descrição</th>
               <th style="width:140px;">Ações</th>
             </tr>
@@ -154,16 +230,19 @@
               <td>{{ n.categoria_principal }}</td>
               <td>{{ n.subcategoria }}</td>
               <td>{{ n.tipo }}</td>
+              <td>{{ n.natureza_operacao }}</td>
+              <td>{{ n.entra_dre ? 'Sim' : 'Não' }}</td>
 
               <!-- <td>{{ n.status }}</td> -->
               <td>
-                <span class="badge" [ngClass]="n.status ? 'badge-ok' : 'badge-off'">
-                  {{ n.status ? 'Ativo' : 'Inativo' }}
+                <span class="badge" [ngClass]="n.ativo ? 'badge-ok' : 'badge-off'">
+                  {{ n.ativo ? 'Ativo' : 'Inativo' }}
                 </span>
               </td>
               
               
               <td>{{ n.tipo_natureza }}</td>
+              <td>{{ contaLabel(n) }}</td>
               <td class="email">{{ n.descricao }}</td>
               <td class="actions">
                 <button class="btn sm" (click)="editar(n)">Editar</button>
@@ -195,15 +274,4 @@
     </section>
   </div>
 
-  <!-- Overlay erros -->
-  <div class="overlay" *ngIf="errorOverlayOpen" role="alertdialog" aria-modal="true">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
-      <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
-      </div>
-    </div>
-  </div>
 </div>

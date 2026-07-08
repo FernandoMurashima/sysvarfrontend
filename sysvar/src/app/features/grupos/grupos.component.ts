@@ -30,6 +30,7 @@ export class GruposComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   submitted = false;
+  excluirModal: { tipo: 'grupo' | 'subgrupo'; titulo: string; grupo?: GrupoModel; subgrupo?: SubgrupoModel } | null = null;
 
   grupos: GrupoModel[] = [];
   subgrupos: SubgrupoModel[] = [];
@@ -145,11 +146,29 @@ export class GruposComponent implements OnInit {
 
   excluirGrupo(g: GrupoModel) {
     if (!g.Idgrupo) return;
-    const ok = confirm(`Excluir o grupo "${g.Descricao}"?`);
-    if (!ok) return;
+    this.excluirModal = { tipo: 'grupo', titulo: `Excluir o grupo "${g.Descricao}"?`, grupo: g };
+  }
 
-    this.gruposApi.remove(g.Idgrupo).subscribe({
+  confirmarExclusao(): void {
+    const modal = this.excluirModal;
+    if (!modal) return;
+    if (modal.tipo === 'grupo' && modal.grupo) {
+      this.executarExclusaoGrupo(modal.grupo);
+      return;
+    }
+    if (modal.tipo === 'subgrupo' && modal.subgrupo) {
+      this.executarExclusaoSubgrupo(modal.subgrupo);
+    }
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
+  private executarExclusaoGrupo(g: GrupoModel): void {
+    this.gruposApi.remove(g.Idgrupo!).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Grupo excluído.';
         this.loadGrupos();
         if (this.editingGrupoId === g.Idgrupo) this.novoGrupo();
@@ -257,11 +276,13 @@ export class GruposComponent implements OnInit {
 
   excluirSubgrupo(s: SubgrupoModel) {
     if (!s.Idsubgrupo) return;
-    const ok = confirm(`Excluir o subgrupo "${s.Descricao}"?`);
-    if (!ok) return;
+    this.excluirModal = { tipo: 'subgrupo', titulo: `Excluir o subgrupo "${s.Descricao}"?`, subgrupo: s };
+  }
 
-    this.subgruposApi.remove(s.Idsubgrupo).subscribe({
+  private executarExclusaoSubgrupo(s: SubgrupoModel): void {
+    this.subgruposApi.remove(s.Idsubgrupo!).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Subgrupo excluído.';
         if (this.selectedGrupoId) this.carregarSubgrupos(this.selectedGrupoId);
       },

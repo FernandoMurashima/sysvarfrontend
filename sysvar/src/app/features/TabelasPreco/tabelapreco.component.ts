@@ -23,6 +23,7 @@ export class TabelaprecoComponent {
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  excluirModal: TabelaPreco | null = null;
 
   items = signal<TabelaPreco[]>([]);
   page = signal(1);
@@ -109,8 +110,21 @@ export class TabelaprecoComponent {
 
   excluir(row: TabelaPreco) {
     if (!row.Idtabela) return;
-    if (!confirm(`Excluir a tabela "${row.NomeTabela}"?`)) return;
-    this.api.delete(row.Idtabela).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.Idtabela) return;
+    this.api.delete(row.Idtabela).subscribe(() => {
+      this.excluirModal = null;
+      this.successMsg.set('Tabela excluída.');
+      this.load();
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   getFormErrors(): string[] {

@@ -20,6 +20,17 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="overlay" *ngIf="excluirModal as forma">
+    <div class="overlay-card">
+      <h4>Excluir forma de pagamento</h4>
+      <p>Confirma a exclusão da forma <strong>{{ forma.codigo }} - {{ forma.descricao }}</strong>?</p>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
   <div class="content">
     <!-- Placeholder quando o form estiver fechado -->
     <section class="card form-placeholder" *ngIf="!showForm">
@@ -32,11 +43,6 @@
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
       <h3>{{ editingId ? 'Editar Forma de Pagamento' : 'Nova Forma de Pagamento' }}</h3>
-
-      <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
-        Existem {{ getFormErrors().length }} campo(s) com problema.
-      </div>
-
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1: Código, Descrição, Ativo -->
@@ -77,6 +83,48 @@
           </label>
         </div>
 
+        <h4>Liquidação bancária</h4>
+        <div class="grid-10">
+          <label class="input-item">
+            Gera recebível bancário
+            <select formControlName="gera_recebivel_bancario">
+              <option [ngValue]="false">Não</option>
+              <option [ngValue]="true">Sim</option>
+            </select>
+          </label>
+
+          <label class="input-item">
+            Adquirente
+            <input type="text" formControlName="adquirente" placeholder="Stone, Cielo, Rede..." />
+          </label>
+
+          <label class="input-item"
+                 [class.invalid]="form.get('gera_recebivel_bancario')?.value && !form.get('conta_liquidacao')?.value && submitted">
+            Conta de liquidação
+            <select formControlName="conta_liquidacao">
+              <option [ngValue]="null">Selecione</option>
+              <option *ngFor="let conta of contas" [ngValue]="conta.Idconta">
+                {{ conta.descricao }} - {{ conta.banco }} Ag {{ conta.agencia }} Cc {{ conta.conta }}
+              </option>
+            </select>
+          </label>
+
+          <label class="input-item">
+            Prazo crédito
+            <input type="number" min="0" formControlName="prazo_credito_dias" />
+          </label>
+
+          <label class="input-item">
+            Taxa %
+            <input type="number" min="0" step="0.0001" formControlName="taxa_percentual" />
+          </label>
+
+          <label class="input-item">
+            Taxa fixa
+            <input type="number" min="0" step="0.01" formControlName="taxa_fixa" />
+          </label>
+        </div>
+
         <h4>Parcelas</h4>
         <div class="table-wrapper parcelas-wrapper">
           <table class="table parcelas-table">
@@ -114,6 +162,12 @@
         <div class="parcelas-actions">
           <button type="button" class="btn" (click)="addParcela()">Adicionar parcela</button>
         </div>
+        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+          <strong>Pendências</strong>
+          <ul>
+            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+          </ul>
+        </div>
 
         <div class="actions-form">
           <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
@@ -145,6 +199,7 @@
               <th style="width: 120px;">Código</th>
               <th>Descrição</th>
               <th style="width: 120px;"># Parcelas</th>
+              <th style="width: 140px;">Liquidação</th>
               <th style="width: 90px;">Ativo</th>
               <th style="width: 150px;">Ações</th>
             </tr>
@@ -154,6 +209,7 @@
               <td>{{ f.codigo }}</td>
               <td>{{ f.descricao }}</td>
               <td>{{ f.num_parcelas }}</td>
+              <td>{{ f.gera_recebivel_bancario ? 'Banco' : 'Caixa' }}</td>
               <!-- <td>{{ f.ativo ? 'Sim' : 'Não' }}</td> -->
 
               <td>
@@ -194,19 +250,5 @@
         </div>
       </div>
     </section>
-  </div>
-
-  <!-- OVERLAY ERROS -->
-  <div class="overlay" *ngIf="errorOverlayOpen" role="alertdialog" aria-modal="true">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
-      <ul>
-        <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-      </ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
-      </div>
-    </div>
   </div>
 </div>

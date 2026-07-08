@@ -1,0 +1,196 @@
+<section class="consulta-page">
+  <div class="toolbar">
+    <h2>Consulta Financeira por Natureza</h2>
+    <div class="toolbar-actions">
+      <button type="button" class="btn secondary" (click)="alternarTelaCheia()">Tela cheia</button>
+      <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Atualizar</button>
+      <a class="btn secondary" routerLink="/home">Home</a>
+    </div>
+  </div>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <div class="panel filters">
+    <label>
+      Loja
+      <select [(ngModel)]="filtros.loja">
+        <option value="">Todas</option>
+        <option *ngFor="let loja of lojas" [value]="lojaId(loja)">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+    <label>
+      Operacao
+      <select [(ngModel)]="filtros.operacao" (change)="onOperacaoChange()">
+        <option value="">Todas</option>
+        <option value="RECEITA">Receita</option>
+        <option value="DESPESA">Despesa</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+        <option value="AJUSTE">Ajuste</option>
+      </select>
+    </label>
+    <label>
+      Natureza
+      <select [(ngModel)]="filtros.natureza">
+        <option value="">Todas</option>
+        <option *ngFor="let nat of naturezasFiltradas" [value]="nat.idnatureza">
+          {{ nat.codigo }} - {{ nat.descricao }}
+        </option>
+      </select>
+    </label>
+    <label>
+      Status
+      <select [(ngModel)]="filtros.status">
+        <option value="EFETIVA">Efetivas</option>
+        <option value="PREVISTA">Previstas</option>
+        <option value="TODOS">Todas</option>
+      </select>
+    </label>
+    <label>
+      De
+      <input type="date" [(ngModel)]="filtros.data_ini">
+    </label>
+    <label>
+      Ate
+      <input type="date" [(ngModel)]="filtros.data_fim">
+    </label>
+    <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Buscar</button>
+    <button type="button" class="btn secondary" (click)="limpar()">Limpar</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>Receitas</span>
+      <strong class="valor-pos">{{ money(consulta?.totais?.receitas) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Despesas</span>
+      <strong class="valor-neg">{{ money(consulta?.totais?.despesas) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Resultado</span>
+      <strong [ngClass]="valorClass(consulta?.totais?.resultado)">{{ money(consulta?.totais?.resultado) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Transferencias</span>
+      <strong>{{ money(consulta?.totais?.transferencias) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Movimentacoes</span>
+      <strong>{{ consulta?.totais?.movimentacoes || 0 }}</strong>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" [class.active]="aba === 'natureza'" (click)="aba = 'natureza'">Por natureza</button>
+    <button type="button" [class.active]="aba === 'categoria'" (click)="aba = 'categoria'">Por categoria</button>
+    <button type="button" [class.active]="aba === 'detalhe'" (click)="aba = 'detalhe'">Detalhado</button>
+  </div>
+
+  <div class="panel table-panel" *ngIf="aba === 'natureza'">
+    <div class="list-header">
+      <h3>Naturezas</h3>
+      <span>{{ linhasNatureza.length }} linha(s)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Natureza</th>
+          <th>Operacao</th>
+          <th>Categoria</th>
+          <th class="num">Receitas</th>
+          <th class="num">Despesas</th>
+          <th class="num">Resultado</th>
+          <th class="num">Qtd</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of linhasNatureza">
+          <td>{{ row.codigo }}</td>
+          <td>{{ row.descricao }}</td>
+          <td>{{ row.operacao }}</td>
+          <td>{{ row.categoria_gerencial }}</td>
+          <td class="num valor-pos">{{ money(row.receitas) }}</td>
+          <td class="num valor-neg">{{ money(row.despesas) }}</td>
+          <td class="num" [ngClass]="valorClass(row.resultado)">{{ money(row.resultado) }}</td>
+          <td class="num">{{ row.quantidade }}</td>
+        </tr>
+        <tr *ngIf="!linhasNatureza.length">
+          <td colspan="8" class="empty">Nenhuma movimentacao encontrada.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel table-panel" *ngIf="aba === 'categoria'">
+    <div class="list-header">
+      <h3>Categorias gerenciais</h3>
+      <span>{{ linhasCategoria.length }} linha(s)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th class="num">Receitas</th>
+          <th class="num">Despesas</th>
+          <th class="num">Transferencias</th>
+          <th class="num">Resultado</th>
+          <th class="num">Qtd</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of linhasCategoria">
+          <td>{{ row.categoria_gerencial }}</td>
+          <td class="num valor-pos">{{ money(row.receitas) }}</td>
+          <td class="num valor-neg">{{ money(row.despesas) }}</td>
+          <td class="num">{{ money(row.transferencias) }}</td>
+          <td class="num" [ngClass]="valorClass(row.resultado)">{{ money(row.resultado) }}</td>
+          <td class="num">{{ row.quantidade }}</td>
+        </tr>
+        <tr *ngIf="!linhasCategoria.length">
+          <td colspan="6" class="empty">Nenhuma movimentacao encontrada.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel table-panel" *ngIf="aba === 'detalhe'">
+    <div class="list-header">
+      <h3>Detalhe das movimentacoes</h3>
+      <span>{{ detalhes.length }} movimentacao(oes)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Loja</th>
+          <th>Documento</th>
+          <th>Historico</th>
+          <th>Origem</th>
+          <th>Natureza</th>
+          <th class="num">Receita</th>
+          <th class="num">Despesa</th>
+          <th class="num">Transf.</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of detalhes">
+          <td>{{ row.data_movimento | date:'dd/MM/yyyy' }}</td>
+          <td>{{ row.loja }}</td>
+          <td>{{ row.documento }}</td>
+          <td>{{ row.historico }}</td>
+          <td>{{ row.origem }}</td>
+          <td>{{ row.natureza }}</td>
+          <td class="num valor-pos">{{ money(row.receita) }}</td>
+          <td class="num valor-neg">{{ money(row.despesa) }}</td>
+          <td class="num">{{ money(row.transferencia) }}</td>
+          <td>{{ row.status }}</td>
+        </tr>
+        <tr *ngIf="!detalhes.length">
+          <td colspan="10" class="empty">Nenhuma movimentacao encontrada.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

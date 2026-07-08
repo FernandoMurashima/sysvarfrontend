@@ -9,12 +9,13 @@ export class NatLancamentosService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/cadastros/nat_lancamento/`;
 
-  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number }): Observable<any> {
+  list(params?: Record<string, string | number | boolean | null | undefined>): Observable<any> {
     let p = new HttpParams();
-    if (params?.search)    p = p.set('search', params.search);
-    if (params?.ordering)  p = p.set('ordering', params.ordering);
-    if (params?.page)      p = p.set('page', String(params.page));
-    if (params?.page_size) p = p.set('page_size', String(params.page_size));
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        p = p.set(key, String(value));
+      }
+    });
     return this.http.get(this.base, { params: p });
   }
 

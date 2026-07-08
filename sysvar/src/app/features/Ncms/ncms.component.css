@@ -38,7 +38,7 @@ label { display:grid; gap:6px; font-size:14px; min-width:0; }
 .input-item > * { min-width:0; }
 input, select { width:100%; max-width:100%; padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; outline:none; }
 .input-item.invalid input, .input-item.invalid select, input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
-.field-error { color:#b91c1c; font-size:12px; min-height:16px; }
+.field-error { display:none; }
 
 .actions-form { margin-top:12px; display:flex; gap:8px; }
 .btn { padding:8px 12px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; }
@@ -75,3 +75,7 @@ input, select { width:100%; max-width:100%; padding:8px 10px; border-radius:8px;
 
 .btn.danger { background:#ef4444 !important; border-color:#dc2626 !important; color:#fff !important; }
 .btn.danger:hover { filter: brightness(0.95); }
+
+.form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
+.form-pending strong { display:block; margin-bottom:6px; }
+.form-pending ul { margin:0; padding-left:18px; }

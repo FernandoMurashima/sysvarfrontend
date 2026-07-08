@@ -39,6 +39,7 @@ export class PromocoesComponent implements OnInit {
   todasLojas = true;
   produtoBusca = '';
   produtoAdicionarId: number | null = null;
+  excluirModal: Promocao | null = null;
 
   promocoes: Promocao[] = [];
   lojas: Loja[] = [];
@@ -145,14 +146,26 @@ export class PromocoesComponent implements OnInit {
 
   excluir(promocao: Promocao): void {
     const id = promocao.Idpromocao;
-    if (!id || !confirm(`Excluir a promoção "${promocao.nome}"?`)) return;
+    if (!id) return;
+    this.excluirModal = promocao;
+  }
+
+  confirmarExclusao(): void {
+    const promocao = this.excluirModal;
+    const id = promocao?.Idpromocao;
+    if (!id) return;
     this.promocoesApi.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Promoção excluída.';
         this.load();
       },
       error: () => this.errorMsg = 'Falha ao excluir promoção.'
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   toggleLista(field: keyof Promocao, id: number | undefined): void {

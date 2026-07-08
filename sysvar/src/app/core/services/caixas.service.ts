@@ -27,6 +27,17 @@ export class CaixasService {
     return this.http.put<Caixa>(`${this.base}${id}/`, payload);
   }
 
+  transferir(payload: {
+    caixa_origem: number;
+    caixa_destino: number;
+    documento?: string | null;
+    valor: number;
+    data_movimento: string;
+    observacao?: string | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}transferir/`, payload);
+  }
+
   remove(id: number): Observable<unknown> {
     return this.http.delete(`${this.base}${id}/`);
   }

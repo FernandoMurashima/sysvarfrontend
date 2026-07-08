@@ -10,8 +10,12 @@ import {
 } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { EmpresasService } from '../../core/services/empresas.service';
 import { Loja } from '../../core/models/loja';
+import { Empresa } from '../../core/models/empresa';
+import { User } from '../../core/models/user';
 
 @Component({
   selector: 'app-lojas',
@@ -22,7 +26,9 @@ import { Loja } from '../../core/models/loja';
 })
 export class LojasComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
   private api = inject(LojasService);
+  private empresasApi = inject(EmpresasService);
 
   loading = false;
   saving = false;
@@ -33,9 +39,11 @@ export class LojasComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Loja | null = null;
   errorOverlayOpen = false;
 
   form: FormGroup = this.fb.group({
+    empresa: [null, [Validators.required]],
     nome_loja: ['', [Validators.required, Validators.maxLength(50)]],
     apelido_loja: ['', [Validators.required, Validators.maxLength(20)]],
     cnpj: ['', [Validators.required, this.cnpjValidator]],
@@ -69,6 +77,8 @@ export class LojasComponent implements OnInit {
 
   lojasAll: Loja[] = [];
   lojas: Loja[] = [];
+  empresas: Empresa[] = [];
+  usuarioAtual: User | null = null;
 
   page = 1;
   pageSize = 20;
@@ -78,8 +88,13 @@ export class LojasComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get pageStart(): number { if (this.total === 0) return 0; return (this.page - 1) * this.pageSize + 1; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
+  get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
+  get empresaBloqueada(): boolean { return !!this.usuarioAtual && !this.isSuperUsuario; }
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.loadUsuarioAtual();
+    this.load();
+  }
 
   // ===== Helpers =====
   private formatPhone(v?: string | null): string {
@@ -135,7 +150,70 @@ export class LojasComponent implements OnInit {
     ctrl.setValue(this.formatPhone(ctrl.value), { emitEvent: false });
   }
 
+  private defaultEmpresaId(): number | null {
+    const empresaUsuario = this.empresaUsuarioId();
+    if (!this.isSuperUsuario && empresaUsuario) return empresaUsuario;
+    return this.empresas.length === 1 && this.empresas[0].id ? this.empresas[0].id : null;
+  }
+
+  private empresaUsuarioId(): number | null {
+    return this.usuarioAtual?.Idempresa ?? this.usuarioAtual?.empresa?.id ?? null;
+  }
+
+  private aplicarUsuarioAtual(user: User | null): void {
+    this.usuarioAtual = user;
+    this.loadEmpresas();
+  }
+
+  empresaLabel(loja: Loja): string {
+    if (loja.empresa_nome) return loja.empresa_nome;
+    const id = loja.empresa;
+    const empresa = this.empresas.find(e => e.id === id);
+    return empresa?.nome_fantasia || empresa?.nome || '-';
+  }
+
   // ====== Fluxo ======
+  loadUsuarioAtual(): void {
+    const cached = this.auth.getCurrentUser() as User | null;
+    if (cached) {
+      this.aplicarUsuarioAtual(cached);
+    }
+    this.auth.me().subscribe({
+      next: (user) => {
+        this.auth.setCurrentUser(user as any);
+        this.aplicarUsuarioAtual(user as User);
+      },
+      error: () => {
+        if (!cached) this.loadEmpresas();
+      }
+    });
+  }
+
+  loadEmpresas(): void {
+    this.empresasApi.list({ page_size: 2000, ordering: 'nome' }).subscribe({
+      next: (res: any) => {
+        const empresas = Array.isArray(res) ? res : (res?.results ?? []);
+        const empresaUsuario = this.empresaUsuarioId();
+        this.empresas = this.isSuperUsuario || !empresaUsuario
+          ? empresas
+          : empresas.filter((empresa: Empresa) => empresa.id === empresaUsuario);
+        const defaultId = this.defaultEmpresaId();
+        if (defaultId && (!this.form.get('empresa')?.value || this.empresaBloqueada)) {
+          this.form.patchValue({ empresa: defaultId });
+        }
+        const empresaCtrl = this.form.get('empresa');
+        if (this.empresaBloqueada) {
+          empresaCtrl?.disable({ emitEvent: false });
+        } else {
+          empresaCtrl?.enable({ emitEvent: false });
+        }
+      },
+      error: () => {
+        this.empresas = [];
+      }
+    });
+  }
+
   load(): void {
     this.loading = true;
     this.api.list({ search: this.search, page_size: 2000 }).subscribe({
@@ -143,6 +221,8 @@ export class LojasComponent implements OnInit {
         const rawArr: Loja[] = Array.isArray(res) ? res : (res?.results ?? []);
         const arr = rawArr.map(item => ({
           ...item,
+          empresa: (item as any).empresa ?? null,
+          empresa_nome: (item as any).empresa_nome ?? null,
           // compat de apelido
           apelido_loja: item.apelido_loja ?? (item as any).Apelido_loja ?? '',
           // mascarar telefones vindos só com dígitos
@@ -190,6 +270,7 @@ export class LojasComponent implements OnInit {
     this.errorMsg = '';
 
     this.form.reset({
+      empresa: this.defaultEmpresaId(),
       nome_loja: '',
       apelido_loja: '',
       cnpj: '',
@@ -221,6 +302,7 @@ export class LojasComponent implements OnInit {
     this.errorMsg = '';
 
     this.form.reset({
+      empresa:     (row as any).empresa ?? null,
       nome_loja:    row.nome_loja ?? '',
       apelido_loja: (row as any).apelido_loja ?? (row as any).Apelido_loja ?? '',
       cnpj:         row.cnpj ?? '',
@@ -257,7 +339,7 @@ export class LojasComponent implements OnInit {
     this.submitted = true;
     if (this.form.invalid) { this.openErrorOverlayIfNeeded(); return; }
 
-    const f = this.form.value as any;
+    const f = this.form.getRawValue() as any;
     const apelido = (f.apelido_loja || '').toString().trim();
 
     // datas: '' -> null (DRF aceita null para DateField nullable)
@@ -265,6 +347,7 @@ export class LojasComponent implements OnInit {
     const dataEnceramento = this.blankToNull(f.DataEnceramento);
 
     const payload: any = {
+      empresa: f.empresa ? Number(f.empresa) : null,
       nome_loja: (f.nome_loja || '').toString().trim(),
       cnpj: (f.cnpj || '').toString().trim(),
 
@@ -338,10 +421,16 @@ export class LojasComponent implements OnInit {
   excluir(item: Loja): void {
     const id = (item as any).id ?? (item as any).Idloja;
     if (!id) return;
-    if (!confirm(`Excluir a loja "${item.nome_loja}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item ? ((item as any).id ?? (item as any).Idloja) : null;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Loja excluída.';
         const eraUltimo = this.lojas.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -352,12 +441,17 @@ export class LojasComponent implements OnInit {
     });
   }
 
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
   // ====== Overlay de erros ======
   getFormErrors(): string[] {
     const f = this.form;
     const msgs: string[] = [];
     const push = (cond: boolean, msg: string) => { if (cond) msgs.push(msg); };
 
+    push(f.get('empresa')?.hasError('required') || false, 'empresa: Este campo é obrigatório.');
     push(f.get('nome_loja')?.hasError('required') || false, 'nome_loja: Este campo é obrigatório.');
     push(f.get('nome_loja')?.hasError('maxlength') || false, 'nome_loja: Máx. 50 caracteres.');
     push(f.get('apelido_loja')?.hasError('required') || false, 'apelido_loja: Este campo é obrigatório.');
@@ -370,7 +464,7 @@ export class LojasComponent implements OnInit {
     push(f.get('telefone2')?.hasError('phone') || false, 'telefone2: Formato (99)-9999-9999 ou (99)-99999-9999.');
 
     const fields = [
-      'nome_loja','apelido_loja','cnpj','email',
+      'empresa','nome_loja','apelido_loja','cnpj','email',
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',

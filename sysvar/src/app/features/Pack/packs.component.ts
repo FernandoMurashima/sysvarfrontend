@@ -36,6 +36,7 @@ export class PacksComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   submitted = false;
+  excluirModal: { tipo: 'pack' | 'item'; titulo: string; pack?: PackModel; item?: PackItemModel } | null = null;
 
   packs: PackModel[] = [];
   items: PackItemModel[] = [];
@@ -159,9 +160,33 @@ export class PacksComponent implements OnInit {
 
   excluirPack(p: PackModel) {
     if (!p.id) return;
-    if (!confirm(`Excluir o pack "${p.nome || ('#'+p.id)}"?`)) return;
-    this.packsApi.remove(p.id).subscribe({
+    this.excluirModal = {
+      tipo: 'pack',
+      titulo: `Excluir o pack "${p.nome || ('#' + p.id)}"?`,
+      pack: p,
+    };
+  }
+
+  confirmarExclusao(): void {
+    const modal = this.excluirModal;
+    if (!modal) return;
+    if (modal.tipo === 'pack' && modal.pack) {
+      this.executarExclusaoPack(modal.pack);
+      return;
+    }
+    if (modal.tipo === 'item' && modal.item) {
+      this.executarExclusaoItem(modal.item);
+    }
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
+  private executarExclusaoPack(p: PackModel): void {
+    this.packsApi.remove(p.id!).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Pack excluído.';
         if (this.selectedPackId === p.id) this.fecharItens();
         this.loadPacks();
@@ -267,9 +292,20 @@ export class PacksComponent implements OnInit {
 
   excluirItem(it: PackItemModel) {
     if (!it.id) return;
-    if (!confirm('Excluir este item do pack?')) return;
-    this.itensApi.remove(it.id).subscribe({
-      next: () => { this.successMsg = 'Item excluído.'; if (this.selectedPackId) this.loadItens(this.selectedPackId); },
+    this.excluirModal = {
+      tipo: 'item',
+      titulo: 'Excluir este item do pack?',
+      item: it,
+    };
+  }
+
+  private executarExclusaoItem(it: PackItemModel): void {
+    this.itensApi.remove(it.id!).subscribe({
+      next: () => {
+        this.excluirModal = null;
+        this.successMsg = 'Item excluído.';
+        if (this.selectedPackId) this.loadItens(this.selectedPackId);
+      },
       error: () => (this.errorMsg = 'Falha ao excluir o item do pack.'),
     });
   }

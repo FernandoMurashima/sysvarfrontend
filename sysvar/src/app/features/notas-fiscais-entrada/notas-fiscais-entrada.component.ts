@@ -42,6 +42,12 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   submitted = false;
   mensagem = '';
   erro = '';
+  confirmModal: {
+    action: 'removerItem' | 'fecharNota' | 'cancelarNota';
+    title: string;
+    text: string;
+    item?: ItemRecebimentoUI;
+  } | null = null;
 
   search = '';
   notas: NotaFiscalEntrada[] = [];
@@ -313,13 +319,15 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       next: (itens) => {
         this.itensPedido = itens.map(item => {
           const qtdNaNota = Number(item.qtd_na_nota || 0);
+          const saldo = Number(item.saldo_total_recebivel || 0);
           const preco = Number(item.preco_unit_pedido || 0);
+          const qtdInicial = qtdNaNota > 0 ? qtdNaNota : saldo;
           return {
             ...item,
-            qtd_receber: qtdNaNota,
+            qtd_receber: qtdInicial,
             preco_unit_nf: preco,
             desconto_item: 0,
-            total_item: qtdNaNota * preco,
+            total_item: qtdInicial * preco,
           };
         });
         this.loadingItens = false;
@@ -345,6 +353,13 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const saldoTotal = Number(item.saldo_total_recebivel || 0);
     if (qtd < 0 || qtd > saldoTotal) {
       this.erro = 'Quantidade recebida inválida para o saldo do pedido.';
+      return;
+    }
+    if (!this.quantidadeFechaPack(item, qtd)) {
+      const validas = (item.quantidades_validas || []).join(', ');
+      this.erro = validas
+        ? `A quantidade recebida do item ${item.pedido_item} precisa fechar com o pack. Use: ${validas}.`
+        : `A quantidade recebida do item ${item.pedido_item} não fecha com a composição do pack.`;
       return;
     }
 
@@ -376,13 +391,58 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     });
   }
 
+  descricaoItem(item: ItemRecebimentoUI): string {
+    const partes = [
+      item.produto_descricao || item.descricao_livre || '',
+      item.produto_referencia ? `Ref. ${item.produto_referencia}` : '',
+      item.cor_nome || '',
+      item.pack_nome || '',
+    ].filter(Boolean);
+    return partes.join(' · ') || '-';
+  }
+
+  private quantidadeFechaPack(item: ItemRecebimentoUI, qtd: number): boolean {
+    if (!item.pack || !item.quantidades_validas?.length || qtd <= 0) return true;
+    return item.quantidades_validas.some(valor => Number(valor) === qtd);
+  }
+
   removerItem(item: ItemRecebimentoUI): void {
     const nota = this.notaAtual();
     if (!nota || nota.status !== 'AB' || !item.nota_item) return;
-    if (!confirm('Remover este item da nota?')) return;
+    this.confirmModal = {
+      action: 'removerItem',
+      title: 'Remover item da nota',
+      text: 'Confirma a remoção deste item da nota?',
+      item,
+    };
+  }
 
+  confirmarAcao(): void {
+    const modal = this.confirmModal;
+    if (!modal) return;
+    if (modal.action === 'removerItem' && modal.item) {
+      this.executarRemocaoItem(modal.item);
+      return;
+    }
+    if (modal.action === 'fecharNota') {
+      this.executarFechamentoNota();
+      return;
+    }
+    if (modal.action === 'cancelarNota') {
+      this.executarCancelamentoNota();
+    }
+  }
+
+  fecharConfirmacao(): void {
+    this.confirmModal = null;
+  }
+
+  private executarRemocaoItem(item: ItemRecebimentoUI): void {
+    const nota = this.notaAtual();
+    if (!nota || !item.nota_item) return;
     this.notasApi.removerItem(item.nota_item).subscribe({
       next: () => {
+        this.confirmModal = null;
         this.mensagem = 'Item removido.';
         this.notasApi.get(nota.id).subscribe(n => this.notaAtual.set(n));
         this.carregarItensPedido(nota.id);
@@ -396,10 +456,19 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   fecharNota(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status !== 'AB') return;
-    if (!confirm(`Fechar a nota ${nota.numero}?`)) return;
+    this.confirmModal = {
+      action: 'fecharNota',
+      title: 'Fechar nota fiscal',
+      text: `Confirma o fechamento da nota ${nota.numero}?`,
+    };
+  }
 
+  private executarFechamentoNota(): void {
+    const nota = this.notaAtual();
+    if (!nota || nota.status !== 'AB') return;
     this.notasApi.fechar(nota.id).subscribe({
       next: (n) => {
+        this.confirmModal = null;
         this.notaAtual.set(n);
         this.form.disable();
         const fin = n.financeiro;
@@ -419,10 +488,19 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   cancelarNota(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status === 'CA') return;
-    if (!confirm(`Cancelar a nota ${nota.numero}?`)) return;
+    this.confirmModal = {
+      action: 'cancelarNota',
+      title: 'Cancelar nota fiscal',
+      text: `Confirma o cancelamento da nota ${nota.numero}?`,
+    };
+  }
 
+  private executarCancelamentoNota(): void {
+    const nota = this.notaAtual();
+    if (!nota || nota.status === 'CA') return;
     this.notasApi.cancelar(nota.id).subscribe({
       next: (n) => {
+        this.confirmModal = null;
         this.notaAtual.set(n);
         this.form.disable();
         this.mensagem = 'Nota cancelada.';

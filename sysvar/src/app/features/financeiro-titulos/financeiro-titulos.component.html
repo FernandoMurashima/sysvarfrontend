@@ -18,6 +18,51 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="modal-backdrop" *ngIf="baixaModal">
+    <section class="modal-card">
+      <h3>Baixar parcela</h3>
+      <p class="modal-doc">Parcela {{ baixaModal.parcela.parcela_n }}</p>
+      <div class="modal-grid">
+        <label>
+          Data da baixa
+          <input type="date" [(ngModel)]="baixaModal.data_baixa" />
+        </label>
+        <label>
+          Valor da baixa
+          <input type="number" step="0.01" min="0.01" [(ngModel)]="baixaModal.valor_baixa" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharBaixa()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarBaixa()">Confirmar baixa</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="cancelarModal as parcela">
+    <section class="modal-card">
+      <h3>Cancelar parcela</h3>
+      <p class="modal-doc">Parcela {{ parcela.parcela_n }}</p>
+      <p class="modal-text">Confirma o cancelamento desta parcela?</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharCancelamentoParcela()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarCancelamentoParcela()">Cancelar parcela</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="excluirModal as titulo">
+    <section class="modal-card">
+      <h3>Excluir título</h3>
+      <p class="modal-doc">{{ titulo.Titulo }}</p>
+      <p class="modal-text">Confirma a exclusão deste título?</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharExclusaoTitulo()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusaoTitulo()">Excluir</button>
+      </div>
+    </section>
+  </div>
+
   <section class="panel" *ngIf="showForm">
     <div class="panel-header">
       <h3>Novo título</h3>
@@ -83,7 +128,7 @@
           Natureza*
           <select formControlName="Idnatureza">
             <option [ngValue]="null">Selecione</option>
-            <option *ngFor="let nat of naturezas" [ngValue]="nat.idnatureza">
+            <option *ngFor="let nat of naturezasTitulo" [ngValue]="nat.idnatureza">
               {{ nat.codigo }} - {{ nat.descricao }}
             </option>
           </select>

@@ -27,6 +27,7 @@ export class UnidadesComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Unidade | null = null;
   errorOverlayOpen = false;
 
   // form
@@ -164,10 +165,16 @@ export class UnidadesComponent implements OnInit {
   excluir(item: Unidade): void {
     const id = (item as any).Idunidade;
     if (!id) return;
-    if (!confirm(`Excluir a unidade "${(item as any).Descricao}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item ? (item as any).Idunidade : null;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Unidade excluída.';
         const eraUltimo = this.unidades.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -179,6 +186,10 @@ export class UnidadesComponent implements OnInit {
         this.errorMsg = 'Falha ao excluir.';
       }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // --------- Overlay de erros ---------

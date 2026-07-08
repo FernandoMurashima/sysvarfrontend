@@ -1,0 +1,165 @@
+<div class="page">
+  <header class="toolbar">
+    <h2>Plano Contábil</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar por código, descrição, classe..."
+             [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn primary" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="novo()">Novo</button>
+      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="card form-placeholder" *ngIf="!showForm">
+    <div class="placeholder-inner">
+      <p>Para cadastrar uma conta contábil, clique em <strong>Novo</strong>.</p>
+      <p>Para editar, localize na lista e clique em <strong>Editar</strong>.</p>
+    </div>
+  </section>
+
+  <section class="card form" *ngIf="showForm">
+    <h3>{{ editingId ? 'Editar Conta Contábil' : 'Nova Conta Contábil' }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="empresa-row" *ngIf="isSuperUser">
+        <label>
+          Empresa*
+          <select formControlName="empresa">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.nome_fantasia || empresa.nome }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid">
+        <label id="codigo-box" [class.invalid]="form.get('codigo')?.invalid && submitted">
+          Código*
+          <input type="text" formControlName="codigo" />
+        </label>
+
+        <label id="descricao-box" [class.invalid]="form.get('descricao')?.invalid && submitted">
+          Descrição*
+          <input type="text" formControlName="descricao" />
+        </label>
+
+        <label id="classe-box">
+          Classe*
+          <select formControlName="classe">
+            <option *ngFor="let classe of classes" [value]="classe.value">{{ classe.label }}</option>
+          </select>
+        </label>
+
+        <label id="natureza-box">
+          Natureza*
+          <select formControlName="natureza">
+            <option *ngFor="let natureza of naturezas" [value]="natureza.value">{{ natureza.label }}</option>
+          </select>
+        </label>
+
+        <label id="pai-box">
+          Conta pai
+          <select formControlName="conta_pai">
+            <option [ngValue]="null">Sem conta pai</option>
+            <option *ngFor="let conta of contasPaiDisponiveis()" [ngValue]="conta.id">
+              {{ conta.codigo }} - {{ conta.descricao }}
+            </option>
+          </select>
+        </label>
+
+        <label id="nivel-box">
+          Nível*
+          <input type="number" formControlName="nivel" min="1" />
+        </label>
+
+        <label class="checkbox-line" id="analitica-box">
+          <input type="checkbox" formControlName="analitica" />
+          Analítica
+        </label>
+
+        <label class="checkbox-line" id="ativa-box">
+          <input type="checkbox" formControlName="ativa" />
+          Ativa
+        </label>
+      </div>
+
+      <div class="form-pending" *ngIf="submitted && form.invalid">
+        <strong>Pendências</strong>
+        <ul>
+          <li *ngIf="form.get('empresa')?.hasError('required')">Empresa é obrigatória.</li>
+          <li *ngIf="form.get('codigo')?.hasError('required')">Código é obrigatório.</li>
+          <li *ngIf="form.get('descricao')?.hasError('required')">Descrição é obrigatória.</li>
+        </ul>
+      </div>
+
+      <div class="actions-form">
+        <button class="btn primary" type="submit" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+        <button class="btn ghost" type="button" (click)="cancelar()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card list">
+    <div class="list-header">
+      <div>Total: {{ total }}</div>
+      <div class="list-controls">
+        <label>Itens por página</label>
+        <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="contas.length; else emptyTpl">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Classe</th>
+            <th>Natureza</th>
+            <th>Conta pai</th>
+            <th>Nível</th>
+            <th>Tipo</th>
+            <th>Status</th>
+            <th style="width:140px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let conta of contas">
+            <td><strong>{{ conta.codigo }}</strong></td>
+            <td>{{ conta.descricao }}</td>
+            <td>{{ conta.classe }}</td>
+            <td>{{ conta.natureza }}</td>
+            <td>{{ conta.conta_pai_codigo || '-' }}</td>
+            <td>{{ conta.nivel }}</td>
+            <td>{{ conta.analitica ? 'Analítica' : 'Sintética' }}</td>
+            <td><span class="badge" [ngClass]="conta.ativa ? 'badge-ok' : 'badge-off'">{{ conta.ativa ? 'Ativa' : 'Inativa' }}</span></td>
+            <td class="actions">
+              <button class="btn sm" type="button" (click)="editar(conta)">Editar</button>
+              <button class="btn sm danger" type="button" (click)="excluir(conta)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading">Nenhuma conta contábil encontrada.</div>
+        <div class="loading" *ngIf="loading">Carregando...</div>
+      </ng-template>
+    </div>
+
+    <div class="pager" *ngIf="total > 0">
+      <div class="left">
+        <button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
+        <button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
+      </div>
+      <div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span></div>
+      <div class="right">
+        <button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
+        <button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button>
+      </div>
+    </div>
+  </section>
+</div>

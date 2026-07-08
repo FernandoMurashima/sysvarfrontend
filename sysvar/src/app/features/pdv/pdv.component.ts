@@ -133,6 +133,7 @@ export class PdvComponent implements OnInit {
   trocaVenda: VendaDevolucaoConsulta | null = null;
   trocaVendas: VendaDevolucaoConsulta[] = [];
   trocaQuantidades: Record<number, number> = {};
+  confirmacaoPdv: { tipo: 'fechar-pdv' | 'cancelar-venda' | 'limpar-venda'; titulo: string; mensagem: string; acao: string } | null = null;
 
   lojaId: number | null = null;
   clienteId: number | null = null;
@@ -387,7 +388,31 @@ export class PdvComponent implements OnInit {
   }
 
   fecharPdv(): void {
-    if (this.vendaIniciada && !confirm('Existe uma venda em andamento. Fechar o PDV mesmo assim?')) return;
+    if (this.vendaIniciada) {
+      this.confirmacaoPdv = {
+        tipo: 'fechar-pdv',
+        titulo: 'Fechar PDV',
+        mensagem: 'Existe uma venda em andamento. Confirma o fechamento do PDV?',
+        acao: 'Fechar PDV'
+      };
+      return;
+    }
+    this.executarFechamentoPdv();
+  }
+
+  confirmarAcaoPdv(): void {
+    const tipo = this.confirmacaoPdv?.tipo;
+    this.confirmacaoPdv = null;
+    if (tipo === 'fechar-pdv') this.executarFechamentoPdv();
+    if (tipo === 'cancelar-venda') this.executarCancelamentoVenda();
+    if (tipo === 'limpar-venda') this.executarLimpezaVenda();
+  }
+
+  cancelarAcaoPdv(): void {
+    this.confirmacaoPdv = null;
+  }
+
+  private executarFechamentoPdv(): void {
     localStorage.removeItem(this.sessionKey);
     this.pdvAberto = false;
     this.vendaIniciada = false;
@@ -463,7 +488,19 @@ export class PdvComponent implements OnInit {
   }
 
   cancelarVenda(): void {
-    if (this.carrinho.length && !confirm('Cancelar a venda atual?')) return;
+    if (this.carrinho.length) {
+      this.confirmacaoPdv = {
+        tipo: 'cancelar-venda',
+        titulo: 'Cancelar venda',
+        mensagem: 'Confirma o cancelamento da venda atual?',
+        acao: 'Cancelar venda'
+      };
+      return;
+    }
+    this.executarCancelamentoVenda();
+  }
+
+  private executarCancelamentoVenda(): void {
     this.vendaIniciada = false;
     this.carrinho = [];
     this.selecionarProduto(null);
@@ -593,7 +630,19 @@ export class PdvComponent implements OnInit {
   }
 
   limparVenda(): void {
-    if (this.carrinho.length && !confirm('Limpar a venda atual?')) return;
+    if (this.carrinho.length) {
+      this.confirmacaoPdv = {
+        tipo: 'limpar-venda',
+        titulo: 'Limpar venda',
+        mensagem: 'Confirma a limpeza dos itens e pagamentos da venda atual?',
+        acao: 'Limpar venda'
+      };
+      return;
+    }
+    this.executarLimpezaVenda();
+  }
+
+  private executarLimpezaVenda(): void {
     this.carrinho = [];
     this.descontoGeral = 0;
     this.valorRecebido = 0;

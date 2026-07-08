@@ -19,6 +19,67 @@
     </div>
   </header>
 
+  <section class="alert success" *ngIf="successMsg()">{{ successMsg() }}</section>
+  <section class="alert error" *ngIf="errorMsg()">{{ errorMsg() }}</section>
+
+  <div class="modal-backdrop" *ngIf="skuConfirmModal as sku">
+    <div class="modal confirm-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h4>Criar SKUs/EANs</h4>
+      </div>
+      <div class="modal-body">
+        <p>
+          Você incluiu nova(s) cor(es): <strong>{{ sku.nomes }}</strong>.
+        </p>
+        <p>
+          Ao salvar, o sistema vai criar os SKUs e os códigos EAN correspondentes para todos os tamanhos da grade deste produto.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" (click)="fecharCriacaoSkus()">Voltar</button>
+        <button class="btn primary" type="button" (click)="confirmarCriacaoSkus()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="excluirModal as produto">
+    <div class="modal confirm-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h4>Excluir produto</h4>
+      </div>
+      <div class="modal-body">
+        <p>Confirma a exclusão do produto <strong>{{ produto.descricao }}</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="segurancaModal as modal">
+    <div class="modal confirm-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h4>{{ modal.title }}</h4>
+      </div>
+      <div class="modal-body security-grid">
+        <p>{{ modal.produto.descricao }}</p>
+        <label>
+          Motivo
+          <input type="text" [(ngModel)]="modal.motivo" />
+        </label>
+        <label>
+          Senha
+          <input type="password" [(ngModel)]="modal.senha" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button>
+        <button class="btn primary" type="button" (click)="confirmarSeguranca()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- DICA -->
   <section class="card hint">
     <p>
@@ -98,11 +159,6 @@
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
     <h3>{{ editingId ? 'Editar Produto' : 'Novo Produto' }}</h3>
-
-    <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
-      Existem {{ getFormErrors().length }} pendência(s).
-    </div>
-
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
         <!-- Linha 1 -->
@@ -264,6 +320,12 @@
           </section>
         </div>
       </div>
+        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+          <strong>Pendências</strong>
+          <ul>
+            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+          </ul>
+        </div>
 
       <div class="actions-form">
         <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
@@ -273,18 +335,6 @@
       </div>
     </form>
   </section>
-
-  <!-- OVERLAY ERROS -->
-  <div class="overlay" *ngIf="errorOverlayOpen()" role="alertdialog" aria-modal="true">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
-      <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
-      </div>
-    </div>
-  </div>
 
   <!-- MODAL LOJAS -->
   <div class="modal-backdrop" *ngIf="lojasModalAberto()">

@@ -42,11 +42,12 @@ export class ShellComponent {
     {
       label: 'Cadastros', icon: 'bi bi-journal-text', roles: this.cadastrosRoles,
       children: [
-        { label: 'Empresas',            link: '/empresas',      icon: 'bi bi-buildings',     roles: ['Admin', 'Diretor'] },
+        { label: 'Empresas',            link: '/empresas',      icon: 'bi bi-buildings',     roles: ['Admin'], superOnly: true },
         { label: 'Lojas',               link: '/lojas',         icon: 'bi bi-shop',          roles: this.cadastrosRoles },
         { label: 'Clientes',            link: '/clientes',      icon: 'bi bi-people',        roles: this.clientesRoles },
         { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: this.comprasRoles },
         { label: 'Funcionários',        link: '/funcionarios',  icon: 'bi bi-person-badge',  roles: this.cadastrosRoles },
+        { label: 'Plano Contábil',      link: '/plano-contabil', icon: 'bi bi-diagram-3',     roles: this.cadastrosRoles },
         { label: 'Natureza Lançamento', link: '/natureza', icon: 'bi bi-person-badge',  roles: this.cadastrosRoles },
       ]
     },
@@ -102,7 +103,6 @@ export class ShellComponent {
         { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles },
         { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles },
         { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles },
-        { label: 'Nota Fiscal'          , link: '/vendas/nota',       icon: 'bi bi-cash',                   roles: this.vendasGestaoRoles },
         { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles },
         { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles },
       ]
@@ -114,10 +114,7 @@ export class ShellComponent {
         
         { label: 'Pedido de Compra Uso/Consumo' , link: '/compras/pedidos-uso-consumo' , icon: 'bi bi-bag-check',              roles: this.comprasRoles },
         { label: 'Pedido de Compra Revenda'     , link: '/compras/pedidos-revenda'     , icon: 'bi bi-bag-check',              roles: this.comprasRoles },
-        { label: 'Devoluções'                   , link: '/compras/devolucoes'          , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
-        { label: 'Cotação de Compras'           , link: '/compras/cotacoes'            , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
         { label: 'Entrada de Nf-e'              , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt',               roles: this.comprasRoles },
-        { label: 'Trocas'                       , link: '/compras/trocas'              , icon: 'bi bi-arrow-counterclockwise', roles: this.comprasRoles },
         { label: 'Notas Lançadas'               , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt-cutoff',        roles: this.comprasRoles },
 
       ]
@@ -130,9 +127,13 @@ export class ShellComponent {
         { label: 'Contas a Pagar',            link: '/financeiro/pagar',         icon: 'bi bi-wallet2',          roles: this.pagarRoles },
         { label: 'Caixa',                     link: '/financeiro/caixa',         icon: 'bi bi-safe',             roles: this.caixaRoles },
         { label: 'Contas Bancárias',          link: '/financeiro/contas',        icon: 'bi bi-bank',             roles: this.financeiroRoles },
+        { label: 'Antecipação de Recebíveis', link: '/financeiro/antecipacoes',  icon: 'bi bi-lightning-charge', roles: this.receberRoles },
         { label: 'Movimentações Financeiras', link: '/financeiro/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] },
+        { label: 'Consulta por Natureza',     link: '/financeiro/consulta-naturezas', icon: 'bi bi-list-columns-reverse', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] },
+        { label: 'Lançamentos Contábeis',     link: '/financeiro/lancamentos-contabeis', icon: 'bi bi-journal-check', roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] },
+        { label: 'DRE Gerencial',             link: '/financeiro/dre', icon: 'bi bi-clipboard-data', roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] },
         { label: 'Vales-troca',               link: '/financeiro/vales-troca',   icon: 'bi bi-ticket-perforated', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber'] },
-        { label: 'Formas de Pagamentos'     , link: 'financeiro/formas-pagamento', icon: 'bi bi-arrow-left-right', roles: this.vendasGestaoRoles },
+        { label: 'Formas de Pagamentos'     , link: '/financeiro/formas-pagamento', icon: 'bi bi-arrow-left-right', roles: this.vendasGestaoRoles },
       ]
     },
 
@@ -140,9 +141,6 @@ export class ShellComponent {
       label: 'Relatórios', icon: 'bi bi-graph-up', roles: ['Diretor', 'Gerente'],
       children: [
         { label: 'Vendas'     ,  link: '/relatorios/vendas',     icon: 'bi bi-bar-chart', roles: this.vendasGestaoRoles },
-        { label: 'Financeiro' ,  link: '/relatorios/financeiro', icon: 'bi bi-pie-chart', roles: ['Diretor', 'Gerente'] },
-        { label: 'Estoque'    ,  link: '/relatorios/estoque',    icon: 'bi bi-clipboard', roles: ['Diretor', 'Gerente'] },
-        { label: 'Compras'    ,  link: '/relatorios/compras',    icon: 'bi bi-clipboard', roles: ['Diretor', 'Gerente'] },
         
 
       ]
@@ -152,25 +150,26 @@ export class ShellComponent {
       label: 'Configurações', icon: 'bi bi-gear', roles: ['Admin'],
       children: [
         { label: 'Usuários',               link: '/config/usuarios',            icon: 'bi bi-person-gear',  roles: ['Admin'] },
-        { label: 'Perfis/Acessos',         link: '/config/perfis',              icon: 'bi bi-shield-lock',  roles: ['Admin'] },
-        { label: 'Modelo de Documentos',   link: '/config/modelos',             icon: 'bi bi-sliders',      roles: ['Admin'] },
-        { label: 'Impostos / NCM',         link: '/config/impostos',            icon: 'bi bi-percent',      roles: ['Admin'] },
-        { label: 'Estoque Lançamento',     link: '/config/estoque-lancamento',  icon: 'bi bi-percent',      roles: ['Admin'] },
         
         
       ]
     },
   ];
 
-  get filteredMenu(): NavItem[] {
-    return this.perm.filterMenu(this.menuItems);
-  }
-
+  visibleMenu: NavItem[] = [];
   focusMode = false;
   currentPageTitle = 'Home';
   telaCheia = false;
 
   constructor() {
+    this.refreshMenu();
+    this.auth.me().subscribe({
+      next: (user) => {
+        this.auth.setCurrentUser(user);
+        this.refreshMenu();
+      },
+      error: () => {}
+    });
     this.applyRouteState(this.router.url);
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -216,6 +215,9 @@ export class ShellComponent {
     };
 
   return map[t] ?? raw ;
+  }
+  private refreshMenu(): void {
+    this.visibleMenu = this.perm.filterMenu(this.menuItems);
   }
 
   private applyRouteState(url: string) {

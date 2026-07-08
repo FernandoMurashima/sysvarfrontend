@@ -50,6 +50,9 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   clientes: Cliente[] = [];
   naturezas: NatLancamento[] = [];
   formas: FormaPagamento[] = [];
+  baixaModal: { parcela: ParcelaFinanceira; valor_baixa: number; data_baixa: string } | null = null;
+  cancelarModal: ParcelaFinanceira | null = null;
+  excluirModal: TituloFinanceiro | null = null;
 
   form: FormGroup = this.fb.group({
     idloja: [null, Validators.required],
@@ -102,7 +105,7 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.fornecedores = this.unwrap<Fornecedor>(res.fornecedores);
         this.clientes = this.unwrap<Cliente>(res.clientes);
-        this.naturezas = this.unwrap<NatLancamento>(res.naturezas);
+        this.naturezas = this.unwrap<NatLancamento>(res.naturezas).filter(n => n.ativo !== false);
         this.formas = this.unwrap<FormaPagamento>(res.formas);
       },
       error: () => {
@@ -149,7 +152,7 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
       Valor_total: 0,
       Previsao: false,
       FormaPagamento: '',
-      Idnatureza: this.naturezas[0]?.idnatureza ?? null,
+      Idnatureza: this.naturezasTitulo[0]?.idnatureza ?? null,
       conta_contabil: ''
     });
     this.clearParcelas();
@@ -233,28 +236,56 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     const id = this.parcelaId(parcela);
     if (!id) return;
     const valorAtual = Number(parcela.valor_parcela || 0);
-    const valor = Number(prompt('Valor da baixa', String(valorAtual)) || 0);
+    this.baixaModal = {
+      parcela,
+      valor_baixa: valorAtual,
+      data_baixa: this.today()
+    };
+  }
+
+  confirmarBaixa(): void {
+    const id = this.baixaModal ? this.parcelaId(this.baixaModal.parcela) : null;
+    if (!id) return;
+    const valor = Number(this.baixaModal?.valor_baixa || 0);
     if (valor <= 0) return;
-    this.api.baixarParcela(this.tipo, id, { valor_baixa: valor, data_baixa: this.today() }).subscribe({
+    this.api.baixarParcela(this.tipo, id, {
+      valor_baixa: valor,
+      data_baixa: String(this.baixaModal?.data_baixa || this.today())
+    }).subscribe({
       next: () => {
         this.successMsg = 'Parcela baixada.';
+        this.baixaModal = null;
         this.load();
       },
       error: () => this.errorMsg = 'Falha ao baixar parcela.'
     });
   }
 
+  fecharBaixa(): void {
+    this.baixaModal = null;
+  }
+
   cancelarParcela(parcela: ParcelaFinanceira): void {
     const id = this.parcelaId(parcela);
     if (!id) return;
-    if (!confirm('Cancelar esta parcela?')) return;
+    this.cancelarModal = parcela;
+  }
+
+  confirmarCancelamentoParcela(): void {
+    const id = this.cancelarModal ? this.parcelaId(this.cancelarModal) : null;
+    if (!id) return;
     this.api.cancelarParcela(this.tipo, id, 'Cancelado pela tela financeira').subscribe({
       next: () => {
         this.successMsg = 'Parcela cancelada.';
+        this.cancelarModal = null;
         this.load();
       },
       error: () => this.errorMsg = 'Falha ao cancelar parcela.'
     });
+  }
+
+  fecharCancelamentoParcela(): void {
+    this.cancelarModal = null;
   }
 
   reabrirParcela(parcela: ParcelaFinanceira): void {
@@ -272,14 +303,24 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   excluir(titulo: TituloFinanceiro): void {
     const id = this.tituloId(titulo);
     if (!id) return;
-    if (!confirm(`Excluir o título "${titulo.Titulo}"?`)) return;
+    this.excluirModal = titulo;
+  }
+
+  confirmarExclusaoTitulo(): void {
+    const id = this.excluirModal ? this.tituloId(this.excluirModal) : null;
+    if (!id) return;
     this.api.remove(this.tipo, id).subscribe({
       next: () => {
         this.successMsg = 'Título excluído.';
+        this.excluirModal = null;
         this.load();
       },
       error: () => this.errorMsg = 'Falha ao excluir título.'
     });
+  }
+
+  fecharExclusaoTitulo(): void {
+    this.excluirModal = null;
   }
 
   tituloId(titulo: TituloFinanceiro): number | null {
@@ -322,6 +363,11 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   statusClass(status: string): string {
     return `status-${status.toLowerCase()}`;
+  }
+
+  get naturezasTitulo(): NatLancamento[] {
+    const operacoes = this.tipo === 'pagar' ? ['DESPESA', 'AJUSTE'] : ['RECEITA', 'AJUSTE'];
+    return this.naturezas.filter(n => operacoes.includes(String(n.natureza_operacao || '').toUpperCase()));
   }
 
   private salvarParcelas(created: TituloFinanceiro): void {

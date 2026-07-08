@@ -21,6 +21,7 @@ export class EstoqueInventarioComponent implements OnInit {
   private lojasApi = inject(LojasService);
   loading = false; saving = false; showForm = false; errorMsg = ''; successMsg = '';
   lojas: Loja[] = []; inventarios: InventarioEstoque[] = []; selecionado: InventarioEstoque | null = null;
+  fecharModal: InventarioEstoque | null = null;
   form = this.fb.group({ Idloja: [null as number | null, Validators.required], descricao: ['', Validators.required], data_abertura: [this.today(), Validators.required], observacao: [''] });
   ngOnInit(): void { this.load(); }
   load(): void {
@@ -40,7 +41,16 @@ export class EstoqueInventarioComponent implements OnInit {
     });
   }
   gerarItens(inv: InventarioEstoque): void { if (!inv.Idinventario) return; this.api.gerarItensInventario(inv.Idinventario).subscribe({ next: () => { this.successMsg = 'Itens gerados.'; this.load(); }, error: () => this.errorMsg = 'Falha ao gerar itens.' }); }
-  fechar(inv: InventarioEstoque): void { if (!inv.Idinventario || !confirm('Fechar inventário e ajustar estoque?')) return; this.api.fecharInventario(inv.Idinventario).subscribe({ next: () => { this.successMsg = 'Inventário fechado.'; this.load(); }, error: () => this.errorMsg = 'Falha ao fechar inventário.' }); }
+  fechar(inv: InventarioEstoque): void { if (!inv.Idinventario) return; this.fecharModal = inv; }
+  confirmarFechamento(): void {
+    const inv = this.fecharModal;
+    if (!inv?.Idinventario) return;
+    this.api.fecharInventario(inv.Idinventario).subscribe({
+      next: () => { this.fecharModal = null; this.successMsg = 'Inventário fechado.'; this.load(); },
+      error: () => this.errorMsg = 'Falha ao fechar inventário.'
+    });
+  }
+  cancelarFechamento(): void { this.fecharModal = null; }
   atualizarItem(item: InventarioEstoqueItem): void { if (!item.Idinventarioitem) return; this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: Number(item.saldo_contado), observacao: item.observacao }).subscribe({ next: () => this.successMsg = 'Contagem atualizada.', error: () => this.errorMsg = 'Falha ao atualizar item.' }); }
   lojaNome(id: number): string { return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`; }
   private unwrap<T>(res: any): T[] { return Array.isArray(res) ? res : (res?.results ?? []); }

@@ -14,6 +14,8 @@ import { ProdutosService } from '../../core/services/produtos.service';
 import { CoresService } from '../../core/services/cores.service';
 import { PacksService } from '../../core/services/pack.service';
 import { PackItensService } from '../../core/services/pack-item.service';
+import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
+import { NatLancamento } from '../../core/models/natureza-lancamento';
 import { environment } from '../../../environments/environment';
 
 type Option = { id: number; label: string };
@@ -54,6 +56,7 @@ export class PedidosRevendaComponent implements OnInit {
   private coresApi = inject(CoresService);
   private packsApi = inject(PacksService);
   private packItensApi = inject(PackItensService);
+  private naturezasApi = inject(NatLancamentosService);
   private http = inject(HttpClient);
 
   // navegação: list / form
@@ -71,11 +74,22 @@ export class PedidosRevendaComponent implements OnInit {
   saving = false;
   loadingLookups = signal(false);
   loadingPedidos = false;
+  successMsg = '';
+  errorMsg = '';
+  confirmModal: {
+    action: 'removerItem' | 'excluirPedido' | 'cancelarPedido';
+    title: string;
+    text: string;
+    item?: PedidoCompraItemUI;
+    pedido?: any;
+  } | null = null;
+  aprovarModal: { pedido: any; idnatureza: number | null } | null = null;
 
   // lookups
   lojas: Option[] = [];
   fornecedores: Option[] = [];
   formas: FormaOption[] = [];
+  naturezasCompra: NatLancamento[] = [];
 
   private lojaMap = new Map<number, string>();
   private fornecedorMap = new Map<number, string>();
@@ -151,6 +165,7 @@ export class PedidosRevendaComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLookups();
+    this.loadNaturezasCompra();
     this.loadAllCores();
     this.loadPedidos();
     this.setupItemFormRecalc();
@@ -458,7 +473,7 @@ export class PedidosRevendaComponent implements OnInit {
       next: (resp: any) => {
         const arr = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '1');
         if (!arr.length) {
-          alert('Produto de revenda não encontrado.');
+          this.showError('Produto de revenda não encontrado.');
           this.itemForm.patchValue({ produto: null }, { emitEvent: false });
           this.produtoDescricaoAtual = '';
           this.coresProduto = this.coresAll.slice();
@@ -467,9 +482,43 @@ export class PedidosRevendaComponent implements OnInit {
         this.setProdutoFromApi(arr[0]);
       },
       error: () => {
-        alert('Erro ao buscar produto.');
+        this.showError('Erro ao buscar produto.');
       },
     });
+  }
+
+  private loadNaturezasCompra(): void {
+    this.naturezasApi.list({
+      page_size: 500,
+      ordering: 'codigo',
+      natureza_operacao: 'DESPESA',
+      ativo: true,
+    }).subscribe({
+      next: (resp: any) => {
+        this.naturezasCompra = this.arrayOrResults<NatLancamento>(resp)
+          .filter(n => (n.ativo ?? true) && (n.natureza_operacao || '').toUpperCase() === 'DESPESA')
+          .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+      },
+      error: () => {
+        this.naturezasCompra = [];
+      },
+    });
+  }
+
+  naturezaLabel(n: NatLancamento): string {
+    const conta = n.plano_contabil_codigo
+      ? ` · Conta ${n.plano_contabil_codigo} - ${n.plano_contabil_descricao || ''}`.trim()
+      : '';
+    return `${n.codigo} - ${n.descricao}${conta}`;
+  }
+
+  private sugerirNaturezaCompraRevenda(): number | null {
+    const textoPreferido = ['mercador', 'revenda', 'cmv', 'compra'];
+    const encontrada = this.naturezasCompra.find(n => {
+      const alvo = `${n.codigo} ${n.descricao} ${n.categoria_principal} ${n.subcategoria} ${n.categoria_gerencial || ''}`.toLowerCase();
+      return textoPreferido.some(term => alvo.includes(term));
+    });
+    return encontrada?.idnatureza ?? this.naturezasCompra[0]?.idnatureza ?? null;
   }
 
   buscarProdutosConsulta(): void {
@@ -484,7 +533,7 @@ export class PedidosRevendaComponent implements OnInit {
       error: () => {
         this.produtosConsulta = [];
         this.carregandoProdutosConsulta = false;
-        alert('Erro ao buscar produtos de revenda.');
+        this.showError('Erro ao buscar produtos de revenda.');
       },
     });
   }
@@ -492,7 +541,7 @@ export class PedidosRevendaComponent implements OnInit {
   usarProdutoConsulta(): void {
     const prod = this.produtosConsulta.find(p => (p.Idproduto ?? p.id) === this.produtoConsultaId);
     if (!prod) {
-      alert('Selecione um produto da consulta.');
+      this.showError('Selecione um produto da consulta.');
       return;
     }
     this.setProdutoFromApi(prod);
@@ -500,7 +549,7 @@ export class PedidosRevendaComponent implements OnInit {
 
   private setProdutoFromApi(prod: any) {
     if ((prod.tipo_produto ?? '').toString() !== '1') {
-      alert('Este produto não é de revenda.');
+      this.showError('Este produto não é de revenda.');
       this.itemForm.patchValue({ produto: null }, { emitEvent: false });
       this.produtoDescricaoAtual = '';
       this.coresProduto = this.coresAll.slice();
@@ -663,15 +712,44 @@ export class PedidosRevendaComponent implements OnInit {
 
   removerItem(it: PedidoCompraItemUI) {
     if (!it.id) return;
-    if (!confirm('Remover este item?')) return;
+    this.confirmModal = {
+      action: 'removerItem',
+      title: 'Remover item',
+      text: 'Confirma a remoção deste item do pedido?',
+      item: it,
+    };
+  }
 
-    this.pedidosApi.deleteItem(it.id).subscribe({
+  confirmarAcao(): void {
+    const modal = this.confirmModal;
+    if (!modal) return;
+
+    if (modal.action === 'removerItem' && modal.item) {
+      this.executarRemocaoItem(modal.item);
+      return;
+    }
+    if (modal.action === 'excluirPedido' && modal.pedido) {
+      this.executarExclusaoPedido(modal.pedido);
+      return;
+    }
+    if (modal.action === 'cancelarPedido' && modal.pedido) {
+      this.executarCancelamentoPedido(modal.pedido);
+    }
+  }
+
+  fecharConfirmacao(): void {
+    this.confirmModal = null;
+  }
+
+  private executarRemocaoItem(it: PedidoCompraItemUI): void {
+    this.pedidosApi.deleteItem(it.id!).subscribe({
       next: () => {
+        this.confirmModal = null;
         const pedidoId = this.pedidoAtualId();
         if (pedidoId) this.carregarItensPedido(pedidoId);
       },
       error: () => {
-        alert('Erro ao remover item.');
+        this.showError('Erro ao remover item.');
       },
     });
   }
@@ -681,7 +759,7 @@ export class PedidosRevendaComponent implements OnInit {
     this.submitted = true;
 
     if (this.headerForm.invalid) {
-      alert('Preencha o cabeçalho (loja, fornecedor, emissão, forma) antes de adicionar itens.');
+      this.showError('Preencha o cabeçalho (loja, fornecedor, emissão, forma) antes de adicionar itens.');
       return;
     }
 
@@ -722,7 +800,7 @@ export class PedidosRevendaComponent implements OnInit {
             next: () => this.salvarItemNoBackend(idPedido),
             error: () => {
               this.savingItem = false;
-              alert('Pedido criado, mas houve erro ao aplicar a forma de pagamento.');
+              this.showError('Pedido criado, mas houve erro ao aplicar a forma de pagamento.');
             },
           });
         } else {
@@ -731,7 +809,7 @@ export class PedidosRevendaComponent implements OnInit {
       },
       error: () => {
         this.savingItem = false;
-        alert('Erro ao criar o pedido.');
+        this.showError('Erro ao criar o pedido.');
       },
     });
   }
@@ -766,7 +844,7 @@ export class PedidosRevendaComponent implements OnInit {
       },
       error: () => {
         this.savingItem = false;
-        alert('Erro ao salvar item.');
+        this.showError('Erro ao salvar item.');
       },
     });
   }
@@ -823,7 +901,7 @@ export class PedidosRevendaComponent implements OnInit {
 
   editarPedido(p: any) {
     if (!this.isAberto(p)) {
-      alert('Pedidos Aprovados ou Cancelados não podem ser editados.');
+      this.showError('Pedidos aprovados ou cancelados não podem ser editados.');
       return;
     }
 
@@ -846,14 +924,22 @@ export class PedidosRevendaComponent implements OnInit {
 
   excluirPedido(p: any) {
     if (!this.isAberto(p)) {
-      alert('Só é permitido excluir pedidos em aberto (AB).');
+      this.showError('Só é permitido excluir pedidos em aberto (AB).');
       return;
     }
-    if (!confirm(`Confirma a exclusão do pedido ${p.id}?`)) return;
+    this.confirmModal = {
+      action: 'excluirPedido',
+      title: 'Excluir pedido',
+      text: `Confirma a exclusão do pedido ${p.id}?`,
+      pedido: p,
+    };
+  }
 
+  private executarExclusaoPedido(p: any): void {
     this.pedidosApi.delete(p.id).subscribe({
       next: () => {
-        alert('Pedido excluído com sucesso.');
+        this.confirmModal = null;
+        this.showSuccess('Pedido excluído com sucesso.');
         this.loadPedidos();
         if (this.pedidoAtualId() === p.id) {
           this.resetForm();
@@ -861,29 +947,32 @@ export class PedidosRevendaComponent implements OnInit {
         }
       },
       error: () => {
-        alert('Erro ao excluir pedido.');
+        this.showError('Erro ao excluir pedido.');
       },
     });
   }
 
   aprovarPedido(p: any) {
     if (!this.isAberto(p)) {
-      alert('Só é possível aprovar pedidos em aberto (AB).');
+      this.showError('Só é possível aprovar pedidos em aberto (AB).');
       return;
     }
+    this.aprovarModal = { pedido: p, idnatureza: this.sugerirNaturezaCompraRevenda() };
+  }
 
-    const raw = prompt('Informe o ID da natureza para aprovação:');
-    if (!raw) return;
-
-    const idnatureza = Number(raw);
+  confirmarAprovacao(): void {
+    const p = this.aprovarModal?.pedido;
+    const idnatureza = Number(this.aprovarModal?.idnatureza || 0);
+    if (!p) return;
     if (!idnatureza || Number.isNaN(idnatureza)) {
-      alert('ID de natureza inválido.');
+      this.showError('Selecione a natureza de lançamento para aprovar o pedido.');
       return;
     }
 
     this.pedidosApi.aprovar(p.id, idnatureza).subscribe({
       next: () => {
-        alert('Pedido aprovado com sucesso.');
+        this.aprovarModal = null;
+        this.showSuccess('Pedido aprovado com sucesso.');
         this.loadPedidos();
         // se estiver editando este pedido, volta para a lista
         if (this.pedidoAtualId() === p.id) {
@@ -892,21 +981,33 @@ export class PedidosRevendaComponent implements OnInit {
         }
       },
       error: () => {
-        alert('Erro ao aprovar pedido.');
+        this.showError('Erro ao aprovar pedido.');
       },
     });
   }
 
+  fecharAprovacao(): void {
+    this.aprovarModal = null;
+  }
+
   cancelarPedido(p: any) {
     if (!this.isAberto(p)) {
-      alert('Só é possível cancelar pedidos em aberto (AB).');
+      this.showError('Só é possível cancelar pedidos em aberto (AB).');
       return;
     }
-    if (!confirm(`Confirma o cancelamento do pedido ${p.id}?`)) return;
+    this.confirmModal = {
+      action: 'cancelarPedido',
+      title: 'Cancelar pedido',
+      text: `Confirma o cancelamento do pedido ${p.id}?`,
+      pedido: p,
+    };
+  }
 
+  private executarCancelamentoPedido(p: any): void {
     this.pedidosApi.cancelar(p.id).subscribe({
       next: () => {
-        alert('Pedido cancelado com sucesso.');
+        this.confirmModal = null;
+        this.showSuccess('Pedido cancelado com sucesso.');
         this.loadPedidos();
         if (this.pedidoAtualId() === p.id) {
           this.resetForm();
@@ -914,7 +1015,7 @@ export class PedidosRevendaComponent implements OnInit {
         }
       },
       error: () => {
-        alert('Erro ao cancelar pedido.');
+        this.showError('Erro ao cancelar pedido.');
       },
     });
   }
@@ -924,22 +1025,22 @@ export class PedidosRevendaComponent implements OnInit {
     this.submitted = true;
 
     if (this.headerForm.invalid) {
-      alert('Preencha o cabeçalho antes de gravar o pedido.');
+      this.showError('Preencha o cabeçalho antes de gravar o pedido.');
       return;
     }
     const v = this.headerForm.value;
     if (!v.forma_pagamento_codigo) {
-      alert('Informe a forma de pagamento.');
+      this.showError('Informe a forma de pagamento.');
       return;
     }
     if (!this.itens.length) {
-      alert('Inclua pelo menos um item antes de gravar o pedido.');
+      this.showError('Inclua pelo menos um item antes de gravar o pedido.');
       return;
     }
 
     const pedidoId = this.pedidoAtualId();
     if (!pedidoId) {
-      alert('Inclua pelo menos um item para gerar o pedido (cabeçalho + itens).');
+      this.showError('Inclua pelo menos um item para gerar o pedido (cabeçalho + itens).');
       return;
     }
 
@@ -947,15 +1048,25 @@ export class PedidosRevendaComponent implements OnInit {
     this.pedidosApi.setFormaPagamento(pedidoId, v.forma_pagamento_codigo).subscribe({
       next: () => {
         this.saving = false;
-        alert('Pedido gravado com sucesso.');
+        this.showSuccess('Pedido gravado com sucesso.');
         this.loadPedidos();
         this.resetForm();
         this.setViewList();
       },
       error: () => {
         this.saving = false;
-        alert('Pedido gravado, mas houve erro ao recalcular as parcelas.');
+        this.showError('Pedido gravado, mas houve erro ao recalcular as parcelas.');
       },
     });
+  }
+
+  private showSuccess(message: string): void {
+    this.successMsg = message;
+    this.errorMsg = '';
+  }
+
+  private showError(message: string): void {
+    this.errorMsg = message;
+    this.successMsg = '';
   }
 }

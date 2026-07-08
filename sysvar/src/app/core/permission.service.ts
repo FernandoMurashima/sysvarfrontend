@@ -12,6 +12,7 @@ export class PermissionService {
   }
 
   canAccess(item: NavItem): boolean {
+    if (item.superOnly) return this.auth.getCurrentUser()?.is_superuser === true;
     if (!item.roles || item.roles.length === 0) return true;
     if (this.currentRole === 'Admin') return true;
     return item.roles.includes(this.currentRole);
@@ -31,6 +32,7 @@ export class PermissionService {
           icon: node.icon,
           link: node.link,
           roles: node.roles,
+          superOnly: node.superOnly,
           ...(hasChild ? { children: filteredChildren } : {})
         };
         out.push(next);

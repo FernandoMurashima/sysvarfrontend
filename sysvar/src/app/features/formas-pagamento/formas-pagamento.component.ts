@@ -14,6 +14,8 @@ import { forkJoin } from 'rxjs';
 
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { FormaPagamento, FormaPagamentoParcela } from '../../core/models/forma-pagamento';
+import { ContaBancaria } from '../../core/models/conta-bancaria';
+import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 
 @Component({
   selector: 'app-formas-pagamento',
@@ -25,6 +27,7 @@ import { FormaPagamento, FormaPagamentoParcela } from '../../core/models/forma-p
 export class FormasPagamentoComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FormasPagamentoService);
+  private contasApi = inject(ContasBancariasService);
 
   loading = false;
   saving = false;
@@ -36,9 +39,11 @@ export class FormasPagamentoComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   errorOverlayOpen = false;
+  excluirModal: FormaPagamento | null = null;
 
   formasAll: FormaPagamento[] = [];
   formas: FormaPagamento[] = [];
+  contas: ContaBancaria[] = [];
 
   page = 1;
   pageSize = 20;
@@ -51,6 +56,12 @@ export class FormasPagamentoComponent implements OnInit {
     codigo: ['', [Validators.required, Validators.maxLength(10)]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
     ativo: [true],
+    gera_recebivel_bancario: [false],
+    adquirente: ['', Validators.maxLength(80)],
+    conta_liquidacao: [null as number | null],
+    prazo_credito_dias: [0, [Validators.min(0)]],
+    taxa_percentual: [0, [Validators.min(0)]],
+    taxa_fixa: [0, [Validators.min(0)]],
     parcelas: this.fb.array([])
   });
 
@@ -116,9 +127,10 @@ export class FormasPagamentoComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.list().subscribe({
+    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }) }).subscribe({
       next: (res: any) => {
-        const rawArr: FormaPagamento[] = Array.isArray(res) ? res : (res?.results ?? []);
+        this.contas = Array.isArray(res.contas) ? res.contas : (res.contas?.results ?? []);
+        const rawArr: FormaPagamento[] = Array.isArray(res.formas) ? res.formas : (res.formas?.results ?? []);
         const filtered = this.filterList(rawArr);
         this.formasAll = filtered;
         this.total = filtered.length;
@@ -197,7 +209,13 @@ export class FormasPagamentoComponent implements OnInit {
     this.form.reset({
       codigo: '',
       descricao: '',
-      ativo: true
+      ativo: true,
+      gera_recebivel_bancario: false,
+      adquirente: '',
+      conta_liquidacao: null,
+      prazo_credito_dias: 0,
+      taxa_percentual: 0,
+      taxa_fixa: 0
     });
     this.clearParcelas();
     this.addParcela();
@@ -219,7 +237,13 @@ export class FormasPagamentoComponent implements OnInit {
         this.form.reset({
           codigo: det.codigo ?? '',
           descricao: det.descricao ?? '',
-          ativo: !!det.ativo
+          ativo: !!det.ativo,
+          gera_recebivel_bancario: !!det.gera_recebivel_bancario,
+          adquirente: det.adquirente ?? '',
+          conta_liquidacao: det.conta_liquidacao ?? null,
+          prazo_credito_dias: Number(det.prazo_credito_dias || 0),
+          taxa_percentual: Number(det.taxa_percentual || 0),
+          taxa_fixa: Number(det.taxa_fixa || 0)
         });
 
         this.clearParcelas();
@@ -288,6 +312,12 @@ export class FormasPagamentoComponent implements OnInit {
       codigo: (f.codigo || '').toString().trim(),
       descricao: (f.descricao || '').toString().trim(),
       ativo: !!f.ativo,
+      gera_recebivel_bancario: !!f.gera_recebivel_bancario,
+      adquirente: (f.adquirente || '').toString().trim() || null,
+      conta_liquidacao: f.gera_recebivel_bancario ? Number(f.conta_liquidacao) : null,
+      prazo_credito_dias: Number(f.prazo_credito_dias || 0),
+      taxa_percentual: this.blankToNull(f.taxa_percentual) ?? '0',
+      taxa_fixa: this.blankToNull(f.taxa_fixa) ?? '0',
       num_parcelas: numParcelas
     };
 
@@ -389,12 +419,18 @@ export class FormasPagamentoComponent implements OnInit {
   excluir(item: FormaPagamento): void {
     const id = item.Idformapagamento ?? (item as any).id;
     if (!id) return;
-    if (!confirm(`Excluir a forma "${item.codigo} - ${item.descricao}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item ? (item.Idformapagamento ?? (item as any).id) : null;
+    if (!id) return;
     this.saving = true;
     this.api.remove(id).subscribe({
       next: () => {
         this.saving = false;
+        this.excluirModal = null;
         this.successMsg = 'Forma excluída.';
         const eraUltimo = this.formas.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -408,6 +444,10 @@ export class FormasPagamentoComponent implements OnInit {
     });
   }
 
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
   // ====== Erros / overlay ======
 
   getFormErrors(): string[] {
@@ -419,6 +459,7 @@ export class FormasPagamentoComponent implements OnInit {
     push(f.get('codigo')?.hasError('maxlength') || false, 'codigo: Máx. 10 caracteres.');
     push(f.get('descricao')?.hasError('required') || false, 'descricao: Este campo é obrigatório.');
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
+    push(!!f.get('gera_recebivel_bancario')?.value && !f.get('conta_liquidacao')?.value, 'conta_liquidacao: Informe a conta de liquidação.');
 
     const fields = ['codigo', 'descricao'];
     const seen = new Set<string>();

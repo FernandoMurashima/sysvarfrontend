@@ -19,6 +19,17 @@
   <section class="alert success" *ngIf="mensagem">{{ mensagem }}</section>
   <section class="alert error" *ngIf="erro">{{ erro }}</section>
 
+  <div class="modal-backdrop" *ngIf="confirmModal as modal">
+    <section class="modal-card">
+      <h3>{{ modal.title }}</h3>
+      <p class="modal-text">{{ modal.text }}</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharConfirmacao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarAcao()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
   <section class="card list" *ngIf="view() === 'list'">
     <div class="list-bar">
       <div><strong>Total:</strong> {{ total }}</div>
@@ -164,7 +175,6 @@
         <thead>
           <tr>
             <th>Item pedido</th>
-            <th>Produto</th>
             <th>Descrição</th>
             <th>Qtd pedido</th>
             <th>Recebido outras</th>
@@ -179,8 +189,7 @@
         <tbody>
           <tr *ngFor="let item of itensPedido">
             <td>{{ item.pedido_item }}</td>
-            <td>{{ item.produto || '-' }}</td>
-            <td>{{ item.descricao_livre || '-' }}</td>
+            <td>{{ descricaoItem(item) }}</td>
             <td>{{ item.qtd_pedido | number : '1.3-3' }}</td>
             <td>{{ item.qtd_recebida_outras_notas | number : '1.3-3' }}</td>
             <td>{{ item.saldo_total_recebivel | number : '1.3-3' }}</td>

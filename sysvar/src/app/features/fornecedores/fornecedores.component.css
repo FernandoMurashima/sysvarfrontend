@@ -78,7 +78,7 @@ input, select {
 .input-item.invalid input, .input-item.invalid select, input[aria-invalid="true"] {
   border-color: #ef4444; background: #fef2f2;
 }
-.field-error { color:#b91c1c; font-size: 12px; min-height: 16px; }
+.field-error { display:none; }
 
 .actions-form { margin-top: 12px; display: flex; gap: 8px; }
 
@@ -175,7 +175,7 @@ input, select {
 }
 
 /* opcional: garante que labels não “agarrem” altura vizinha */
-.input-item > span.field-error { min-height: 16px; display: block; }
+.input-item > span.field-error { display:none; }
 
 /* Badges de status (igual Grades) */
 .badge {
@@ -196,3 +196,6 @@ input, select {
   color: #fff !important;
 }
 .btn.danger:hover { filter: brightness(0.95); }
+.form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
+.form-pending strong { display:block; margin-bottom:6px; }
+.form-pending ul { margin:0; padding-left:18px; }

@@ -249,6 +249,37 @@ textarea {
   text-align: center;
 }
 
+.overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, .25);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 60;
+}
+
+.overlay-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
+  max-width: calc(100% - 24px);
+  padding: 16px;
+  width: 520px;
+}
+
+.overlay-card h4 {
+  margin: 0 0 8px;
+}
+
+.overlay-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
 @media (max-width: 1000px) {
   .grid,
   .row,

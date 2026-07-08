@@ -34,6 +34,7 @@ export class ClientesComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Cliente | null = null;
   errorOverlayOpen = false;
 
   // ======== Formulário ========
@@ -350,10 +351,16 @@ export class ClientesComponent implements OnInit {
   excluir(item: Cliente): void {
     const id = item.id;
     if (!id) return;
-    if (!confirm(`Excluir o cliente "${item.nome_cliente}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item?.id;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Cliente excluído.';
         const eraUltimo = this.clientes.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -365,6 +372,10 @@ export class ClientesComponent implements OnInit {
         this.errorMsg = 'Falha ao excluir.';
       }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // ========= Overlay de erros =========

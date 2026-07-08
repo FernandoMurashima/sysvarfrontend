@@ -47,6 +47,8 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   contas: ContaBancaria[] = [];
   naturezas: NatLancamento[] = [];
   formas: FormaPagamento[] = [];
+  cancelarModal: MovimentacaoFinanceira | null = null;
+  excluirModal: MovimentacaoFinanceira | null = null;
 
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],
@@ -56,7 +58,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
     valor: [0, [Validators.required, Validators.min(0.01)]],
     historico: ['', [Validators.required, Validators.maxLength(255)]],
     documento: [''],
-    Idnatureza: [null as number | null],
+    Idnatureza: [null as number | null, Validators.required],
     FormaPagamento: [''],
     destino_tipo: ['CAIXA', Validators.required],
     caixa: [null as number | null],
@@ -81,7 +83,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.caixas = this.unwrap<Caixa>(res.caixas);
         this.contas = this.unwrap<ContaBancaria>(res.contas);
-        this.naturezas = this.unwrap<NatLancamento>(res.naturezas);
+        this.naturezas = this.unwrap<NatLancamento>(res.naturezas).filter(n => n.ativo !== false);
         this.formas = this.unwrap<FormaPagamento>(res.formas);
         this.movimentacoes = this.filter(this.unwrap<MovimentacaoFinanceira>(res.movimentacoes));
         this.loading = false;
@@ -104,7 +106,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
       valor: 0,
       historico: '',
       documento: '',
-      Idnatureza: null,
+      Idnatureza: this.naturezasPorTipo('ENTRADA')[0]?.idnatureza ?? null,
       FormaPagamento: '',
       destino_tipo: 'CAIXA',
       caixa: this.caixas[0]?.Idcaixa ?? null,
@@ -132,6 +134,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   salvar(): void {
+    this.ajustarNaturezaPorTipo();
     if (this.form.invalid) {
       this.errorMsg = 'Revise os campos obrigatórios.';
       return;
@@ -156,6 +159,10 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
       this.errorMsg = 'Informe o caixa ou a conta bancária.';
       return;
     }
+    if (!payload.Idnatureza) {
+      this.errorMsg = 'Informe a natureza de lançamento.';
+      return;
+    }
     this.saving = true;
     const req = this.editingId ? this.api.update(this.editingId, payload) : this.api.create(payload);
     req.subscribe({
@@ -173,27 +180,47 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   cancelarMov(item: MovimentacaoFinanceira): void {
-    const id = item.Idmovimentacao;
-    if (!id || !confirm('Cancelar esta movimentação?')) return;
+    if (!item.Idmovimentacao) return;
+    this.cancelarModal = item;
+  }
+
+  confirmarCancelamento(): void {
+    const id = this.cancelarModal?.Idmovimentacao;
+    if (!id) return;
     this.api.cancelar(id).subscribe({
       next: () => {
         this.successMsg = 'Movimentação cancelada.';
+        this.cancelarModal = null;
         this.loadAll();
       },
       error: () => this.errorMsg = 'Falha ao cancelar movimentação.'
     });
   }
 
+  fecharCancelamento(): void {
+    this.cancelarModal = null;
+  }
+
   excluir(item: MovimentacaoFinanceira): void {
-    const id = item.Idmovimentacao;
-    if (!id || !confirm('Excluir esta movimentação?')) return;
+    if (!item.Idmovimentacao) return;
+    this.excluirModal = item;
+  }
+
+  confirmarExclusao(): void {
+    const id = this.excluirModal?.Idmovimentacao;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
         this.successMsg = 'Movimentação excluída.';
+        this.excluirModal = null;
         this.loadAll();
       },
       error: () => this.errorMsg = 'Falha ao excluir movimentação.'
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   cancelar(): void {
@@ -213,6 +240,23 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
 
   statusClass(status: string): string {
     return `status-${status.toLowerCase()}`;
+  }
+
+  naturezasPorTipo(tipo = String(this.form.value.tipo || '')): NatLancamento[] {
+    const operacoes = tipo === 'ENTRADA'
+      ? ['RECEITA', 'AJUSTE']
+      : tipo === 'SAIDA'
+        ? ['DESPESA', 'AJUSTE']
+        : ['TRANSFERENCIA', 'AJUSTE'];
+    return this.naturezas.filter(n => operacoes.includes(String(n.natureza_operacao || '').toUpperCase()));
+  }
+
+  ajustarNaturezaPorTipo(): void {
+    const atual = Number(this.form.value.Idnatureza || 0);
+    const opcoes = this.naturezasPorTipo();
+    if (!atual || !opcoes.some(n => n.idnatureza === atual)) {
+      this.form.patchValue({ Idnatureza: opcoes[0]?.idnatureza ?? null }, { emitEvent: false });
+    }
   }
 
   private filter(items: MovimentacaoFinanceira[]): MovimentacaoFinanceira[] {

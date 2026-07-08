@@ -29,6 +29,7 @@ export class GradesComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   submitted = false;
+  excluirModal: { tipo: 'grade' | 'tamanho'; titulo: string; grade?: GradeModel; tamanho?: TamanhoModel } | null = null;
 
   grades: GradeModel[] = [];
   tamanhos: TamanhoModel[] = [];
@@ -126,9 +127,29 @@ export class GradesComponent implements OnInit {
 
   excluirGrade(g: GradeModel) {
     if (!g.Idgrade) return;
-    if (!confirm(`Excluir a grade "${g.Descricao}"?`)) return;
-    this.gradesApi.remove(g.Idgrade).subscribe({
+    this.excluirModal = { tipo: 'grade', titulo: `Excluir a grade "${g.Descricao}"?`, grade: g };
+  }
+
+  confirmarExclusao(): void {
+    const modal = this.excluirModal;
+    if (!modal) return;
+    if (modal.tipo === 'grade' && modal.grade) {
+      this.executarExclusaoGrade(modal.grade);
+      return;
+    }
+    if (modal.tipo === 'tamanho' && modal.tamanho) {
+      this.executarExclusaoTamanho(modal.tamanho);
+    }
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
+  }
+
+  private executarExclusaoGrade(g: GradeModel): void {
+    this.gradesApi.remove(g.Idgrade!).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Grade excluída.';
         if (this.selectedGradeId === g.Idgrade) this.fecharTamanhos();
         this.loadGrades();
@@ -227,9 +248,13 @@ export class GradesComponent implements OnInit {
 
   excluirTamanho(t: TamanhoModel) {
     if (!t.Idtamanho) return;
-    if (!confirm(`Excluir o tamanho "${t.Tamanho}"?`)) return;
-    this.tamanhosApi.remove(t.Idtamanho).subscribe({
+    this.excluirModal = { tipo: 'tamanho', titulo: `Excluir o tamanho "${t.Tamanho}"?`, tamanho: t };
+  }
+
+  private executarExclusaoTamanho(t: TamanhoModel): void {
+    this.tamanhosApi.remove(t.Idtamanho!).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Tamanho excluído.';
         if (this.selectedGradeId) this.carregarTamanhos(this.selectedGradeId);
       },

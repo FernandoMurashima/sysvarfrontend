@@ -1,6 +1,16 @@
 <div class="estoque-page">
   <header class="toolbar"><h2>Inventário de Estoque</h2><div class="toolbar-actions"><button class="btn primary" (click)="novo()">Novo inventário</button><button class="btn" (click)="load()">Atualizar</button><button class="btn" [routerLink]="['/home']">Home</button></div></header>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div><div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div class="overlay" *ngIf="fecharModal as inventario">
+    <div class="overlay-card">
+      <h4>Fechar inventário</h4>
+      <p>Confirma o fechamento do inventário <strong>{{ inventario.descricao }}</strong> e o ajuste do estoque?</p>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="cancelarFechamento()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarFechamento()">Fechar inventário</button>
+      </div>
+    </div>
+  </div>
   <section class="panel" *ngIf="showForm"><h3>Novo inventário</h3><form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid"><label>Loja*<select formControlName="Idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option></select></label><label>Descrição*<input formControlName="descricao" /></label><label>Data*<input type="date" formControlName="data_abertura" /></label><label>Observação<input formControlName="observacao" /></label><div class="form-actions"><button class="btn primary" [disabled]="saving">Salvar</button><button class="btn" type="button" (click)="showForm=false">Cancelar</button></div></form></section>
   <section class="panel"><div class="list-header"><strong>Total: {{ inventarios.length }}</strong><span *ngIf="loading">Carregando...</span></div><div class="table-wrapper"><table class="table" *ngIf="inventarios.length; else vazioTpl"><thead><tr><th>Descrição</th><th>Loja</th><th>Data</th><th>Status</th><th>Itens</th><th></th></tr></thead><tbody><tr *ngFor="let inv of inventarios"><td>{{ inv.descricao }}</td><td>{{ lojaNome(inv.Idloja) }}</td><td>{{ inv.data_abertura | date:'dd/MM/yyyy' }}</td><td>{{ inv.status }}</td><td>{{ inv.itens?.length || 0 }}</td><td class="actions"><button class="btn sm" (click)="selecionado = inv">Ver</button><button class="btn sm" *ngIf="inv.status === 'ABERTO'" (click)="gerarItens(inv)">Gerar itens</button><button class="btn sm danger" *ngIf="inv.status === 'ABERTO'" (click)="fechar(inv)">Fechar</button></td></tr></tbody></table><ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum inventário encontrado.</div></ng-template></div></section>
   <section class="panel" *ngIf="selecionado"><h3>Itens - {{ selecionado.descricao }}</h3><div class="table-wrapper"><table class="table"><thead><tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th></th></tr></thead><tbody><tr *ngFor="let item of selecionado.itens || []"><td>{{ item.referencia }}</td><td>{{ item.CodigodeBarra }}</td><td>{{ item.saldo_sistema }}</td><td><input type="number" [(ngModel)]="item.saldo_contado" /></td><td>{{ item.diferenca }}</td><td><button class="btn sm" (click)="atualizarItem(item)">Salvar</button></td></tr></tbody></table></div></section>

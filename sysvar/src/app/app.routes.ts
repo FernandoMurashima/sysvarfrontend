@@ -12,6 +12,7 @@ import { LojasComponent } from './features/lojas/lojas.component';
 import { FornecedoresComponent } from './features/fornecedores/fornecedores.component';
 import { FuncionariosComponent } from './features/funcionarios/funcionarios.component';
 import { NatLancamentosComponent } from './features/natureza-lancamento/natureza-lancamento.component';
+import { PlanoContabilComponent } from './features/plano-contabil/plano-contabil.component';
 import { CoresComponent } from './features/cores/cores.component';
 import { ColecoesComponent } from './features/colecoes/colecoes.component';
 import { UnidadesComponent } from './features/unidades/unidades.component';
@@ -33,6 +34,10 @@ import { NotasFiscaisEntradaComponent } from './features/notas-fiscais-entrada/n
 import { FinanceiroTitulosComponent } from './features/financeiro-titulos/financeiro-titulos.component';
 import { CaixasComponent } from './features/caixas/caixas.component';
 import { ContasBancariasComponent } from './features/contas-bancarias/contas-bancarias.component';
+import { AntecipacaoRecebiveisComponent } from './features/antecipacao-recebiveis/antecipacao-recebiveis.component';
+import { ConsultaFinanceiraNaturezaComponent } from './features/consulta-financeira-natureza/consulta-financeira-natureza.component';
+import { LancamentosContabeisComponent } from './features/lancamentos-contabeis/lancamentos-contabeis.component';
+import { DreGerencialComponent } from './features/dre-gerencial/dre-gerencial.component';
 import { MovimentacoesFinanceirasComponent } from './features/movimentacoes-financeiras/movimentacoes-financeiras.component';
 import { EstoqueConsultaComponent } from './features/estoque-consulta/estoque-consulta.component';
 import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/estoque-movimentacoes.component';
@@ -59,12 +64,13 @@ export const routes: Routes = [
     children: [
       { path: 'home', component: HomeComponent },
 
-      { path: 'empresas', component: EmpresasComponent, data: { roles: ['Admin', 'Diretor'] } },
+      { path: 'empresas', component: EmpresasComponent, data: { roles: ['Admin'], superOnly: true } },
       { path: 'clientes', component: ClientesComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'] } },
       { path: 'lojas', component: LojasComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'] } },
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'] } },
+      { path: 'plano-contabil', component: PlanoContabilComponent, data: { roles: ['Diretor', 'Gerente'] } },
       { path: 'cores', component: CoresComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
       { path: 'colecoes', component: ColecoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
       { path: 'unidades', component: UnidadesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'] } },
@@ -89,7 +95,11 @@ export const routes: Routes = [
       { path: 'financeiro/receber', component: FinanceiroTitulosComponent, data: { tipo: 'receber', roles: ['Diretor', 'Gerente', 'AssistenteReceber'] } },
       { path: 'financeiro/caixa', component: CaixasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'] } },
       { path: 'financeiro/contas', component: ContasBancariasComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] } },
+      { path: 'financeiro/antecipacoes', component: AntecipacaoRecebiveisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber'] } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] } },
+      { path: 'financeiro/consulta-naturezas', component: ConsultaFinanceiraNaturezaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'] } },
+      { path: 'financeiro/lancamentos-contabeis', component: LancamentosContabeisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] } },
+      { path: 'financeiro/dre', component: DreGerencialComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'] } },
       { path: 'financeiro/vales-troca', component: ValesTrocaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber'] } },
       { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { modo: 'matriz', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },
       { path: 'estoque/consulta-movimentacao-referencia', component: EstoqueConsultaComponent, data: { modo: 'movimentos', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'] } },

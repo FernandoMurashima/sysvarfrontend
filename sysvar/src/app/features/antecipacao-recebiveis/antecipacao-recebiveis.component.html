@@ -1,0 +1,153 @@
+<div class="financeiro-page">
+  <header class="toolbar">
+    <h2>Antecipação de Recebíveis</h2>
+    <div class="toolbar-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel filters">
+    <strong>Recebíveis</strong>
+    <select [(ngModel)]="lojaFiltro">
+      <option [ngValue]="null">Todas as lojas</option>
+      <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+    </select>
+    <select [(ngModel)]="contaFiltro">
+      <option [ngValue]="null">Todas as contas</option>
+      <option *ngFor="let conta of contas" [ngValue]="conta.Idconta">{{ conta.descricao }} - {{ lojaNome(conta.idloja) }}</option>
+    </select>
+    <select [(ngModel)]="formaFiltro">
+      <option value="">Todas as formas</option>
+      <option *ngFor="let forma of formas" [value]="forma.codigo">{{ forma.codigo }} - {{ forma.descricao }}</option>
+    </select>
+    <input type="date" [(ngModel)]="vencInicio" aria-label="Vencimento inicial" />
+    <input type="date" [(ngModel)]="vencFim" aria-label="Vencimento final" />
+    <button class="btn primary" type="button" (click)="buscarRecebiveis()" [disabled]="loading">
+      {{ loading ? 'Buscando...' : 'Buscar' }}
+    </button>
+  </section>
+
+  <section class="summary-grid">
+    <div class="summary-card">
+      <span>Selecionados</span>
+      <strong>{{ qtdSelecionada() }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Valor bruto</span>
+      <strong>{{ totalBruto() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Taxa</span>
+      <strong class="exit">{{ taxaValor() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Valor líquido</span>
+      <strong class="entry">{{ totalLiquido() | currency:'BRL' }}</strong>
+    </div>
+  </section>
+
+  <section class="panel operation">
+    <strong>Operação</strong>
+    <label>
+      Data antecipação
+      <input type="date" [(ngModel)]="dataAntecipacao" />
+    </label>
+    <label>
+      Taxa antecipação (%)
+      <input type="number" step="0.0001" min="0" [(ngModel)]="taxaPercentual" placeholder="0,0000" />
+    </label>
+    <label>
+      Documento
+      <input type="text" [(ngModel)]="documento" placeholder="Opcional" maxlength="50" />
+    </label>
+    <label class="wide">
+      Observação
+      <input type="text" [(ngModel)]="observacao" placeholder="Opcional" />
+    </label>
+    <span class="operation-note">
+      O banco entra com {{ totalLiquido() | currency:'BRL' }} líquido após taxa de {{ taxaValor() | currency:'BRL' }}.
+    </span>
+    <button class="btn" type="button" (click)="marcarTodos()" [disabled]="!recebiveis.length">Marcar todas</button>
+    <button class="btn" type="button" (click)="limparSelecao()" [disabled]="!qtdSelecionada()">Limpar</button>
+    <button class="btn primary" type="button" (click)="executar()" [disabled]="saving || !qtdSelecionada()">
+      {{ saving ? 'Registrando...' : 'Antecipar selecionados' }}
+    </button>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Recebíveis disponíveis</strong>
+      <span>{{ recebiveis.length }} item(ns)</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="recebiveis.length; else semRecebiveisTpl">
+        <thead>
+          <tr>
+            <th class="select-col"></th>
+            <th>Venc.</th>
+            <th>Documento</th>
+            <th>Loja</th>
+            <th>Conta</th>
+            <th>Forma</th>
+            <th>Histórico</th>
+            <th class="money-col">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of recebiveis">
+            <td class="select-col">
+              <input type="checkbox" [checked]="selecionado(item)" (change)="alternar(item, $any($event.target).checked)" />
+            </td>
+            <td>{{ item.data_movimento | date:'dd/MM/yyyy' }}</td>
+            <td class="doc">{{ item.documento || '-' }}</td>
+            <td>{{ lojaNome(item.idloja) }}</td>
+            <td>{{ contaNome(item.conta_bancaria) }}</td>
+            <td>{{ item.FormaPagamento || '-' }}</td>
+            <td>{{ item.historico }}</td>
+            <td class="money money-col">{{ item.valor | currency:'BRL' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #semRecebiveisTpl><div class="empty">Nenhum recebível disponível para antecipação.</div></ng-template>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Antecipações registradas</strong>
+      <span>{{ antecipacoes.length }} operação(ões)</span>
+    </div>
+    <div class="table-wrapper small">
+      <table class="table" *ngIf="antecipacoes.length; else semAntecipacoesTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Documento</th>
+            <th>Loja</th>
+            <th>Conta</th>
+            <th class="money-col">Bruto</th>
+            <th class="money-col">Taxa</th>
+            <th class="money-col">Líquido</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of antecipacoes">
+            <td>{{ item.data_antecipacao | date:'dd/MM/yyyy' }}</td>
+            <td class="doc">{{ item.documento }}</td>
+            <td>{{ item.loja_nome || lojaNome(item.idloja) }}</td>
+            <td>{{ item.conta_nome || contaNome(item.conta_bancaria) }}</td>
+            <td class="money money-col">{{ item.valor_bruto | currency:'BRL' }}</td>
+            <td class="money money-col exit">{{ item.taxa_valor | currency:'BRL' }}</td>
+            <td class="money money-col entry">{{ item.valor_liquido | currency:'BRL' }}</td>
+            <td><span class="badge ok">{{ item.status }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #semAntecipacoesTpl><div class="empty">Nenhuma antecipação registrada.</div></ng-template>
+    </div>
+  </section>
+</div>

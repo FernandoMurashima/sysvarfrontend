@@ -1,6 +1,6 @@
 export type TipoMovimentacaoFinanceira = 'ENTRADA' | 'SAIDA' | 'TRANSFERENCIA';
-export type StatusMovimentacaoFinanceira = 'PREVISTA' | 'EFETIVA' | 'CANCELADA';
-export type OrigemMovimentacaoFinanceira = 'MANUAL' | 'PAGAR' | 'RECEBER';
+export type StatusMovimentacaoFinanceira = 'PREVISTA' | 'EFETIVA' | 'CANCELADA' | 'ANTECIPADA';
+export type OrigemMovimentacaoFinanceira = 'MANUAL' | 'PAGAR' | 'RECEBER' | 'TRANSFERENCIA' | 'CARTAO' | 'ANTECIPACAO';
 
 export interface MovimentacaoFinanceira {
   Idmovimentacao?: number;
@@ -18,5 +18,7 @@ export interface MovimentacaoFinanceira {
   conta_bancaria?: number | null;
   pagar_item?: number | null;
   receber_item?: number | null;
+  data_conciliacao?: string | null;
+  valor_conciliado?: string | number | null;
   data_cadastro?: string;
 }

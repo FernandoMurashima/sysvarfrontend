@@ -30,6 +30,7 @@ export class FuncionariosComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Funcionario | null = null;
   errorOverlayOpen = false;
 
   lojasOptions: { id: number; nome: string }[] = [];
@@ -279,10 +280,16 @@ export class FuncionariosComponent implements OnInit {
   excluir(item: Funcionario): void {
     const id = (item as any).id;
     if (!id) return;
-    if (!confirm(`Excluir o funcionário "${item.nomefuncionario}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item ? (item as any).id : null;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Funcionário excluído.';
         const eraUltimo = this.funcionarios.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -291,6 +298,10 @@ export class FuncionariosComponent implements OnInit {
       },
       error: () => { this.errorMsg = 'Falha ao excluir.'; }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // Overlay de erros

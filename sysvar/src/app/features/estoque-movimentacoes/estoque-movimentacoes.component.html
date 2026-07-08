@@ -1,6 +1,109 @@
 <div class="estoque-page">
-  <header class="toolbar"><h2>Movimentações de Estoque</h2><div class="toolbar-actions"><input type="text" placeholder="Referência ou EAN..." [(ngModel)]="search" (keyup.enter)="load()" /><button class="btn primary" (click)="load()">Buscar</button><button class="btn primary" (click)="novo()">Nova movimentação</button><button class="btn" [routerLink]="['/home']">Home</button></div></header>
-  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div><div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
-  <section class="panel" *ngIf="showForm"><h3>Nova movimentação</h3><form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid"><label>Loja*<select formControlName="Idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option></select></label><label>EAN*<input type="text" formControlName="CodigodeBarra" /></label><label>Tipo*<select formControlName="tipo"><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option><option value="AJUSTE">Ajuste</option><option value="RESERVA">Reserva</option></select></label><label>Quantidade*<input type="number" formControlName="quantidade" /></label><label>Documento<input type="text" formControlName="documento" /></label><label class="span-2">Observação<input type="text" formControlName="observacao" /></label><div class="form-actions"><button class="btn primary" [disabled]="saving">Salvar</button><button class="btn" type="button" (click)="showForm=false">Cancelar</button></div></form></section>
-  <section class="panel"><div class="list-header"><strong>Total: {{ movimentos.length }}</strong><span *ngIf="loading">Carregando...</span></div><div class="table-wrapper"><table class="table" *ngIf="movimentos.length; else vazioTpl"><thead><tr><th>Data</th><th>Tipo</th><th>Referência</th><th>EAN</th><th>Loja</th><th>Qtd</th><th>Anterior</th><th>Posterior</th></tr></thead><tbody><tr *ngFor="let m of movimentos"><td>{{ m.data_movimento | date:'dd/MM/yyyy HH:mm' }}</td><td>{{ m.tipo }}</td><td>{{ m.referencia }}</td><td>{{ m.CodigodeBarra }}</td><td>{{ lojaNome(m.Idloja) }}</td><td>{{ m.quantidade }}</td><td>{{ m.saldo_anterior }}</td><td>{{ m.saldo_posterior }}</td></tr></tbody></table><ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada.</div></ng-template></div></section>
+  <header class="toolbar">
+    <h2>Movimentações de Estoque</h2>
+    <div class="toolbar-actions">
+      <input
+        type="text"
+        placeholder="Documento, referência ou EAN..."
+        [(ngModel)]="search"
+        (keyup.enter)="load()"
+      />
+      <button class="btn primary" (click)="load()">Buscar</button>
+      <button class="btn primary" (click)="novo()">Nova movimentação</button>
+      <button class="btn" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>Nova movimentação</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label>
+        Loja*
+        <select formControlName="Idloja">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option>
+        </select>
+      </label>
+
+      <label>
+        EAN*
+        <input type="text" formControlName="CodigodeBarra" />
+      </label>
+
+      <label>
+        Tipo*
+        <select formControlName="tipo">
+          <option value="ENTRADA">Entrada</option>
+          <option value="SAIDA">Saída</option>
+          <option value="AJUSTE">Ajuste</option>
+          <option value="RESERVA">Reserva</option>
+        </select>
+      </label>
+
+      <label>
+        Quantidade*
+        <input type="number" formControlName="quantidade" />
+      </label>
+
+      <label>
+        Documento
+        <input type="text" formControlName="documento" />
+      </label>
+
+      <label class="span-2">
+        Observação
+        <input type="text" formControlName="observacao" />
+      </label>
+
+      <div class="form-actions">
+        <button class="btn primary" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="showForm=false">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Total: {{ movimentos.length }}</strong>
+      <span *ngIf="loading">Carregando...</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="movimentos.length; else vazioTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Documento</th>
+            <th>Referência</th>
+            <th>EAN</th>
+            <th>Loja</th>
+            <th>Qtd</th>
+            <th>Anterior</th>
+            <th>Posterior</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of movimentos">
+            <td>{{ m.data_movimento | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ m.tipo }}</td>
+            <td class="documento">{{ m.documento || '-' }}</td>
+            <td>{{ m.referencia }}</td>
+            <td>{{ m.CodigodeBarra }}</td>
+            <td>{{ lojaNome(m.Idloja) }}</td>
+            <td>{{ m.quantidade }}</td>
+            <td>{{ m.saldo_anterior }}</td>
+            <td>{{ m.saldo_posterior }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #vazioTpl>
+        <div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada.</div>
+      </ng-template>
+    </div>
+  </section>
 </div>

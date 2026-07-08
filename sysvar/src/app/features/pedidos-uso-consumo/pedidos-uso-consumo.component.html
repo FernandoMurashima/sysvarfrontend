@@ -19,6 +19,40 @@
     </div>
   </header>
 
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <div class="modal-backdrop" *ngIf="confirmModal as modal">
+    <section class="modal-card">
+      <h3>{{ modal.title }}</h3>
+      <p class="modal-text">{{ modal.text }}</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharConfirmacao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarAcao()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="aprovarModal">
+    <section class="modal-card">
+      <h3>Aprovar pedido</h3>
+      <p class="modal-text">Selecione a natureza financeira que será usada no contas a pagar.</p>
+      <label>
+        Natureza de lançamento
+        <select [(ngModel)]="aprovarModal.idnatureza">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let n of naturezasCompra" [ngValue]="n.idnatureza">
+            {{ naturezaLabel(n) }}
+          </option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharAprovacao()">Voltar</button>
+        <button class="btn primary" type="button" (click)="confirmarAprovacao()">Aprovar</button>
+      </div>
+    </section>
+  </div>
+
   <!-- DICA -->
   <section class="card hint">
     <p>
@@ -131,13 +165,6 @@
   <section class="card form" *ngIf="view() === 'form'">
     <h3>Novo Pedido de Uso / Consumo</h3>
 
-    <div *ngIf="submitted && headerForm.invalid" class="alert error">
-      Existem {{ getFormErrors().length }} pendência(s) no cabeçalho:
-      <ul>
-        <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
-      </ul>
-    </div>
-
     <!-- Cabeçalho -->
     <form [formGroup]="headerForm" novalidate>
       <div class="grid-12">
@@ -199,6 +226,13 @@
         </label>
       </div>
     </form>
+
+    <div class="form-pending" *ngIf="submitted && getFormErrors().length">
+      <strong>Pendências</strong>
+      <ul>
+        <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
+      </ul>
+    </div>
 
     <hr class="divider" />
 

@@ -2,9 +2,30 @@
   <header class="toolbar">
     <h2>Caixa</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
-      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
-      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
+      <details class="store-picker">
+        <summary>{{ lojaFiltroLabel() }}</summary>
+        <div class="store-picker-menu">
+          <label class="store-option">
+            <input
+              type="checkbox"
+              [checked]="!lojasFiltro.length"
+              (change)="selecionarTodasLojas()"
+            />
+            Todas as lojas
+          </label>
+          <label class="store-option" *ngFor="let loja of lojas">
+            <input
+              type="checkbox"
+              [checked]="lojaFiltroSelecionada(loja.id)"
+              (change)="alternarLojaFiltro(loja.id, $any($event.target).checked)"
+            />
+            {{ loja.nome_loja }}
+          </label>
+        </div>
+      </details>
+      <input type="text" placeholder="Buscar caixa, loja..." [(ngModel)]="search" (keyup.enter)="filtrarCaixas()" />
+      <button class="btn primary" type="button" (click)="filtrarCaixas()">Buscar</button>
+      <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
       <button class="btn primary" type="button" (click)="novo()">Novo caixa</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
@@ -13,17 +34,44 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="modal-backdrop" *ngIf="excluirModal as caixa">
+    <section class="modal-card">
+      <h3>Excluir caixa</h3>
+      <p class="modal-doc">{{ caixa.codigo }} - {{ caixa.descricao }}</p>
+      <p class="modal-text">Confirma a exclusão deste caixa?</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="cancelarExclusao()">Cancelar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </section>
+  </div>
+
   <section class="panel" *ngIf="showForm">
     <h3>{{ editingId ? 'Editar caixa' : 'Novo caixa' }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
-      <label>Tipo*<select formControlName="tipo_caixa"><option value="LOJA">Caixa da loja</option><option value="MASTER">Caixa master do grupo</option></select></label>
-      <label>Loja*<select formControlName="idloja"><option [ngValue]="null">{{ form.value.tipo_caixa === 'MASTER' ? 'Grupo' : 'Selecione' }}</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+      <label>
+        Tipo*
+        <select formControlName="tipo_caixa">
+          <option value="LOJA">Caixa da loja</option>
+          <option value="MASTER">Caixa master do grupo</option>
+        </select>
+      </label>
+
+      <label>
+        Loja*
+        <select formControlName="idloja">
+          <option [ngValue]="null">{{ form.value.tipo_caixa === 'MASTER' ? 'Grupo' : 'Selecione' }}</option>
+          <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+        </select>
+      </label>
+
       <label>Código*<input type="text" formControlName="codigo" /></label>
       <label class="span-2">Descrição*<input type="text" formControlName="descricao" /></label>
       <label>Saldo inicial*<input type="number" step="0.01" formControlName="saldo_inicial" /></label>
       <label>Saldo atual*<input type="number" step="0.01" formControlName="saldo_atual" /></label>
       <label>Data abertura*<input type="date" formControlName="data_abertura" /></label>
       <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+
       <div class="form-actions span-2">
         <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
         <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
@@ -31,24 +79,146 @@
     </form>
   </section>
 
+  <section class="summary-grid" *ngIf="caixaSelecionado() as caixa">
+    <div class="summary-card wide">
+      <span>Caixa selecionado</span>
+      <strong>{{ caixa.codigo }} - {{ caixa.descricao }}</strong>
+      <small>{{ lojaNome(caixa.idloja) }} · {{ caixa.tipo_caixa === 'MASTER' ? 'Master' : 'Loja' }}</small>
+    </div>
+    <div class="summary-card">
+      <span>Saldo atual</span>
+      <strong [class.negative]="(+caixa.saldo_atual || 0) < 0">{{ caixa.saldo_atual | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Entradas</span>
+      <strong class="entry">{{ totalEntradas() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Saídas</span>
+      <strong class="exit">{{ totalSaidas() | currency:'BRL' }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Resultado período</span>
+      <strong [class.negative]="saldoPeriodo() < 0">{{ saldoPeriodo() | currency:'BRL' }}</strong>
+    </div>
+  </section>
+
+  <section class="panel filters">
+    <strong>Período do extrato</strong>
+    <input type="date" [(ngModel)]="dataIni" aria-label="Data inicial" />
+    <input type="date" [(ngModel)]="dataFim" aria-label="Data final" />
+    <button class="btn primary" type="button" (click)="loadMovimentacoes()">Atualizar extrato</button>
+  </section>
+
+  <section class="panel transfer-panel" [formGroup]="transferenciaForm">
+    <strong>Transferência</strong>
+    <select formControlName="caixa_origem" aria-label="Caixa de origem" (change)="sincronizarOrigemTransferencia()">
+      <option [ngValue]="null">Origem</option>
+      <option *ngFor="let caixa of caixasAtivos()" [ngValue]="caixa.Idcaixa">{{ caixaLabel(caixa) }}</option>
+    </select>
+    <select formControlName="caixa_destino" aria-label="Caixa de destino">
+      <option [ngValue]="null">Destino</option>
+      <option *ngFor="let caixa of caixasDestino()" [ngValue]="caixa.Idcaixa">{{ caixaLabel(caixa) }}</option>
+    </select>
+    <input type="text" formControlName="documento" placeholder="Documento" maxlength="50" aria-label="Documento" />
+    <input type="date" formControlName="data_movimento" aria-label="Data da transferência" />
+    <input type="number" step="0.01" min="0.01" formControlName="valor" placeholder="Valor" aria-label="Valor" />
+    <input type="text" formControlName="observacao" placeholder="Observação" aria-label="Observação" />
+    <button class="btn primary" type="button" (click)="transferir()" [disabled]="transferindo">
+      {{ transferindo ? 'Transferindo...' : 'Transferir' }}
+    </button>
+  </section>
+
   <section class="panel">
-    <div class="list-header"><strong>Total: {{ caixas.length }}</strong><span *ngIf="loading">Carregando...</span></div>
-    <div class="table-wrapper">
+    <div class="list-header">
+      <strong>Caixas</strong>
+      <span *ngIf="loading">Carregando...</span>
+    </div>
+
+    <div class="table-wrapper compact">
       <table class="table" *ngIf="caixas.length; else vazioTpl">
-        <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Loja</th><th>Saldo atual</th><th>Ativo</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Tipo</th>
+            <th>Loja</th>
+            <th>Saldo atual</th>
+            <th>Ativo</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
-          <tr *ngFor="let caixa of caixas">
+          <tr
+            *ngFor="let caixa of caixas"
+            [class.selected]="caixa.Idcaixa === selectedCaixaId"
+            (click)="selecionarCaixa(caixa)"
+          >
             <td>{{ caixa.codigo }}</td>
             <td>{{ caixa.descricao }}</td>
             <td>{{ caixa.tipo_caixa === 'MASTER' ? 'Master' : 'Loja' }}</td>
             <td>{{ lojaNome(caixa.idloja) }}</td>
-            <td>{{ caixa.saldo_atual | currency:'BRL' }}</td>
+            <td [class.negative]="(+caixa.saldo_atual || 0) < 0">{{ caixa.saldo_atual | currency:'BRL' }}</td>
             <td><span class="badge" [ngClass]="caixa.ativo ? 'ok' : 'off'">{{ caixa.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-            <td class="actions"><button class="btn sm" (click)="editar(caixa)">Editar</button><button class="btn sm danger" (click)="excluir(caixa)">Excluir</button></td>
+            <td class="actions" (click)="$event.stopPropagation()">
+              <button class="btn sm" (click)="editar(caixa)">Editar</button>
+              <button class="btn sm danger" (click)="excluir(caixa)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td>Total</td>
+            <td>{{ caixas.length }} caixa(s)</td>
+            <td>Loja: {{ totalSaldoCaixasLoja() | currency:'BRL' }}</td>
+            <td>Master: {{ totalSaldoCaixasMaster() | currency:'BRL' }}</td>
+            <td [class.negative]="totalSaldoCaixas() < 0">{{ totalSaldoCaixas() | currency:'BRL' }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <ng-template #vazioTpl>
+        <div class="empty" *ngIf="!loading">Nenhum caixa encontrado.</div>
+      </ng-template>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="list-header">
+      <strong>Extrato do caixa</strong>
+      <span>{{ movimentacoes.length }} movimentação(ões)</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="movimentacoes.length; else semMovimentosTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Documento</th>
+            <th>Histórico</th>
+            <th>Origem</th>
+            <th class="money-col">Entrada</th>
+            <th class="money-col">Saída</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mov of movimentacoes">
+            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+            <td class="doc">{{ mov.documento || '-' }}</td>
+            <td>{{ mov.historico }}</td>
+            <td>{{ mov.origem }}</td>
+            <td class="money money-col entry">{{ valorEntrada(mov) !== null ? (valorEntrada(mov) | currency:'BRL') : '-' }}</td>
+            <td class="money money-col exit">{{ valorSaida(mov) !== null ? (valorSaida(mov) | currency:'BRL') : '-' }}</td>
+            <td>{{ mov.status }}</td>
           </tr>
         </tbody>
       </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum caixa encontrado.</div></ng-template>
+
+      <ng-template #semMovimentosTpl>
+        <div class="empty">Nenhuma movimentação encontrada para este caixa.</div>
+      </ng-template>
     </div>
   </section>
 </div>

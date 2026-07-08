@@ -20,6 +20,16 @@
   </header>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div class="pdv-confirm-overlay" *ngIf="confirmacaoPdv as modal">
+    <div class="pdv-confirm-card">
+      <h4>{{ modal.titulo }}</h4>
+      <p>{{ modal.mensagem }}</p>
+      <div class="pdv-confirm-actions">
+        <button class="btn" type="button" (click)="cancelarAcaoPdv()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarAcaoPdv()">{{ modal.acao }}</button>
+      </div>
+    </div>
+  </div>
 
   <section class="sale-done" *ngIf="cupom && !vendaIniciada">
     <div class="done-summary">

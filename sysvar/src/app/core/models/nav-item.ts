@@ -17,4 +17,5 @@ export interface NavItem {
   link?: string;        // rota direta
   children?: NavItem[]; // submenus
   roles?: UserRole[];   // <- agora usando o tipo exportado
+  superOnly?: boolean;
 }

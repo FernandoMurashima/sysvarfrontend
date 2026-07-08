@@ -13,6 +13,17 @@
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <div class="overlay" *ngIf="excluirModal as funcionario">
+    <div class="overlay-card">
+      <h4>Excluir funcionário</h4>
+      <p>Confirma a exclusão do funcionário <strong>{{ funcionario.nomefuncionario }}</strong>?</p>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
   <div class="content">
     <section class="card form-placeholder" *ngIf="!showForm">
       <div class="placeholder-inner">
@@ -23,10 +34,6 @@
 
     <section class="card form" *ngIf="showForm">
       <h3>{{ editingId ? 'Editar Funcionário' : 'Novo Funcionário' }}</h3>
-
-      <div *ngIf="(submitted || form.touched) && form.invalid" class="alert error">
-        Existem {{ getFormErrors().length }} campo(s) com problema.
-      </div>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
@@ -112,6 +119,13 @@
             <input type="checkbox" formControlName="ativo" />
             <span class="field-error" *ngIf="form.get('ativo')?.errors?.['server']">{{ form.get('ativo')?.errors?.['server'] }}</span>
           </label>
+        </div>
+
+        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+          <strong>Pendências</strong>
+          <ul>
+            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+          </ul>
         </div>
 
         <div class="actions-form">
@@ -201,15 +215,4 @@
     </section>
   </div>
 
-  <!-- OVERLAY ERROS -->
-  <div class="overlay" *ngIf="errorOverlayOpen" role="alertdialog" aria-modal="true">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length }} pendência(s):</p>
-      <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
-      </div>
-    </div>
-  </div>
 </div>

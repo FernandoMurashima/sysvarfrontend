@@ -7,6 +7,10 @@ import { environment } from '../../environments/environment';
 interface TokenResponse { token: string; user?: MeResponse; }
 interface MeResponse {
   id: number; username: string; first_name: string; last_name: string; email: string; type: string;
+  Idempresa?: number | null;
+  empresa?: { id: number; nome: string; nome_fantasia?: string | null } | null;
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +20,7 @@ export class AuthService {
   private tokenKey = 'auth_token';
   private userTypeKey = 'user_type';
   private userNameKey = 'user_name';
+  private currentUserKey = 'current_user';
 
   get api() { return environment.apiBaseUrl; }
   get apiBaseUrl() { return environment.apiBaseUrl; }
@@ -28,6 +33,7 @@ export class AuthService {
           if (res.user) {
             this.setUserType(res.user.type || 'Regular');
             this.setUserName(res.user.username || '');
+            this.setCurrentUser(res.user);
           }
         }),
         tap((res) => {
@@ -37,6 +43,7 @@ export class AuthService {
             next: me => {
               this.setUserType(me.type || 'Regular');
               this.setUserName(me.username || '');
+              this.setCurrentUser(me);
             },
             error: () => {
               this.setUserType('Regular');
@@ -68,6 +75,7 @@ export class AuthService {
     sessionStorage.removeItem(this.tokenKey);
     sessionStorage.removeItem(this.userTypeKey);
     sessionStorage.removeItem(this.userNameKey);
+    sessionStorage.removeItem(this.currentUserKey);
   }
   isAuthenticated() { return !!this.getToken(); }
 
@@ -96,4 +104,15 @@ export class AuthService {
 
   setUserName(username: string) { sessionStorage.setItem(this.userNameKey, username); }
   getUserName(): string | null { return sessionStorage.getItem(this.userNameKey); }
+
+  setCurrentUser(user: MeResponse) { sessionStorage.setItem(this.currentUserKey, JSON.stringify(user)); }
+  getCurrentUser(): MeResponse | null {
+    const raw = sessionStorage.getItem(this.currentUserKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as MeResponse;
+    } catch {
+      return null;
+    }
+  }
 }

@@ -23,6 +23,7 @@ export class MateriaisComponent {
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  excluirModal: Material | null = null;
 
   items = signal<Material[]>([]);
   page = signal(1);
@@ -107,8 +108,21 @@ export class MateriaisComponent {
 
   excluir(row: Material) {
     if (!row.Idmaterial) return;
-    if (!confirm(`Excluir o material "${row.Descricao}"?`)) return;
-    this.api.delete(row.Idmaterial).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.Idmaterial) return;
+    this.api.delete(row.Idmaterial).subscribe(() => {
+      this.excluirModal = null;
+      this.successMsg.set('Material excluído.');
+      this.load();
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   getFormErrors(): string[] {

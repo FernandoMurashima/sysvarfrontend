@@ -31,6 +31,7 @@ export class CoresComponent implements OnInit {
   search = '';
   successMsg = '';
   errorMsg = '';
+  excluirModal: Cor | null = null;
   errorOverlayOpen = false;
 
   form: FormGroup = this.fb.group({
@@ -200,10 +201,16 @@ export class CoresComponent implements OnInit {
   excluir(item: Cor): void {
     const id = (item as any).Idcor;
     if (!id) return;
-    if (!confirm(`Excluir a cor "${(item as any).Descricao}"?`)) return;
+    this.excluirModal = item;
+  }
 
+  confirmarExclusao(): void {
+    const item = this.excluirModal;
+    const id = item ? (item as any).Idcor : null;
+    if (!id) return;
     this.api.remove(id).subscribe({
       next: () => {
+        this.excluirModal = null;
         this.successMsg = 'Cor excluída.';
         const eraUltimo = this.cores.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -215,6 +222,10 @@ export class CoresComponent implements OnInit {
         this.errorMsg = 'Falha ao excluir.';
       }
     });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // --------- Overlay de erros ---------

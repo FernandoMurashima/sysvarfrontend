@@ -24,6 +24,7 @@ export class ColecoesComponent {
   errorOverlayOpen = signal(false);
   submitted = false;
   saving = false;
+  excluirModal: Colecao | null = null;
 
   // lista/paginação client-side
   colecoes = signal<Colecao[]>([]);
@@ -166,8 +167,21 @@ export class ColecoesComponent {
 
   excluir(row: Colecao) {
     if (!row.Idcolecao) return;
-    if (!confirm(`Excluir a coleção "${row.Descricao}"?`)) return;
-    this.api.delete(row.Idcolecao).subscribe(() => this.load());
+    this.excluirModal = row;
+  }
+
+  confirmarExclusao(): void {
+    const row = this.excluirModal;
+    if (!row?.Idcolecao) return;
+    this.api.delete(row.Idcolecao).subscribe(() => {
+      this.excluirModal = null;
+      this.successMsg.set('Coleção excluída.');
+      this.load();
+    });
+  }
+
+  fecharExclusao(): void {
+    this.excluirModal = null;
   }
 
   // ---------- overlay ----------
