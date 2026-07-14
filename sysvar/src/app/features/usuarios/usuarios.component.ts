@@ -21,6 +21,18 @@ type Loja = {
   apelido_loja?: string;
 };
 
+type ModuloPermissao = {
+  key: string;
+  label: string;
+  acesso: 'NONE' | 'VIEW' | 'EDIT';
+};
+
+type CampoPermissao = {
+  key: string;
+  label: string;
+  pode_ver: boolean;
+};
+
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -51,6 +63,11 @@ export class UsuariosComponent implements OnInit {
 
   showForm = false;
   errorOverlayOpen = false;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('configuracoes', true) !== false;
+  }
 
   usuarios: User[] = [];
   empresas: Empresa[] = [];
@@ -70,6 +87,24 @@ export class UsuariosComponent implements OnInit {
     'Assistente',
     'AssistenteReceber',
     'AssistentePagar'
+  ];
+
+  modulosPermissao: ModuloPermissao[] = [
+    { key: 'cadastros', label: 'Cadastros', acesso: 'EDIT' },
+    { key: 'produtos', label: 'Produtos', acesso: 'EDIT' },
+    { key: 'fiscal', label: 'Fiscal', acesso: 'NONE' },
+    { key: 'estoque', label: 'Estoque', acesso: 'EDIT' },
+    { key: 'vendas', label: 'Vendas', acesso: 'EDIT' },
+    { key: 'compras', label: 'Compras', acesso: 'EDIT' },
+    { key: 'producao', label: 'Produção', acesso: 'NONE' },
+    { key: 'financeiro', label: 'Financeiro', acesso: 'NONE' },
+    { key: 'relatorios', label: 'Relatórios', acesso: 'VIEW' },
+    { key: 'configuracoes', label: 'Configurações', acesso: 'VIEW' },
+  ];
+
+  camposPermissao: CampoPermissao[] = [
+    { key: 'funcionario.salario', label: 'Ver salário de funcionários', pode_ver: false },
+    { key: 'produto.custo', label: 'Ver custos e margens de produtos', pode_ver: false },
   ];
 
   form = this.fb.group({
@@ -194,9 +229,11 @@ export class UsuariosComponent implements OnInit {
 
   novo() {
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.showForm = true;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       username: '',
@@ -210,6 +247,7 @@ export class UsuariosComponent implements OnInit {
       password: '',
       confirm_password: '',
     });
+    this.resetPermissoes();
     this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
@@ -217,9 +255,11 @@ export class UsuariosComponent implements OnInit {
 
   editar(item: User) {
     this.editingId = item.id ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.showForm = true;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
 
     this.form.patchValue({
       username: item.username ?? '',
@@ -233,16 +273,25 @@ export class UsuariosComponent implements OnInit {
       password: '',
       confirm_password: '',
     });
+    this.aplicarPermissoesUsuario(item);
     this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
   }
 
+  consultar(item: User) {
+    this.editar(item);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao() {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset();
   }
 
@@ -261,18 +310,56 @@ export class UsuariosComponent implements OnInit {
     payload.Idlojas = lojas;
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
+    payload.permissoes_modulos = this.modulosPermissao.map(m => ({
+      modulo: m.key,
+      acesso: m.acesso,
+    }));
+    payload.permissoes_campos = this.camposPermissao.map(c => ({
+      campo: c.key,
+      pode_ver: c.pode_ver,
+    }));
     return payload;
   }
 
+  private resetPermissoes(): void {
+    const padrao: Record<string, 'NONE' | 'VIEW' | 'EDIT'> = {
+      cadastros: 'EDIT',
+      produtos: 'EDIT',
+      fiscal: 'NONE',
+      estoque: 'EDIT',
+      vendas: 'EDIT',
+      compras: 'EDIT',
+      producao: 'NONE',
+      financeiro: 'NONE',
+      relatorios: 'VIEW',
+      configuracoes: 'VIEW',
+    };
+    this.modulosPermissao = this.modulosPermissao.map(m => ({ ...m, acesso: padrao[m.key] || 'NONE' }));
+    this.camposPermissao = this.camposPermissao.map(c => ({ ...c, pode_ver: false }));
+  }
+
+  private aplicarPermissoesUsuario(item: User): void {
+    const modulos = new Map((item.permissoes_modulos || []).map(p => [p.modulo, p.acesso]));
+    this.modulosPermissao = this.modulosPermissao.map(m => ({
+      ...m,
+      acesso: (modulos.get(m.key) as any) || m.acesso,
+    }));
+    const campos = new Map((item.permissoes_campos || []).map(p => [p.campo, p.pode_ver]));
+    this.camposPermissao = this.camposPermissao.map(c => ({
+      ...c,
+      pode_ver: campos.has(c.key) ? Boolean(campos.get(c.key)) : false,
+    }));
+  }
+
   private validatePasswordPair(): string | null {
-    const pwd = (this.form.get('password')?.value || '').toString();
-    const conf = (this.form.get('confirm_password')?.value || '').toString();
-    if (pwd || conf) {
-      if (pwd.length < 6) return 'Senha: mínimo 6 caracteres.';
-      if (pwd !== conf) return 'Senha/Confirmação: não conferem.';
-    } else if (!this.editingId) {
+    const pwd = (this.form.get('password')?.value || '').toString().trim();
+    const conf = (this.form.get('confirm_password')?.value || '').toString().trim();
+    if (!this.editingId && !pwd) {
       return 'Senha: obrigatória no cadastro.';
     }
+    if (!pwd) return null;
+    if (pwd.length < 6) return 'Senha: mínimo 6 caracteres.';
+    if (pwd !== conf) return 'Senha/Confirmação: não conferem.';
     return null;
   }
 

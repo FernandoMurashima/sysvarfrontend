@@ -22,6 +22,7 @@ export class EmpresasComponent implements OnInit {
   showForm = false;
   submitted = false;
   editingId: number | null = null;
+  consultando = false;
 
   search = '';
   successMsg = '';
@@ -42,6 +43,13 @@ export class EmpresasComponent implements OnInit {
     nome_fantasia: ['', [Validators.maxLength(120)]],
     documento: ['', [Validators.maxLength(18)]],
     ativo: [true],
+    licenca_master: [false],
+    usa_vendas: [false],
+    usa_compras: [false],
+    usa_estoque: [false],
+    usa_financeiro: [false],
+    usa_fiscal: [false],
+    usa_producao: [false],
   });
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
@@ -90,32 +98,77 @@ export class EmpresasComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
-    this.form.reset({ nome: '', nome_fantasia: '', documento: '', ativo: true });
+    this.form.enable({ emitEvent: false });
+    this.form.reset({
+      nome: '',
+      nome_fantasia: '',
+      documento: '',
+      ativo: true,
+      licenca_master: false,
+      usa_vendas: false,
+      usa_compras: false,
+      usa_estoque: false,
+      usa_financeiro: false,
+      usa_fiscal: false,
+      usa_producao: false,
+    });
+    this.aplicarMaster(false);
   }
 
   editar(row: Empresa): void {
     if (!row.id) return;
     this.showForm = true;
     this.editingId = row.id;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       nome: row.nome ?? '',
       nome_fantasia: row.nome_fantasia ?? '',
       documento: row.documento ?? '',
       ativo: row.ativo !== false,
+      licenca_master: row.licenca_master === true,
+      usa_vendas: row.usa_vendas === true,
+      usa_compras: row.usa_compras === true,
+      usa_estoque: row.usa_estoque === true,
+      usa_financeiro: row.usa_financeiro === true,
+      usa_fiscal: row.usa_fiscal === true,
+      usa_producao: row.usa_producao === true,
     });
+    this.aplicarMaster(row.licenca_master === true);
+  }
+
+  consultar(row: Empresa): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
   }
 
   cancelar(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
-    this.form.reset({ nome: '', nome_fantasia: '', documento: '', ativo: true });
+    this.form.enable({ emitEvent: false });
+    this.form.reset({
+      nome: '',
+      nome_fantasia: '',
+      documento: '',
+      ativo: true,
+      licenca_master: false,
+      usa_vendas: false,
+      usa_compras: false,
+      usa_estoque: false,
+      usa_financeiro: false,
+      usa_fiscal: false,
+      usa_producao: false,
+    });
   }
 
   salvar(): void {
@@ -127,11 +180,22 @@ export class EmpresasComponent implements OnInit {
       return;
     }
 
+    const raw = this.form.getRawValue();
     const payload: Partial<Empresa> = {
-      nome: (this.form.value.nome || '').trim(),
-      nome_fantasia: this.blankToNull(this.form.value.nome_fantasia),
-      documento: this.blankToNull(this.form.value.documento),
-      ativo: this.form.value.ativo !== false,
+      nome: (raw.nome || '').trim(),
+      nome_fantasia: this.blankToNull(raw.nome_fantasia),
+      documento: this.blankToNull(raw.documento),
+      ativo: raw.ativo !== false,
+      licenca_master: raw.licenca_master === true,
+      usa_vendas: raw.usa_vendas === true,
+      usa_compras: raw.usa_compras === true,
+      usa_estoque: raw.usa_estoque === true,
+      usa_financeiro: raw.usa_financeiro === true,
+      usa_fiscal: raw.usa_fiscal === true,
+      usa_producao: raw.usa_producao === true,
+      usa_ficha_tecnica: raw.usa_producao === true,
+      usa_faccao: raw.usa_producao === true,
+      usa_distribuicao_producao: raw.usa_producao === true,
     };
 
     this.saving = true;
@@ -165,6 +229,36 @@ export class EmpresasComponent implements OnInit {
     if (fantasia?.errors?.['maxlength']) errors.push('Nome fantasia deve ter no máximo 120 caracteres.');
     if (documento?.errors?.['maxlength']) errors.push('Documento deve ter no máximo 18 caracteres.');
     return errors;
+  }
+
+  onMasterChange(): void {
+    this.aplicarMaster(this.form.get('licenca_master')?.value === true);
+  }
+
+  private aplicarMaster(master: boolean): void {
+    const campos = ['usa_vendas', 'usa_compras', 'usa_estoque', 'usa_financeiro', 'usa_fiscal', 'usa_producao'];
+    for (const campo of campos) {
+      const ctrl = this.form.get(campo);
+      if (!ctrl) continue;
+      if (master) {
+        ctrl.setValue(true, { emitEvent: false });
+        ctrl.disable({ emitEvent: false });
+      } else {
+        ctrl.enable({ emitEvent: false });
+      }
+    }
+  }
+
+  modulosLabel(empresa: Empresa): string[] {
+    if (empresa.licenca_master) return ['Master'];
+    const tags: string[] = [];
+    if (empresa.usa_vendas) tags.push('Vendas');
+    if (empresa.usa_compras) tags.push('Compras');
+    if (empresa.usa_estoque) tags.push('Estoque');
+    if (empresa.usa_financeiro) tags.push('Financeiro');
+    if (empresa.usa_fiscal) tags.push('Fiscal');
+    if (empresa.usa_producao) tags.push('Produção');
+    return tags;
   }
 
   alternarAtivo(row: Empresa): void {

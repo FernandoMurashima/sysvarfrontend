@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ColecoesService } from '../../core/services/colecoes.service';
 import { Colecao } from '../../core/models/colecao';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-colecoes',
@@ -16,6 +17,7 @@ import { RouterLink } from '@angular/router';
 export class ColecoesComponent {
   private fb = inject(FormBuilder);
   private api = inject(ColecoesService);
+  private auth = inject(AuthService);
 
   // UI
   search = '';
@@ -42,9 +44,14 @@ export class ColecoesComponent {
     return this.colecoes().slice(start, start + this.pageSize());
   });
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+
   // form
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
   form: FormGroup = this.fb.group({
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
     Codigo: [null, [Validators.required, Validators.pattern(/^\d{2}$/)]],
@@ -111,14 +118,18 @@ export class ColecoesComponent {
   novo() {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({ Descricao: '', Codigo: null, Estacao: null, Status: 'CR', Contador: 0 });
   }
 
   editar(row: Colecao) {
     this.showForm = true;
     this.editingId = row.Idcolecao!;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       Descricao: row.Descricao ?? '',
       Codigo: row.Codigo ?? null,
@@ -128,9 +139,17 @@ export class ColecoesComponent {
     });
   }
 
+  consultar(row: Colecao) {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao() {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset();
   }
 

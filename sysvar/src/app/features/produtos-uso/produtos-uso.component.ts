@@ -14,6 +14,7 @@ import { SubgruposService } from '../../core/services/subgrupos.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { MateriaisService } from '../../core/services/material.service';
 import { NcmsService } from '../../core/services/ncms.service';
+import { AuthService } from '../../core/auth.service';
 
 type ItemRef = { id: number; label: string };
 
@@ -32,6 +33,7 @@ type ItemRef = { id: number; label: string };
 export class ProdutosUsoComponent {
   private fb = inject(FormBuilder);
   private api = inject(ProdutosService);
+  private auth = inject(AuthService);
 
   private gruposApi = inject(GruposService);
   private subgruposApi = inject(SubgruposService);
@@ -80,9 +82,15 @@ export class ProdutosUsoComponent {
   // form
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
 
   form: FormGroup = this.fb.group({
     tipo_produto: ['2', [Validators.required]],
+    referencia: [{ value: '', disabled: true }],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
     descricao_reduzida: [null, [Validators.maxLength(60)]],
 
@@ -107,6 +115,7 @@ export class ProdutosUsoComponent {
 
   private unidadeMap = new Map<number, string>();
   private subGrupoSub?: Subscription;
+  private tipoProdutoSub?: Subscription;
 
   constructor() {
     effect(() => {
@@ -116,6 +125,7 @@ export class ProdutosUsoComponent {
 
     this.loadLookups();
     this.wireGrupoToSubgrupo();
+    this.wireTipoProduto();
     this.load();
   }
 
@@ -202,10 +212,10 @@ export class ProdutosUsoComponent {
   // lista / pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2', page_size: 100 }).subscribe({
+    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2,4', page_size: 100 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
-          .filter(p => p.tipo_produto === '2'); // só uso/consumo
+          .filter(p => p.tipo_produto === '2' || p.tipo_produto === '4');
         this.produtos.set(rows);
         this.page.set(1);
       },
@@ -232,14 +242,36 @@ export class ProdutosUsoComponent {
     return this.unidadeMap.get(id) ?? String(id);
   }
 
+  private wireTipoProduto() {
+    this.tipoProdutoSub?.unsubscribe();
+    this.tipoProdutoSub = this.form.get('tipo_produto')?.valueChanges.subscribe((tipo: string | null) => {
+      if (tipo === '4') {
+        this.form.patchValue({ grupo: null, subgrupo: null }, { emitEvent: false });
+        this.loadSubgrupos(null);
+      }
+    });
+  }
+
+  tipoProdutoLabel(tipo?: string | null): string {
+    if (tipo === '4') return 'Insumo de Produção';
+    return 'Uso/Consumo';
+  }
+
+  isInsumoProducao(): boolean {
+    return this.form.get('tipo_produto')?.value === '4';
+  }
+
   // form
   novo() {
     this.setViewForm();
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       tipo_produto: '2',
+      referencia: '',
       descricao: '',
       descricao_reduzida: null,
       unidade: null,
@@ -256,10 +288,13 @@ export class ProdutosUsoComponent {
     this.setViewForm();
     this.showForm = true;
     this.editingId = row.Idproduto ?? null;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
-      tipo_produto: '2',
+      tipo_produto: row.tipo_produto ?? '2',
+      referencia: row.referencia ?? '',
       descricao: row.descricao ?? '',
       descricao_reduzida: row.descricao_reduzida ?? null,
       unidade: row.unidade ?? null,
@@ -273,9 +308,17 @@ export class ProdutosUsoComponent {
     this.loadSubgrupos(row.grupo ?? null);
   }
 
+  consultar(row: Produto) {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao() {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset();
   }
 
@@ -285,9 +328,10 @@ export class ProdutosUsoComponent {
 
     const body: Partial<Produto> = {
       ...this.form.value,
-      tipo_produto: '2',  // fixo uso/consumo
       grade: null,
       colecao: null,
+      grupo: this.isInsumoProducao() ? null : this.form.value.grupo,
+      subgrupo: this.isInsumoProducao() ? null : this.form.value.subgrupo,
       referencia: undefined, // não deve ser enviada
     };
 

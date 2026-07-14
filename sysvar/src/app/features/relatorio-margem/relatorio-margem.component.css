@@ -1,0 +1,174 @@
+.margem-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px;
+  padding: 4px;
+}
+
+.toolbar,
+.toolbar-actions,
+.filters,
+.list-header,
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar,
+.list-header {
+  justify-content: space-between;
+}
+
+.toolbar {
+  min-height: 34px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dbe4ee;
+}
+
+.toolbar h2,
+.panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.panel,
+.summary-card {
+  background: #fff;
+  border: 1px solid #d7e0eb;
+  border-radius: 6px;
+}
+
+.panel {
+  padding: 10px;
+}
+
+.filters {
+  flex-wrap: nowrap;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #31415a;
+  font-size: 12px;
+}
+
+.filters select,
+.filters input {
+  height: 30px;
+  min-width: 150px;
+  border: 1px solid #c8d4e3;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.summary-card {
+  min-height: 52px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summary-card span,
+.list-header span {
+  color: #52627a;
+  font-size: 12px;
+}
+
+.summary-card strong {
+  margin-top: 3px;
+  font-size: 18px;
+}
+
+.tabs button,
+.btn {
+  height: 31px;
+  border: 1px solid #c8d4e3;
+  border-radius: 6px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn.primary,
+.tabs button.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+
+.btn.secondary,
+.tabs button {
+  background: #fff;
+  color: #0f172a;
+}
+
+.table-panel {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: #f8fafc;
+  color: #24324a;
+  font-size: 12px;
+}
+
+td {
+  font-size: 13px;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.valor-pos {
+  color: #00826b;
+}
+
+.valor-neg {
+  color: #d10f18;
+}
+
+.valor-muted {
+  color: #64748b;
+}
+
+.empty {
+  color: #52627a;
+  text-align: center;
+}
+
+.alert {
+  padding: 8px 10px;
+  border-radius: 5px;
+}
+
+.alert.error {
+  background: #ffe5e7;
+  color: #9b1018;
+}

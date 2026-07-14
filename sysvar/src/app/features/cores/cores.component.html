@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -25,7 +25,7 @@
       <p>Confirma a exclusão da cor <strong>{{ cor.Descricao }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -41,7 +41,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Cor' : 'Nova Cor' }}</h3>
+      <h3>{{ consultando ? 'Consultar Cor' : (editingId ? 'Editar Cor' : 'Nova Cor') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1 -->
@@ -92,10 +92,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -122,7 +122,7 @@
               <th>Código</th>
               <th>Nome da Cor</th>
               <th>Status</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -139,8 +139,9 @@
               </td>
               
               <td class="actions">
-                <button class="btn sm" (click)="editar(c)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(c)">Excluir</button>
+                <button class="btn sm" (click)="consultar(c)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(c)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(c)">Excluir</button>
               </td>
             </tr>
           </tbody>

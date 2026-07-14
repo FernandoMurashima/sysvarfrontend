@@ -11,11 +11,11 @@
       <span>{{ lojaNome(lojaId) }}</span>
       <strong>{{ caixaDescricao(caixaId) }}</strong>
       <span>{{ operadorNome }} · {{ usuarioTipoLabel() }}</span>
-      <button class="btn sm" type="button" (click)="fecharPdv()">Fechar PDV</button>
+      <button class="btn sm" type="button" (click)="fecharPdv()" *ngIf="podeEditarModulo">Fechar PDV</button>
     </div>
     <div class="pdv-live-actions" *ngIf="vendaIniciada">
       <strong>{{ total | currency:'BRL' }}</strong>
-      <button class="btn danger" (click)="cancelarVenda()">Cancelar venda</button>
+      <button class="btn danger" (click)="cancelarVenda()" *ngIf="podeEditarModulo">Cancelar venda</button>
     </div>
   </header>
 
@@ -26,7 +26,7 @@
       <p>{{ modal.mensagem }}</p>
       <div class="pdv-confirm-actions">
         <button class="btn" type="button" (click)="cancelarAcaoPdv()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarAcaoPdv()">{{ modal.acao }}</button>
+        <button class="btn danger" type="button" (click)="confirmarAcaoPdv()" *ngIf="podeEditarModulo">{{ modal.acao }}</button>
       </div>
     </div>
   </div>
@@ -48,7 +48,7 @@
 
       <div class="done-actions">
         <button class="btn primary" type="button" (click)="imprimirCupom()">Imprimir cupom</button>
-        <button class="btn success" type="button" (click)="novaVenda()">Nova venda</button>
+        <button class="btn success" type="button" (click)="novaVenda()" *ngIf="podeEditarModulo">Nova venda</button>
       </div>
     </div>
 
@@ -152,7 +152,7 @@
         <label class="cliente-start">Cliente
           <div class="cliente-select-row">
             <select [(ngModel)]="clienteId" (ngModelChange)="carregarCreditosCliente()"><option [ngValue]="null">Selecione</option><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nome_cliente }}</option></select>
-            <button class="btn" type="button" (click)="abrirCadastroCliente()">Novo</button>
+            <button class="btn" type="button" (click)="abrirCadastroCliente()" *ngIf="podeEditarModulo">Novo</button>
           </div>
         </label>
         <label>Vendedor
@@ -172,11 +172,11 @@
           <label>E-mail<input type="email" [(ngModel)]="novoCliente.email" /></label>
         </div>
         <div class="quick-client-actions">
-          <button class="btn primary" type="button" [disabled]="salvandoCliente" (click)="salvarClienteRapido()">Salvar cliente</button>
+          <button class="btn primary" type="button" [disabled]="salvandoCliente" (click)="salvarClienteRapido()" *ngIf="podeEditarModulo">Salvar cliente</button>
           <button class="btn" type="button" (click)="cadastroClienteAberto=false">Cancelar</button>
         </div>
       </div>
-      <button class="start-button" (click)="iniciarVenda()">Iniciar venda</button>
+      <button class="start-button" (click)="iniciarVenda()" *ngIf="podeEditarModulo">Iniciar venda</button>
     </div>
   </section>
 
@@ -187,7 +187,7 @@
           <label>Código de barras
             <input class="scan-input" type="text" placeholder="Bipe o EAN ou digite código/referência" [(ngModel)]="codigoRapido" (keyup.enter)="adicionarCodigoRapido()" autofocus />
           </label>
-          <button class="btn primary scan-button" type="button" (click)="adicionarCodigoRapido()">Lançar item</button>
+          <button class="btn primary scan-button" type="button" (click)="adicionarCodigoRapido()" *ngIf="podeEditarModulo">Lançar item</button>
         </div>
 
         <section class="exchange-panel" *ngIf="trocaAberta">
@@ -202,11 +202,11 @@
             <label>Cupom
               <input type="text" [(ngModel)]="trocaDocumento" (keyup.enter)="buscarTrocaPorDocumento()" placeholder="Documento da venda original" />
             </label>
-            <button class="btn primary" type="button" (click)="buscarTrocaPorDocumento()" [disabled]="trocaLoading">Buscar cupom</button>
+            <button class="btn primary" type="button" (click)="buscarTrocaPorDocumento()" [disabled]="trocaLoading" *ngIf="podeEditarModulo">Buscar cupom</button>
             <label>Código de barras
               <input type="text" [(ngModel)]="trocaCodigoBarra" (keyup.enter)="buscarTrocaPorCodigo()" placeholder="Bipe a peça devolvida" />
             </label>
-            <button class="btn primary" type="button" (click)="buscarTrocaPorCodigo()" [disabled]="trocaLoading">Buscar peça</button>
+            <button class="btn primary" type="button" (click)="buscarTrocaPorCodigo()" [disabled]="trocaLoading" *ngIf="podeEditarModulo">Buscar peça</button>
           </div>
           <div class="exchange-options" *ngIf="trocaVendas.length > 1">
             <button class="exchange-sale" type="button" *ngFor="let vendaTroca of trocaVendas" (click)="carregarVendaTroca(vendaTroca, trocaCodigoBarra)">
@@ -232,7 +232,7 @@
                 <input type="text" [(ngModel)]="trocaMotivo" />
               </label>
               <strong>{{ totalTrocaSelecionado() | currency:'BRL' }}</strong>
-              <button class="btn primary" type="button" (click)="finalizarTroca()" [disabled]="trocaSaving || totalTrocaSelecionado() <= 0">
+              <button class="btn primary" type="button" (click)="finalizarTroca()" [disabled]="trocaSaving || totalTrocaSelecionado() <= 0" *ngIf="podeEditarModulo">
                 {{ trocaSaving ? 'Gerando...' : 'Gerar vale-troca' }}
               </button>
             </div>
@@ -264,7 +264,7 @@
             </div>
             <div class="lookup-actions">
               <label>Qtd<input type="number" min="1" step="1" [(ngModel)]="qtdConsulta" /></label>
-              <button class="btn primary" type="button" (click)="lancarProdutoConsulta()">Lançar item</button>
+              <button class="btn primary" type="button" (click)="lancarProdutoConsulta()" *ngIf="podeEditarModulo">Lançar item</button>
             </div>
           </div>
         </section>
@@ -303,8 +303,8 @@
         <div><span>Cashback</span><strong>{{ saldoCashback | currency:'BRL' }}</strong></div>
         <div><span>Troca</span><strong>{{ saldoValeTroca | currency:'BRL' }}</strong></div>
         <div><span>{{ cashbackMensagem }}</span><strong>{{ cashbackPrevisto | currency:'BRL' }}</strong></div>
-        <button class="btn sm" type="button" (click)="abrirTroca()">Troca</button>
-        <button class="btn sm" (click)="cancelarVenda()">Cancelar venda</button>
+        <button class="btn sm" type="button" (click)="abrirTroca()" *ngIf="podeEditarModulo">Troca</button>
+        <button class="btn sm" (click)="cancelarVenda()" *ngIf="podeEditarModulo">Cancelar venda</button>
       </div>
 
       <div class="cart-list">
@@ -322,7 +322,7 @@
           </div>
           <div class="cart-item-actions">
             <span class="line-total">{{ (item.qtd * item.preco - item.desconto) | currency:'BRL' }}</span>
-            <button class="btn sm danger remove-item" (click)="removerItem(i)">Remover</button>
+            <button class="btn sm danger remove-item" (click)="removerItem(i)" *ngIf="podeEditarModulo">Remover</button>
           </div>
         </div>
       </div>
@@ -357,10 +357,10 @@
                   </option>
                 </select>
               </label>
-              <button class="btn sm" type="button" (click)="preencherSaldoPagamento(i)">Saldo</button>
-              <button class="btn sm danger" type="button" (click)="removerPagamento(i)">Remover</button>
+              <button class="btn sm" type="button" (click)="preencherSaldoPagamento(i)" *ngIf="podeEditarModulo">Saldo</button>
+              <button class="btn sm danger" type="button" (click)="removerPagamento(i)" *ngIf="podeEditarModulo">Remover</button>
             </div>
-            <button class="btn primary add-payment" type="button" (click)="adicionarPagamento()">Adicionar pagamento</button>
+            <button class="btn primary add-payment" type="button" (click)="adicionarPagamento()" *ngIf="podeEditarModulo">Adicionar pagamento</button>
           </div>
         </div>
 

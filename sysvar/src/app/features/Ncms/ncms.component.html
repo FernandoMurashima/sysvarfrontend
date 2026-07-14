@@ -5,7 +5,7 @@
       <input type="text" placeholder="Buscar por NCM/descrição..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -18,7 +18,7 @@
       <p>Confirma a exclusão do NCM <strong>{{ ncm.ncm }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -32,7 +32,7 @@
     </section>
 
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar NCM' : 'Novo NCM' }}</h3>
+      <h3>{{ consultando ? 'Consultar NCM' : (editingId ? 'Editar NCM' : 'Novo NCM') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <label id="ncm-box" class="input-item" [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">
@@ -61,13 +61,29 @@
             <span class="field-error" *ngIf="form.get('aliquota')?.errors?.['server']">{{ form.get('aliquota')?.errors?.['server'] }}</span>
           </label>
 
+          <label id="categoria-box" class="input-item">
+            Categoria*
+            <select formControlName="categoria">
+              <option value="VESTUARIO">Vestuário</option>
+              <option value="TECIDO">Tecidos</option>
+              <option value="AVIAMENTO">Aviamentos</option>
+              <option value="EMBALAGEM">Embalagens</option>
+              <option value="OUTROS">Outros</option>
+            </select>
+          </label>
+
           <label id="campo1-box" class="input-item" [class.invalid]="form.get('campo1')?.invalid && (form.get('campo1')?.touched || submitted)">
-            Campo1
+            Observação
             <input type="text" formControlName="campo1" maxlength="25"/>
             <span class="field-error" *ngIf="form.get('campo1')?.touched || submitted">
               <ng-container *ngIf="form.get('campo1')?.errors?.['maxlength']">Máx. 25 caracteres.</ng-container>
               <ng-container *ngIf="form.get('campo1')?.errors?.['server']">{{ form.get('campo1')?.errors?.['server'] }}</ng-container>
             </span>
+          </label>
+
+          <label id="ativo-box" class="check-item">
+            <input type="checkbox" formControlName="ativo" />
+            Ativo
           </label>
         </div>
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
@@ -78,8 +94,8 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -101,18 +117,23 @@
             <tr>
               <th style="width:140px;">NCM</th>
               <th>Descrição</th>
+              <th style="width:150px;">Categoria</th>
               <th style="width:140px;">Alíquota</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:110px;">Status</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let r of paged()">
               <td>{{ r.ncm }}</td>
               <td>{{ r.descricao }}</td>
+              <td>{{ categoriaLabel(r.categoria) }}</td>
               <td>{{ r.aliquota ?? '' }}</td>
+              <td><span class="status" [class.inactive]="r.ativo === false">{{ r.ativo === false ? 'Inativo' : 'Ativo' }}</span></td>
               <td class="actions">
-                <button class="btn sm" (click)="editar(r)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(r)">Excluir</button>
+                <button class="btn sm" (click)="consultar(r)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button>
               </td>
             </tr>
           </tbody>

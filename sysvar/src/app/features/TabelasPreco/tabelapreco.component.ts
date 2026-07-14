@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TabelaprecoService } from '../../core/services/tabelapreco.service';
 import { TabelaPreco } from '../../core/models/tabelapreco';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-tabelas-preco',
@@ -16,6 +17,7 @@ import { TabelaPreco } from '../../core/models/tabelapreco';
 export class TabelaprecoComponent {
   private fb = inject(FormBuilder);
   private api = inject(TabelaprecoService);
+  private auth = inject(AuthService);
 
   search = '';
   loading = signal(false);
@@ -40,8 +42,13 @@ export class TabelaprecoComponent {
     return this.items().slice(start, start + this.pageSize());
   });
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
   form: FormGroup = this.fb.group({
     NomeTabela: ['', [Validators.required, Validators.maxLength(100)]],
     DataInicio: ['', [Validators.required]],
@@ -73,11 +80,15 @@ export class TabelaprecoComponent {
 
   novo() {
     this.showForm = true; this.editingId = null; this.submitted = false;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({ NomeTabela: '', DataInicio: '', Promocao: false, DataFim: null });
   }
 
   editar(row: TabelaPreco) {
     this.showForm = true; this.editingId = row.Idtabela ?? null; this.submitted = false;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       NomeTabela: row.NomeTabela ?? '',
       DataInicio: row.DataInicio ? row.DataInicio.substring(0, 10) : '',
@@ -86,7 +97,13 @@ export class TabelaprecoComponent {
     });
   }
 
-  cancelarEdicao() { this.showForm = false; this.editingId = null; this.form.reset(); }
+  consultar(row: TabelaPreco) {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
+  cancelarEdicao() { this.showForm = false; this.editingId = null; this.consultando = false; this.form.enable({ emitEvent: false }); this.form.reset(); }
 
   salvar() {
     this.submitted = true;

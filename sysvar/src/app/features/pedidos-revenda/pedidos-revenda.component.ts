@@ -17,6 +17,7 @@ import { PackItensService } from '../../core/services/pack-item.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { NatLancamento } from '../../core/models/natureza-lancamento';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/auth.service';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
@@ -58,12 +59,20 @@ export class PedidosRevendaComponent implements OnInit {
   private packItensApi = inject(PackItensService);
   private naturezasApi = inject(NatLancamentosService);
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('compras', true) !== false;
+  }
 
   // navegação: list / form
   view = signal<'list' | 'form'>('list');
   setViewList() {
     this.view.set('list');
     this.pedidoAtualId.set(null);
+    this.consultando = false;
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
   }
   setViewForm() {
     this.view.set('form');
@@ -72,6 +81,7 @@ export class PedidosRevendaComponent implements OnInit {
   // estado geral
   submitted = false;
   saving = false;
+  consultando = false;
   loadingLookups = signal(false);
   loadingPedidos = false;
   successMsg = '';
@@ -84,6 +94,7 @@ export class PedidosRevendaComponent implements OnInit {
     pedido?: any;
   } | null = null;
   aprovarModal: { pedido: any; idnatureza: number | null } | null = null;
+  naturezaModal: { pedido: any; idnatureza: number | null } | null = null;
 
   // lookups
   lojas: Option[] = [];
@@ -437,6 +448,9 @@ export class PedidosRevendaComponent implements OnInit {
 
   novo() {
     this.resetForm();
+    this.consultando = false;
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
     this.setViewForm();
   }
 
@@ -905,8 +919,19 @@ export class PedidosRevendaComponent implements OnInit {
       return;
     }
 
+    this.abrirPedido(p, false);
+  }
+
+  consultarPedido(p: any) {
+    this.abrirPedido(p, true);
+  }
+
+  private abrirPedido(p: any, somenteConsulta: boolean) {
     this.submitted = false;
+    this.consultando = somenteConsulta;
     this.pedidoAtualId.set(p.id);
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
 
     this.headerForm.reset({
       loja: p.loja ?? null,
@@ -920,6 +945,11 @@ export class PedidosRevendaComponent implements OnInit {
     this.itens = [];
     this.carregarItensPedido(p.id);
     this.setViewForm();
+
+    if (somenteConsulta) {
+      this.headerForm.disable({ emitEvent: false });
+      this.itemForm.disable({ emitEvent: false });
+    }
   }
 
   excluirPedido(p: any) {
@@ -988,6 +1018,42 @@ export class PedidosRevendaComponent implements OnInit {
 
   fecharAprovacao(): void {
     this.aprovarModal = null;
+  }
+
+  editarNaturezaPedido(p: any): void {
+    if (!['AP', 'AT'].includes((p.status || '').toUpperCase())) {
+      this.showError('A natureza só pode ser editada em pedido aprovado ou atendido.');
+      return;
+    }
+    this.naturezaModal = {
+      pedido: p,
+      idnatureza: p.idnatureza ?? this.sugerirNaturezaCompraRevenda(),
+    };
+  }
+
+  confirmarNatureza(): void {
+    const p = this.naturezaModal?.pedido;
+    const idnatureza = Number(this.naturezaModal?.idnatureza || 0);
+    if (!p) return;
+    if (!idnatureza || Number.isNaN(idnatureza)) {
+      this.showError('Selecione a natureza de lançamento.');
+      return;
+    }
+
+    this.pedidosApi.alterarNatureza(p.id, idnatureza).subscribe({
+      next: () => {
+        this.naturezaModal = null;
+        this.showSuccess('Natureza do pedido atualizada.');
+        this.loadPedidos();
+      },
+      error: (err) => {
+        this.showError(err?.error?.detail || 'Erro ao alterar natureza do pedido.');
+      },
+    });
+  }
+
+  fecharNatureza(): void {
+    this.naturezaModal = null;
   }
 
   cancelarPedido(p: any) {

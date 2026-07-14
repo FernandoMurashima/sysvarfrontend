@@ -16,6 +16,7 @@ import { FormasPagamentoService } from '../../core/services/formas-pagamento.ser
 import { FormaPagamento, FormaPagamentoParcela } from '../../core/models/forma-pagamento';
 import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-formas-pagamento',
@@ -28,12 +29,14 @@ export class FormasPagamentoComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FormasPagamentoService);
   private contasApi = inject(ContasBancariasService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
 
   search = '';
   successMsg = '';
@@ -78,6 +81,9 @@ export class FormasPagamentoComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('financeiro', true) !== false;
   }
 
   ngOnInit(): void {
@@ -201,11 +207,14 @@ export class FormasPagamentoComponent implements OnInit {
   // ====== Fluxo form ======
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       codigo: '',
       descricao: '',
@@ -221,12 +230,14 @@ export class FormasPagamentoComponent implements OnInit {
     this.addParcela();
   }
 
-  editar(row: FormaPagamento): void {
+  editar(row: FormaPagamento, modoConsulta = false): void {
+    if (!modoConsulta && !this.podeEditarModulo) return;
     const id = row.Idformapagamento ?? (row as any).id ?? null;
     if (!id) return;
 
     this.showForm = true;
     this.editingId = id;
+    this.consultando = modoConsulta;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
@@ -234,6 +245,7 @@ export class FormasPagamentoComponent implements OnInit {
 
     this.api.get(id).subscribe({
       next: (det: FormaPagamento) => {
+        this.form.enable({ emitEvent: false });
         this.form.reset({
           codigo: det.codigo ?? '',
           descricao: det.descricao ?? '',
@@ -261,6 +273,10 @@ export class FormasPagamentoComponent implements OnInit {
           this.addParcela();
         }
 
+        if (this.consultando) {
+          this.form.disable({ emitEvent: false });
+        }
+
         this.loading = false;
       },
       error: () => {
@@ -270,19 +286,29 @@ export class FormasPagamentoComponent implements OnInit {
     });
   }
 
+  consultar(row: FormaPagamento): void {
+    const id = row.Idformapagamento ?? (row as any).id ?? null;
+    if (!id) return;
+    this.editar(row, true);
+  }
+
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
     this.clearParcelas();
   }
 
   addParcela(): void {
+    if (this.consultando) return;
     this.parcelasFA.push(this.makeParcelaGroup());
   }
 
   removeParcela(ix: number): void {
+    if (this.consultando) return;
     if (ix < 0 || ix >= this.parcelasFA.length) return;
     this.parcelasFA.removeAt(ix);
     // renumera ordens
@@ -293,6 +319,7 @@ export class FormasPagamentoComponent implements OnInit {
   }
 
   salvar(): void {
+    if (!this.podeEditarModulo) return;
     this.submitted = true;
 
     if (this.parcelasFA.length === 0) {
@@ -417,12 +444,14 @@ export class FormasPagamentoComponent implements OnInit {
   }
 
   excluir(item: FormaPagamento): void {
+    if (!this.podeEditarModulo) return;
     const id = item.Idformapagamento ?? (item as any).id;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeEditarModulo) return;
     const item = this.excluirModal;
     const id = item ? (item.Idformapagamento ?? (item as any).id) : null;
     if (!id) return;

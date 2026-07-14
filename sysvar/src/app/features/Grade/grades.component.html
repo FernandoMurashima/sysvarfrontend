@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novoGrade()">Nova Grade</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrade()">Nova Grade</button>
       <button class="btn primary" (click)="goHome()">Home</button>
     </div>
   </header>
@@ -25,7 +25,7 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -40,7 +40,7 @@
   <div class="content">
     <!-- FORM GRADE -->
     <section class="card form" *ngIf="formModeGrade !== null || submitted">
-      <h3>{{ formModeGrade === 'edit' ? 'Editar Grade' : 'Nova Grade' }}</h3>
+      <h3>{{ consultandoGrade ? 'Consultar Grade' : (formModeGrade === 'edit' ? 'Editar Grade' : 'Nova Grade') }}</h3>
 
       <form [formGroup]="formGrade" (ngSubmit)="salvarGrade()">
         <div class="grid-10">
@@ -69,10 +69,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (formGrade.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultandoGrade && podeEditarModulo" [disabled]="saving || (formGrade.invalid && submitted)">
             {{ formModeGrade === 'edit' ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoGrade()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoGrade()">{{ consultandoGrade ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -87,7 +87,7 @@
             <th>ID</th>
             <th>Descrição</th>
             <th>Status</th>
-            <th style="width:260px;">Ações</th>
+            <th style="width:330px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -100,9 +100,10 @@
               </span>
             </td>
             <td class="actions">
+              <button class="btn sm" (click)="consultarGrade(g)">Consultar</button>
               <button class="btn sm" (click)="selecionarGrade(g.Idgrade!)">Tamanhos</button>
-              <button class="btn sm" (click)="editarGrade(g)">Editar</button>
-              <button class="btn sm danger" (click)="excluirGrade(g)">Excluir</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrade(g)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirGrade(g)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -159,10 +160,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="formTamanho.invalid">
+          <button class="btn primary" type="submit" *ngIf="!consultandoTamanho && podeEditarModulo" [disabled]="formTamanho.invalid">
             {{ editingTamId ? 'Salvar alterações' : 'Adicionar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoTamanho()">Limpar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoTamanho()">{{ consultandoTamanho ? 'Voltar' : 'Limpar' }}</button>
           <button class="btn ghost" type="button" (click)="fecharTamanhos()">Fechar</button>
         </div>
       </form>
@@ -175,7 +176,7 @@
             <th>Tamanho</th>
             <th>Descrição</th>
             <th>Status</th>
-            <th style="width:180px;">Ações</th>
+            <th style="width:240px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -188,8 +189,9 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn sm" (click)="editarTamanho(t)">Editar</button>
-              <button class="btn sm danger" (click)="excluirTamanho(t)">Excluir</button>
+              <button class="btn sm" (click)="consultarTamanho(t)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarTamanho(t)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirTamanho(t)">Excluir</button>
             </td>
           </tr>
         </tbody>

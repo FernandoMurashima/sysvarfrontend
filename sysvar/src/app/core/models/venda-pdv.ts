@@ -57,10 +57,14 @@ export interface CupomPdv {
     preco_unitario: string;
     desconto: string;
     total_item: string;
+    ncm?: string;
+    cfop?: string;
+    total_impostos?: string;
   }>;
   subtotal: string;
   desconto: string;
   total: string;
+  total_impostos?: string;
   forma_pagamento: string;
   valor_recebido: string;
   troco: string;
@@ -230,4 +234,41 @@ export interface RelatorioVendas {
   colecoes: RelatorioColecaoVenda[];
   grupos: RelatorioGrupoVenda[];
   subgrupos: RelatorioSubgrupoVenda[];
+}
+
+export interface RelatorioMargemResumo {
+  receita: string;
+  cmv: string;
+  margem: string;
+  margem_percentual: string;
+  produtos: number;
+  quantidade: number;
+}
+
+export interface RelatorioMargemProduto {
+  produto: string;
+  referencia: string;
+  colecao: string;
+  grupo: string;
+  subgrupo: string;
+  quantidade: number;
+  receita: string;
+  cmv: string;
+  margem: string;
+  margem_percentual: string;
+}
+
+export interface RelatorioMargemLoja {
+  loja: string;
+  quantidade: number;
+  receita: string;
+  cmv: string;
+  margem: string;
+  margem_percentual: string;
+}
+
+export interface RelatorioMargem {
+  resumo: RelatorioMargemResumo;
+  produtos: RelatorioMargemProduto[];
+  lojas: RelatorioMargemLoja[];
 }

@@ -8,9 +8,25 @@ interface TokenResponse { token: string; user?: MeResponse; }
 interface MeResponse {
   id: number; username: string; first_name: string; last_name: string; email: string; type: string;
   Idempresa?: number | null;
-  empresa?: { id: number; nome: string; nome_fantasia?: string | null } | null;
+  empresa?: {
+    id: number;
+    nome: string;
+    nome_fantasia?: string | null;
+    licenca_master?: boolean;
+    usa_vendas?: boolean;
+    usa_compras?: boolean;
+    usa_estoque?: boolean;
+    usa_financeiro?: boolean;
+    usa_fiscal?: boolean;
+    usa_producao?: boolean;
+    usa_ficha_tecnica?: boolean;
+    usa_faccao?: boolean;
+    usa_distribuicao_producao?: boolean;
+  } | null;
   is_staff?: boolean;
   is_superuser?: boolean;
+  permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
+  permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -114,5 +130,39 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  empresaModuloHabilitado(modulo: 'cadastros' | 'produtos' | 'vendas' | 'compras' | 'estoque' | 'financeiro' | 'fiscal' | 'producao' | 'relatorios' | 'configuracoes'): boolean {
+    const user = this.getCurrentUser();
+    if (user?.is_superuser) return true;
+    if (['cadastros', 'produtos', 'relatorios', 'configuracoes'].includes(modulo)) return true;
+    const empresa = user?.empresa;
+    if (!empresa) return false;
+    if (empresa.licenca_master === true) return true;
+    const campo = `usa_${modulo}` as keyof NonNullable<MeResponse['empresa']>;
+    return empresa[campo] === true;
+  }
+
+  permissaoModulo(modulo?: string | null): 'NONE' | 'VIEW' | 'EDIT' | null {
+    if (!modulo) return null;
+    const user = this.getCurrentUser();
+    if (user?.is_superuser) return 'EDIT';
+    const perm = user?.permissoes_modulos?.find(p => p.modulo === modulo);
+    return perm?.acesso ?? null;
+  }
+
+  podeAcessarModulo(modulo?: string | null, escrita = false): boolean | null {
+    const acesso = this.permissaoModulo(modulo);
+    if (acesso === null) return null;
+    if (acesso === 'NONE') return false;
+    if (escrita) return acesso === 'EDIT';
+    return acesso === 'VIEW' || acesso === 'EDIT';
+  }
+
+  permissaoCampo(campo: string): boolean | null {
+    const user = this.getCurrentUser();
+    if (user?.is_superuser) return true;
+    const perm = user?.permissoes_campos?.find(p => p.campo === campo);
+    return perm ? !!perm.pode_ver : null;
   }
 }

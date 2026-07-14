@@ -35,6 +35,11 @@ export class LojasComponent implements OnInit {
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('cadastros', true) !== false;
+  }
 
   search = '';
   successMsg = '';
@@ -63,12 +68,21 @@ export class LojasComponent implements OnInit {
     telefone2: ['', [this.phoneValidator]],
 
     // novos no form (mantemos nomes já usados no HTML)
-    conta_contabil: [''],
     DataAbertura: [''],
     DataEnceramento: [''],
     EstoqueNegativo: ['NAO'],
     Rede: ['NAO'],
     Matriz: ['NAO'],
+    tipo_unidade: ['LOJA'],
+    regime_tributario: ['SIMPLES'],
+    ambiente_fiscal: ['HOMOLOGACAO'],
+    inscricao_estadual: ['', [Validators.maxLength(20)]],
+    serie_nfce: [1, [Validators.min(1)]],
+    proximo_numero_nfce: [1, [Validators.min(1)]],
+    serie_nfe: [1, [Validators.min(1)]],
+    proximo_numero_nfe: [1, [Validators.min(1)]],
+    emite_nfce: [true],
+    emite_nfe: [true],
   });
 
   logradouroOptions: string[] = [
@@ -228,8 +242,9 @@ export class LojasComponent implements OnInit {
           // mascarar telefones vindos só com dígitos
           telefone1: this.formatPhone(item.telefone1),
           telefone2: this.formatPhone(item.telefone2),
-          // mapear ContaContabil (backend) -> conta_contabil (form/UI)
-          conta_contabil: (item as any).conta_contabil ?? (item as any).ContaContabil ?? '',
+          tipo_unidade: (item as any).tipo_unidade ?? 'LOJA',
+          regime_tributario: (item as any).regime_tributario ?? 'SIMPLES',
+          ambiente_fiscal: (item as any).ambiente_fiscal ?? 'HOMOLOGACAO',
         })) as Loja[];
         this.lojasAll = arr;
         this.total = (res && typeof res === 'object' && typeof res.count === 'number') ? res.count : arr.length;
@@ -265,9 +280,12 @@ export class LojasComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
+    if (this.empresaBloqueada) this.form.get('empresa')?.disable({ emitEvent: false });
 
     this.form.reset({
       empresa: this.defaultEmpresaId(),
@@ -285,21 +303,33 @@ export class LojasComponent implements OnInit {
       estado: '',
       telefone1: '',
       telefone2: '',
-      conta_contabil: '',
       DataAbertura: '',
       DataEnceramento: '',
       EstoqueNegativo: 'NAO',
       Rede: 'NAO',
       Matriz: 'NAO',
+      tipo_unidade: 'LOJA',
+      regime_tributario: 'SIMPLES',
+      ambiente_fiscal: 'HOMOLOGACAO',
+      inscricao_estadual: '',
+      serie_nfce: 1,
+      proximo_numero_nfce: 1,
+      serie_nfe: 1,
+      proximo_numero_nfe: 1,
+      emite_nfce: true,
+      emite_nfe: true,
     });
   }
 
   editar(row: Loja): void {
     this.showForm = true;
     this.editingId = (row as any).id ?? (row as any).Idloja ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
+    if (this.empresaBloqueada) this.form.get('empresa')?.disable({ emitEvent: false });
 
     this.form.reset({
       empresa:     (row as any).empresa ?? null,
@@ -319,20 +349,38 @@ export class LojasComponent implements OnInit {
       telefone2:    this.formatPhone(row.telefone2),
 
       // novos
-      conta_contabil: (row as any).conta_contabil ?? (row as any).ContaContabil ?? '',
       DataAbertura:   (row as any).DataAbertura ?? '',
       DataEnceramento:(row as any).DataEnceramento ?? '',
       EstoqueNegativo:(row as any).EstoqueNegativo ?? 'NAO',
       Rede:           (row as any).Rede ?? 'NAO',
       Matriz:         (row as any).Matriz ?? 'NAO',
+      tipo_unidade:   (row as any).tipo_unidade ?? 'LOJA',
+      regime_tributario: (row as any).regime_tributario ?? 'SIMPLES',
+      ambiente_fiscal: (row as any).ambiente_fiscal ?? 'HOMOLOGACAO',
+      inscricao_estadual: (row as any).inscricao_estadual ?? '',
+      serie_nfce: (row as any).serie_nfce ?? 1,
+      proximo_numero_nfce: (row as any).proximo_numero_nfce ?? 1,
+      serie_nfe: (row as any).serie_nfe ?? 1,
+      proximo_numero_nfe: (row as any).proximo_numero_nfe ?? 1,
+      emite_nfce: (row as any).emite_nfce !== false,
+      emite_nfe: (row as any).emite_nfe !== false,
     });
+  }
+
+  consultar(row: Loja): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
   }
 
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
+    if (this.empresaBloqueada) this.form.get('empresa')?.disable({ emitEvent: false });
   }
 
   salvar(): void {
@@ -372,9 +420,18 @@ export class LojasComponent implements OnInit {
       EstoqueNegativo: this.blankToNull(f.EstoqueNegativo),
       Rede: this.blankToNull(f.Rede),
       Matriz: this.blankToNull(f.Matriz),
+      tipo_unidade: this.blankToNull(f.tipo_unidade),
       DataAbertura: dataAbertura,
       DataEnceramento: dataEnceramento,
-      ContaContabil: this.blankToNull(f.conta_contabil),
+      regime_tributario: this.blankToNull(f.regime_tributario) || 'SIMPLES',
+      ambiente_fiscal: this.blankToNull(f.ambiente_fiscal) || 'HOMOLOGACAO',
+      inscricao_estadual: this.blankToNull(f.inscricao_estadual),
+      serie_nfce: Number(f.serie_nfce || 1),
+      proximo_numero_nfce: Number(f.proximo_numero_nfce || 1),
+      serie_nfe: Number(f.serie_nfe || 1),
+      proximo_numero_nfe: Number(f.proximo_numero_nfe || 1),
+      emite_nfce: f.emite_nfce === true,
+      emite_nfe: f.emite_nfe === true,
     };
 
     this.saving = true;
@@ -396,7 +453,6 @@ export class LojasComponent implements OnInit {
         if (serverErrors) {
           const mapToCtrl = (apiField: string) => {
             if (apiField === 'Apelido_loja' || apiField === 'apelido_loja') return 'apelido_loja';
-            if (apiField === 'ContaContabil') return 'conta_contabil';
             return apiField;
           };
           const seen = new Set<string>();
@@ -468,8 +524,8 @@ export class LojasComponent implements OnInit {
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',
-      'conta_contabil','DataAbertura','DataEnceramento',
-      'EstoqueNegativo','Rede','Matriz'
+      'DataAbertura','DataEnceramento',
+      'EstoqueNegativo','Rede','Matriz','tipo_unidade'
     ];
     const seen = new Set<string>();
     fields.forEach(field => {
@@ -482,4 +538,13 @@ export class LojasComponent implements OnInit {
 
   openErrorOverlayIfNeeded(): void { this.errorOverlayOpen = this.getFormErrors().length > 0; }
   closeErrorOverlay(): void { this.errorOverlayOpen = false; }
+
+  tipoUnidadeLabel(tipo?: string | null): string {
+    const labels: Record<string, string> = {
+      LOJA: 'Loja',
+      MATRIZ: 'Matriz/Central',
+      FABRICA: 'Fábrica',
+    };
+    return labels[tipo || ''] || '-';
+  }
 }

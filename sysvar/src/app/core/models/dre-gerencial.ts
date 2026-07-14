@@ -31,7 +31,7 @@ export interface DreGrupo {
 }
 
 export interface DreDetalhe {
-  id: number;
+  id: number | string;
   data_movimento: string;
   loja: string;
   documento: string;
@@ -47,6 +47,7 @@ export interface DreGerencial {
   periodo: {
     data_ini: string;
     data_fim: string;
+    regime?: string;
   };
   totais: DreTotais;
   grupos: DreGrupo[];

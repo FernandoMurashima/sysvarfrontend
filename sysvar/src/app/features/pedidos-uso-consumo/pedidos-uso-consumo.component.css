@@ -26,18 +26,20 @@
 
 /* Tabela */
 .table-wrapper { max-height:480px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; }
-.table { width:100%; border-collapse:collapse; table-layout:fixed; }
-.table thead th { position:sticky; top:0; z-index:1; background:#a2c4e7; border-bottom:1px solid #e5e7eb; font-weight:600; text-align:left; padding:10px 12px; }
-.table td { border-bottom:1px solid #f1f5f9; padding:10px 12px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; }
+.table { width:100%; min-width:1540px; border-collapse:collapse; table-layout:fixed; }
+.table thead th { position:sticky; top:0; z-index:1; background:#a2c4e7; border-bottom:1px solid #e5e7eb; font-weight:600; text-align:left; padding:6px 8px; }
+.table td { border-bottom:1px solid #f1f5f9; padding:6px 8px; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.table tbody tr { height:38px; }
 
 /* larguras colunas lista */
-.col-numero      { width: 10%; }
-.col-loja        { width: 22%; }
-.col-fornecedor  { width: 28%; }
-.col-emissao     { width: 14%; }
-.col-status      { width: 10%; }
-.col-total       { width: 16%; }
-.col-acoes-list  { width: 26%; }
+.col-numero      { width: 78px; }
+.col-loja        { width: 260px; }
+.col-fornecedor  { width: 340px; }
+.col-emissao     { width: 118px; }
+.col-status      { width: 82px; }
+.col-natureza    { width: 270px; }
+.col-total       { width: 120px; }
+.col-acoes-list  { width: 360px; }
 
 /* larguras colunas itens */
 .col-produto { width: 40%; }
@@ -73,6 +75,7 @@ input, select, textarea { width:100%; max-width:100%; padding:8px 10px; border-r
 .input-item.invalid textarea,
 input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .field-error { display:none; }
+.field-hint { color:#5f6f86; font-size:11px; line-height:1.15; }
 .form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
 .form-pending strong { display:block; margin-bottom:6px; }
 .form-pending ul { margin:0; padding-left:18px; }
@@ -109,6 +112,19 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 
 .product-entry {
   position: relative;
+}
+
+.product-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.product-line .btn {
+  height: 32px;
+  padding: 5px 10px;
+  white-space: nowrap;
 }
 
 .product-suggestions {
@@ -157,6 +173,55 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
   white-space: nowrap;
 }
 
+.product-lookup {
+  margin-top: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 8px;
+}
+
+.lookup-head {
+  display: grid;
+  grid-template-columns: auto minmax(360px, 560px);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lookup-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.lookup-table {
+  max-height: 230px;
+  overflow: auto;
+  border: 1px solid #dbe4ef;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.lookup-table .table {
+  table-layout: auto;
+}
+
+.lookup-table th,
+.lookup-table td {
+  padding: 6px 8px;
+}
+
+.lookup-actions {
+  width: 110px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.badge-info {
+  background: #2563eb;
+}
+
 /* Ações (botões) */
 .actions-form { margin-top:12px; display:flex; gap:8px; }
 .btn { padding:8px 12px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; }
@@ -164,7 +229,9 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 .btn.primary { background:#111827; color:#fff; border-color:#111827; }
 .btn.primary:hover { filter:brightness(1.06); }
 .btn.ghost { background:transparent; }
-.btn.sm { padding:6px 10px; font-size:13px; }
+.btn.sm { min-height:26px; padding:4px 8px; font-size:12px; }
+.actions-cell { overflow:visible !important; }
+.actions-list-cell { display:flex; align-items:center; gap:4px; flex-wrap:nowrap; white-space:nowrap; }
 .btn.danger { background:#ef4444 !important; border-color:#dc2626 !important; color:#fff !important; }
 .btn.danger:hover { filter: brightness(0.95); }
 

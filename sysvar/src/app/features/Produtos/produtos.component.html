@@ -14,7 +14,7 @@
       <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -37,7 +37,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharCriacaoSkus()">Voltar</button>
-        <button class="btn primary" type="button" (click)="confirmarCriacaoSkus()">Confirmar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarCriacaoSkus()">Confirmar</button>
       </div>
     </div>
   </div>
@@ -52,7 +52,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -75,7 +75,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button>
-        <button class="btn primary" type="button" (click)="confirmarSeguranca()">Confirmar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarSeguranca()">Confirmar</button>
       </div>
     </div>
   </div>
@@ -118,7 +118,7 @@
             <td>{{ p.descricao }}</td>
             <td>{{ p.descricao_reduzida || '—' }}</td>
             <td>{{ p.referencia || '—' }}</td>
-            <td><span class="badge badge-info">Revenda</span></td>
+            <td><span class="badge badge-info">{{ tipoProdutoLabel(p.tipo_produto) }}</span></td>
             <td>{{ colecaoLabel(p.colecao ?? null) }}</td>
             <td>
               <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
@@ -126,10 +126,11 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn sm" (click)="editar(p)">Editar</button>
-              <button class="btn sm danger" (click)="excluir(p)">Excluir</button>
-              <button class="btn sm" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
-              <button class="btn sm" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
+              <button class="btn sm" (click)="consultar(p)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(p)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(p)">Excluir</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
             </td>
           </tr>
         </tbody>
@@ -158,7 +159,7 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>{{ editingId ? 'Editar Produto' : 'Novo Produto' }}</h3>
+    <h3>{{ consultando ? 'Consultar Produto' : (editingId ? 'Editar Produto' : 'Novo Produto') }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
         <!-- Linha 1 -->
@@ -166,6 +167,7 @@
           Tipo
           <select formControlName="tipo_produto">
             <option value="1">Revenda</option>
+            <option value="3">Produto Próprio</option>
           </select>
         </label>
 
@@ -291,7 +293,7 @@
                 <span class="vinculo-title">Lojas vinculadas</span>
                 <small>{{ lojasSelecionadasIds().length || 0 }} selecionada(s)</small>
               </div>
-              <button class="btn" type="button" (click)="abrirModalLojas()">Alterar lojas</button>
+              <button class="btn" type="button" (click)="abrirModalLojas()" *ngIf="!consultando && podeEditarModulo">Alterar lojas</button>
             </div>
 
             <div class="chips" *ngIf="lojasSelecionadasResumo().length > 0; else semLojasTpl">
@@ -308,7 +310,7 @@
                 <span class="vinculo-title">Cores vinculadas</span>
                 <small>{{ coresSelecionadasIds().length || 0 }} selecionada(s)</small>
               </div>
-              <button class="btn" type="button" (click)="abrirModalCores()">Incluir/remover cores</button>
+              <button class="btn" type="button" (click)="abrirModalCores()" *ngIf="!consultando && podeEditarModulo">Incluir/remover cores</button>
             </div>
 
             <div class="chips" *ngIf="coresSelecionadasResumo().length > 0; else semCoresTpl">
@@ -319,6 +321,48 @@
             </ng-template>
           </section>
         </div>
+
+        <section class="col-span-12 sku-cost-box" *ngIf="editingId && produtoSkus().length">
+          <div class="sku-cost-head">
+            <div>
+              <strong>SKUs e custos</strong>
+              <small>{{ produtoSkus().length }} variação(ões)</small>
+            </div>
+          </div>
+
+          <div class="sku-cost-table-wrap">
+            <table class="sku-cost-table">
+              <thead>
+                <tr>
+                  <th>Cor</th>
+                  <th>Tamanho</th>
+                  <th>Código de barras</th>
+                  <th class="num">Estoque</th>
+                  <th class="num">Custo original</th>
+                  <th class="num">Última compra</th>
+                  <th class="num">Custo médio</th>
+                  <th class="num">Preço venda</th>
+                  <th class="num">Margem</th>
+                  <th class="num">Margem %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let sku of produtoSkus()">
+                  <td>{{ sku.cor_descricao || sku.idcor }}</td>
+                  <td>{{ sku.tamanho_descricao || sku.idtamanho }}</td>
+                  <td>{{ sku.ean13 }}</td>
+                  <td class="num">{{ sku.estoque_total || 0 }}</td>
+                  <td class="num">{{ money(sku.custo_original) }}</td>
+                  <td class="num">{{ money(sku.custo_ultima_compra) }}</td>
+                  <td class="num">{{ money(sku.custo_medio) }}</td>
+                  <td class="num">{{ money(sku.preco_venda) }}</td>
+                  <td class="num">{{ money(sku.margem_valor) }}</td>
+                  <td class="num">{{ percent(sku.margem_percentual) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
@@ -328,10 +372,10 @@
         </div>
 
       <div class="actions-form">
-        <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
           {{ editingId ? 'Salvar alterações' : 'Salvar' }}
         </button>
-        <button class="btn ghost" type="button" (click)="setViewList()">Cancelar</button>
+        <button class="btn ghost" type="button" (click)="setViewList()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
       </div>
     </form>
   </section>
@@ -352,7 +396,7 @@
 
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharModalLojas()">Cancelar</button>
-        <button class="btn btn-primary" type="button" (click)="confirmarLojas(lojasSelecionadasIds())">Aplicar</button>
+        <button class="btn btn-primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarLojas(lojasSelecionadasIds())">Aplicar</button>
       </div>
     </div>
   </div>
@@ -375,7 +419,7 @@
 
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharModalCores()">Cancelar</button>
-        <button class="btn btn-primary" type="button" (click)="confirmarCores(coresSelecionadasIds())">Aplicar</button>
+        <button class="btn btn-primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarCores(coresSelecionadasIds())">Aplicar</button>
       </div>
     </div>
   </div>

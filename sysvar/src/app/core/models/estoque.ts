@@ -16,6 +16,9 @@ export interface EstoqueMovimentacao {
   referencia?: string;
   tipo: TipoMovimentoEstoque;
   quantidade: number;
+  custo_unitario?: number | string;
+  custo_total?: number | string;
+  custo_medio_apos?: number | string;
   saldo_anterior?: number;
   saldo_posterior?: number;
   documento?: string | null;

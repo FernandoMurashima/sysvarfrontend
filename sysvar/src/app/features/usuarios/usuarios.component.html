@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Nova</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Nova</button>
       <button class="btn primary" (click)="goHome()">Home</button>
     </div>
   </header>
@@ -25,7 +25,7 @@
       <p>Confirma a exclusão do usuário <strong>{{ usuario.username }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -41,7 +41,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Usuário' : 'Novo Usuário' }}</h3>
+      <h3>{{ consultando ? 'Consultar Usuário' : (editingId ? 'Editar Usuário' : 'Novo Usuário') }}</h3>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
@@ -102,7 +102,7 @@
                 <input
                   type="checkbox"
                   [checked]="todasLojasMarcadas()"
-                  [disabled]="!empresaSelecionadaId() || lojasDaEmpresa().length === 0"
+                  [disabled]="consultando || !empresaSelecionadaId() || lojasDaEmpresa().length === 0"
                   (change)="toggleTodasLojas($any($event.target).checked)"
                 />
                 Todas
@@ -111,6 +111,7 @@
                 <input
                   type="checkbox"
                   [checked]="lojaPermitidaMarcada(l)"
+                  [disabled]="consultando"
                   (change)="toggleLojaPermitida(l, $any($event.target).checked)"
                 />
                 {{ l.nome_loja || l.apelido_loja || ('Loja #' + lojaId(l)) }}
@@ -120,16 +121,49 @@
             </div>
           </label>
 
-          <label id="pwd-box" class="input-item" [class.invalid]="form.get('password')?.invalid && (form.get('password')?.touched || submitted)">
+          <label id="pwd-box" class="input-item" *ngIf="!consultando" [class.invalid]="form.get('password')?.invalid && (form.get('password')?.touched || submitted)">
             Senha {{ editingId ? '(opcional para alterar)' : '*' }}
-            <input type="password" formControlName="password" />
+            <input type="password" formControlName="password" autocomplete="new-password" />
           </label>
 
-          <label id="pwdc-box" class="input-item" [class.invalid]="form.get('confirm_password')?.invalid && (form.get('confirm_password')?.touched || submitted)">
+          <label id="pwdc-box" class="input-item" *ngIf="!consultando" [class.invalid]="form.get('confirm_password')?.invalid && (form.get('confirm_password')?.touched || submitted)">
             Confirmar Senha {{ editingId ? '(se alterar)' : '*' }}
-            <input type="password" formControlName="confirm_password" />
+            <input type="password" formControlName="confirm_password" autocomplete="new-password" />
           </label>
         </div>
+
+        <section class="permissions-panel">
+          <div class="permissions-title">
+            <strong>Permissões por módulo</strong>
+            <span>Defina se o usuário não acessa, só consulta ou pode editar.</span>
+          </div>
+          <div class="permissions-grid">
+            <label class="permission-line" *ngFor="let modulo of modulosPermissao">
+              <span>{{ modulo.label }}</span>
+              <select [(ngModel)]="modulo.acesso" [ngModelOptions]="{standalone: true}" [disabled]="consultando || !podeEditarModulo">
+                <option value="NONE">Sem acesso</option>
+                <option value="VIEW">Consultar</option>
+                <option value="EDIT">Completo</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="permissions-title fields-title">
+            <strong>Campos sensíveis</strong>
+            <span>Campos que exigem permissão específica para aparecer.</span>
+          </div>
+          <div class="sensitive-grid">
+            <label class="check-line" *ngFor="let campo of camposPermissao">
+              <input
+                type="checkbox"
+                [(ngModel)]="campo.pode_ver"
+                [ngModelOptions]="{standalone: true}"
+                [disabled]="consultando || !podeEditarModulo"
+              />
+              {{ campo.label }}
+            </label>
+          </div>
+        </section>
 
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
@@ -139,10 +173,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -161,7 +195,7 @@
             <th>Empresa</th>
             <th>Loja principal</th>
             <th>Lojas</th>
-            <th style="width:140px;">Ações</th>
+            <th style="width:200px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -174,8 +208,9 @@
             <td>{{ u.loja?.nome_loja || lojaNome(u.Idloja || u.loja?.Idloja) }}</td>
             <td>{{ u.lojas?.length || 0 }}</td>
             <td class="actions">
-              <button class="btn sm" (click)="editar(u)">Editar</button>
-              <button class="btn sm danger" (click)="excluir(u)">Excluir</button>
+              <button class="btn sm" (click)="consultar(u)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(u)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(u)">Excluir</button>
             </td>
           </tr>
         </tbody>

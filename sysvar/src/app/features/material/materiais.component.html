@@ -5,7 +5,7 @@
       <input type="text" placeholder="Buscar por descrição/código..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -18,7 +18,7 @@
       <p>Confirma a exclusão do material <strong>{{ material.Descricao }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -31,7 +31,7 @@
     </section>
 
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Material' : 'Novo Material' }}</h3>
+      <h3>{{ consultando ? 'Consultar Material' : (editingId ? 'Editar Material' : 'Novo Material') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <label id="desc-box" class="input-item" [class.invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted)">
@@ -70,8 +70,8 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -94,7 +94,7 @@
               <th>Descrição</th>
               <th style="width:140px;">Código</th>
               <th style="width:140px;">Status</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -111,8 +111,9 @@
 
 
               <td class="actions">
-                <button class="btn sm" (click)="editar(r)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(r)">Excluir</button>
+                <button class="btn sm" (click)="consultar(r)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button>
               </td>
             </tr>
           </tbody>

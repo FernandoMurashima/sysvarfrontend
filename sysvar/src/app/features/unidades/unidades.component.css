@@ -103,18 +103,19 @@ input, select {
 .placeholder-inner { color:#64748b; text-align:center; }
 
 /* ===== Layout do formulário (Unidades) ===== */
-/* Linha 1: Descrição | Código */
-#descricao-box { grid-column: 1 / span 8; }
-#codigo-box    { grid-column: 9 / span 4; }   /* <<< amplia a área do rótulo+input */
+/* Linha 1: Descrição | Código | Decimal */
+#descricao-box { grid-column: 1 / span 6; }
+#codigo-box    { grid-column: 7 / span 3; }
+#decimal-box   { grid-column: 10 / span 3; }
 #codigo-box input {
   max-width: 180px;
-  justify-self: start;                           /* encosta à direita */
+  justify-self: start;
 }
 
 /* responsivo */
 @media (max-width: 600px) {
   .grid-10 { grid-template-columns: 1fr; align-items: stretch; }
-  #descricao-box, #codigo-box { grid-column: 1 / -1; }
+  #descricao-box, #codigo-box, #decimal-box { grid-column: 1 / -1; }
   #codigo-box input { max-width: 100%; justify-self: stretch; }
 }
 
@@ -133,6 +134,14 @@ input, select {
 
 .badge-ok { background: #16a34a !important; }   /* verde */
 .badge-off { background: #94a3b8 !important; }  /* cinza */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #fff;
+}
 
 /* Botão Excluir vermelho (igual Grades) */
 .btn.danger {

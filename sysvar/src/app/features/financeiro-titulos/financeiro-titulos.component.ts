@@ -16,6 +16,7 @@ import { FormasPagamentoService } from '../../core/services/formas-pagamento.ser
 import { LojasService } from '../../core/services/lojas.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { FormaPagamento } from '../../core/models/forma-pagamento';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-financeiro-titulos',
@@ -33,6 +34,7 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   private clientesApi = inject(ClientesService);
   private naturezaApi = inject(NatLancamentosService);
   private formasApi = inject(FormasPagamentoService);
+  private auth = inject(AuthService);
   private sub?: Subscription;
 
   tipo: TipoTituloFinanceiro = 'pagar';
@@ -50,9 +52,22 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   clientes: Cliente[] = [];
   naturezas: NatLancamento[] = [];
   formas: FormaPagamento[] = [];
-  baixaModal: { parcela: ParcelaFinanceira; valor_baixa: number; data_baixa: string } | null = null;
+  baixaModal: {
+    parcela: ParcelaFinanceira;
+    valor_base: number;
+    valor_baixa: number;
+    data_baixa: string;
+    juros: number;
+    multa: number;
+    tarifa: number;
+    desconto: number;
+  } | null = null;
   cancelarModal: ParcelaFinanceira | null = null;
   excluirModal: TituloFinanceiro | null = null;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
 
   form: FormGroup = this.fb.group({
     idloja: [null, Validators.required],
@@ -95,10 +110,10 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   loadAuxiliares(): void {
     forkJoin({
-      lojas: this.lojasApi.list(),
-      fornecedores: this.fornecedoresApi.list(),
-      clientes: this.clientesApi.list(),
-      naturezas: this.naturezaApi.list(),
+      lojas: this.lojasApi.list({ page_size: 500 }),
+      fornecedores: this.fornecedoresApi.list({ page_size: 500, ordering: 'nome_fornecedor' }),
+      clientes: this.clientesApi.list({ page_size: 500, ordering: 'nome_cliente' }),
+      naturezas: this.naturezaApi.list({ page_size: 500, ordering: 'codigo' }),
       formas: this.formasApi.list({ ativo: true })
     }).subscribe({
       next: res => {
@@ -238,9 +253,24 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     const valorAtual = Number(parcela.valor_parcela || 0);
     this.baixaModal = {
       parcela,
+      valor_base: valorAtual,
       valor_baixa: valorAtual,
-      data_baixa: this.today()
+      data_baixa: this.today(),
+      juros: Number(parcela.juros || 0),
+      multa: Number(parcela.multa || 0),
+      tarifa: Number(parcela.tarifa || 0),
+      desconto: Number(parcela.desconto || 0)
     };
+  }
+
+  recalcularBaixa(): void {
+    if (!this.baixaModal) return;
+    const base = Number(this.baixaModal.valor_base || 0);
+    const juros = Number(this.baixaModal.juros || 0);
+    const multa = Number(this.baixaModal.multa || 0);
+    const tarifa = this.tipo === 'pagar' ? Number(this.baixaModal.tarifa || 0) : 0;
+    const desconto = Number(this.baixaModal.desconto || 0);
+    this.baixaModal.valor_baixa = Number((base + juros + multa + tarifa - desconto).toFixed(2));
   }
 
   confirmarBaixa(): void {
@@ -250,7 +280,11 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     if (valor <= 0) return;
     this.api.baixarParcela(this.tipo, id, {
       valor_baixa: valor,
-      data_baixa: String(this.baixaModal?.data_baixa || this.today())
+      data_baixa: String(this.baixaModal?.data_baixa || this.today()),
+      juros: Number(this.baixaModal?.juros || 0),
+      multa: Number(this.baixaModal?.multa || 0),
+      tarifa: this.tipo === 'pagar' ? Number(this.baixaModal?.tarifa || 0) : 0,
+      desconto: Number(this.baixaModal?.desconto || 0)
     }).subscribe({
       next: () => {
         this.successMsg = 'Parcela baixada.';
@@ -367,7 +401,27 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   get naturezasTitulo(): NatLancamento[] {
     const operacoes = this.tipo === 'pagar' ? ['DESPESA', 'AJUSTE'] : ['RECEITA', 'AJUSTE'];
-    return this.naturezas.filter(n => operacoes.includes(String(n.natureza_operacao || '').toUpperCase()));
+    return this.naturezas
+      .filter(n => operacoes.includes(String(n.natureza_operacao || '').toUpperCase()))
+      .sort((a, b) => `${a.codigo || ''} ${a.descricao || ''}`.localeCompare(`${b.codigo || ''} ${b.descricao || ''}`));
+  }
+
+  naturezaId(natureza: NatLancamento): number | null {
+    return natureza.idnatureza ? Number(natureza.idnatureza) : null;
+  }
+
+  onParceiroChange(): void {
+    if (this.tipo !== 'pagar') return;
+    const fornecedorId = Number(this.form.get('parceiro')?.value || 0);
+    const fornecedor = this.fornecedores.find(f => Number(f.id) === fornecedorId);
+    const textoFornecedor = `${fornecedor?.categoria || ''} ${fornecedor?.nome_fornecedor || ''} ${fornecedor?.apelido || ''}`.toLowerCase();
+    if (!textoFornecedor.includes('aluguel')) return;
+    const aluguel = this.naturezasTitulo.find(n =>
+      String(n.codigo || '') === '3201' || String(n.descricao || '').toLowerCase().includes('aluguel')
+    );
+    if (aluguel?.idnatureza) {
+      this.form.patchValue({ Idnatureza: Number(aluguel.idnatureza) });
+    }
   }
 
   private salvarParcelas(created: TituloFinanceiro): void {

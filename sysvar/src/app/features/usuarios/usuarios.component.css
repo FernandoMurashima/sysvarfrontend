@@ -112,6 +112,58 @@ input, select {
 .check-line.strong { font-weight: 700; }
 .muted { color: #64748b; font-weight: 500; }
 
+.permissions-panel {
+  margin-top: 12px;
+  border: 1px solid #cbd6e2;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f8fbff;
+}
+
+.permissions-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.permissions-title span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.permission-line {
+  display: grid;
+  gap: 4px;
+}
+
+.permission-line span {
+  font-size: 12px;
+}
+
+.permission-line select {
+  height: 32px;
+}
+
+.fields-title { margin-top: 12px; }
+
+.sensitive-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.sensitive-grid .check-line {
+  min-width: 240px;
+}
+
 /* responsivo */
 @media (max-width: 600px) {
   .grid-10 { grid-template-columns: 1fr; }
@@ -120,6 +172,7 @@ input, select {
   #cep-box, #bairro-box, #cidade-box, #telefone1-box, #telefone2-box,
   #conta-contabil-box, #abertura-box, #encerramento-box,
   #estoque-neg-box, #rede-box, #matriz-box { grid-column: 1 / -1; }
+  .permissions-grid { grid-template-columns: 1fr; }
 }
 
 /* overlay (mesmo padrão do clientes) */

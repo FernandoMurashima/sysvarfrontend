@@ -36,10 +36,22 @@ export const authGuard: CanActivateFn = (route) => {
     );
   }
 
+  const moduloEmpresa = route.data?.['moduloEmpresa'] as 'cadastros' | 'produtos' | 'vendas' | 'compras' | 'estoque' | 'financeiro' | 'fiscal' | 'producao' | 'relatorios' | 'configuracoes' | undefined;
+  const permissaoModulo = auth.podeAcessarModulo(moduloEmpresa || null);
+  if (permissaoModulo === false) {
+    router.navigateByUrl('/home');
+    return false;
+  }
+  if (moduloEmpresa && !auth.empresaModuloHabilitado(moduloEmpresa)) {
+    router.navigateByUrl('/home');
+    return false;
+  }
+
   const roles = (route.data?.['roles'] ?? []) as UserRole[];
   if (!roles.length) return true;
 
   const current = auth.getUserType() as UserRole | null;
+  if (permissaoModulo === true) return true;
   if (current === 'Admin' || (current && roles.includes(current))) return true;
 
   router.navigateByUrl('/home');

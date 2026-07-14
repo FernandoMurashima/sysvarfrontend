@@ -15,7 +15,7 @@
       <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -49,7 +49,27 @@
       </label>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharAprovacao()">Voltar</button>
-        <button class="btn primary" type="button" (click)="confirmarAprovacao()">Aprovar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarAprovacao()">Aprovar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="naturezaModal">
+    <section class="modal-card">
+      <h3>Natureza do pedido</h3>
+      <p class="modal-text">Confira ou altere a natureza financeira usada no contas a pagar.</p>
+      <label>
+        Natureza de lançamento
+        <select [(ngModel)]="naturezaModal.idnatureza">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let n of naturezasCompra" [ngValue]="n.idnatureza">
+            {{ naturezaLabel(n) }}
+          </option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharNatureza()">Voltar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarNatureza()">Salvar</button>
       </div>
     </section>
   </div>
@@ -83,6 +103,7 @@
             <th class="col-fornecedor">Fornecedor</th>
             <th class="col-emissao">Emissão</th>
             <th class="col-status">Status</th>
+            <th class="col-natureza">Natureza</th>
             <th class="col-total">Total</th>
             <th class="col-acoes-list">Ações</th>
           </tr>
@@ -94,22 +115,34 @@
             <td>{{ labelFornecedor(p.fornecedor) }}</td>
             <td>{{ p.emissao }}</td>
             <td>
-              <span class="badge" [ngClass]="p.status === 'AP' ? 'badge-ok' : 'badge-off'">
+              <span class="badge" [ngClass]="['AP', 'AT'].includes((p.status || '').toUpperCase()) ? 'badge-ok' : 'badge-off'">
                 {{ p.status }}
               </span>
             </td>
+            <td>{{ p.natureza_label || '-' }}</td>
             <td>{{ p.total_pedido | number : '1.2-2' }}</td>
-            <td>
+            <td class="actions-cell">
+              <div class="actions-list-cell">
               <button
                 class="btn sm"
                 type="button"
+                (click)="consultarPedido(p)"
+              >
+                Consultar
+              </button>
+              <button
+                class="btn sm"
+                *ngIf="podeEditarModulo"
+                type="button"
                 (click)="editarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+                style="margin-left:4px;"
               >
                 Editar
               </button>
               <button
                 class="btn sm danger"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="excluirPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -119,6 +152,7 @@
               </button>
               <button
                 class="btn sm"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="aprovarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -128,6 +162,17 @@
               </button>
               <button
                 class="btn sm"
+                *ngIf="podeEditarModulo"
+                type="button"
+                (click)="editarNaturezaPedido(p)"
+                [disabled]="!['AP', 'AT'].includes((p.status || '').toUpperCase())"
+                style="margin-left:4px;"
+              >
+                Natureza
+              </button>
+              <button
+                class="btn sm"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="cancelarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -135,6 +180,7 @@
               >
                 Cancelar
               </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -164,7 +210,7 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>Novo Pedido de Revenda</h3>
+    <h3>{{ consultando ? 'Consultar Pedido de Revenda' : (pedidoAtualId() ? 'Editar Pedido de Revenda' : 'Novo Pedido de Revenda') }}</h3>
 
     <!-- Cabeçalho -->
     <form [formGroup]="headerForm" novalidate>
@@ -240,7 +286,7 @@
     <!-- ITENS -->
     <h3>Itens do Pedido</h3>
 
-    <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()">
+    <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando">
       <div class="grid-12 itens-grid">
         <!-- Linha única: produto, cor, pack, n_packs, qtd, preço, desconto, total -->
         <label class="input-item col-span-3">
@@ -355,7 +401,7 @@
             <th class="col-preco">Preço</th>
             <th class="col-desc">Desc</th>
             <th class="col-total">Total</th>
-            <th class="col-acoes">Ações</th>
+            <th class="col-acoes" *ngIf="!consultando && podeEditarModulo">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -368,7 +414,7 @@
             <td>{{ it.preco_unit | number : '1.2-2' }}</td>
             <td>{{ it.desconto_valor | number : '1.2-2' }}</td>
             <td>{{ it.total_item | number : '1.2-2' }}</td>
-            <td>
+            <td *ngIf="!consultando && podeEditarModulo">
               <button class="btn sm" type="button" (click)="editarItem(it)">Editar</button>
               <button class="btn sm danger" type="button" (click)="removerItem(it)" style="margin-left:4px;">
                 Remover
@@ -386,11 +432,11 @@
 
     <!-- AÇÕES FINAIS DO PEDIDO -->
     <div class="actions-form">
-      <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving">
+      <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving" *ngIf="!consultando && podeEditarModulo">
         Gravar pedido
       </button>
       <button class="btn ghost" type="button" (click)="cancelar()">
-        Cancelar
+        {{ consultando ? 'Voltar' : 'Cancelar' }}
       </button>
     </div>
   </section>

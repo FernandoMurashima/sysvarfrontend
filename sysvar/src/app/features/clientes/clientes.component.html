@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -40,7 +40,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Cliente' : 'Novo Cliente' }}</h3>
+      <h3>{{ consultando ? 'Consultar Cliente' : (editingId ? 'Editar Cliente' : 'Novo Cliente') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
 
@@ -178,7 +178,7 @@
             <span class="field-error" *ngIf="form.get('categoria')?.errors?.['server']">{{ form.get('categoria')?.errors?.['server'] }}</span>
           </label>
 
-          <!-- Linha 6 (Flags + Conta contábil) -->
+          <!-- Linha 6 (Flags) -->
           <label id="bloqueio-box" class="input-item checkbox-line">
             <input type="checkbox" formControlName="bloqueio" />
             Bloqueio
@@ -194,12 +194,6 @@
             Ativo
           </label>
 
-          <label id="conta-contabil-box" class="input-item">
-            Conta Contábil
-            <input type="text" formControlName="conta_contabil" />
-            <span class="field-error" *ngIf="form.get('conta_contabil')?.errors?.['server']">{{ form.get('conta_contabil')?.errors?.['server'] }}</span>
-          </label>
-
         </div>
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
@@ -209,10 +203,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -241,7 +235,7 @@
               <th>Cidade</th>
               <th>Email</th>
               <th>Telefone</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -253,8 +247,9 @@
               <td class="email">{{ c.email }}</td>
               <td>{{ c.telefone1 }}</td>
               <td class="actions">
-                <button class="btn sm" (click)="editar(c)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(c)">Excluir</button>
+                <button class="btn sm" (click)="consultar(c)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(c)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(c)">Excluir</button>
               </td>
             </tr>
           </tbody>

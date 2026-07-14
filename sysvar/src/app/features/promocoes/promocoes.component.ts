@@ -15,6 +15,7 @@ import { LojasService } from '../../core/services/lojas.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { PromocoesService } from '../../core/services/promocoes.service';
 import { SubgruposService } from '../../core/services/subgrupos.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-promocoes',
@@ -30,16 +31,19 @@ export class PromocoesComponent implements OnInit {
   private colecoesApi = inject(ColecoesService);
   private gruposApi = inject(GruposService);
   private subgruposApi = inject(SubgruposService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
   editingId: number | null = null;
+  consultando = false;
   errorMsg = '';
   successMsg = '';
   todasLojas = true;
   produtoBusca = '';
   produtoAdicionarId: number | null = null;
   excluirModal: Promocao | null = null;
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('vendas', true) !== false; }
 
   promocoes: Promocao[] = [];
   lojas: Loja[] = [];
@@ -93,8 +97,10 @@ export class PromocoesComponent implements OnInit {
     });
   }
 
-  novo(): void {
+  novo(forcar = false): void {
+    if (!forcar && !this.podeEditarModulo) return;
     this.editingId = null;
+    this.consultando = false;
     this.form = this.novaPromocao();
     this.todasLojas = true;
     this.produtoBusca = '';
@@ -103,8 +109,10 @@ export class PromocoesComponent implements OnInit {
     this.errorMsg = '';
   }
 
-  editar(promocao: Promocao): void {
+  editar(promocao: Promocao, modoConsulta = false): void {
+    if (!modoConsulta && !this.podeEditarModulo) return;
     this.editingId = promocao.Idpromocao ?? null;
+    this.consultando = modoConsulta;
     this.form = {
       ...promocao,
       lojas: [...(promocao.lojas ?? [])],
@@ -118,7 +126,13 @@ export class PromocoesComponent implements OnInit {
     this.produtoAdicionarId = null;
   }
 
+  consultar(promocao: Promocao): void {
+    this.editar(promocao, true);
+  }
+
   salvar(): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     const erro = this.validar();
     if (erro) {
       this.errorMsg = erro;
@@ -145,12 +159,14 @@ export class PromocoesComponent implements OnInit {
   }
 
   excluir(promocao: Promocao): void {
+    if (!this.podeEditarModulo) return;
     const id = promocao.Idpromocao;
     if (!id) return;
     this.excluirModal = promocao;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeEditarModulo) return;
     const promocao = this.excluirModal;
     const id = promocao?.Idpromocao;
     if (!id) return;
@@ -169,6 +185,8 @@ export class PromocoesComponent implements OnInit {
   }
 
   toggleLista(field: keyof Promocao, id: number | undefined): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     if (!id) return;
     const atual = [...((this.form[field] as number[] | undefined) ?? [])];
     const index = atual.indexOf(id);
@@ -182,10 +200,14 @@ export class PromocoesComponent implements OnInit {
   }
 
   alternarTodasLojas(): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     if (this.todasLojas) this.form.lojas = [];
   }
 
   alterarEscopo(): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     this.form.produtos = [];
     this.form.colecoes = [];
     this.form.grupos = [];
@@ -212,6 +234,8 @@ export class PromocoesComponent implements OnInit {
   }
 
   adicionarProduto(): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     if (!this.produtoAdicionarId) return;
     const atual = [...(this.form.produtos ?? [])];
     if (!atual.includes(this.produtoAdicionarId)) atual.push(this.produtoAdicionarId);
@@ -221,6 +245,8 @@ export class PromocoesComponent implements OnInit {
   }
 
   removerProduto(id: number | undefined): void {
+    if (!this.podeEditarModulo) return;
+    if (this.consultando) return;
     if (!id) return;
     this.form.produtos = (this.form.produtos ?? []).filter(item => item !== id);
   }

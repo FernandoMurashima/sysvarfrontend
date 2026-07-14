@@ -8,6 +8,7 @@ import { FuncionariosService } from '../../core/services/funcionarios.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-funcionarios',
@@ -20,12 +21,18 @@ export class FuncionariosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FuncionariosService);
   private lojasApi = inject(LojasService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('cadastros', true) !== false;
+  }
 
   search = '';
   successMsg = '';
@@ -34,6 +41,14 @@ export class FuncionariosComponent implements OnInit {
   errorOverlayOpen = false;
 
   lojasOptions: { id: number; nome: string }[] = [];
+
+  get podeVerSalario(): boolean {
+    const user = this.auth.getCurrentUser();
+    const permissao = this.auth.permissaoCampo('funcionario.salario');
+    if (permissao !== null) return permissao;
+    const tipo = String(this.auth.getUserType() || user?.type || '').toLowerCase();
+    return !!user?.is_superuser || tipo === 'admin' || tipo === 'diretor';
+  }
 
   form: FormGroup = this.fb.group({
     nomefuncionario: ['', [Validators.required, Validators.maxLength(50)]],
@@ -46,6 +61,7 @@ export class FuncionariosComponent implements OnInit {
     categoria: ['', [Validators.maxLength(15)]],
     meta: [0, []],
     comissao_percentual: [0, []],
+    salario: [0, []],
 
     idloja: [null],
     ativo: [true],
@@ -175,9 +191,11 @@ export class FuncionariosComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       nomefuncionario: '',
@@ -188,17 +206,21 @@ export class FuncionariosComponent implements OnInit {
       categoria: '',
       meta: 0,
       comissao_percentual: 0,
+      salario: this.podeVerSalario ? 0 : null,
       idloja: null,
       ativo: true,
     });
+    if (!this.podeVerSalario) this.form.get('salario')?.disable({ emitEvent: false });
   }
 
   editar(row: Funcionario): void {
     this.showForm = true;
     this.editingId = (row as any).id ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       nomefuncionario: row.nomefuncionario ?? '',
@@ -209,16 +231,26 @@ export class FuncionariosComponent implements OnInit {
       categoria: row.categoria ?? '',
       meta: row.meta ?? 0,
       comissao_percentual: row.comissao_percentual ?? 0,
+      salario: row.salario_oculto ? null : (row.salario ?? 0),
       idloja: (row as any).idloja ?? null,
       ativo: row.ativo ?? true,
     });
+    if (!this.podeVerSalario || row.salario_oculto) this.form.get('salario')?.disable({ emitEvent: false });
+  }
+
+  consultar(row: Funcionario): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
   }
 
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {
@@ -234,16 +266,20 @@ export class FuncionariosComponent implements OnInit {
     }
 
     // normalizações simples
-    const raw = this.form.value;
+    const raw = this.form.getRawValue();
     const payload: Funcionario = {
       ...raw,
       meta: raw.meta === '' || raw.meta === null ? 0 : Number(raw.meta),
       comissao_percentual: raw.comissao_percentual === '' || raw.comissao_percentual === null ? 0 : Number(raw.comissao_percentual),
+      salario: raw.salario === '' || raw.salario === null ? 0 : Number(raw.salario),
       idloja: raw.idloja === '' ? null : raw.idloja,
       inicio: raw.inicio ? raw.inicio : null as any,
       fim: raw.fim ? raw.fim : null as any,
       cpf: raw.cpf ? String(raw.cpf) : null as any,
     };
+    if (!this.podeVerSalario) {
+      delete payload.salario;
+    }
 
     this.saving = true;
     const req$ = this.editingId
@@ -317,7 +353,7 @@ export class FuncionariosComponent implements OnInit {
     P(f.get('categoria')?.hasError('maxlength') || false, 'Categoria: máx. 15 caracteres.');
     P(f.get('idloja')?.hasError('required') || false, 'Loja é obrigatória para este cargo.');
 
-    ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','comissao_percentual','idloja','ativo']
+    ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','comissao_percentual','salario','idloja','ativo']
       .forEach(field => {
         const err = f.get(field)?.errors?.['server'];
         if (err) msgs.push(`${field}: ${err}`);

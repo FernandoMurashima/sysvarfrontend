@@ -14,7 +14,7 @@
       <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -32,7 +32,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -55,7 +55,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button>
-        <button class="btn primary" type="button" (click)="confirmarSeguranca()">Confirmar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarSeguranca()">Confirmar</button>
       </div>
     </div>
   </div>
@@ -99,7 +99,7 @@
             <td>{{ p.descricao }}</td>
             <td>{{ p.descricao_reduzida || '—' }}</td>
             <td>{{ p.referencia || '—' }}</td>
-            <td><span class="badge badge-info">Uso/Consumo</span></td>
+            <td><span class="badge badge-info">{{ tipoProdutoLabel(p.tipo_produto) }}</span></td>
             <td>{{ unidadeLabel(p.unidade ?? null) }}</td>
             <td>{{ p.ncm || '—' }}</td>
             <td>
@@ -108,10 +108,11 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn sm" (click)="editar(p)">Editar</button>
-              <button class="btn sm danger" (click)="excluir(p)">Excluir</button>
-              <button class="btn sm" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
-              <button class="btn sm" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
+              <button class="btn sm" (click)="consultar(p)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(p)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(p)">Excluir</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
             </td>
           </tr>
         </tbody>
@@ -140,7 +141,7 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>{{ editingId ? 'Editar Produto de Uso/Consumo' : 'Novo Produto de Uso/Consumo' }}</h3>
+    <h3>{{ consultando ? 'Consultar Produto de Uso/Consumo' : (editingId ? 'Editar Produto de Uso/Consumo' : 'Novo Produto de Uso/Consumo') }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
         <!-- Linha 1 -->
@@ -148,7 +149,13 @@
           Tipo
           <select formControlName="tipo_produto">
             <option value="2">Uso/Consumo</option>
+            <option value="4">Insumo de Produção</option>
           </select>
+        </label>
+
+        <label class="input-item col-span-2">
+          Código
+          <input type="text" formControlName="referencia" placeholder="Gerado ao salvar" />
         </label>
 
         <label class="input-item col-span-4"
@@ -164,7 +171,7 @@
           </span>
         </label>
 
-        <label class="input-item col-span-3"
+        <label class="input-item col-span-2"
                [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">
           Descrição reduzida
           <input type="text" formControlName="descricao_reduzida" />
@@ -176,7 +183,7 @@
           </span>
         </label>
 
-        <label class="input-item col-span-3"
+        <label class="input-item col-span-2"
                [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">
           Unidade*
           <select formControlName="unidade">
@@ -189,7 +196,7 @@
         </label>
 
         <!-- Linha 2 -->
-        <label class="input-item col-span-3">
+        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">
           Grupo
           <select formControlName="grupo">
             <option [ngValue]="null">— selecione —</option>
@@ -197,7 +204,7 @@
           </select>
         </label>
 
-        <label class="input-item col-span-3">
+        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">
           Subgrupo
           <select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value">
             <option [ngValue]="null">— selecione —</option>
@@ -232,10 +239,9 @@
           </span>
         </label>
 
-        <!-- Linha 3 -->
-        <label class="input-item col-span-12">
+        <label class="input-item col-span-6">
           Observações
-          <textarea formControlName="observacoes" rows="3"></textarea>
+          <input type="text" formControlName="observacoes" />
         </label>
       </div>
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
@@ -246,10 +252,10 @@
         </div>
 
       <div class="actions-form">
-        <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
           {{ editingId ? 'Salvar alterações' : 'Salvar' }}
         </button>
-        <button class="btn ghost" type="button" (click)="setViewList()">Cancelar</button>
+        <button class="btn ghost" type="button" (click)="setViewList()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
       </div>
     </form>
   </section>

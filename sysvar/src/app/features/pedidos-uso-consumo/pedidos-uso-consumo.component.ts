@@ -11,6 +11,9 @@ import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { NatLancamento } from '../../core/models/natureza-lancamento';
+import { UnidadesService } from '../../core/services/unidades.service';
+import { Unidade } from '../../core/models/unidade';
+import { AuthService } from '../../core/auth.service';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
@@ -42,12 +45,21 @@ export class PedidosUsoConsumoComponent implements OnInit {
   private fornecedoresApi = inject(FornecedoresService);
   private produtosApi = inject(ProdutosService);
   private naturezasApi = inject(NatLancamentosService);
+  private unidadesApi = inject(UnidadesService);
+  private auth = inject(AuthService);
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('compras', true) !== false;
+  }
 
   // navegação: list / form
   view = signal<'list' | 'form'>('list');
   setViewList() {
     this.view.set('list');
     this.pedidoAtualId.set(null);
+    this.consultando = false;
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
   }
   setViewForm() {
     this.view.set('form');
@@ -56,6 +68,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
   // estado geral
   submitted = false;
   saving = false;
+  consultando = false;
   loadingLookups = signal(false);
   loadingPedidos = false;
   successMsg = '';
@@ -68,15 +81,18 @@ export class PedidosUsoConsumoComponent implements OnInit {
     pedido?: any;
   } | null = null;
   aprovarModal: { pedido: any; idnatureza: number | null } | null = null;
+  naturezaModal: { pedido: any; idnatureza: number | null } | null = null;
 
   // lookups
   lojas: Option[] = [];
   fornecedores: Option[] = [];
   formas: FormaOption[] = [];
   naturezasCompra: NatLancamento[] = [];
+  unidades: Unidade[] = [];
 
   private lojaMap = new Map<number, string>();
   private fornecedorMap = new Map<number, string>();
+  private unidadeMap = new Map<number, Unidade>();
 
   // Pedido atual
   pedidoAtualId = signal<number | null>(null);
@@ -96,7 +112,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     id: [null],
     produto_input: ['', Validators.required], // ID ou parte da descrição
     produto: [null, Validators.required],
-    quantidade: [0, [Validators.required, Validators.min(1)]],
+    quantidade: [0, [Validators.required, Validators.min(0.001)]],
     preco_unit: [0, [Validators.required, Validators.min(0)]],
     desconto_valor: [0],
     total_item: [{ value: 0, disabled: false }],
@@ -111,6 +127,11 @@ export class PedidosUsoConsumoComponent implements OnInit {
   produtosSugestoes: any[] = [];
   produtoSugestoesAbertas = false;
   carregandoProdutosSugestoes = false;
+  produtoConsultaAberta = false;
+  produtoConsultaSearch = '';
+  produtosConsulta: any[] = [];
+  carregandoProdutosConsulta = false;
+  produtoSelecionado: any | null = null;
 
   // ===== lista de pedidos (Uso/Consumo – tipo=2) =====
   search = '';
@@ -240,6 +261,21 @@ export class PedidosUsoConsumoComponent implements OnInit {
       },
       error: () => {
         this.formas = [];
+      },
+    });
+
+    this.unidadesApi.list({ ordering: 'Descricao', page_size: 1000 }).subscribe({
+      next: (resp: any) => {
+        this.unidades = this.arrayOrResults<Unidade>(resp);
+        this.unidadeMap.clear();
+        this.unidades.forEach(unidade => {
+          const id = Number(unidade.Idunidade || 0);
+          if (id) this.unidadeMap.set(id, unidade);
+        });
+      },
+      error: () => {
+        this.unidades = [];
+        this.unidadeMap.clear();
       },
     });
   }
@@ -421,6 +457,9 @@ export class PedidosUsoConsumoComponent implements OnInit {
 
   novo() {
     this.resetForm();
+    this.consultando = false;
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
     this.setViewForm();
   }
 
@@ -435,6 +474,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     if (!input) {
       this.itemForm.patchValue({ produto: null }, { emitEvent: false });
       this.produtoDescricaoAtual = '';
+      this.produtoSelecionado = null;
       return;
     }
 
@@ -452,13 +492,14 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
 
   private buscarProdutoPorDescricao(texto: string) {
-    this.produtosApi.list({ search: texto, page_size: 5, ativo: 'true', tipo_produto: '2' }).subscribe({
+    this.produtosApi.list({ search: texto, page_size: 5, ativo: 'true', tipo_produto: '2,4' }).subscribe({
       next: (resp: any) => {
-        const arr = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
+        const arr = this.arrayOrResults<any>(resp).filter(p => ['2', '4'].includes(String(p.tipo_produto)));
         if (!arr.length) {
-          this.showError('Produto de uso/consumo não encontrado.');
+          this.showError('Produto de uso/consumo ou insumo não encontrado.');
           this.itemForm.patchValue({ produto: null }, { emitEvent: false });
           this.produtoDescricaoAtual = '';
+          this.produtoSelecionado = null;
           return;
         }
         this.setProdutoFromApi(arr[0]);
@@ -478,6 +519,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
       if (!search) {
         this.itemForm.patchValue({ produto: null }, { emitEvent: false });
         this.produtoDescricaoAtual = '';
+        this.produtoSelecionado = null;
       }
       return;
     }
@@ -488,9 +530,9 @@ export class PedidosUsoConsumoComponent implements OnInit {
     }
 
     this.carregandoProdutosSugestoes = true;
-    this.produtosApi.list({ search, page_size: 8, ativo: 'true', tipo_produto: '2' }).subscribe({
+    this.produtosApi.list({ search, page_size: 8, ativo: 'true', tipo_produto: '2,4' }).subscribe({
       next: (resp: any) => {
-        this.produtosSugestoes = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '2');
+        this.produtosSugestoes = this.arrayOrResults<any>(resp).filter(p => ['2', '4'].includes(String(p.tipo_produto)));
         this.produtoSugestoesAbertas = this.produtosSugestoes.length > 0;
         this.carregandoProdutosSugestoes = false;
       },
@@ -508,6 +550,41 @@ export class PedidosUsoConsumoComponent implements OnInit {
     this.produtoSugestoesAbertas = false;
   }
 
+  abrirConsultaProdutos(): void {
+    this.produtoConsultaAberta = !this.produtoConsultaAberta;
+    if (this.produtoConsultaAberta && !this.produtosConsulta.length) {
+      this.produtoConsultaSearch = (this.itemForm.get('produto_input')?.value || '').toString();
+      this.buscarConsultaProdutos();
+    }
+  }
+
+  buscarConsultaProdutos(): void {
+    this.carregandoProdutosConsulta = true;
+    this.produtosApi.list({
+      search: this.produtoConsultaSearch,
+      page_size: 30,
+      ativo: 'true',
+      tipo_produto: '2,4',
+    }).subscribe({
+      next: (resp: any) => {
+        this.produtosConsulta = this.arrayOrResults<any>(resp)
+          .filter(p => ['2', '4'].includes(String(p.tipo_produto)))
+          .sort((a, b) => (a.descricao || '').localeCompare(b.descricao || ''));
+        this.carregandoProdutosConsulta = false;
+      },
+      error: () => {
+        this.produtosConsulta = [];
+        this.carregandoProdutosConsulta = false;
+      },
+    });
+  }
+
+  selecionarProdutoConsulta(prod: any): void {
+    this.setProdutoFromApi(prod);
+    this.produtoConsultaAberta = false;
+    this.produtosConsulta = [];
+  }
+
   fecharSugestoesProdutoComAtraso(): void {
     window.setTimeout(() => {
       this.produtoSugestoesAbertas = false;
@@ -515,10 +592,11 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
 
   private setProdutoFromApi(prod: any) {
-    if ((prod.tipo_produto ?? '').toString() !== '2') {
-      this.showError('Este produto não é de uso/consumo.');
+    if (!['2', '4'].includes((prod.tipo_produto ?? '').toString())) {
+      this.showError('Este produto não é de uso/consumo nem insumo de produção.');
       this.itemForm.patchValue({ produto: null }, { emitEvent: false });
       this.produtoDescricaoAtual = '';
+      this.produtoSelecionado = null;
       return;
     }
 
@@ -534,6 +612,17 @@ export class PedidosUsoConsumoComponent implements OnInit {
     );
 
     this.produtoDescricaoAtual = descricao;
+    this.produtoSelecionado = prod;
+  }
+
+  produtoTipoLabel(prod: any): string {
+    return String(prod?.tipo_produto) === '4' ? 'Insumo' : 'Uso/Consumo';
+  }
+
+  unidadeProdutoSelecionadoLabel(): string {
+    const unidade = this.unidadeProdutoSelecionado();
+    if (!unidade) return '';
+    return `${unidade.Descricao}${unidade.permite_decimal ? ' - aceita decimal' : ' - somente inteiro'}`;
   }
 
   // ===== Recalcular total do item =====
@@ -578,8 +667,12 @@ export class PedidosUsoConsumoComponent implements OnInit {
       observacoes: '',
     });
     this.produtoDescricaoAtual = '';
+    this.produtoSelecionado = null;
     this.produtosSugestoes = [];
     this.produtoSugestoesAbertas = false;
+    this.produtoConsultaAberta = false;
+    this.produtoConsultaSearch = '';
+    this.produtosConsulta = [];
   }
 
   editarItem(it: PedidoUsoItemUI) {
@@ -595,6 +688,13 @@ export class PedidosUsoConsumoComponent implements OnInit {
     });
 
     this.produtoDescricaoAtual = it.produto_label;
+    this.produtoSelecionado = null;
+    if (it.produto) {
+      this.produtosApi.get(it.produto).subscribe({
+        next: prod => this.produtoSelecionado = prod as any,
+        error: () => this.produtoSelecionado = null,
+      });
+    }
   }
 
   removerItem(it: PedidoUsoItemUI) {
@@ -702,6 +802,10 @@ export class PedidosUsoConsumoComponent implements OnInit {
 
   private salvarItemNoBackend(pedidoId: number) {
     const raw = this.itemForm.getRawValue();
+    if (!this.validarQuantidadePorUnidade()) {
+      this.savingItem = false;
+      return;
+    }
 
     const payload: any = {
       pedido: pedidoId,
@@ -732,6 +836,22 @@ export class PedidosUsoConsumoComponent implements OnInit {
         this.showError('Erro ao salvar item.');
       },
     });
+  }
+
+  private unidadeProdutoSelecionado(): Unidade | null {
+    const produto = this.produtoSelecionado;
+    const unidadeId = Number(produto?.unidade || 0);
+    return unidadeId ? (this.unidadeMap.get(unidadeId) || null) : null;
+  }
+
+  private validarQuantidadePorUnidade(): boolean {
+    const unidade = this.unidadeProdutoSelecionado();
+    const quantidade = Number(this.itemForm.get('quantidade')?.value || 0);
+    if (unidade && !unidade.permite_decimal && !Number.isInteger(quantidade)) {
+      this.showError(`A unidade ${unidade.Descricao} não aceita quantidade decimal.`);
+      return false;
+    }
+    return true;
   }
 
   private carregarItensPedido(pedidoId: number) {
@@ -780,8 +900,19 @@ export class PedidosUsoConsumoComponent implements OnInit {
       return;
     }
 
+    this.abrirPedido(p, false);
+  }
+
+  consultarPedido(p: any) {
+    this.abrirPedido(p, true);
+  }
+
+  private abrirPedido(p: any, somenteConsulta: boolean) {
     this.submitted = false;
+    this.consultando = somenteConsulta;
     this.pedidoAtualId.set(p.id);
+    this.headerForm.enable({ emitEvent: false });
+    this.itemForm.enable({ emitEvent: false });
 
     this.headerForm.reset({
       loja: p.loja ?? null,
@@ -795,6 +926,11 @@ export class PedidosUsoConsumoComponent implements OnInit {
     this.itens = [];
     this.carregarItensPedido(p.id);
     this.setViewForm();
+
+    if (somenteConsulta) {
+      this.headerForm.disable({ emitEvent: false });
+      this.itemForm.disable({ emitEvent: false });
+    }
   }
 
   excluirPedido(p: any) {
@@ -862,6 +998,42 @@ export class PedidosUsoConsumoComponent implements OnInit {
 
   fecharAprovacao(): void {
     this.aprovarModal = null;
+  }
+
+  editarNaturezaPedido(p: any): void {
+    if (!['AP', 'AT'].includes((p.status || '').toUpperCase())) {
+      this.showError('A natureza só pode ser editada em pedido aprovado ou atendido.');
+      return;
+    }
+    this.naturezaModal = {
+      pedido: p,
+      idnatureza: p.idnatureza ?? this.sugerirNaturezaUsoConsumo(),
+    };
+  }
+
+  confirmarNatureza(): void {
+    const p = this.naturezaModal?.pedido;
+    const idnatureza = Number(this.naturezaModal?.idnatureza || 0);
+    if (!p) return;
+    if (!idnatureza || Number.isNaN(idnatureza)) {
+      this.showError('Selecione a natureza de lançamento.');
+      return;
+    }
+
+    this.pedidosApi.alterarNatureza(p.id, idnatureza).subscribe({
+      next: () => {
+        this.naturezaModal = null;
+        this.showSuccess('Natureza do pedido atualizada.');
+        this.loadPedidos();
+      },
+      error: (err) => {
+        this.showError(err?.error?.detail || 'Erro ao alterar natureza do pedido.');
+      },
+    });
+  }
+
+  fecharNatureza(): void {
+    this.naturezaModal = null;
   }
 
   cancelarPedido(p: any) {

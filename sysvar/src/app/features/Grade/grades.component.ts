@@ -8,6 +8,7 @@ import { GradesService } from '../../core/services/grades.service';
 import { TamanhosService } from '../../core/services/tamanhos.service';
 import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-grades',
@@ -20,6 +21,7 @@ export class GradesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private gradesApi = inject(GradesService);
   private tamanhosApi = inject(TamanhosService);
+  private auth = inject(AuthService);
   constructor(private router: Router) {}
 
   goHome() { this.router.navigate(['/home']); }
@@ -37,8 +39,13 @@ export class GradesComponent implements OnInit {
   search = '';
   selectedGradeId: number | null = null;
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+
   formModeGrade: 'new' | 'edit' | null = null;
   editingGradeId: number | null = null;
+  consultandoGrade = false;
 
   formGrade = this.fb.group({
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
@@ -46,6 +53,7 @@ export class GradesComponent implements OnInit {
   });
 
   editingTamId: number | null = null;
+  consultandoTamanho = false;
   submittedSub = false;
 
   formTamanho = this.fb.group({
@@ -80,18 +88,28 @@ export class GradesComponent implements OnInit {
 
   novoGrade() {
     this.editingGradeId = null;
+    this.consultandoGrade = false;
     this.formModeGrade = 'new';
     this.submitted = false;
+    this.formGrade.enable({ emitEvent: false });
     this.formGrade.reset({ Descricao: '', Status: '' });
     this.successMsg = ''; this.errorMsg = '';
   }
 
   editarGrade(g: GradeModel) {
     this.editingGradeId = g.Idgrade ?? null;
+    this.consultandoGrade = false;
     this.formModeGrade = 'edit';
     this.submitted = false;
+    this.formGrade.enable({ emitEvent: false });
     this.formGrade.reset({ Descricao: g.Descricao ?? '', Status: g.Status ?? '' });
     this.successMsg = ''; this.errorMsg = '';
+  }
+
+  consultarGrade(g: GradeModel) {
+    this.editarGrade(g);
+    this.consultandoGrade = true;
+    this.formGrade.disable({ emitEvent: false });
   }
 
   salvarGrade() {
@@ -161,8 +179,10 @@ export class GradesComponent implements OnInit {
 
   cancelarEdicaoGrade() {
     this.editingGradeId = null;
+    this.consultandoGrade = false;
     this.formModeGrade = null;
     this.submitted = false;
+    this.formGrade.enable({ emitEvent: false });
     this.formGrade.reset({ Descricao: '', Status: '' });
   }
 
@@ -200,7 +220,9 @@ export class GradesComponent implements OnInit {
 
   novoTamanho() {
     this.editingTamId = null;
+    this.consultandoTamanho = false;
     this.submittedSub = false;
+    this.formTamanho.enable({ emitEvent: false });
     this.formTamanho.reset({
       Idgrade: this.selectedGradeId ?? 0,
       Tamanho: '',
@@ -211,13 +233,21 @@ export class GradesComponent implements OnInit {
 
   editarTamanho(t: TamanhoModel) {
     this.editingTamId = t.Idtamanho ?? null;
+    this.consultandoTamanho = false;
     this.submittedSub = false;
+    this.formTamanho.enable({ emitEvent: false });
     this.formTamanho.reset({
       Idgrade: (t as any).idgrade?.Idgrade ?? (t as any).idgrade ?? this.selectedGradeId ?? 0,
       Tamanho: t.Tamanho ?? '',
       Descricao: t.Descricao ?? 'Tamanho',
       Status: t.Status ?? ''
     });
+  }
+
+  consultarTamanho(t: TamanhoModel) {
+    this.editarTamanho(t);
+    this.consultandoTamanho = true;
+    this.formTamanho.disable({ emitEvent: false });
   }
 
   salvarTamanho() {

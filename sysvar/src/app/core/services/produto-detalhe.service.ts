@@ -11,6 +11,15 @@ export interface ProdutoSku {
   idtamanho: number;
   codigo_item_ref?: string;
   ean13: string;
+  cor_descricao?: string;
+  tamanho_descricao?: string;
+  custo_original?: number | string;
+  custo_ultima_compra?: number | string;
+  custo_medio?: number | string;
+  preco_venda?: number | string;
+  margem_valor?: number | string;
+  margem_percentual?: number | string;
+  estoque_total?: number;
   ativo?: boolean;
   bloqueado_venda?: boolean;
 }

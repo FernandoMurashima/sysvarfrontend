@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { Fornecedor } from '../../core/models/fornecedor';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-fornecedores',
@@ -23,6 +24,7 @@ import { Fornecedor } from '../../core/models/fornecedor';
 export class FornecedoresComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FornecedoresService);
+  private auth = inject(AuthService);
 
   // ======== Estado UI ========
   loading = false;
@@ -30,6 +32,11 @@ export class FornecedoresComponent implements OnInit {
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('cadastros', true) !== false;
+  }
 
   search = '';
   successMsg = '';
@@ -65,9 +72,24 @@ export class FornecedoresComponent implements OnInit {
     ativo: [true],
   });
 
+  categoriaOptions = [
+    { value: 'MATERIA_PRIMA', label: 'Matéria-prima' },
+    { value: 'AVIAMENTO', label: 'Aviamento' },
+    { value: 'REVENDA', label: 'Produto de revenda' },
+    { value: 'FACCAO', label: 'Facção' },
+    { value: 'PRESTADOR', label: 'Prestador de serviço' },
+    { value: 'TRANSPORTADORA', label: 'Transportadora' },
+    { value: 'OUTROS', label: 'Outros' },
+  ];
+
   logradouroOptions: string[] = [
     'Rua','Avenida','Travessa','Alameda','Praça','Rodovia','Estrada','Largo','Viela'
   ];
+
+  categoriaLabel(value?: string | null): string {
+    if (!value) return '';
+    return this.categoriaOptions.find(opt => opt.value === value)?.label || value;
+  }
 
   // ======== Lista + paginação client-side ========
   fornecedoresAll: Fornecedor[] = [];
@@ -203,9 +225,11 @@ export class FornecedoresComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       nome_fornecedor: '',
@@ -238,9 +262,11 @@ export class FornecedoresComponent implements OnInit {
   editar(row: Fornecedor): void {
     this.showForm = true;
     this.editingId = row.id ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     const t1 = this.formatPhone(row.telefone1 ?? '');
     const t2 = this.formatPhone(row.telefone2 ?? '');
@@ -273,11 +299,19 @@ export class FornecedoresComponent implements OnInit {
     });
   }
 
+  consultar(row: Fornecedor): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {
@@ -386,7 +420,7 @@ export class FornecedoresComponent implements OnInit {
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',
-      'categoria','bloqueio','mala_direta','conta_contabil',
+      'categoria','bloqueio','mala_direta',
       'ativo'
     ].forEach(field => {
       const err = f.get(field)?.errors?.['server'];

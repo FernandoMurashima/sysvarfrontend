@@ -5,7 +5,7 @@
       <input type="text" placeholder="Buscar por nome..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novoPack()">Novo Pack</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoPack()">Novo Pack</button>
       <button class="btn primary" (click)="goHome()">Home</button>
     </div>
   </header>
@@ -19,7 +19,7 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -33,7 +33,7 @@
 
   <div class="content">
     <section class="card form" *ngIf="formModePack !== null || submitted">
-      <h3>{{ formModePack === 'edit' ? 'Editar Pack' : 'Novo Pack' }}</h3>
+      <h3>{{ consultandoPack ? 'Consultar Pack' : (formModePack === 'edit' ? 'Editar Pack' : 'Novo Pack') }}</h3>
 
       <form [formGroup]="formPack" (ngSubmit)="salvarPack()">
         <div class="grid-10">
@@ -62,10 +62,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (formPack.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultandoPack && podeEditarModulo" [disabled]="saving || (formPack.invalid && submitted)">
             {{ formModePack === 'edit' ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoPack()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoPack()">{{ consultandoPack ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -80,7 +80,7 @@
             <th>Nome</th>
             <th>Grade</th>
             <th>Status</th>
-            <th style="width:260px;">Ações</th>
+            <th style="width:330px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -94,9 +94,10 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn sm" (click)="editarPack(p)">Editar</button>
+              <button class="btn sm" (click)="consultarPack(p)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarPack(p)">Editar</button>
               <button class="btn sm" (click)="selecionarPack(p.id!, p.grade)">Itens</button>
-              <button class="btn sm danger" (click)="excluirPack(p)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirPack(p)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -135,10 +136,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="formItem.invalid">
+          <button class="btn primary" type="submit" *ngIf="!consultandoItem && podeEditarModulo" [disabled]="formItem.invalid">
             {{ editingItemId ? 'Salvar alterações' : 'Adicionar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoItem()">Limpar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoItem()">{{ consultandoItem ? 'Voltar' : 'Limpar' }}</button>
           <button class="btn ghost" type="button" (click)="fecharItens()">Fechar</button>
         </div>
       </form>
@@ -150,7 +151,7 @@
           <tr>
             <th>Tamanho</th>
             <th>Quantidade</th>
-            <th style="width:180px;">Ações</th>
+            <th style="width:240px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -158,8 +159,9 @@
             <td>{{ getTamanhoDesc(it.tamanho) }}</td>
             <td>{{ it.qtd }}</td>
             <td class="actions">
-              <button class="btn sm" (click)="editarItem(it)">Editar</button>
-              <button class="btn sm danger" (click)="excluirItem(it)">Excluir</button>
+              <button class="btn sm" (click)="consultarItem(it)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarItem(it)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirItem(it)">Excluir</button>
             </td>
           </tr>
         </tbody>

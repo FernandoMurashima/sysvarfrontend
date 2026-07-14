@@ -46,6 +46,8 @@
 .grid-10 { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; }
 label { display: grid; gap: 6px; font-size: 14px; }
 input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; outline: none; }
+.checkline { display:flex; flex-direction:row; align-items:center; gap:8px; align-self:end; min-height:38px; }
+.checkline input { width:16px; height:16px; padding:0; }
 .input-item.invalid input, .input-item.invalid select, input[aria-invalid="true"] { border-color: #ef4444; background: #fef2f2; }
 .input-item.invalid { color: #b91c1c; }
 .field-error { display: none; }
@@ -90,11 +92,22 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
 #abertura-box       { grid-column: 5 / span 2; }
 #encerramento-box   { grid-column: 7 / span 3; }
 
-/* Linha 6: Estoque, Rede, Matriz, Conta Contábil (mesma linha) */
+/* Linha 6: Estoque, Rede, Matriz e tipo da unidade */
 #estoque-neg-box    { grid-column: 1 / span 2; }
 #rede-box           { grid-column: 3 / span 2; }
 #matriz-box         { grid-column: 5 / span 2; }
-#conta-contabil-box { grid-column: 7 / span 4; }
+#tipo-unidade-box   { grid-column: 7 / span 4; }
+
+/* Linha fiscal da unidade emissora */
+#regime-box         { grid-column: 1 / span 2; }
+#ambiente-box       { grid-column: 3 / span 2; }
+#ie-box             { grid-column: 5 / span 2; }
+#emite-nfce-box     { grid-column: 7 / span 1; }
+#serie-nfce-box     { grid-column: 8 / span 1; }
+#prox-nfce-box      { grid-column: 9 / span 1; }
+#emite-nfe-box      { grid-column: 10 / span 1; }
+#serie-nfe-box      { grid-column: 1 / span 1; }
+#prox-nfe-box       { grid-column: 2 / span 1; }
 
 /* responsivo */
 @media (max-width: 600px) {
@@ -103,7 +116,9 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
   #tipo-box, #endereco-box, #numero-box, #complemento-box,
   #cep-box, #bairro-box, #cidade-box, #estado-box,
   #telefone1-box, #telefone2-box, #abertura-box, #encerramento-box,
-  #estoque-neg-box, #rede-box, #matriz-box, #conta-contabil-box { grid-column: 1 / -1; }
+  #estoque-neg-box, #rede-box, #matriz-box, #tipo-unidade-box,
+  #regime-box, #ambiente-box, #ie-box, #emite-nfce-box, #serie-nfce-box, #prox-nfce-box,
+  #emite-nfe-box, #serie-nfe-box, #prox-nfe-box { grid-column: 1 / -1; }
 }
 
 /* overlay */

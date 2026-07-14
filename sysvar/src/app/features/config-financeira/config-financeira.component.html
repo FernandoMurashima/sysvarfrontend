@@ -1,0 +1,73 @@
+<div class="config-page">
+  <header class="toolbar">
+    <h2>Configuração Financeira</h2>
+    <div class="toolbar-actions">
+      <button class="btn primary" type="button" (click)="salvar()" [disabled]="saving">Salvar</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel">
+    <h3>Naturezas padrão para baixas</h3>
+    <form [formGroup]="form" class="form-grid">
+      <label>
+        Juros pagos
+        <select formControlName="natureza_juros_pagos">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of despesas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Juros recebidos
+        <select formControlName="natureza_juros_recebidos">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of receitas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Tarifas pagas
+        <select formControlName="natureza_tarifas_pagas">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of despesas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Multas pagas
+        <select formControlName="natureza_multas_pagas">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of despesas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Multas recebidas
+        <select formControlName="natureza_multas_recebidas">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of receitas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Descontos concedidos
+        <select formControlName="natureza_descontos_concedidos">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of despesas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Descontos obtidos
+        <select formControlName="natureza_descontos_obtidos">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let nat of receitas()" [ngValue]="nat.idnatureza">{{ nat.codigo }} - {{ nat.descricao }}</option>
+        </select>
+      </label>
+    </form>
+  </section>
+</div>

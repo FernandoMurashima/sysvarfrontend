@@ -13,5 +13,7 @@ export interface User {
   loja?: { Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string } | null;
   Idlojas?: number[];
   lojas?: Array<{ Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string }>;
+  permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
+  permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
   password?: string; // write-only no backend; só enviar em criação/alteração de senha
 }

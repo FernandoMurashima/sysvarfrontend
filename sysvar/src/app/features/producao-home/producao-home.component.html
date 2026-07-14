@@ -1,0 +1,167 @@
+<section class="page">
+  <header class="toolbar">
+    <h2>Produção</h2>
+    <div class="toolbar-actions">
+      <button class="btn primary" type="button" (click)="load()">Atualizar</button>
+      <a class="btn" routerLink="/home">Home</a>
+    </div>
+  </header>
+
+  <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <section class="panel actions-panel">
+    <div class="quick-actions">
+      <a class="btn primary" routerLink="/producao/ficha-tecnica">Ficha Técnica</a>
+      <a class="btn primary" routerLink="/producao/ordens">Ordem de Produção</a>
+    </div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi">
+      <span>Abertas</span>
+      <strong>{{ painel?.totais?.abertas || 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Aprovadas</span>
+      <strong>{{ painel?.totais?.aprovadas || 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Em produção</span>
+      <strong>{{ painel?.totais?.em_producao || 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Finalizadas</span>
+      <strong>{{ painel?.totais?.finalizadas || 0 }}</strong>
+    </div>
+  </section>
+
+  <section class="kpis cost-kpis">
+    <div class="kpi">
+      <span>Custo previsto</span>
+      <strong>{{ money(painel?.totais?.custo_previsto) }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Custo real</span>
+      <strong>{{ money(painel?.totais?.custo_real) }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Variação</span>
+      <strong [class.negative]="(painel?.totais?.variacao_custo || 0) > 0" [class.positive]="(painel?.totais?.variacao_custo || 0) < 0">
+        {{ money(painel?.totais?.variacao_custo) }}
+      </strong>
+    </div>
+  </section>
+
+  <section class="kpis faccao-kpis">
+    <div class="kpi">
+      <span>Facção pendente</span>
+      <strong>{{ painel?.faccao?.pendentes || 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Facção enviada</span>
+      <strong>{{ painel?.faccao?.enviadas || 0 }}</strong>
+    </div>
+    <div class="kpi">
+      <span>Facção retornada</span>
+      <strong>{{ painel?.faccao?.retornadas || 0 }}</strong>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h3>OPs recentes</h3>
+      <span>{{ painel?.recentes?.length || 0 }} registro(s)</span>
+    </div>
+    <table class="table" *ngIf="painel?.recentes?.length; else emptyOps">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Produto</th>
+          <th class="num">Qtd</th>
+          <th>Status</th>
+          <th class="num">Previsto</th>
+          <th class="num">Custo real</th>
+          <th class="num">Variação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let op of painel.recentes">
+          <td>{{ op.numero }}</td>
+          <td>{{ op.referencia }} - {{ op.produto }}</td>
+          <td class="num">{{ qtd(op.quantidade) }}</td>
+          <td><span class="badge">{{ statusLabel(op.status) }}</span></td>
+          <td class="num">{{ money(op.custo_previsto) }}</td>
+          <td class="num">{{ money(op.custo_real) }}</td>
+          <td class="num" [class.danger-text]="op.variacao_custo > 0">{{ money(op.variacao_custo) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #emptyOps>
+      <div class="empty">{{ loading ? 'Carregando...' : 'Nenhuma OP cadastrada.' }}</div>
+    </ng-template>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h3>Alertas de insumos</h3>
+      <span>{{ painel?.alertas_insumos?.length || 0 }} alerta(s)</span>
+    </div>
+    <table class="table" *ngIf="painel?.alertas_insumos?.length; else emptyInsumos">
+      <thead>
+        <tr>
+          <th>Insumo</th>
+          <th>Referência</th>
+          <th>Estoque central</th>
+          <th class="num">Necessário</th>
+          <th class="num">Saldo</th>
+          <th class="num">Falta</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of painel.alertas_insumos">
+          <td>{{ item.produto }}</td>
+          <td>{{ item.referencia || '-' }}</td>
+          <td>{{ item.loja_central }}</td>
+          <td class="num">{{ qtd(item.necessario) }}</td>
+          <td class="num">{{ qtd(item.saldo) }}</td>
+          <td class="num danger-text">{{ qtd(item.falta) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #emptyInsumos>
+      <div class="empty">Nenhum alerta de insumo para as OPs em aberto.</div>
+    </ng-template>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h3>Pendências de facção</h3>
+      <span>{{ painel?.pendencias_faccao?.length || 0 }} pendência(s)</span>
+    </div>
+    <table class="table" *ngIf="painel?.pendencias_faccao?.length; else emptyFaccao">
+      <thead>
+        <tr>
+          <th>OP</th>
+          <th>Produto</th>
+          <th>Facção</th>
+          <th>Serviço</th>
+          <th class="num">Qtd</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of painel.pendencias_faccao">
+          <td>{{ item.op }}</td>
+          <td>{{ item.produto }}</td>
+          <td>{{ item.fornecedor || '-' }}</td>
+          <td>{{ item.servico }}</td>
+          <td class="num">{{ qtd(item.quantidade) }}</td>
+          <td><span class="badge warning">{{ statusLabel(item.status) }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #emptyFaccao>
+      <div class="empty">Nenhuma pendência de facção.</div>
+    </ng-template>
+  </section>
+</section>

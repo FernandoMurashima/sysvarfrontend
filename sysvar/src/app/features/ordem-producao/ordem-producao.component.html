@@ -1,0 +1,322 @@
+<section class="page">
+  <header class="toolbar">
+    <h2>Ordens de Produção</h2>
+    <div class="toolbar-actions">
+      <div class="search-box">
+        <input
+          placeholder="Buscar por número, produto ou referência..."
+          [(ngModel)]="search"
+          (ngModelChange)="onSearchInput()"
+          (focus)="onSearchInput()"
+          (blur)="esconderSugestoes()"
+          (keyup.enter)="load()"
+        />
+        <div class="suggestions" *ngIf="showSugestoes">
+          <div class="suggestion muted" *ngIf="loadingSugestoes">Buscando...</div>
+          <button
+            class="suggestion"
+            type="button"
+            *ngFor="let ordem of sugestoesOps"
+            (mousedown)="selecionarSugestao(ordem)"
+          >
+            <strong>{{ ordem.numero }}</strong>
+            <span>{{ ordem.produto_referencia || '-' }} - {{ ordem.produto_descricao }}</span>
+            <small>{{ statusLabel(ordem.status) }} · {{ formatQtd(ordem.quantidade) }} peça(s)</small>
+          </button>
+          <div class="suggestion muted" *ngIf="!loadingSugestoes && !sugestoesOps.length">Nenhuma OP encontrada.</div>
+        </div>
+      </div>
+      <select [(ngModel)]="statusFiltro" (change)="load()">
+        <option value="">Todos</option>
+        <option value="ABERTA">Aberta</option>
+        <option value="APROVADA">Aprovada</option>
+        <option value="EM_PRODUCAO">Em produção</option>
+        <option value="FINALIZADA">Finalizada</option>
+        <option value="CANCELADA">Cancelada</option>
+      </select>
+      <button class="btn primary" type="button" (click)="load()">Buscar</button>
+      <button class="btn" type="button" (click)="search=''; statusFiltro=''; load()">Limpar</button>
+      <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">Nova</button>
+      <a class="btn" routerLink="/home">Home</a>
+    </div>
+  </header>
+
+  <div class="msg success" *ngIf="successMsg">{{ successMsg }}</div>
+  <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <section class="panel form-panel">
+    <div class="panel-title">
+      <h3>{{ ordemAtual?.id ? 'Editar Ordem de Produção' : 'Nova Ordem de Produção' }}</h3>
+      <span class="badge" *ngIf="ordemAtual?.status">{{ statusLabel(ordemAtual?.status) }}</span>
+    </div>
+
+    <div class="form-grid">
+      <label class="field number-field">
+        Número
+        <input [(ngModel)]="form.numero" [disabled]="!canEdit()" placeholder="Automático se vazio" />
+      </label>
+
+      <label class="field ficha-field">
+        Ficha técnica*
+        <select [(ngModel)]="form.ficha_tecnica" [disabled]="!canEdit()" (change)="onFichaChange()">
+          <option [ngValue]="undefined">Selecione</option>
+          <option *ngFor="let ficha of fichas" [ngValue]="ficha.id">{{ ficha.produto_referencia }} - {{ ficha.produto_descricao }} v{{ ficha.versao }}</option>
+        </select>
+      </label>
+
+      <label class="field qty-field">
+        Total da OP
+        <input type="number" min="0" step="0.01" [(ngModel)]="form.quantidade" disabled />
+      </label>
+
+      <label class="field obs-field">
+        Observações
+        <input [(ngModel)]="form.observacoes" [disabled]="!canEdit()" />
+      </label>
+    </div>
+
+    <div class="grade-panel" *ngIf="form.ficha_tecnica">
+      <div class="grade-title">
+        <strong>Grade a produzir</strong>
+        <span>{{ gradeRows.length }} SKU(s)</span>
+      </div>
+      <div class="grade-scroll" *ngIf="gradeRows.length; else emptyGrade">
+        <table class="table grade-table">
+          <thead>
+            <tr>
+              <th>Cor</th>
+              <th>Tamanho</th>
+              <th>Código de barras</th>
+              <th class="num">Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of gradeRows">
+              <td>{{ row.sku.cor_descricao || '-' }}</td>
+              <td>{{ row.sku.tamanho_descricao || '-' }}</td>
+              <td>{{ row.sku.ean13 || '-' }}</td>
+              <td class="num">
+                <input
+                  class="grade-qty"
+                  type="number"
+                  min="0"
+                  step="1"
+                  [(ngModel)]="row.quantidade"
+                  [disabled]="!canEdit()"
+                  (ngModelChange)="recalcularTotalGrade()"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #emptyGrade>
+        <div class="empty">Nenhum SKU ativo encontrado para o produto da ficha técnica.</div>
+      </ng-template>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn primary" type="button" (click)="salvar()" [disabled]="saving || !canEdit()" *ngIf="podeEditarModulo">{{ ordemAtual?.id ? 'Salvar alterações' : 'Criar OP' }}</button>
+      <button class="btn" type="button" (click)="nova()">Cancelar</button>
+      <span class="total-cost" *ngIf="ordemAtual?.id">Custo previsto: <strong>{{ formatMoney(ordemAtual?.custo_previsto) }}</strong></span>
+      <span class="total-cost" *ngIf="ordemAtual?.id">Custo real: <strong>{{ formatMoney(ordemAtual?.custo_real) }}</strong></span>
+    </div>
+
+    <div class="actions-row flow-actions" *ngIf="ordemAtual?.id && podeEditarModulo">
+      <button class="btn primary" type="button" (click)="aprovar()" [disabled]="ordemAtual?.status !== 'ABERTA'">Aprovar</button>
+      <button class="btn primary" type="button" (click)="iniciar()" [disabled]="ordemAtual?.status !== 'APROVADA'">Iniciar produção</button>
+      <button class="btn" type="button" (click)="verificarEstoque()" [disabled]="verificandoEstoque || ordemAtual?.status === 'CANCELADA' || ordemAtual?.status === 'FINALIZADA'">
+        {{ verificandoEstoque ? 'Verificando...' : 'Verificar estoque' }}
+      </button>
+      <button class="btn primary" type="button" (click)="finalizar()" [disabled]="ordemAtual?.status !== 'APROVADA' && ordemAtual?.status !== 'EM_PRODUCAO'">Finalizar</button>
+      <button class="btn danger" type="button" (click)="cancelar()" [disabled]="ordemAtual?.status === 'FINALIZADA' || ordemAtual?.status === 'CANCELADA'">Cancelar OP</button>
+    </div>
+
+    <section class="stock-panel" *ngIf="estoqueValidacao">
+      <div class="grade-title">
+        <strong>Validação de estoque</strong>
+        <span>{{ estoqueValidacao.ok ? 'Estoque suficiente' : estoqueValidacao.faltas.length + ' falta(s)' }}</span>
+      </div>
+      <div class="stock-ok" *ngIf="estoqueValidacao.ok">Insumos disponíveis em {{ estoqueValidacao.loja }}.</div>
+      <table class="table compact-table" *ngIf="!estoqueValidacao.ok">
+        <thead>
+          <tr>
+            <th>Insumo</th>
+            <th>Referência</th>
+            <th>Estoque central</th>
+            <th class="num">Necessário</th>
+            <th class="num">Saldo</th>
+            <th class="num">Falta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let falta of estoqueValidacao.faltas">
+            <td>{{ falta.produto }}</td>
+            <td>{{ falta.referencia || '-' }}</td>
+            <td>{{ falta.loja }}</td>
+            <td class="num">{{ formatQtd(falta.necessario) }}</td>
+            <td class="num">{{ formatQtd(falta.saldo) }}</td>
+            <td class="num cost-alert">{{ formatQtd(falta.falta) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="distribution-alert" *ngIf="ordemAtual?.status === 'FINALIZADA'">
+      <div>
+        <strong>OP finalizada aguardando distribuição</strong>
+        <span>Envie os produtos acabados da fábrica/estoque central para a loja de destino.</span>
+      </div>
+      <button class="btn primary" type="button" (click)="abrirDistribuicao()" *ngIf="podeEditarModulo">Distribuir</button>
+    </section>
+
+    <section class="faccao-panel" *ngIf="itensFaccao().length">
+      <div class="grade-title">
+        <strong>Controle de facção</strong>
+        <span>{{ itensFaccao().length }} serviço(s)</span>
+      </div>
+      <table class="table faccao-table">
+        <thead>
+          <tr>
+            <th>Facção</th>
+            <th>Serviço</th>
+            <th class="num">Qtd enviada</th>
+            <th>Data envio</th>
+            <th>Documento</th>
+            <th class="num">Qtd retorno</th>
+            <th>Data retorno</th>
+            <th class="num">Custo real</th>
+            <th>Status</th>
+            <th *ngIf="podeEditarModulo">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of itensFaccao()">
+            <td>{{ item.fornecedor_nome || '-' }}</td>
+            <td>{{ item.descricao || 'Serviço de facção' }}</td>
+            <td class="num">
+              <input class="mini-input" type="number" min="0" step="0.01" [(ngModel)]="item.quantidade_enviada_faccao" />
+            </td>
+            <td>
+              <input class="date-input" type="date" [(ngModel)]="item.data_envio_faccao" />
+            </td>
+            <td>
+              <input class="doc-input" [(ngModel)]="item.documento_faccao" placeholder="Documento" />
+            </td>
+            <td class="num">
+              <input class="mini-input" type="number" min="0" step="0.01" [(ngModel)]="item.quantidade_retornada_faccao" />
+            </td>
+            <td>
+              <input class="date-input" type="date" [(ngModel)]="item.data_retorno_faccao" />
+            </td>
+            <td class="num">
+              <input class="mini-input" type="number" min="0" step="0.01" [(ngModel)]="item.custo_unitario_real" />
+            </td>
+            <td><span class="badge">{{ statusFaccaoLabel(item.status_faccao) }}</span></td>
+            <td class="actions" *ngIf="podeEditarModulo">
+              <button class="btn sm" type="button" (click)="enviarFaccao(item)" [disabled]="ordemAtual?.status === 'FINALIZADA' || ordemAtual?.status === 'CANCELADA' || item.status_faccao === 'RETORNADO'">Enviar</button>
+              <button class="btn sm primary" type="button" (click)="retornarFaccao(item)" [disabled]="ordemAtual?.status === 'FINALIZADA' || ordemAtual?.status === 'CANCELADA' || item.status_faccao === 'PENDENTE'">Retorno</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <table class="table" *ngIf="(ordemAtual?.itens?.length || 0) > 0; else emptyItens">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Produto / Serviço</th>
+          <th>Un.</th>
+          <th>Qtd base</th>
+          <th>Perda</th>
+          <th>Qtd necessária</th>
+          <th>Custo previsto</th>
+          <th>Custo real</th>
+          <th>Total previsto</th>
+          <th>Total real</th>
+          <th>Variação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of ordemAtual?.itens">
+          <td>{{ item.tipo }}</td>
+          <td>{{ item.produto_descricao || item.fornecedor_nome || item.descricao || '-' }}</td>
+          <td>{{ item.unidade_descricao || '-' }}</td>
+          <td class="num">{{ formatQtd(item.quantidade_base) }}</td>
+          <td class="num">{{ formatQtd(item.perda_percentual || 0) }}%</td>
+          <td class="num">{{ formatQtd(item.quantidade_necessaria) }}</td>
+          <td class="num">{{ formatMoney(item.custo_unitario_previsto) }}</td>
+          <td class="num">{{ formatMoney(item.custo_unitario_real) }}</td>
+          <td class="num">{{ formatMoney(item.custo_total_previsto) }}</td>
+          <td class="num">{{ formatMoney(item.custo_total_real) }}</td>
+          <td class="num" [class.cost-alert]="(item.custo_total_real || 0) > (item.custo_total_previsto || 0)">
+            {{ formatMoney((item.custo_total_real || 0) - (item.custo_total_previsto || 0)) }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <ng-template #emptyItens>
+      <div class="empty">{{ ordemAtual?.id ? 'Nenhum item calculado para esta OP.' : 'Crie a OP para calcular os itens da ficha técnica.' }}</div>
+    </ng-template>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="showDistribuicaoModal && podeEditarModulo">
+    <section class="distribution-modal">
+      <header class="modal-header">
+        <h3>Distribuir OP {{ ordemAtual?.numero }}</h3>
+        <button class="btn sm" type="button" (click)="fecharDistribuicao()">Fechar</button>
+      </header>
+
+      <div class="distribution-form">
+        <label class="field">
+          Loja destino
+          <select [(ngModel)]="distribuicao.loja_destino" aria-label="Loja destino">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let loja of lojasDestino" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+          </select>
+        </label>
+        <label class="field">
+          Documento
+          <input [(ngModel)]="distribuicao.documento" placeholder="Opcional" />
+        </label>
+      </div>
+
+      <div class="grade-scroll" *ngIf="distribuicaoRows.length; else emptyDistribuicao">
+        <table class="table grade-table">
+          <thead>
+            <tr>
+              <th>Cor</th>
+              <th>Tamanho</th>
+              <th>Código de barras</th>
+              <th class="num">Produzido</th>
+              <th class="num">Distribuir</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of distribuicaoRows">
+              <td>{{ row.cor }}</td>
+              <td>{{ row.tamanho }}</td>
+              <td>{{ row.ean }}</td>
+              <td class="num">{{ formatQtd(row.produzido) }}</td>
+              <td class="num">
+                <input class="grade-qty" type="number" min="0" step="1" [(ngModel)]="row.quantidade" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #emptyDistribuicao>
+        <div class="empty">Nenhum SKU produzido encontrado para distribuir.</div>
+      </ng-template>
+
+      <footer class="modal-actions">
+        <button class="btn" type="button" (click)="fecharDistribuicao()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="distribuir()" [disabled]="distribuindo">
+          {{ distribuindo ? 'Distribuindo...' : 'Confirmar distribuição' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+
+</section>

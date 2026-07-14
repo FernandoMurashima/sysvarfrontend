@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CoresService } from '../../core/services/cores.service';
 import { Cor } from '../../core/models/cor';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-cores',
@@ -21,12 +22,14 @@ import { Cor } from '../../core/models/cor';
 export class CoresComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(CoresService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
 
   search = '';
   successMsg = '';
@@ -47,6 +50,10 @@ export class CoresComponent implements OnInit {
   page = 1;
   pageSize = 20;
   pageSizeOptions = [10, 20, 50, 100];
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
   total = 0;
 
   get totalPages(): number {
@@ -122,9 +129,11 @@ export class CoresComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       Descricao: '',
@@ -137,9 +146,11 @@ export class CoresComponent implements OnInit {
   editar(row: Cor): void {
     this.showForm = true;
     this.editingId = (row as any).Idcor ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       Descricao:    row.Descricao ?? '',
@@ -149,11 +160,19 @@ export class CoresComponent implements OnInit {
     });
   }
 
+  consultar(row: Cor): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {

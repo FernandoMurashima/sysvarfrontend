@@ -5,7 +5,7 @@
       <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
       <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
       <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()">Nova movimentação</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Nova movimentação</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -20,7 +20,7 @@
       <p class="modal-text">{{ mov.historico }}</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharCancelamento()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarCancelamento()">Cancelar movimentação</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarCancelamento()">Cancelar movimentação</button>
       </div>
     </section>
   </div>
@@ -32,7 +32,7 @@
       <p class="modal-text">{{ mov.historico }}</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </section>
   </div>
@@ -53,7 +53,7 @@
       <label *ngIf="form.value.destino_tipo === 'CAIXA'">Caixa*<select formControlName="caixa"><option [ngValue]="null">Selecione</option><option *ngFor="let caixa of caixas" [ngValue]="caixa.Idcaixa">{{ caixa.descricao }}</option></select></label>
       <label *ngIf="form.value.destino_tipo === 'CONTA'">Conta bancária*<select formControlName="conta_bancaria"><option [ngValue]="null">Selecione</option><option *ngFor="let conta of contas" [ngValue]="conta.Idconta">{{ conta.descricao }}</option></select></label>
       <div class="form-actions span-2">
-        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="submit" [disabled]="saving">Salvar</button>
         <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
       </div>
     </form>
@@ -72,7 +72,7 @@
             <td>{{ destinoNome(mov) }}</td>
             <td>{{ mov.valor | currency:'BRL' }}</td>
             <td><span class="badge" [ngClass]="statusClass(mov.status)">{{ mov.status }}</span></td>
-            <td class="actions"><button class="btn sm" (click)="editar(mov)">Editar</button><button class="btn sm danger" (click)="cancelarMov(mov)" *ngIf="mov.status !== 'CANCELADA'">Cancelar</button><button class="btn sm danger" (click)="excluir(mov)">Excluir</button></td>
+            <td class="actions"><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(mov)">Editar</button><button class="btn sm danger" (click)="cancelarMov(mov)" *ngIf="podeEditarModulo && mov.status !== 'CANCELADA'">Cancelar</button><button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(mov)">Excluir</button></td>
           </tr>
         </tbody>
       </table>

@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novoGrupo()">Novo Grupo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrupo()">Novo Grupo</button>
       <button class="btn primary" (click)=" goHome()">Home</button>
     </div>
   </header>
@@ -25,7 +25,7 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -41,7 +41,7 @@
 
     <!-- FORM GRUPO (agora controlado por formModeGrupo) -->
     <section class="card form" *ngIf="formModeGrupo !== null || submitted">
-      <h3>{{ formModeGrupo === 'edit' ? 'Editar Grupo' : 'Novo Grupo' }}</h3>
+      <h3>{{ consultandoGrupo ? 'Consultar Grupo' : (formModeGrupo === 'edit' ? 'Editar Grupo' : 'Novo Grupo') }}</h3>
 
       <form [formGroup]="formGrupo" (ngSubmit)="salvarGrupo()">
         <div class="grid-10">
@@ -81,10 +81,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (formGrupo.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultandoGrupo && podeEditarModulo" [disabled]="saving || (formGrupo.invalid && submitted)">
             {{ formModeGrupo === 'edit' ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoGrupo()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoGrupo()">{{ consultandoGrupo ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -101,7 +101,7 @@
             <th>Código</th>
             <th>Descrição</th>
             <th>Margem (%)</th>
-            <th style="width:260px;">Ações</th>
+            <th style="width:330px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -110,9 +110,10 @@
             <td>{{ g.Descricao }}</td>
             <td>{{ g.Margem | number:'1.2-2' }}</td>
             <td class="actions">
-              <button class="btn sm" (click)="editarGrupo(g)">Editar</button>
+              <button class="btn sm" (click)="consultarGrupo(g)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrupo(g)">Editar</button>
               <button class="btn sm" (click)="selecionarGrupo(g.Idgrupo!)">Subgrupos</button>
-              <button class="btn sm danger" (click)="excluirGrupo(g)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirGrupo(g)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -161,10 +162,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="formSubgrupo.invalid">
+          <button class="btn primary" type="submit" *ngIf="!consultandoSubgrupo && podeEditarModulo" [disabled]="formSubgrupo.invalid">
             {{ editingSubgrupoId ? 'Salvar alterações' : 'Adicionar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoSubgrupo()">Limpar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicaoSubgrupo()">{{ consultandoSubgrupo ? 'Voltar' : 'Limpar' }}</button>
           <button class="btn ghost" (click)="fecharSubgrupos()">Fechar</button>
      
         </div>
@@ -180,7 +181,7 @@
           <tr>
             <th>Descrição</th>
             <th>Margem (%)</th>
-            <th style="width:180px;">Ações</th>
+            <th style="width:240px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -188,8 +189,9 @@
             <td>{{ s.Descricao }}</td>
             <td>{{ s.Margem | number:'1.2-2' }}</td>
             <td class="actions">
-              <button class="btn sm" (click)="editarSubgrupo(s)">Editar</button>
-              <button class="btn sm danger" (click)="excluirSubgrupo(s)">Excluir</button>
+              <button class="btn sm" (click)="consultarSubgrupo(s)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarSubgrupo(s)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirSubgrupo(s)">Excluir</button>
             </td>
           </tr>
         </tbody>

@@ -6,7 +6,7 @@
              [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
       <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
       <button class="btn primary" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Novo</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -22,7 +22,7 @@
   </section>
 
   <section class="card form" *ngIf="showForm">
-    <h3>{{ editingId ? 'Editar Conta Contábil' : 'Nova Conta Contábil' }}</h3>
+    <h3>{{ consultando ? 'Consultar Conta Contábil' : (editingId ? 'Editar Conta Contábil' : 'Nova Conta Contábil') }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="empresa-row" *ngIf="isSuperUser">
         <label>
@@ -95,8 +95,8 @@
       </div>
 
       <div class="actions-form">
-        <button class="btn primary" type="submit" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
-        <button class="btn ghost" type="button" (click)="cancelar()">Cancelar</button>
+        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+        <button class="btn ghost" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
       </div>
     </form>
   </section>
@@ -124,7 +124,7 @@
             <th>Nível</th>
             <th>Tipo</th>
             <th>Status</th>
-            <th style="width:140px;">Ações</th>
+            <th style="width:200px;">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -138,8 +138,9 @@
             <td>{{ conta.analitica ? 'Analítica' : 'Sintética' }}</td>
             <td><span class="badge" [ngClass]="conta.ativa ? 'badge-ok' : 'badge-off'">{{ conta.ativa ? 'Ativa' : 'Inativa' }}</span></td>
             <td class="actions">
-              <button class="btn sm" type="button" (click)="editar(conta)">Editar</button>
-              <button class="btn sm danger" type="button" (click)="excluir(conta)">Excluir</button>
+              <button class="btn sm" type="button" (click)="consultar(conta)">Consultar</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" type="button" (click)="editar(conta)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" type="button" (click)="excluir(conta)">Excluir</button>
             </td>
           </tr>
         </tbody>

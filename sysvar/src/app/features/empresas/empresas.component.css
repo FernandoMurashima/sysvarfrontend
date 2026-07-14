@@ -54,7 +54,7 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr 120px auto;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
 }
@@ -63,6 +63,16 @@
   display: grid;
   gap: 4px;
   font-size: 13px;
+  grid-column: span 2;
+}
+
+.field.wide {
+  grid-column: span 3;
+}
+
+.field.uf,
+.field.small {
+  grid-column: span 1;
 }
 
 input,
@@ -72,6 +82,50 @@ select {
   border-radius: 6px;
   padding: 4px 8px;
   background: #fff;
+}
+
+.modules-box {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d7e0eb;
+  border-radius: 6px;
+  background: #f8fbff;
+}
+
+.modules-box strong {
+  margin-right: 6px;
+}
+
+.modules-box label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modules-box input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.modules-box .master {
+  font-weight: 700;
+  color: #081225;
+}
+
+.basic-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e8f4ff;
+  color: #17446f;
+  font-weight: 700;
 }
 
 .invalid input {
@@ -104,6 +158,11 @@ select {
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  margin-top: 2px;
 }
 
 .btn {
@@ -213,6 +272,28 @@ select {
 
 .badge.off {
   background: #64748b;
+}
+
+.module-tags {
+  min-width: 230px;
+}
+
+.module-tags span {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin: 2px 4px 2px 0;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.module-tags em {
+  color: #64748b;
+  font-style: normal;
 }
 
 .empty {

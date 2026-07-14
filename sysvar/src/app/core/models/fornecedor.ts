@@ -18,7 +18,7 @@ export interface Fornecedor {
   telefone2?: string;
   email?: string;
 
-  categoria?: string;
+  categoria?: 'MATERIA_PRIMA' | 'AVIAMENTO' | 'REVENDA' | 'FACCAO' | 'PRESTADOR' | 'TRANSPORTADORA' | 'OUTROS' | string;
   bloqueio?: boolean;
   mala_direta?: boolean;
   conta_contabil?: string;

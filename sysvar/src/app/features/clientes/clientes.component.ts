@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ClientesService } from '../../core/services/clientes.service';
 import { Cliente } from '../../core/models/clientes';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-clientes',
@@ -23,6 +24,7 @@ import { Cliente } from '../../core/models/clientes';
 export class ClientesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(ClientesService);
+  private auth = inject(AuthService);
 
   // ======== Estado geral UI ========
   loading = false;
@@ -30,6 +32,11 @@ export class ClientesComponent implements OnInit {
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('cadastros', true) !== false;
+  }
 
   search = '';
   successMsg = '';
@@ -215,9 +222,11 @@ export class ClientesComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       nome_cliente: '',
@@ -252,9 +261,11 @@ export class ClientesComponent implements OnInit {
   editar(row: Cliente): void {
     this.showForm = true;
     this.editingId = row.id ?? null;
+    this.consultando = false;
     this.submitted = false;
-       this.successMsg = '';
+    this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
 
     // Formatar telefones vindos como dígitos do backend
     const t1 = this.formatPhone(row.telefone1 ?? '');
@@ -290,11 +301,19 @@ export class ClientesComponent implements OnInit {
     });
   }
 
+  consultar(row: Cliente): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {
@@ -406,7 +425,6 @@ export class ClientesComponent implements OnInit {
       'telefone1','telefone2',
       'categoria','aniversario',
       'bloqueio','mala_direta','ativo',
-      'conta_contabil'
     ].forEach(field => {
       const err = f.get(field)?.errors?.['server'];
       if (err) msgs.push(`${field}: ${err}`);

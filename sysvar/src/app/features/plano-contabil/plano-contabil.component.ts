@@ -27,6 +27,7 @@ export class PlanoContabilComponent implements OnInit {
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
   successMsg = '';
   errorMsg = '';
 
@@ -68,6 +69,7 @@ export class PlanoContabilComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get pageStart(): number { return this.total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
 
   ngOnInit(): void {
     this.loadEmpresas();
@@ -116,10 +118,13 @@ export class PlanoContabilComponent implements OnInit {
   }
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       empresa: this.isSuperUser && this.empresas.length === 1 ? this.empresas[0].id ?? null : null,
       codigo: '',
@@ -133,11 +138,14 @@ export class PlanoContabilComponent implements OnInit {
     });
   }
 
-  editar(row: PlanoContabil): void {
+  editar(row: PlanoContabil, modoConsulta = false): void {
+    if (!modoConsulta && !this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = row.id ?? null;
+    this.consultando = modoConsulta;
     this.submitted = false;
     this.successMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       empresa: row.empresa ?? null,
       codigo: row.codigo ?? '',
@@ -151,7 +159,13 @@ export class PlanoContabilComponent implements OnInit {
     });
   }
 
+  consultar(row: PlanoContabil): void {
+    this.editar(row, true);
+    this.form.disable({ emitEvent: false });
+  }
+
   salvar(): void {
+    if (!this.podeEditarModulo) return;
     this.submitted = true;
     if (this.isSuperUser && !this.form.value.empresa) this.form.get('empresa')?.setErrors({ required: true });
     if (this.form.invalid) return;
@@ -185,6 +199,7 @@ export class PlanoContabilComponent implements OnInit {
   }
 
   excluir(row: PlanoContabil): void {
+    if (!this.podeEditarModulo) return;
     if (!row.id || !confirm(`Excluir a conta ${row.codigo} - ${row.descricao}?`)) return;
     this.api.remove(row.id).subscribe({
       next: () => { this.successMsg = 'Conta excluída.'; this.load(); },
@@ -195,7 +210,9 @@ export class PlanoContabilComponent implements OnInit {
   cancelar(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
   }
 
   applyPage(): void {

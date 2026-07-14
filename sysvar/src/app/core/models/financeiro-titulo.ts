@@ -13,6 +13,8 @@ export interface ParcelaFinanceira {
   FormaPagamento?: string | null;
   idconta?: number | null;
   juros?: string | number;
+  multa?: string | number;
+  tarifa?: string | number;
   desconto?: string | number;
   data_baixa?: string | null;
   valor_baixa?: string | number | null;

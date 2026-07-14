@@ -30,6 +30,7 @@ import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/servic
 import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
+import { AuthService } from '../../core/auth.service';
 
 type ItemRef = { id: number; label: string };
 
@@ -69,6 +70,11 @@ export class ProdutosComponent {
   private estoqueApi = inject(EstoqueService);
   private lojasApi = inject(LojasService);
   private skusApi = inject(ProdutoDetalheService);
+  private auth = inject(AuthService);
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
 
   // navegação
   view = signal<'list' | 'form'>('list');
@@ -95,6 +101,7 @@ export class ProdutosComponent {
 
   // lista/pager
   produtos = signal<Produto[]>([]);
+  produtoSkus = signal<ProdutoSku[]>([]);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
@@ -138,6 +145,7 @@ export class ProdutosComponent {
   // form
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
 
   form: FormGroup = this.fb.group({
     // produto
@@ -337,10 +345,10 @@ export class ProdutosComponent {
   // lista/pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1', page_size: 100 }).subscribe({
+    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1,3', page_size: 100 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
-          .filter(p => p.tipo_produto === '1');
+          .filter(p => p.tipo_produto === '1' || p.tipo_produto === '3');
         this.produtos.set(rows);
         this.page.set(1);
       },
@@ -365,6 +373,11 @@ export class ProdutosComponent {
   colecaoLabel(id?: number | null) {
     if (!id) return '';
     return this.colecaoMap.get(id) ?? String(id);
+  }
+
+  tipoProdutoLabel(tipo?: string | null): string {
+    if (tipo === '3') return 'Produto Próprio';
+    return 'Revenda';
   }
 
   lojaId(loja: Loja | any): number | null {
@@ -420,7 +433,10 @@ export class ProdutosComponent {
     this.setViewForm();
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
+    this.produtoSkus.set([]);
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       tipo_produto: '1',
       descricao: '',
@@ -447,7 +463,9 @@ export class ProdutosComponent {
     this.setViewForm();
     this.showForm = true;
     this.editingId = row.Idproduto!;
+    this.consultando = false;
     this.submitted = false;
+    this.form.enable({ emitEvent: false });
 
     this.form.reset({
       tipo_produto: row.tipo_produto ?? '1',
@@ -483,9 +501,18 @@ export class ProdutosComponent {
     this.carregarVinculosProduto(row.Idproduto);
   }
 
+  consultar(row: Produto) {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao() {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
+    this.produtoSkus.set([]);
+    this.form.enable({ emitEvent: false });
     this.form.reset();
   }
 
@@ -526,12 +553,12 @@ export class ProdutosComponent {
     req.subscribe({
       next: (produtoSalvo: any) => {
         const prodId = (produtoSalvo?.Idproduto ?? this.editingId) as number | null;
-        const tipo = (produtoSalvo?.tipo_produto ?? this.form.get('tipo_produto')?.value ?? '1') as '1' | '2';
+        const tipo = (produtoSalvo?.tipo_produto ?? this.form.get('tipo_produto')?.value ?? '1') as '1' | '3';
 
         const idTabela = this.form.get('tabela_preco')?.value as number | null;
         const preco = this.form.get('preco')?.value as number | null;
 
-        if (prodId && idTabela && preco != null && produtoSalvo?.tipo_produto === '1') {
+        if (prodId && idTabela && preco != null && (produtoSalvo?.tipo_produto === '1' || produtoSalvo?.tipo_produto === '3')) {
           this.prodPrecoApi.upsert(idTabela, prodId, Number(preco)).subscribe({
             next: () => this.gerarSkusPosSave(prodId, tipo),
             error: () => {
@@ -559,14 +586,14 @@ export class ProdutosComponent {
     });
   }
 
-  /** Depois de salvar o produto, gera SKUs (ProdutoDetalhe) se for Revenda e tiver cores selecionadas
+  /** Depois de salvar o produto, gera SKUs (ProdutoDetalhe) para produtos vendáveis com cores selecionadas
    *  e, em seguida, cria estoque inicial nas lojas selecionadas (se houver).
    */
-  private gerarSkusPosSave(prodId: number, tipo: '1' | '2') {
+  private gerarSkusPosSave(prodId: number, tipo: '1' | '3') {
     const cores = this.coresSelecionadasIds();
     const lojas = this.lojasSelecionadasIds();
 
-    if (tipo !== '1' || !cores.length) {
+    if (!['1', '3'].includes(tipo) || !cores.length) {
       this.finishSave();
       return;
     }
@@ -600,11 +627,19 @@ export class ProdutosComponent {
     this.lojasSelecionadasIds.set([]);
     this.coresSelecionadasIds.set([]);
     this.coresOriginaisIds.set([]);
+    this.produtoSkus.set([]);
     if (!prodId) return;
 
     this.skusApi.list({ produto: prodId, page_size: 5000 }).subscribe({
       next: (res: any) => {
         const skus = this.arrayOrResults<ProdutoSku>(res);
+        this.produtoSkus.set(
+          skus.slice().sort((a, b) => {
+            const cor = String(a.cor_descricao || '').localeCompare(String(b.cor_descricao || ''));
+            if (cor !== 0) return cor;
+            return String(a.tamanho_descricao || '').localeCompare(String(b.tamanho_descricao || ''), undefined, { numeric: true });
+          })
+        );
         const cores = Array.from(new Set(
           skus
             .map(sku => Number(sku.idcor || 0))
@@ -634,6 +669,7 @@ export class ProdutosComponent {
         this.coresSelecionadasIds.set([]);
         this.coresOriginaisIds.set([]);
         this.lojasSelecionadasIds.set([]);
+        this.produtoSkus.set([]);
       }
     });
   }
@@ -751,6 +787,28 @@ export class ProdutosComponent {
   private showError(message: string): void {
     this.errorMsg.set(message);
     this.successMsg.set(null);
+  }
+
+  toNumber(value: unknown): number {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const raw = String(value).trim();
+    const normalized = raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw;
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  money(value: unknown): string {
+    if (value === null || value === undefined || value === '') return 'Restrito';
+    return this.toNumber(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  percent(value: unknown): string {
+    if (value === null || value === undefined || value === '') return 'Restrito';
+    return `${this.toNumber(value).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}%`;
   }
 
   // overlay

@@ -6,7 +6,7 @@
              [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -19,7 +19,7 @@
       <p>Confirma a exclusão da natureza <strong>{{ natureza.codigo }} - {{ natureza.descricao }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -35,7 +35,7 @@
 
     <!-- Form -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Natureza' : 'Nova Natureza' }}</h3>
+      <h3>{{ consultando ? 'Consultar Natureza' : (editingId ? 'Editar Natureza' : 'Nova Natureza') }}</h3>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="empresa-row" *ngIf="isSuperUser">
@@ -187,10 +187,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -221,7 +221,7 @@
               <th>Tipo Natureza</th>
               <th>Conta</th>
               <th>Descrição</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -245,8 +245,9 @@
               <td>{{ contaLabel(n) }}</td>
               <td class="email">{{ n.descricao }}</td>
               <td class="actions">
-                <button class="btn sm" (click)="editar(n)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(n)">Excluir</button>
+                <button class="btn sm" (click)="consultar(n)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(n)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(n)">Excluir</button>
               </td>
             </tr>
           </tbody>

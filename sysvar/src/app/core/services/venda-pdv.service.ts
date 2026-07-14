@@ -7,6 +7,7 @@ import {
   CupomPdv,
   FinalizarDevolucaoVendaPayload,
   FinalizarVendaPdvPayload,
+  RelatorioMargem,
   RelatorioVendas,
   VendaDevolucao,
   VendaDevolucaoConsulta,
@@ -32,6 +33,14 @@ export class VendaPdvService {
       if (value !== null && value !== undefined && value !== '') query[key] = String(value);
     });
     return this.http.get<RelatorioVendas>(`${this.base}/vendas-pdv/relatorio-vendas/`, { params: query });
+  }
+
+  relatorioMargem(params?: Record<string, string | number | null | undefined>): Observable<RelatorioMargem> {
+    const query: Record<string, string> = {};
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') query[key] = String(value);
+    });
+    return this.http.get<RelatorioMargem>(`${this.base}/vendas-pdv/relatorio-margem/`, { params: query });
   }
 
   vendasDevolviveis(params?: Record<string, string | number | null | undefined>): Observable<VendaDevolucaoConsulta[]> {

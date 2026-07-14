@@ -32,6 +32,7 @@ export class NatLancamentosComponent implements OnInit {
 
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
 
   successMsg = '';
   errorMsg = '';
@@ -97,6 +98,7 @@ export class NatLancamentosComponent implements OnInit {
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
 
   get isSuperUser(): boolean { return !!this.auth.getCurrentUser()?.is_superuser; }
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
 
   ngOnInit(): void {
     this.loadEmpresas();
@@ -170,10 +172,13 @@ export class NatLancamentosComponent implements OnInit {
   clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       codigo: '', categoria_principal: '', subcategoria: '',
       descricao: '', tipo: 'OPERACIONAL', status: 'ATIVO', tipo_natureza: 'DEBITO',
@@ -183,11 +188,14 @@ export class NatLancamentosComponent implements OnInit {
     });
   }
 
-  editar(row: NatLancamento): void {
+  editar(row: NatLancamento, modoConsulta = false): void {
+    if (!modoConsulta && !this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = row.idnatureza ?? null;
+    this.consultando = modoConsulta;
     this.submitted = false;
     this.successMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       codigo: row.codigo ?? '',
       categoria_principal: row.categoria_principal ?? '',
@@ -207,14 +215,22 @@ export class NatLancamentosComponent implements OnInit {
     });
   }
 
+  consultar(row: NatLancamento): void {
+    this.editar(row, true);
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {
+    if (!this.podeEditarModulo) return;
     this.submitted = true;
     if (this.isSuperUser && !this.form.get('empresa')?.value) {
       this.form.get('empresa')?.setErrors({ required: true });
@@ -256,12 +272,14 @@ export class NatLancamentosComponent implements OnInit {
   }
 
   excluir(row: NatLancamento): void {
+    if (!this.podeEditarModulo) return;
     const id = row.idnatureza;
     if (!id) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeEditarModulo) return;
     const row = this.excluirModal;
     const id = row?.idnatureza;
     if (!id) return;

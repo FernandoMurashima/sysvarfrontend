@@ -27,12 +27,19 @@ export interface Loja {
   EstoqueNegativo?: string;   // "SIM" | "NAO" | null
   Rede?: string;              // "SIM" | "NAO" | null
   Matriz?: string;            // "SIM" | "NAO" | null
+  tipo_unidade?: 'LOJA' | 'MATRIZ' | 'FABRICA' | string | null;
+  regime_tributario?: 'SIMPLES' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | string | null;
+  ambiente_fiscal?: 'HOMOLOGACAO' | 'PRODUCAO' | string | null;
+  inscricao_estadual?: string | null;
+  serie_nfce?: number;
+  proximo_numero_nfce?: number;
+  serie_nfe?: number;
+  proximo_numero_nfe?: number;
+  emite_nfce?: boolean;
+  emite_nfe?: boolean;
+  ativo?: boolean;
   DataAbertura?: string | null;    // yyyy-MM-dd
   DataEnceramento?: string | null;  // yyyy-MM-dd
-
-  // nome do backend é ContaContabil; no form usamos conta_contabil
-  ContaContabil?: string | null;
-  conta_contabil?: string | null;
 
   data_cadastro?: string;
 }

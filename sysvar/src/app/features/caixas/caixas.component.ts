@@ -10,6 +10,7 @@ import { MovimentacaoFinanceira } from '../../core/models/movimentacao-financeir
 import { CaixasService } from '../../core/services/caixas.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-caixas',
@@ -23,6 +24,7 @@ export class CaixasComponent implements OnInit {
   private api = inject(CaixasService);
   private lojasApi = inject(LojasService);
   private movsApi = inject(MovimentacoesFinanceirasService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
@@ -42,6 +44,10 @@ export class CaixasComponent implements OnInit {
   dataFim = '';
   transferindo = false;
   excluirModal: Caixa | null = null;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
 
   form = this.fb.group({
     tipo_caixa: ['LOJA' as 'LOJA' | 'MASTER', Validators.required],

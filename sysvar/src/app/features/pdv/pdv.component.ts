@@ -213,8 +213,12 @@ export class PdvComponent implements OnInit {
     return this.moeda(Math.max(0, this.total - this.totalPago));
   }
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('vendas', true) !== false;
+  }
+
   get podeFinalizarVenda(): boolean {
-    return !this.finalizando && this.carrinho.length > 0 && this.totalPago + 0.009 >= this.total;
+    return this.podeEditarModulo && !this.finalizando && this.carrinho.length > 0 && this.totalPago + 0.009 >= this.total;
   }
 
   get cashbackUsado(): number {
@@ -294,7 +298,7 @@ export class PdvComponent implements OnInit {
   }
 
   get podeAbrirPdv(): boolean {
-    return ['caixa', 'gerente', 'admin', 'administrador'].includes(this.usuarioTipoNormalizado());
+    return this.podeEditarModulo && ['caixa', 'gerente', 'admin', 'administrador'].includes(this.usuarioTipoNormalizado());
   }
 
   load(): void {
@@ -324,7 +328,9 @@ export class PdvComponent implements OnInit {
         this.formas = this.unwrap<FormaPagamento>(data.formas);
         this.cashbackConfig = data.cashback ?? null;
         this.cashbackAtivo = !!data.cashback?.ativo;
-        this.produtos = this.unwrap<Produto>(data.produtos).filter(p => p.tipo_produto === '1' && p.ativo !== false && p.bloqueado_venda !== true);
+        this.produtos = this.unwrap<Produto>(data.produtos).filter(p =>
+          ['1', '3'].includes(p.tipo_produto) && p.ativo !== false && p.bloqueado_venda !== true
+        );
         this.skus = this.unwrap<ProdutoSku>(data.skus).filter(s => s.ativo !== false && s.bloqueado_venda !== true);
         this.estoques = this.unwrap<Estoque>(data.estoques);
         this.precos = this.unwrap<TabelaPrecoProduto>(data.precos);
@@ -446,6 +452,10 @@ export class PdvComponent implements OnInit {
   }
 
   lancarProdutoConsulta(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     const sku = this.skusConsultaSelecionada.find(item => item.ean13 === this.skuConsultaEan);
     if (!sku) {
       this.errorMsg = 'Selecione uma cor/tamanho para lançar.';
@@ -467,6 +477,10 @@ export class PdvComponent implements OnInit {
   }
 
   iniciarVenda(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (!this.pdvAberto || !this.lojaId || !this.caixaId) {
       this.errorMsg = 'Abra o PDV antes de iniciar a venda.';
       return;
@@ -488,6 +502,10 @@ export class PdvComponent implements OnInit {
   }
 
   cancelarVenda(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (this.carrinho.length) {
       this.confirmacaoPdv = {
         tipo: 'cancelar-venda',
@@ -558,12 +576,20 @@ export class PdvComponent implements OnInit {
   }
 
   adicionarSelecionado(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (!this.vendaIniciada) return;
     if (!this.selecionado || !this.skuSelecionado) return;
     this.adicionarSku(this.skuSelecionado.ean13, 1);
   }
 
   adicionarCodigoRapido(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (!this.vendaIniciada) {
       this.errorMsg = 'Inicie a venda antes de lançar itens.';
       return;
@@ -575,6 +601,10 @@ export class PdvComponent implements OnInit {
   }
 
   adicionarSku(ean: string, quantidade = 1): boolean {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return false;
+    }
     if (!this.vendaIniciada) {
       this.errorMsg = 'Inicie a venda antes de lançar itens.';
       return false;
@@ -625,6 +655,10 @@ export class PdvComponent implements OnInit {
   }
 
   removerItem(index: number): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     this.carrinho.splice(index, 1);
     this.sugerirPagamentoTotal();
   }
@@ -650,6 +684,10 @@ export class PdvComponent implements OnInit {
   }
 
   abrirTroca(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (!this.clienteId || this.clienteEhPadrao(this.clienteId)) {
       this.errorMsg = 'Troca exige cliente identificado.';
       return;
@@ -739,6 +777,10 @@ export class PdvComponent implements OnInit {
   }
 
   finalizarTroca(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (!this.trocaVenda) return;
     const itens = this.trocaVenda.itens
       .map(item => ({ venda_item: item.id, quantidade: Math.trunc(Number(this.trocaQuantidades[item.id] || 0)) }))
@@ -839,12 +881,20 @@ export class PdvComponent implements OnInit {
   }
 
   adicionarPagamento(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     const pagamento = this.novoPagamento('DINHEIRO');
     pagamento.valor = Number(this.saldoPendente.toFixed(2));
     this.pagamentos.push(pagamento);
   }
 
   removerPagamento(index: number): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     if (this.pagamentos.length === 1) {
       this.pagamentos[0] = this.novoPagamento('DINHEIRO');
       return;
@@ -879,6 +929,10 @@ export class PdvComponent implements OnInit {
   }
 
   finalizar(): void {
+    if (!this.podeEditarModulo) {
+      this.errorMsg = 'Seu usuário tem acesso apenas para consulta em vendas.';
+      return;
+    }
     const pagamentos = this.pagamentosValidos();
     if (!this.lojaId || !this.caixaId || !this.clienteId || !this.vendedorId || this.carrinho.length === 0) {
       this.errorMsg = 'Informe loja, caixa, cliente, vendedor e ao menos um item.';

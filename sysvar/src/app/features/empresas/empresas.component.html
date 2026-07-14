@@ -30,7 +30,7 @@
   </div>
 
   <section class="panel" *ngIf="showForm">
-    <h3>{{ editingId ? 'Editar empresa' : 'Nova empresa' }}</h3>
+    <h3>{{ consultando ? 'Consultar empresa' : (editingId ? 'Editar empresa' : 'Nova empresa') }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
       <label class="field wide" [class.invalid]="form.get('nome')?.invalid && (form.get('nome')?.touched || submitted)">
         Razão social*
@@ -51,6 +51,44 @@
           <option [ngValue]="false">Inativa</option>
         </select>
       </label>
+      <div class="modules-box">
+        <strong>Licença básica</strong>
+        <span class="basic-tag">Cadastros</span>
+        <span class="basic-tag">Produtos</span>
+        <span class="basic-tag">Relatórios</span>
+        <span class="basic-tag">Configurações</span>
+      </div>
+      <div class="modules-box">
+        <strong>Módulos contratados</strong>
+        <label class="master">
+          <input type="checkbox" formControlName="licenca_master" (change)="onMasterChange()" />
+          Todos / Master
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_vendas" />
+          Vendas
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_compras" />
+          Compras
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_estoque" />
+          Estoque
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_financeiro" />
+          Financeiro
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_fiscal" />
+          Fiscal
+        </label>
+        <label>
+          <input type="checkbox" formControlName="usa_producao" />
+          Produção
+        </label>
+      </div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>
         <ul>
@@ -58,8 +96,8 @@
         </ul>
       </div>
       <div class="form-actions">
-        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
-        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
+        <button class="btn primary" type="submit" *ngIf="!consultando" [disabled]="saving">Salvar</button>
+        <button class="btn" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
       </div>
     </form>
   </section>
@@ -86,6 +124,7 @@
           <th>Nome fantasia</th>
           <th>Documento</th>
           <th>Status</th>
+          <th>Módulos</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -99,7 +138,14 @@
               {{ empresa.ativo === false ? 'Inativa' : 'Ativa' }}
             </span>
           </td>
+          <td class="module-tags">
+            <ng-container *ngIf="modulosLabel(empresa).length; else basicOnly">
+              <span *ngFor="let modulo of modulosLabel(empresa)">{{ modulo }}</span>
+            </ng-container>
+            <ng-template #basicOnly><em>Básico</em></ng-template>
+          </td>
           <td class="actions">
+            <button class="btn sm" type="button" (click)="consultar(empresa)">Consultar</button>
             <button class="btn sm" type="button" (click)="editar(empresa)">Editar</button>
             <button class="btn sm" type="button" (click)="alternarAtivo(empresa)">
               {{ empresa.ativo === false ? 'Ativar' : 'Inativar' }}

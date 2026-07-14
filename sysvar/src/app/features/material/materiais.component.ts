@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MateriaisService } from '../../core/services/material.service';
 import { Material } from '../../core/models/material';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-materiais',
@@ -16,6 +17,7 @@ import { Material } from '../../core/models/material';
 export class MateriaisComponent {
   private fb = inject(FormBuilder);
   private api = inject(MateriaisService);
+  private auth = inject(AuthService);
 
   search = '';
   loading = signal(false);
@@ -39,9 +41,11 @@ export class MateriaisComponent {
     const start = (this.page() - 1) * this.pageSize();
     return this.items().slice(start, start + this.pageSize());
   });
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
 
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
   form: FormGroup = this.fb.group({
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
     Codigo: [null, [Validators.maxLength(10)]],
@@ -71,12 +75,18 @@ export class MateriaisComponent {
   lastPage() { this.page.set(this.totalPages()); }
 
   novo() {
+    if (!this.podeEditarModulo) return;
     this.showForm = true; this.editingId = null; this.submitted = false;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({ Descricao: '', Codigo: null, Status: null });
   }
 
-  editar(row: Material) {
+  editar(row: Material, modoConsulta = false) {
+    if (!modoConsulta && !this.podeEditarModulo) return;
     this.showForm = true; this.editingId = row.Idmaterial ?? null; this.submitted = false;
+    this.consultando = modoConsulta;
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       Descricao: row.Descricao ?? '',
       Codigo: row.Codigo ?? null,
@@ -84,9 +94,15 @@ export class MateriaisComponent {
     });
   }
 
-  cancelarEdicao() { this.showForm = false; this.editingId = null; this.form.reset(); }
+  consultar(row: Material) {
+    this.editar(row, true);
+    this.form.disable({ emitEvent: false });
+  }
+
+  cancelarEdicao() { this.showForm = false; this.editingId = null; this.consultando = false; this.form.enable({ emitEvent: false }); this.form.reset(); }
 
   salvar() {
+    if (!this.podeEditarModulo) return;
     this.submitted = true;
     if (this.form.invalid) { this.openErrorOverlay(); return; }
     const body: Partial<Material> = this.form.value;
@@ -107,11 +123,13 @@ export class MateriaisComponent {
   }
 
   excluir(row: Material) {
+    if (!this.podeEditarModulo) return;
     if (!row.Idmaterial) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeEditarModulo) return;
     const row = this.excluirModal;
     if (!row?.Idmaterial) return;
     this.api.delete(row.Idmaterial).subscribe(() => {

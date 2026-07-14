@@ -14,7 +14,7 @@
       <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -48,7 +48,27 @@
       </label>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharAprovacao()">Voltar</button>
-        <button class="btn primary" type="button" (click)="confirmarAprovacao()">Aprovar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarAprovacao()">Aprovar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="naturezaModal">
+    <section class="modal-card">
+      <h3>Natureza do pedido</h3>
+      <p class="modal-text">Confira ou altere a natureza financeira usada no contas a pagar.</p>
+      <label>
+        Natureza de lançamento
+        <select [(ngModel)]="naturezaModal.idnatureza">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let n of naturezasCompra" [ngValue]="n.idnatureza">
+            {{ naturezaLabel(n) }}
+          </option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="fecharNatureza()">Voltar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarNatureza()">Salvar</button>
       </div>
     </section>
   </div>
@@ -82,6 +102,7 @@
             <th class="col-fornecedor">Fornecedor</th>
             <th class="col-emissao">Emissão</th>
             <th class="col-status">Status</th>
+            <th class="col-natureza">Natureza</th>
             <th class="col-total">Total</th>
             <th class="col-acoes-list">Ações</th>
           </tr>
@@ -93,22 +114,34 @@
             <td>{{ labelFornecedor(p.fornecedor) }}</td>
             <td>{{ p.emissao }}</td>
             <td>
-              <span class="badge" [ngClass]="p.status === 'AP' ? 'badge-ok' : 'badge-off'">
+              <span class="badge" [ngClass]="['AP', 'AT'].includes((p.status || '').toUpperCase()) ? 'badge-ok' : 'badge-off'">
                 {{ p.status }}
               </span>
             </td>
+            <td>{{ p.natureza_label || '-' }}</td>
             <td>{{ p.total_pedido | number : '1.2-2' }}</td>
-            <td>
+            <td class="actions-cell">
+              <div class="actions-list-cell">
               <button
                 class="btn sm"
                 type="button"
+                (click)="consultarPedido(p)"
+              >
+                Consultar
+              </button>
+              <button
+                class="btn sm"
+                *ngIf="podeEditarModulo"
+                type="button"
                 (click)="editarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
+                style="margin-left:4px;"
               >
                 Editar
               </button>
               <button
                 class="btn sm danger"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="excluirPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -118,6 +151,7 @@
               </button>
               <button
                 class="btn sm"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="aprovarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -127,6 +161,17 @@
               </button>
               <button
                 class="btn sm"
+                *ngIf="podeEditarModulo"
+                type="button"
+                (click)="editarNaturezaPedido(p)"
+                [disabled]="!['AP', 'AT'].includes((p.status || '').toUpperCase())"
+                style="margin-left:4px;"
+              >
+                Natureza
+              </button>
+              <button
+                class="btn sm"
+                *ngIf="podeEditarModulo"
                 type="button"
                 (click)="cancelarPedido(p)"
                 [disabled]="(p.status || '').toUpperCase() !== 'AB'"
@@ -134,6 +179,7 @@
               >
                 Cancelar
               </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -163,7 +209,7 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>Novo Pedido de Uso / Consumo</h3>
+    <h3>{{ consultando ? 'Consultar Pedido de Uso / Consumo' : (pedidoAtualId() ? 'Editar Pedido de Uso / Consumo' : 'Novo Pedido de Uso / Consumo') }}</h3>
 
     <!-- Cabeçalho -->
     <form [formGroup]="headerForm" novalidate>
@@ -239,21 +285,26 @@
     <!-- ITENS -->
     <h3>Itens do Pedido</h3>
 
-    <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()">
+    <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando">
       <div class="grid-12 itens-grid">
         <!-- Linha única: produto, quantidade, preço, desconto, total -->
         <label class="input-item product-entry">
           Produto*
-          <input
-            type="text"
-            formControlName="produto_input"
-            autocomplete="off"
-            placeholder="Digite descrição, referência ou código"
-            (input)="buscarSugestoesProduto()"
-            (focus)="buscarSugestoesProduto()"
-            (blur)="fecharSugestoesProdutoComAtraso()"
-            (keyup.enter)="onProdutoBlur()"
-          />
+          <div class="product-line">
+            <input
+              type="text"
+              formControlName="produto_input"
+              autocomplete="off"
+              placeholder="Digite descrição, referência ou código"
+              (input)="buscarSugestoesProduto()"
+              (focus)="buscarSugestoesProduto()"
+              (blur)="fecharSugestoesProdutoComAtraso()"
+              (keyup.enter)="onProdutoBlur()"
+            />
+            <button class="btn" type="button" (click)="abrirConsultaProdutos()">
+              {{ produtoConsultaAberta ? 'Fechar' : 'Consultar' }}
+            </button>
+          </div>
           <div class="product-suggestions" *ngIf="produtoSugestoesAbertas && produtosSugestoes.length">
             <button
               type="button"
@@ -262,14 +313,15 @@
               (mousedown)="selecionarProdutoSugestao(p)"
             >
               <strong>{{ p.descricao }}</strong>
-              <span>{{ p.referencia || (p.Idproduto ?? p.id) }}</span>
+              <span>{{ p.referencia || (p.Idproduto ?? p.id) }} · {{ produtoTipoLabel(p) }}</span>
             </button>
           </div>
         </label>
 
         <label class="input-item numeric-entry">
           Quantidade*
-          <input type="number" formControlName="quantidade" min="1" />
+          <input type="number" formControlName="quantidade" min="0.001" step="0.001" />
+          <small class="field-hint" *ngIf="unidadeProdutoSelecionadoLabel()">{{ unidadeProdutoSelecionadoLabel() }}</small>
         </label>
 
         <label class="input-item numeric-entry">
@@ -296,6 +348,50 @@
           Limpar item
         </button>
       </div>
+
+      <section class="product-lookup" *ngIf="produtoConsultaAberta">
+        <div class="lookup-head">
+          <strong>Consulta de produtos de uso/consumo e insumos</strong>
+          <div class="lookup-search">
+            <input
+              type="text"
+              [(ngModel)]="produtoConsultaSearch"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Buscar descrição, referência ou código"
+              (keyup.enter)="buscarConsultaProdutos()"
+            />
+            <button class="btn primary" type="button" (click)="buscarConsultaProdutos()">Buscar</button>
+          </div>
+        </div>
+
+        <div class="lookup-table">
+          <table class="table" *ngIf="produtosConsulta.length; else produtosConsultaVazia">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Referência</th>
+                <th>Tipo</th>
+                <th>Custo médio</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of produtosConsulta">
+                <td>{{ p.descricao }}</td>
+                <td>{{ p.referencia || '-' }}</td>
+                <td><span class="badge badge-info">{{ produtoTipoLabel(p) }}</span></td>
+                <td>{{ (p.custo_medio || 0) | number : '1.2-2' }}</td>
+                <td class="lookup-actions">
+                  <button class="btn sm primary" type="button" (click)="selecionarProdutoConsulta(p)">Selecionar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #produtosConsultaVazia>
+            <div class="empty-hint">{{ carregandoProdutosConsulta ? 'Carregando produtos...' : 'Nenhum produto encontrado.' }}</div>
+          </ng-template>
+        </div>
+      </section>
     </form>
 
     <div class="table-wrapper itens-wrapper">
@@ -307,17 +403,17 @@
             <th class="col-preco">Preço</th>
             <th class="col-desc">Desc</th>
             <th class="col-total">Total</th>
-            <th class="col-acoes">Ações</th>
+            <th class="col-acoes" *ngIf="!consultando && podeEditarModulo">Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let it of itens">
             <td>{{ it.produto_label || '—' }}</td>
-            <td>{{ it.quantidade | number : '1.0-0' }}</td>
+            <td>{{ it.quantidade | number : '1.0-3' }}</td>
             <td>{{ it.preco_unit | number : '1.2-2' }}</td>
             <td>{{ it.desconto_valor | number : '1.2-2' }}</td>
             <td>{{ it.total_item | number : '1.2-2' }}</td>
-            <td>
+            <td *ngIf="!consultando && podeEditarModulo">
               <button class="btn sm" type="button" (click)="editarItem(it)">Editar</button>
               <button class="btn sm danger" type="button" (click)="removerItem(it)" style="margin-left:4px;">
                 Remover
@@ -335,11 +431,11 @@
 
     <!-- AÇÕES FINAIS DO PEDIDO -->
     <div class="actions-form">
-      <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving">
+      <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving" *ngIf="!consultando && podeEditarModulo">
         Gravar pedido
       </button>
       <button class="btn ghost" type="button" (click)="cancelar()">
-        Cancelar
+        {{ consultando ? 'Voltar' : 'Cancelar' }}
       </button>
     </div>
   </section>

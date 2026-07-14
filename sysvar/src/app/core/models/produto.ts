@@ -1,7 +1,7 @@
 export interface Produto {
   Idproduto?: number;
-  tipo_produto: '1' | '2';        // '1' Revenda | '2' Uso/Consumo
-  referencia?: string | null;     // read-only (gerada no back p/ Revenda)
+  tipo_produto: '1' | '2' | '3' | '4'; // Revenda | Uso/Consumo | Produto Próprio | Insumo
+  referencia?: string | null;     // read-only (gerada no back p/ produtos vendáveis)
 
   descricao: string;
   descricao_reduzida?: string | null;

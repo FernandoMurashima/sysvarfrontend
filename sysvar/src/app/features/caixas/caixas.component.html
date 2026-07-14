@@ -26,7 +26,7 @@
       <input type="text" placeholder="Buscar caixa, loja..." [(ngModel)]="search" (keyup.enter)="filtrarCaixas()" />
       <button class="btn primary" type="button" (click)="filtrarCaixas()">Buscar</button>
       <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()">Novo caixa</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Novo caixa</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -41,7 +41,7 @@
       <p class="modal-text">Confirma a exclusão deste caixa?</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="cancelarExclusao()">Cancelar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </section>
   </div>
@@ -73,7 +73,7 @@
       <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
 
       <div class="form-actions span-2">
-        <button class="btn primary" type="submit" [disabled]="saving">Salvar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="submit" [disabled]="saving">Salvar</button>
         <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
       </div>
     </form>
@@ -110,7 +110,7 @@
     <button class="btn primary" type="button" (click)="loadMovimentacoes()">Atualizar extrato</button>
   </section>
 
-  <section class="panel transfer-panel" [formGroup]="transferenciaForm">
+  <section class="panel transfer-panel" *ngIf="podeEditarModulo" [formGroup]="transferenciaForm">
     <strong>Transferência</strong>
     <select formControlName="caixa_origem" aria-label="Caixa de origem" (change)="sincronizarOrigemTransferencia()">
       <option [ngValue]="null">Origem</option>
@@ -161,8 +161,8 @@
             <td [class.negative]="(+caixa.saldo_atual || 0) < 0">{{ caixa.saldo_atual | currency:'BRL' }}</td>
             <td><span class="badge" [ngClass]="caixa.ativo ? 'ok' : 'off'">{{ caixa.ativo ? 'Ativo' : 'Inativo' }}</span></td>
             <td class="actions" (click)="$event.stopPropagation()">
-              <button class="btn sm" (click)="editar(caixa)">Editar</button>
-              <button class="btn sm danger" (click)="excluir(caixa)">Excluir</button>
+              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(caixa)">Editar</button>
+              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(caixa)">Excluir</button>
             </td>
           </tr>
         </tbody>

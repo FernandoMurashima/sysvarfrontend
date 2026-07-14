@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NcmsService } from '../../core/services/ncms.service';
 import { Ncm } from '../../core/models/ncm';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-ncms',
@@ -16,6 +17,7 @@ import { Ncm } from '../../core/models/ncm';
 export class NcmsComponent {
   private fb = inject(FormBuilder);
   private api = inject(NcmsService);
+  private auth = inject(AuthService);
 
   search = '';
   loading = signal(false);
@@ -40,13 +42,20 @@ export class NcmsComponent {
     return this.items().slice(start, start + this.pageSize());
   });
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('fiscal', true) !== false;
+  }
+
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
   form: FormGroup = this.fb.group({
     ncm: [null, [Validators.required, Validators.pattern(/^\d{4}\.\d{2}\.\d{2}$/)]],
     descricao: ['', [Validators.required, Validators.maxLength(1000)]],
+    categoria: ['OUTROS', Validators.required],
     aliquota: [null],
     campo1: [null, [Validators.maxLength(25)]],
+    ativo: [true],
   });
 
   constructor() {
@@ -73,21 +82,33 @@ export class NcmsComponent {
 
   novo() {
     this.showForm = true; this.editingId = null; this.submitted = false;
-    this.form.reset({ ncm: null, descricao: '', aliquota: null, campo1: null });
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
+    this.form.reset({ ncm: null, descricao: '', categoria: 'OUTROS', aliquota: null, campo1: null, ativo: true });
   }
 
   editar(row: Ncm) {
     this.showForm = true; this.editingId = row.id ?? null; this.submitted = false;
+    this.consultando = false;
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       ncm: row.ncm ?? null,
       descricao: row.descricao ?? '',
+      categoria: row.categoria ?? 'OUTROS',
       aliquota: row.aliquota ?? null,
       campo1: row.campo1 ?? null,
+      ativo: row.ativo !== false,
     });
   }
 
+  consultar(row: Ncm) {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
+  }
+
   cancelarEdicao() {
-    this.showForm = false; this.editingId = null; this.form.reset();
+    this.showForm = false; this.editingId = null; this.consultando = false; this.form.enable({ emitEvent: false }); this.form.reset();
   }
 
   salvar() {
@@ -142,9 +163,14 @@ export class NcmsComponent {
       if (f['descricao'].errors?.['required']) msgs.push('Descrição: obrigatória.');
       if (f['descricao'].errors?.['maxlength']) msgs.push('Descrição: máx. 1000 caracteres.');
     }
+    if (f['categoria']?.invalid) msgs.push('Categoria: obrigatória.');
     if (f['campo1']?.invalid && f['campo1'].errors?.['maxlength']) msgs.push('Campo1: máx. 25 caracteres.');
     for (const k of Object.keys(f)) if ((f as any)[k].errors?.['server']) msgs.push(`${k}: ${(f as any)[k].errors?.['server']}`);
     return msgs;
+  }
+
+  categoriaLabel(v: string | null | undefined): string {
+    return ({ VESTUARIO: 'Vestuário', TECIDO: 'Tecidos', AVIAMENTO: 'Aviamentos', EMBALAGEM: 'Embalagens', OUTROS: 'Outros' } as any)[v || ''] || 'Outros';
   }
 
   openErrorOverlay() { this.errorOverlayOpen.set(true); }

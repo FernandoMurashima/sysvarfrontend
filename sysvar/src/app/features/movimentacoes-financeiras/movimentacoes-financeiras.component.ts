@@ -16,6 +16,7 @@ import { FormasPagamentoService } from '../../core/services/formas-pagamento.ser
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-movimentacoes-financeiras',
@@ -32,6 +33,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   private contasApi = inject(ContasBancariasService);
   private naturezaApi = inject(NatLancamentosService);
   private formasApi = inject(FormasPagamentoService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
@@ -49,6 +51,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   formas: FormaPagamento[] = [];
   cancelarModal: MovimentacaoFinanceira | null = null;
   excluirModal: MovimentacaoFinanceira | null = null;
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
 
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],
@@ -96,6 +99,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = null;
     this.form.reset({
@@ -115,6 +119,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   editar(item: MovimentacaoFinanceira): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.editingId = item.Idmovimentacao ?? null;
     this.form.reset({
@@ -134,6 +139,7 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   salvar(): void {
+    if (!this.podeEditarModulo) return;
     this.ajustarNaturezaPorTipo();
     if (this.form.invalid) {
       this.errorMsg = 'Revise os campos obrigatórios.';
@@ -180,11 +186,13 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   cancelarMov(item: MovimentacaoFinanceira): void {
+    if (!this.podeEditarModulo) return;
     if (!item.Idmovimentacao) return;
     this.cancelarModal = item;
   }
 
   confirmarCancelamento(): void {
+    if (!this.podeEditarModulo) return;
     const id = this.cancelarModal?.Idmovimentacao;
     if (!id) return;
     this.api.cancelar(id).subscribe({
@@ -202,11 +210,13 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   }
 
   excluir(item: MovimentacaoFinanceira): void {
+    if (!this.podeEditarModulo) return;
     if (!item.Idmovimentacao) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeEditarModulo) return;
     const id = this.excluirModal?.Idmovimentacao;
     if (!id) return;
     this.api.remove(id).subscribe({

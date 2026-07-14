@@ -1,0 +1,134 @@
+<section class="margem-page">
+  <div class="toolbar">
+    <h2>Margem / CMV</h2>
+    <div class="toolbar-actions">
+      <button type="button" class="btn secondary" (click)="alternarTelaCheia()">Tela cheia</button>
+      <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Atualizar</button>
+      <a class="btn secondary" routerLink="/home">Home</a>
+    </div>
+  </div>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <div class="panel filters">
+    <label>
+      Loja
+      <select [(ngModel)]="filtros.loja">
+        <option value="">Todas</option>
+        <option *ngFor="let loja of lojas" [value]="lojaId(loja)">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+    <label>
+      De
+      <input type="date" [(ngModel)]="filtros.data_ini">
+    </label>
+    <label>
+      Até
+      <input type="date" [(ngModel)]="filtros.data_fim">
+    </label>
+    <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Buscar</button>
+    <button type="button" class="btn secondary" (click)="limpar()">Limpar</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>Receita</span>
+      <strong class="valor-pos">{{ money(relatorio?.resumo?.receita) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>CMV</span>
+      <strong class="valor-neg">{{ money(relatorio?.resumo?.cmv) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Margem bruta</span>
+      <strong [ngClass]="valorClass(relatorio?.resumo?.margem)">{{ money(relatorio?.resumo?.margem) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Margem %</span>
+      <strong [ngClass]="valorClass(relatorio?.resumo?.margem_percentual)">{{ percent(relatorio?.resumo?.margem_percentual) }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Produtos</span>
+      <strong>{{ relatorio?.resumo?.produtos || 0 }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Peças</span>
+      <strong>{{ relatorio?.resumo?.quantidade || 0 }}</strong>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" [class.active]="aba === 'produtos'" (click)="aba = 'produtos'">Por produto</button>
+    <button type="button" [class.active]="aba === 'lojas'" (click)="aba = 'lojas'">Por loja</button>
+  </div>
+
+  <div class="panel table-panel" *ngIf="aba === 'produtos'">
+    <div class="list-header">
+      <h3>Margem por produto</h3>
+      <span>{{ produtos.length }} produto(s)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Referência</th>
+          <th>Grupo</th>
+          <th>Subgrupo</th>
+          <th class="num">Qtd</th>
+          <th class="num">Receita</th>
+          <th class="num">CMV</th>
+          <th class="num">Margem</th>
+          <th class="num">Margem %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of produtos">
+          <td>{{ item.produto }}</td>
+          <td>{{ item.referencia || '-' }}</td>
+          <td>{{ item.grupo || '-' }}</td>
+          <td>{{ item.subgrupo || '-' }}</td>
+          <td class="num">{{ item.quantidade }}</td>
+          <td class="num valor-pos">{{ money(item.receita) }}</td>
+          <td class="num valor-neg">{{ money(item.cmv) }}</td>
+          <td class="num" [ngClass]="valorClass(item.margem)">{{ money(item.margem) }}</td>
+          <td class="num" [ngClass]="valorClass(item.margem_percentual)">{{ percent(item.margem_percentual) }}</td>
+        </tr>
+        <tr *ngIf="!produtos.length && !loading">
+          <td colspan="9" class="empty">Nenhuma venda encontrada para o período.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel table-panel" *ngIf="aba === 'lojas'">
+    <div class="list-header">
+      <h3>Margem por loja</h3>
+      <span>{{ lojasResumo.length }} loja(s)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Loja</th>
+          <th class="num">Qtd</th>
+          <th class="num">Receita</th>
+          <th class="num">CMV</th>
+          <th class="num">Margem</th>
+          <th class="num">Margem %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let loja of lojasResumo">
+          <td>{{ loja.loja }}</td>
+          <td class="num">{{ loja.quantidade }}</td>
+          <td class="num valor-pos">{{ money(loja.receita) }}</td>
+          <td class="num valor-neg">{{ money(loja.cmv) }}</td>
+          <td class="num" [ngClass]="valorClass(loja.margem)">{{ money(loja.margem) }}</td>
+          <td class="num" [ngClass]="valorClass(loja.margem_percentual)">{{ percent(loja.margem_percentual) }}</td>
+        </tr>
+        <tr *ngIf="!lojasResumo.length && !loading">
+          <td colspan="6" class="empty">Nenhuma venda encontrada para o período.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

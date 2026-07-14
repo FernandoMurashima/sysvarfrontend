@@ -32,6 +32,7 @@ export class DreGerencialComponent implements OnInit {
     loja: '',
     data_ini: '',
     data_fim: '',
+    regime: 'caixa',
   };
 
   ngOnInit(): void {
@@ -74,6 +75,7 @@ export class DreGerencialComponent implements OnInit {
 
   limpar(): void {
     this.filtros.loja = '';
+    this.filtros.regime = 'caixa';
     this.definirPeriodoPadrao();
     this.consultar();
   }

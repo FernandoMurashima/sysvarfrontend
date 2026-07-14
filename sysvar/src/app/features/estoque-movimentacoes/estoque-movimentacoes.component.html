@@ -9,7 +9,7 @@
         (keyup.enter)="load()"
       />
       <button class="btn primary" (click)="load()">Buscar</button>
-      <button class="btn primary" (click)="novo()">Nova movimentação</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Nova movimentação</button>
       <button class="btn" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -59,7 +59,7 @@
       </label>
 
       <div class="form-actions">
-        <button class="btn primary" [disabled]="saving">Salvar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button>
         <button class="btn" type="button" (click)="showForm=false">Cancelar</button>
       </div>
     </form>
@@ -78,10 +78,13 @@
             <th>Data</th>
             <th>Tipo</th>
             <th>Documento</th>
+            <th>Histórico</th>
             <th>Referência</th>
             <th>EAN</th>
             <th>Loja</th>
             <th>Qtd</th>
+            <th>Custo unit.</th>
+            <th>Custo total</th>
             <th>Anterior</th>
             <th>Posterior</th>
           </tr>
@@ -91,10 +94,13 @@
             <td>{{ m.data_movimento | date:'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ m.tipo }}</td>
             <td class="documento">{{ m.documento || '-' }}</td>
+            <td>{{ m.observacao || '-' }}</td>
             <td>{{ m.referencia }}</td>
             <td>{{ m.CodigodeBarra }}</td>
             <td>{{ lojaNome(m.Idloja) }}</td>
             <td>{{ m.quantidade }}</td>
+            <td class="num">{{ money(m.custo_unitario) }}</td>
+            <td class="num">{{ money(m.custo_total) }}</td>
             <td>{{ m.saldo_anterior }}</td>
             <td>{{ m.saldo_posterior }}</td>
           </tr>

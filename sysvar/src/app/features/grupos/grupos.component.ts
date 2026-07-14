@@ -7,6 +7,7 @@ import { GruposService } from '../../core/services/grupos.service';
 import { SubgruposService } from '../../core/services/subgrupos.service';
 import { GrupoModel } from '../../core/models/grupo';
 import { SubgrupoModel } from '../../core/models/subgrupo';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-grupos',
@@ -19,6 +20,7 @@ export class GruposComponent implements OnInit {
   private fb = inject(FormBuilder);
   private gruposApi = inject(GruposService);
   private subgruposApi = inject(SubgruposService);
+  private auth = inject(AuthService);
   constructor(private router: Router) {}
 
   goHome() {
@@ -37,7 +39,12 @@ export class GruposComponent implements OnInit {
 
   search = '';
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+
   editingGrupoId: number | null = null;
+  consultandoGrupo = false;
   /** novo: controla abertura/fechamento do form de Grupo */
   formModeGrupo: 'new' | 'edit' | null = null;
 
@@ -52,6 +59,7 @@ export class GruposComponent implements OnInit {
 
   // Form Subgrupo
   editingSubgrupoId: number | null = null;
+  consultandoSubgrupo = false;
   submittedSub = false;
 
   formSubgrupo = this.fb.group({
@@ -86,8 +94,10 @@ export class GruposComponent implements OnInit {
 
   novoGrupo() {
     this.editingGrupoId = null;
+    this.consultandoGrupo = false;
     this.formModeGrupo = 'new';      // <- abre o form
     this.submitted = false;
+    this.formGrupo.enable({ emitEvent: false });
     this.formGrupo.reset({ Codigo: '', Descricao: '', Margem: 0 });
     this.successMsg = '';
     this.errorMsg = '';
@@ -95,8 +105,10 @@ export class GruposComponent implements OnInit {
 
   editarGrupo(g: GrupoModel) {
     this.editingGrupoId = g.Idgrupo ?? null;
+    this.consultandoGrupo = false;
     this.formModeGrupo = 'edit';     // <- abre o form
     this.submitted = false;
+    this.formGrupo.enable({ emitEvent: false });
     this.formGrupo.reset({
       Codigo: g.Codigo ?? '',
       Descricao: g.Descricao ?? '',
@@ -104,6 +116,12 @@ export class GruposComponent implements OnInit {
     });
     this.successMsg = '';
     this.errorMsg = '';
+  }
+
+  consultarGrupo(g: GrupoModel) {
+    this.editarGrupo(g);
+    this.consultandoGrupo = true;
+    this.formGrupo.disable({ emitEvent: false });
   }
 
   salvarGrupo() {
@@ -183,8 +201,10 @@ export class GruposComponent implements OnInit {
 
   cancelarEdicaoGrupo() {
     this.editingGrupoId = null;
+    this.consultandoGrupo = false;
     this.formModeGrupo = null;       // <- esconde o form
     this.submitted = false;
+    this.formGrupo.enable({ emitEvent: false });
     this.formGrupo.reset({ Codigo: '', Descricao: '', Margem: 0 });
   }
 
@@ -228,7 +248,9 @@ export class GruposComponent implements OnInit {
 
   novoSubgrupo() {
     this.editingSubgrupoId = null;
+    this.consultandoSubgrupo = false;
     this.submittedSub = false;
+    this.formSubgrupo.enable({ emitEvent: false });
     this.formSubgrupo.reset({
       Idgrupo: this.selectedGrupoId ?? 0,
       Descricao: '',
@@ -238,12 +260,20 @@ export class GruposComponent implements OnInit {
 
   editarSubgrupo(s: SubgrupoModel) {
     this.editingSubgrupoId = s.Idsubgrupo ?? null;
+    this.consultandoSubgrupo = false;
     this.submittedSub = false;
+    this.formSubgrupo.enable({ emitEvent: false });
     this.formSubgrupo.reset({
       Idgrupo: (s as any).Idgrupo?.Idgrupo ?? (s as any).Idgrupo ?? this.selectedGrupoId ?? 0,
       Descricao: s.Descricao ?? '',
       Margem: s.Margem ?? 0,
     });
+  }
+
+  consultarSubgrupo(s: SubgrupoModel) {
+    this.editarSubgrupo(s);
+    this.consultandoSubgrupo = true;
+    this.formSubgrupo.disable({ emitEvent: false });
   }
 
   salvarSubgrupo() {

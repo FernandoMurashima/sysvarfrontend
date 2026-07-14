@@ -13,7 +13,11 @@ export class PermissionService {
 
   canAccess(item: NavItem): boolean {
     if (item.superOnly) return this.auth.getCurrentUser()?.is_superuser === true;
+    const permissaoModulo = this.auth.podeAcessarModulo(item.moduloEmpresa || null);
+    if (permissaoModulo !== null && !permissaoModulo) return false;
+    if (item.moduloEmpresa && !this.auth.empresaModuloHabilitado(item.moduloEmpresa)) return false;
     if (!item.roles || item.roles.length === 0) return true;
+    if (permissaoModulo === true) return true;
     if (this.currentRole === 'Admin') return true;
     return item.roles.includes(this.currentRole);
   }
@@ -33,6 +37,7 @@ export class PermissionService {
           link: node.link,
           roles: node.roles,
           superOnly: node.superOnly,
+          moduloEmpresa: node.moduloEmpresa,
           ...(hasChild ? { children: filteredChildren } : {})
         };
         out.push(next);

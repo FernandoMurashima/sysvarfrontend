@@ -1,0 +1,87 @@
+.config-page {
+  padding: 8px;
+}
+
+.toolbar,
+.panel {
+  background: #fff;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.toolbar {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+}
+
+.toolbar h2,
+.panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.panel {
+  padding: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+select {
+  height: 32px;
+  border: 1px solid #c8d4e3;
+  border-radius: 5px;
+  padding: 0 8px;
+}
+
+.btn {
+  min-width: 72px;
+  height: 31px;
+  border: 1px solid #c8d4e3;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #061126;
+  border-color: #061126;
+  color: #fff;
+}
+
+.alert {
+  padding: 8px 10px;
+  border-radius: 5px;
+  margin-bottom: 8px;
+}
+
+.alert.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+}

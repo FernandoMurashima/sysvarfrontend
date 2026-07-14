@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -24,7 +24,7 @@
       <p>Confirma a exclusão do fornecedor <strong>{{ fornecedor.nome_fornecedor }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -40,7 +40,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Fornecedor' : 'Novo Fornecedor' }}</h3>
+      <h3>{{ consultando ? 'Consultar Fornecedor' : (editingId ? 'Editar Fornecedor' : 'Novo Fornecedor') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1 -->
@@ -168,7 +168,10 @@
 
           <label id="categoria-box" class="input-item">
             Categoria
-            <input type="text" formControlName="categoria" />
+            <select formControlName="categoria">
+              <option value="">Selecione</option>
+              <option *ngFor="let opt of categoriaOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
             <span class="field-error" *ngIf="form.get('categoria')?.errors?.['server']">{{ form.get('categoria')?.errors?.['server'] }}</span>
           </label>
 
@@ -182,12 +185,6 @@
             Mala Direta
             <input type="checkbox" formControlName="mala_direta" />
             <span class="field-error" *ngIf="form.get('mala_direta')?.errors?.['server']">{{ form.get('mala_direta')?.errors?.['server'] }}</span>
-          </label>
-
-          <label id="conta-contabil-box" class="input-item">
-            Conta Contábil
-            <input type="text" formControlName="conta_contabil" />
-            <span class="field-error" *ngIf="form.get('conta_contabil')?.errors?.['server']">{{ form.get('conta_contabil')?.errors?.['server'] }}</span>
           </label>
 
           <label id="ativo-box" class="input-item">
@@ -204,10 +201,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -232,26 +229,29 @@
             <tr>
               <th>Nome</th>
               <th>Apelido</th>
+              <th>Categoria</th>
               <th>CNPJ</th>
               <th>Cidade</th>
               <th>UF</th>
               <th>Email</th>
               <th>Telefone</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let f of fornecedores">
               <td>{{ f.nome_fornecedor }}</td>
               <td>{{ f.apelido }}</td>
+              <td>{{ categoriaLabel(f.categoria) || '—' }}</td>
               <td>{{ f.cnpj }}</td>
               <td>{{ f.cidade }}</td>
               <td>{{ f.estado }}</td>
               <td class="email">{{ f.email }}</td>
               <td>{{ f.telefone1 }}</td>
               <td class="actions">
-                <button class="btn sm" (click)="editar(f)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(f)">Excluir</button>
+                <button class="btn sm" (click)="consultar(f)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(f)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(f)">Excluir</button>
               </td>
             </tr>
           </tbody>

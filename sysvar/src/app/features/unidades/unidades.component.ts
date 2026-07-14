@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { Unidade } from '../../core/models/unidade';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-unidades',
@@ -16,6 +17,7 @@ import { Unidade } from '../../core/models/unidade';
 export class UnidadesComponent implements OnInit {
   private fb  = inject(FormBuilder);
   private api = inject(UnidadesService);
+  private auth = inject(AuthService);
 
   // UI/estado
   loading = false;
@@ -23,6 +25,7 @@ export class UnidadesComponent implements OnInit {
   submitted = false;
   showForm = false;
   editingId: number | null = null;
+  consultando = false;
 
   search = '';
   successMsg = '';
@@ -34,6 +37,7 @@ export class UnidadesComponent implements OnInit {
   form: FormGroup = this.fb.group({
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
     Codigo: ['', [Validators.maxLength(10)]], // opcional no back; só limitamos tamanho
+    permite_decimal: [false],
   });
 
   // lista + paginação client-side (igual Cores)
@@ -47,6 +51,7 @@ export class UnidadesComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get pageStart(): number   { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
   get pageEnd(): number     { return Math.min(this.page * this.pageSize, this.total); }
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
 
   ngOnInit(): void { this.load(); }
 
@@ -99,36 +104,49 @@ export class UnidadesComponent implements OnInit {
   novo(): void {
     this.showForm = true;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
-    this.form.reset({ Descricao: '', Codigo: '' });
+    this.form.enable({ emitEvent: false });
+    this.form.reset({ Descricao: '', Codigo: '', permite_decimal: false });
   }
 
   editar(row: Unidade): void {
     this.showForm = true;
     this.editingId = (row as any).Idunidade ?? null;
+    this.consultando = false;
     this.submitted = false;
     this.successMsg = '';
     this.errorMsg = '';
+    this.form.enable({ emitEvent: false });
     this.form.reset({
       Descricao: row.Descricao ?? '',
       Codigo: row.Codigo ?? '',
+      permite_decimal: !!row.permite_decimal,
     });
+  }
+
+  consultar(row: Unidade): void {
+    this.editar(row);
+    this.consultando = true;
+    this.form.disable({ emitEvent: false });
   }
 
   cancelarEdicao(): void {
     this.showForm = false;
     this.editingId = null;
+    this.consultando = false;
     this.submitted = false;
     this.errorOverlayOpen = false;
+    this.form.enable({ emitEvent: false });
   }
 
   salvar(): void {
     this.submitted = true;
     if (this.form.invalid) { this.openErrorOverlayIfNeeded(); return; }
 
-    const payload: Unidade = { ...this.form.value };
+    const payload: Unidade = { ...this.form.value, permite_decimal: !!this.form.value.permite_decimal };
     this.saving = true;
 
     const req$ = this.editingId

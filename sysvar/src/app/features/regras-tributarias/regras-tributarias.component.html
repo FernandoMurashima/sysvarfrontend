@@ -1,0 +1,65 @@
+<div class="page">
+  <header class="toolbar">
+    <h2>Regras Tributárias</h2>
+    <div class="toolbar-actions">
+      <input type="text" placeholder="Buscar por regra, tributo, CFOP ou NCM..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Nova</button>
+      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
+
+  <div class="overlay" *ngIf="excluirModal as regra">
+    <div class="overlay-card">
+      <h4>Excluir regra</h4>
+      <p>Confirma a exclusão da regra <strong>{{ regra.nome }}</strong>?</p>
+      <div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" type="button" *ngIf="podeEditarModulo" (click)="confirmarExclusao()">Excluir</button></div>
+    </div>
+  </div>
+
+  <section class="panel hint" *ngIf="!showForm">
+    <span>Configure alíquotas por tributo, CFOP, NCM, regime, UF e tipo de produto.</span>
+  </section>
+
+  <section class="panel" *ngIf="showForm">
+    <h3>{{ consultando ? 'Consultar regra' : (editingId ? 'Editar regra' : 'Nova regra') }}</h3>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+      <label class="field wide" [class.invalid]="form.get('nome')?.invalid && submitted">Nome*<input formControlName="nome" /></label>
+      <label class="field">Tributo*<select formControlName="tributo"><option [ngValue]="null">Selecione</option><option *ngFor="let t of tributos()" [ngValue]="t.id">{{ t.codigo }} - {{ t.descricao }}</option></select></label>
+      <label class="field">Operação*<select formControlName="tipo_operacao"><option value="VENDA">Venda</option><option value="COMPRA">Compra</option><option value="DEVOLUCAO">Devolução</option><option value="TRANSFERENCIA">Transferência</option><option value="OUTROS">Outros</option></select></label>
+      <label class="field">Regime*<select formControlName="regime_tributario"><option value="TODOS">Todos</option><option value="SIMPLES">Simples Nacional</option><option value="LUCRO_PRESUMIDO">Lucro Presumido</option><option value="LUCRO_REAL">Lucro Real</option></select></label>
+      <label class="field">Tipo produto*<select formControlName="tipo_produto"><option value="TODOS">Todos</option><option value="REVENDA">Revenda</option><option value="USO_CONSUMO">Uso/Consumo</option><option value="INSUMO">Insumo</option><option value="PROPRIO">Produto próprio</option></select></label>
+      <label class="field">CFOP<select formControlName="cfop"><option [ngValue]="null">Todos</option><option *ngFor="let c of cfops()" [ngValue]="c.id">{{ c.codigo }} - {{ c.descricao }}</option></select></label>
+      <label class="field">NCM<select formControlName="ncm"><option [ngValue]="null">Todos</option><option *ngFor="let n of ncms()" [ngValue]="n.id">{{ n.ncm }} - {{ n.descricao | slice:0:45 }}</option></select></label>
+      <label class="field tiny">UF origem<input formControlName="uf_origem" maxlength="2" /></label>
+      <label class="field tiny">UF destino<input formControlName="uf_destino" maxlength="2" /></label>
+      <label class="field tiny">CST/CSOSN<input formControlName="cst_csosn" maxlength="4" /></label>
+      <label class="field">Base<select formControlName="base_calculo"><option value="VALOR_ITEM">Valor do item</option><option value="VALOR_TOTAL">Valor total</option></select></label>
+      <label class="field tiny">Alíquota %<input type="number" step="0.0001" formControlName="aliquota" /></label>
+      <label class="field tiny">Redução base %<input type="number" step="0.0001" formControlName="reducao_base" /></label>
+      <label class="field">Início vigência<input type="date" formControlName="vigencia_inicio" /></label>
+      <label class="field">Fim vigência<input type="date" formControlName="vigencia_fim" /></label>
+      <div class="checks">
+        <label><input type="checkbox" formControlName="permite_credito" /> Permite crédito</label>
+        <label><input type="checkbox" formControlName="compoe_custo" /> Compõe custo</label>
+        <label><input type="checkbox" formControlName="entra_dre" /> Entra DRE</label>
+        <label><input type="checkbox" formControlName="ativo" /> Ativa</label>
+      </div>
+      <label class="field full">Observações<input formControlName="observacoes" /></label>
+      <div class="form-actions"><button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving">Salvar</button><button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="list-header"><strong>Total: {{ total() }}</strong><label>Itens por página <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></label></div>
+    <table class="table" *ngIf="paged().length; else emptyTpl">
+      <thead><tr><th>Regra</th><th>Tributo</th><th>Operação</th><th>CFOP</th><th>NCM</th><th>Regime</th><th>Alíquota</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody><tr *ngFor="let r of paged()"><td>{{ r.nome }}</td><td>{{ r.tributo_codigo }}</td><td>{{ r.tipo_operacao }}</td><td>{{ r.cfop_codigo || 'Todos' }}</td><td>{{ r.ncm_codigo || 'Todos' }}</td><td>{{ r.regime_tributario }}</td><td>{{ r.aliquota }}%</td><td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativa' : 'Inativa' }}</span></td><td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button></td></tr></tbody>
+    </table>
+    <ng-template #emptyTpl><div class="empty-hint">{{ loading() ? 'Carregando...' : 'Nenhuma regra tributária cadastrada.' }}</div></ng-template>
+    <div class="pager" *ngIf="total() > 0"><div><button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button></div><div>Página {{ page() }} de {{ totalPages() }} — Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</div><div><button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button></div></div>
+  </section>
+</div>

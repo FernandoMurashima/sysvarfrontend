@@ -35,7 +35,14 @@ export class FinanceiroTitulosService {
     return this.http.post<ParcelaFinanceira>(`${this.base}/${this.itemPath(tipo)}/`, payload);
   }
 
-  baixarParcela(tipo: TipoTituloFinanceiro, id: number, payload: { valor_baixa: number; data_baixa: string }): Observable<ParcelaFinanceira> {
+  baixarParcela(tipo: TipoTituloFinanceiro, id: number, payload: {
+    valor_baixa: number;
+    data_baixa: string;
+    juros?: number;
+    multa?: number;
+    tarifa?: number;
+    desconto?: number;
+  }): Observable<ParcelaFinanceira> {
     return this.http.post<ParcelaFinanceira>(`${this.base}/${this.itemPath(tipo)}/${id}/baixar/`, payload);
   }
 

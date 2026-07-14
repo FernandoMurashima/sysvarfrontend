@@ -14,6 +14,7 @@ import { ContasBancariasService } from '../../core/services/contas-bancarias.ser
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
+import { AuthService } from '../../core/auth.service';
 
 type DestinoTipo = 'CAIXA' | 'CONTA';
 
@@ -31,6 +32,7 @@ export class ContasBancariasComponent implements OnInit {
   private formasApi = inject(FormasPagamentoService);
   private lojasApi = inject(LojasService);
   private movsApi = inject(MovimentacoesFinanceirasService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
@@ -69,6 +71,10 @@ export class ContasBancariasComponent implements OnInit {
   } | null = null;
   desfazerModal: MovimentacaoFinanceira | null = null;
   excluirModal: ContaBancaria | null = null;
+
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
 
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],

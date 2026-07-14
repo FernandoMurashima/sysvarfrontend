@@ -478,6 +478,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.mensagem = `Nota fechada.${msgFin}`;
         this.erro = '';
         this.loadNotas();
+        this.loadPedidosAprovados();
       },
       error: (err) => {
         this.erro = err?.error?.detail || 'Não foi possível fechar a nota.';
@@ -506,6 +507,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.mensagem = 'Nota cancelada.';
         this.erro = '';
         this.loadNotas();
+        this.loadPedidosAprovados();
       },
       error: () => {
         this.erro = 'Não foi possível cancelar a nota.';

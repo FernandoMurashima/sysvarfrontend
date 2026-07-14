@@ -10,7 +10,7 @@
       />
       <button class="btn primary" type="button" (click)="load()">Buscar</button>
       <button class="btn" type="button" (click)="search = ''; load()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()">Novo título</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Novo título</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -31,10 +31,26 @@
           Valor da baixa
           <input type="number" step="0.01" min="0.01" [(ngModel)]="baixaModal.valor_baixa" />
         </label>
+        <label>
+          Juros
+          <input type="number" step="0.01" min="0" [(ngModel)]="baixaModal.juros" (ngModelChange)="recalcularBaixa()" />
+        </label>
+        <label>
+          Multa
+          <input type="number" step="0.01" min="0" [(ngModel)]="baixaModal.multa" (ngModelChange)="recalcularBaixa()" />
+        </label>
+        <label *ngIf="tipo === 'pagar'">
+          Tarifa
+          <input type="number" step="0.01" min="0" [(ngModel)]="baixaModal.tarifa" (ngModelChange)="recalcularBaixa()" />
+        </label>
+        <label>
+          Desconto
+          <input type="number" step="0.01" min="0" [(ngModel)]="baixaModal.desconto" (ngModelChange)="recalcularBaixa()" />
+        </label>
       </div>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharBaixa()">Cancelar</button>
-        <button class="btn primary" type="button" (click)="confirmarBaixa()">Confirmar baixa</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarBaixa()">Confirmar baixa</button>
       </div>
     </section>
   </div>
@@ -46,7 +62,7 @@
       <p class="modal-text">Confirma o cancelamento desta parcela?</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharCancelamentoParcela()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarCancelamentoParcela()">Cancelar parcela</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarCancelamentoParcela()">Cancelar parcela</button>
       </div>
     </section>
   </div>
@@ -58,7 +74,7 @@
       <p class="modal-text">Confirma a exclusão deste título?</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharExclusaoTitulo()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusaoTitulo()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusaoTitulo()">Excluir</button>
       </div>
     </section>
   </div>
@@ -81,7 +97,7 @@
 
         <label>
           {{ parceiroLabel }}*
-          <select formControlName="parceiro">
+          <select formControlName="parceiro" (change)="onParceiroChange()">
             <option [ngValue]="null">Selecione</option>
             <ng-container *ngIf="tipo === 'pagar'; else clientesTpl">
               <option *ngFor="let fornecedor of fornecedores" [ngValue]="fornecedor.id">
@@ -128,7 +144,7 @@
           Natureza*
           <select formControlName="Idnatureza">
             <option [ngValue]="null">Selecione</option>
-            <option *ngFor="let nat of naturezasTitulo" [ngValue]="nat.idnatureza">
+            <option *ngFor="let nat of naturezasTitulo" [ngValue]="naturezaId(nat)">
               {{ nat.codigo }} - {{ nat.descricao }}
             </option>
           </select>
@@ -179,7 +195,7 @@
       </div>
 
       <div class="form-actions">
-        <button class="btn primary" type="submit" [disabled]="saving">
+        <button class="btn primary" type="submit" *ngIf="podeEditarModulo" [disabled]="saving">
           {{ saving ? 'Salvando...' : 'Salvar título' }}
         </button>
         <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
@@ -227,7 +243,7 @@
                 <button
                   class="btn xs primary parcela-action"
                   type="button"
-                  *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
+                  *ngIf="podeEditarModulo && parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
                   (click)="baixar(parcela)"
                 >
                   Baixar
@@ -235,7 +251,7 @@
                 <button
                   class="btn xs danger parcela-action"
                   type="button"
-                  *ngIf="parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
+                  *ngIf="podeEditarModulo && parcela.status !== 'BAIXADO' && parcela.status !== 'CANCELADO'"
                   (click)="cancelarParcela(parcela)"
                 >
                   Cancelar
@@ -243,7 +259,7 @@
                 <button
                   class="btn xs parcela-action"
                   type="button"
-                  *ngIf="parcela.status === 'CANCELADO'"
+                  *ngIf="podeEditarModulo && parcela.status === 'CANCELADO'"
                   (click)="reabrirParcela(parcela)"
                 >
                   Reabrir

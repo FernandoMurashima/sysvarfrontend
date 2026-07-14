@@ -13,11 +13,13 @@ export interface PedidoCompra {
   previsao_entrega?: string | null;
   forma_pagamento?: string | null;
   observacoes?: string | null;
-  status: 'AB' | 'AP' | 'CA';
+  status: 'AB' | 'AP' | 'AT' | 'CA';
   total_itens: string;
   total_desconto: string;
   frete: string;
   total_pedido: string;
+  idnatureza?: number | null;
+  natureza_label?: string | null;
 }
 
 type Paginated<T> = {
@@ -79,6 +81,10 @@ export class PedidosCompraService {
 
   aprovar(id: number, idnatureza: number) {
     return this.http.post<PedidoCompra>(`${this.base}${id}/aprovar/`, { idnatureza });
+  }
+
+  alterarNatureza(id: number, idnatureza: number) {
+    return this.http.post<PedidoCompra>(`${this.base}${id}/alterar-natureza/`, { idnatureza });
   }
 
   cancelar(id: number) {

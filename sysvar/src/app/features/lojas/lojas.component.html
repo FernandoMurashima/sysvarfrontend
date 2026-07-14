@@ -11,7 +11,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Novo</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -24,7 +24,7 @@
       <p>Confirma a exclusão da loja <strong>{{ loja.nome_loja }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -40,7 +40,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Loja' : 'Nova Loja' }}</h3>
+      <h3>{{ consultando ? 'Consultar Loja' : (editingId ? 'Editar Loja' : 'Nova Loja') }}</h3>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
@@ -221,10 +221,73 @@
             </select>
           </label>
 
-          <label id="conta-contabil-box" class="input-item">
-            Conta Contábil
-            <input type="text" formControlName="conta_contabil" />
-            <span class="field-error" *ngIf="form.get('conta_contabil')?.errors?.['server']">{{ form.get('conta_contabil')?.errors?.['server'] }}</span>
+          <label id="tipo-unidade-box" class="input-item">
+            Tipo da unidade
+            <select formControlName="tipo_unidade">
+              <option value="LOJA">Loja</option>
+              <option value="MATRIZ">Matriz / estoque central</option>
+              <option value="FABRICA">Fábrica / produção</option>
+            </select>
+            <span class="field-error" *ngIf="form.get('tipo_unidade')?.errors?.['server']">{{ form.get('tipo_unidade')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="regime-box" class="input-item">
+            Regime tributário
+            <select formControlName="regime_tributario">
+              <option value="SIMPLES">Simples Nacional</option>
+              <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
+              <option value="LUCRO_REAL">Lucro Real</option>
+            </select>
+            <span class="field-error" *ngIf="form.get('regime_tributario')?.errors?.['server']">{{ form.get('regime_tributario')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="ambiente-box" class="input-item">
+            Ambiente fiscal
+            <select formControlName="ambiente_fiscal">
+              <option value="HOMOLOGACAO">Homologação</option>
+              <option value="PRODUCAO">Produção</option>
+            </select>
+            <span class="field-error" *ngIf="form.get('ambiente_fiscal')?.errors?.['server']">{{ form.get('ambiente_fiscal')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="ie-box" class="input-item">
+            Inscrição estadual
+            <input type="text" formControlName="inscricao_estadual" />
+            <span class="field-error" *ngIf="form.get('inscricao_estadual')?.errors?.['server']">{{ form.get('inscricao_estadual')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="emite-nfce-box" class="input-item checkline">
+            <span>Emite NFC-e</span>
+            <input type="checkbox" formControlName="emite_nfce" />
+          </label>
+
+          <label id="serie-nfce-box" class="input-item">
+            Série NFC-e
+            <input type="number" min="1" formControlName="serie_nfce" />
+            <span class="field-error" *ngIf="form.get('serie_nfce')?.errors?.['server']">{{ form.get('serie_nfce')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="prox-nfce-box" class="input-item">
+            Próx. NFC-e
+            <input type="number" min="1" formControlName="proximo_numero_nfce" />
+            <span class="field-error" *ngIf="form.get('proximo_numero_nfce')?.errors?.['server']">{{ form.get('proximo_numero_nfce')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="emite-nfe-box" class="input-item checkline">
+            <span>Emite NF-e</span>
+            <input type="checkbox" formControlName="emite_nfe" />
+          </label>
+
+          <label id="serie-nfe-box" class="input-item">
+            Série NF-e
+            <input type="number" min="1" formControlName="serie_nfe" />
+            <span class="field-error" *ngIf="form.get('serie_nfe')?.errors?.['server']">{{ form.get('serie_nfe')?.errors?.['server'] }}</span>
+          </label>
+
+          <label id="prox-nfe-box" class="input-item">
+            Próx. NF-e
+            <input type="number" min="1" formControlName="proximo_numero_nfe" />
+            <span class="field-error" *ngIf="form.get('proximo_numero_nfe')?.errors?.['server']">{{ form.get('proximo_numero_nfe')?.errors?.['server'] }}</span>
           </label>
 
         </div>
@@ -237,10 +300,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -265,26 +328,29 @@
             <tr>
               <th>Nome</th>
               <th>Empresa</th>
+              <th>Tipo</th>
               <th>apelido</th>
               <th>CNPJ</th>
               <th>cidade</th>
               <th>Email</th>
               <th>telefone</th>
-              <th style="width:140px;">Ações</th>
+              <th style="width:200px;">Ações</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let l of lojas">
               <td>{{ l.nome_loja }}</td>
               <td>{{ empresaLabel(l) }}</td>
+              <td>{{ tipoUnidadeLabel(l.tipo_unidade) }}</td>
               <td>{{ l.apelido_loja }}</td>
               <td>{{ l.cnpj }}</td>
               <td>{{ l.cidade }}</td>
               <td class="email">{{ l.email }}</td>
               <td>{{ l.telefone1 }}</td>
               <td class="actions">
-                <button class="btn sm" (click)="editar(l)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(l)">Excluir</button>
+                <button class="btn sm" (click)="consultar(l)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(l)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(l)">Excluir</button>
               </td>
             </tr>
           </tbody>

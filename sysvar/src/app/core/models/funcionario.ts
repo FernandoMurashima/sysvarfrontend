@@ -11,6 +11,8 @@ export interface Funcionario {
   categoria?: string;
   meta?: number;
   comissao_percentual?: number;
+  salario?: number | null;
+  salario_oculto?: boolean;
 
   idloja?: number | null;   // FK (Loja)
   ativo?: boolean;

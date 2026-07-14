@@ -13,6 +13,7 @@ import { PackModel } from '../../core/models/pack';
 import { PackItemModel } from '../../core/models/pack-item';
 import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-packs',
@@ -27,6 +28,7 @@ export class PacksComponent implements OnInit {
   private itensApi = inject(PackItensService);
   private gradesApi = inject(GradesService);
   private tamanhosApi = inject(TamanhosService);
+  private auth = inject(AuthService);
   constructor(private router: Router) {}
 
   goHome() { this.router.navigate(['/home']); }
@@ -46,8 +48,13 @@ export class PacksComponent implements OnInit {
   search = '';
   selectedPackId: number | null = null;
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+
   formModePack: 'new' | 'edit' | null = null;
   editingPackId: number | null = null;
+  consultandoPack = false;
 
   formPack = this.fb.group({
     nome: ['', [Validators.maxLength(80)]],
@@ -56,6 +63,7 @@ export class PacksComponent implements OnInit {
   });
 
   editingItemId: number | null = null;
+  consultandoItem = false;
   submittedSub = false;
 
   formItem = this.fb.group({
@@ -112,18 +120,28 @@ export class PacksComponent implements OnInit {
 
   novoPack() {
     this.editingPackId = null;
+    this.consultandoPack = false;
     this.formModePack = 'new';
     this.submitted = false;
+    this.formPack.enable({ emitEvent: false });
     this.formPack.reset({ nome: '', grade: null, ativo: true });
     this.successMsg = ''; this.errorMsg = '';
   }
 
   editarPack(p: PackModel) {
     this.editingPackId = p.id ?? null;
+    this.consultandoPack = false;
     this.formModePack = 'edit';
     this.submitted = false;
+    this.formPack.enable({ emitEvent: false });
     this.formPack.reset({ nome: p.nome ?? '', grade: p.grade ?? null, ativo: !!p.ativo });
     this.successMsg = ''; this.errorMsg = '';
+  }
+
+  consultarPack(p: PackModel) {
+    this.editarPack(p);
+    this.consultandoPack = true;
+    this.formPack.disable({ emitEvent: false });
   }
 
   salvarPack() {
@@ -198,8 +216,10 @@ export class PacksComponent implements OnInit {
 
   cancelarEdicaoPack() {
     this.editingPackId = null;
+    this.consultandoPack = false;
     this.formModePack = null;
     this.submitted = false;
+    this.formPack.enable({ emitEvent: false });
     this.formPack.reset({ nome: '', grade: null, ativo: true });
   }
 
@@ -255,14 +275,24 @@ export class PacksComponent implements OnInit {
   novoItem() {
     if (!this.selectedPackId) return;
     this.editingItemId = null;
+    this.consultandoItem = false;
     this.submittedSub = false;
+    this.formItem.enable({ emitEvent: false });
     this.formItem.reset({ pack: this.selectedPackId, tamanho: null, qtd: 1 });
   }
 
   editarItem(it: PackItemModel) {
     this.editingItemId = it.id ?? null;
+    this.consultandoItem = false;
     this.submittedSub = false;
+    this.formItem.enable({ emitEvent: false });
     this.formItem.reset({ pack: it.pack, tamanho: it.tamanho, qtd: it.qtd });
+  }
+
+  consultarItem(it: PackItemModel) {
+    this.editarItem(it);
+    this.consultandoItem = true;
+    this.formItem.disable({ emitEvent: false });
   }
 
   salvarItem() {

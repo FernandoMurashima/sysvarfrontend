@@ -26,6 +26,13 @@
       Até
       <input type="date" [(ngModel)]="filtros.data_fim">
     </label>
+    <label>
+      Regime
+      <select [(ngModel)]="filtros.regime">
+        <option value="caixa">Caixa</option>
+        <option value="competencia">Competência</option>
+      </select>
+    </label>
     <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Buscar</button>
     <button type="button" class="btn secondary" (click)="limpar()">Limpar</button>
   </div>
@@ -90,7 +97,7 @@
           <th>Grupo</th>
           <th>Natureza</th>
           <th>Categoria</th>
-          <th class="num">Qtd</th>
+          <th class="num">Lanç.</th>
           <th class="num">Valor</th>
         </tr>
       </thead>

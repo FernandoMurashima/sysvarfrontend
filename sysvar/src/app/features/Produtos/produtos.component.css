@@ -36,7 +36,7 @@
 .col-referencia { width: 10%; }
 .col-colecao    { width: 17%; }
 .col-status     { width: 8%;  }
-th.actions, td.actions { width: 230px; }
+th.actions, td.actions { width: 285px; }
 
 /* Ações em linha, sem quebra/scroll local */
 td.actions { display:flex; align-items:center; justify-content:flex-end; gap:4px; white-space:nowrap; overflow:hidden; flex-wrap:nowrap; }
@@ -125,6 +125,63 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
   padding:5px 0;
 }
 
+.sku-cost-box {
+  background:#fff;
+  border:1px solid #dbe4ef;
+  border-radius:8px;
+  padding:10px;
+  min-width:0;
+}
+
+.sku-cost-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+
+.sku-cost-head small {
+  display:block;
+  color:#64748b;
+  margin-top:2px;
+}
+
+.sku-cost-table-wrap {
+  max-height:260px;
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+}
+
+.sku-cost-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:13px;
+}
+
+.sku-cost-table th,
+.sku-cost-table td {
+  border-bottom:1px solid #eef2f7;
+  padding:7px 8px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sku-cost-table th {
+  position:sticky;
+  top:0;
+  background:#f8fafc;
+  z-index:1;
+  text-align:left;
+  font-weight:700;
+}
+
+.sku-cost-table .num {
+  text-align:right;
+}
+
 /* NCM select mais curto */
 #ncm-box .ncm-select { max-width: 100%; }
 
@@ -159,19 +216,19 @@ input[aria-invalid="true"] { border-color:#ef4444; background:#fef2f2; }
 
 /* Responsivo */
 @media (max-width: 1200px) {
-  th.actions, td.actions { width: 220px; }
+  th.actions, td.actions { width: 285px; }
   .col-descricao { width: 26%; }
   .col-reduzida { width: 15%; }
 }
 @media (max-width: 900px) {
   .toolbar-right input { width: 320px; max-width: 56vw; }
-  th.actions, td.actions { width: 210px; }
+  th.actions, td.actions { width: 285px; }
 }
 @media (max-width: 700px){
   .grid-12 { grid-template-columns:1fr; }
   .vinculos-grid { grid-template-columns:1fr; }
   .toolbar-right input { min-width:200px; }
-  th.actions, td.actions { width: 200px; }
+  th.actions, td.actions { width: 285px; }
 }
 
 /* ===== Pricebar ===== */

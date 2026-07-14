@@ -12,7 +12,7 @@
       />
       <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" (click)="novo()">Nova Forma</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Nova Forma</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -26,7 +26,7 @@
       <p>Confirma a exclusão da forma <strong>{{ forma.codigo }} - {{ forma.descricao }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@
 
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
-      <h3>{{ editingId ? 'Editar Forma de Pagamento' : 'Nova Forma de Pagamento' }}</h3>
+      <h3>{{ consultando ? 'Consultar Forma de Pagamento' : (editingId ? 'Editar Forma de Pagamento' : 'Nova Forma de Pagamento') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1: Código, Descrição, Ativo -->
@@ -152,7 +152,7 @@
                   <input type="text" formControlName="valor_fixo" placeholder="ex.: 100.00" />
                 </td>
                 <td class="actions">
-                  <button type="button" class="btn sm danger" (click)="removeParcela(i)">Remover</button>
+                  <button type="button" class="btn sm danger" *ngIf="!consultando && podeEditarModulo" (click)="removeParcela(i)">Remover</button>
                 </td>
               </tr>
             </tbody>
@@ -160,7 +160,7 @@
         </div>
 
         <div class="parcelas-actions">
-          <button type="button" class="btn" (click)="addParcela()">Adicionar parcela</button>
+          <button type="button" class="btn" *ngIf="!consultando && podeEditarModulo" (click)="addParcela()">Adicionar parcela</button>
         </div>
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
@@ -170,10 +170,10 @@
         </div>
 
         <div class="actions-form">
-          <button class="btn primary" type="submit" [disabled]="saving || (form.invalid && submitted)">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">Cancelar</button>
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
     </section>
@@ -201,7 +201,7 @@
               <th style="width: 120px;"># Parcelas</th>
               <th style="width: 140px;">Liquidação</th>
               <th style="width: 90px;">Ativo</th>
-              <th style="width: 150px;">Ações</th>
+              <th style="width: 220px;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -220,8 +220,9 @@
 
 
               <td class="actions">
-                <button class="btn sm" (click)="editar(f)">Editar</button>
-                <button class="btn sm danger" (click)="excluir(f)">Excluir</button>
+                <button class="btn sm" (click)="consultar(f)">Consultar</button>
+                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(f)">Editar</button>
+                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(f)">Excluir</button>
               </td>
             </tr>
           </tbody>

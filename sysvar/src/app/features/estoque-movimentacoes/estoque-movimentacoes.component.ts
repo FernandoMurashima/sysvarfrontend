@@ -7,6 +7,7 @@ import { EstoqueMovimentacao } from '../../core/models/estoque';
 import { Loja } from '../../core/models/loja';
 import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-estoque-movimentacoes',
@@ -19,6 +20,7 @@ export class EstoqueMovimentacoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(EstoqueService);
   private lojasApi = inject(LojasService);
+  private auth = inject(AuthService);
   loading = false;
   saving = false;
   showForm = false;
@@ -27,6 +29,7 @@ export class EstoqueMovimentacoesComponent implements OnInit {
   search = '';
   lojas: Loja[] = [];
   movimentos: EstoqueMovimentacao[] = [];
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('estoque', true) !== false; }
   form = this.fb.group({
     Idloja: [null as number | null, Validators.required],
     CodigodeBarra: ['', [Validators.required, Validators.minLength(13), Validators.maxLength(13)]],
@@ -54,11 +57,13 @@ export class EstoqueMovimentacoesComponent implements OnInit {
   }
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.showForm = true;
     this.form.reset({ Idloja: this.lojas[0]?.id ?? null, CodigodeBarra: '', tipo: 'ENTRADA', quantidade: 1, documento: '', observacao: '' });
   }
 
   salvar(): void {
+    if (!this.podeEditarModulo) return;
     if (this.form.invalid) { this.errorMsg = 'Revise os campos obrigatórios.'; return; }
     this.saving = true;
     const raw = this.form.value;
@@ -76,5 +81,11 @@ export class EstoqueMovimentacoesComponent implements OnInit {
   }
 
   lojaNome(id: number): string { return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`; }
+
+  money(value: number | string | null | undefined): string {
+    const n = Number(value || 0);
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
   private unwrap<T>(res: any): T[] { return Array.isArray(res) ? res : (res?.results ?? []); }
 }
