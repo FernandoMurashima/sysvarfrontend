@@ -11,11 +11,12 @@ import { RouterLink } from '@angular/router';
 import { CoresService } from '../../core/services/cores.service';
 import { Cor } from '../../core/models/cor';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-cores',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './cores.component.html',
   styleUrls: ['./cores.component.css']
 })
@@ -65,6 +66,15 @@ export class CoresComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    const valores = this.coresAll.flatMap(item => [
+      item.Descricao,
+      item.Codigo,
+      item.Cor,
+      item.Status
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {

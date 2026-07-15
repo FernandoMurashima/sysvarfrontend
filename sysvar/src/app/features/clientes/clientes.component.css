@@ -85,12 +85,11 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
 #aniversario-box    { grid-column: 5 / span 2; }
 #categoria-box      { grid-column: 7 / span 3; }
 
-/* Linha 6: Bloqueio, Mala direta, Ativo, Conta Contábil */
+/* Linha 6: Bloqueio, Mala direta, Ativo */
 .checkbox-line { align-items: center; grid-auto-flow: column; grid-template-columns: auto 1fr; }
 #bloqueio-box       { grid-column: 1 / span 2; }
 #mala-direta-box    { grid-column: 3 / span 2; }
 #ativo-box          { grid-column: 5 / span 2; }
-#conta-contabil-box { grid-column: 7 / span 4; }
 
 /* responsivo */
 @media (max-width: 600px) {
@@ -99,7 +98,7 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
   #tipo-box, #endereco-box, #numero-box, #complemento-box,
   #cep-box, #bairro-box, #cidade-box, #estado-box,
   #telefone1-box, #telefone2-box, #aniversario-box, #categoria-box,
-  #bloqueio-box, #mala-direta-box, #ativo-box, #conta-contabil-box { grid-column: 1 / -1; }
+  #bloqueio-box, #mala-direta-box, #ativo-box { grid-column: 1 / -1; }
 }
 
 /* overlay */

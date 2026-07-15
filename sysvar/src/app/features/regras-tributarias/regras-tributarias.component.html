@@ -2,8 +2,13 @@
   <header class="toolbar">
     <h2>Regras Tributárias</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar por regra, tributo, CFOP ou NCM..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions()"
+        placeholder="Buscar por regra, tributo, CFOP ou NCM..."
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
+      />
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Nova</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>

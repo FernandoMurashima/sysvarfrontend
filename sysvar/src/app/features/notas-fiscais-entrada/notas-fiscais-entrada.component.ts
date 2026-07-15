@@ -11,6 +11,7 @@ import {
   NotaFiscalEntrada,
   NotaFiscalEntradaPedidoItem,
 } from '../../core/models/nota-fiscal-entrada';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
 
@@ -24,7 +25,7 @@ type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
 @Component({
   selector: 'app-notas-fiscais-entrada',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './notas-fiscais-entrada.component.html',
   styleUrls: ['./notas-fiscais-entrada.component.css'],
 })
@@ -85,6 +86,15 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.total / this.pageSize));
+  }
+  get searchSuggestions(): string[] {
+    return this.notas.flatMap(n => [
+      String(n.pedido_compra ?? ''),
+      n.numero,
+      n.serie,
+      n.chave_acesso,
+      this.statusLabel(n.status),
+    ].filter(Boolean));
   }
 
   ngOnInit(): void {

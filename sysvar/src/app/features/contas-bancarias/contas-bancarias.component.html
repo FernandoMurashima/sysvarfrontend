@@ -19,8 +19,13 @@
           </label>
         </div>
       </details>
-      <input type="text" placeholder="Buscar conta, banco, loja..." [(ngModel)]="search" (keyup.enter)="filtrarContas()" />
-      <button class="btn primary" type="button" (click)="filtrarContas()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar conta, banco, loja..."
+        (search)="filtrarContas()"
+        (cleared)="filtrarContas()"
+      />
       <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
       <button class="btn primary" type="button" (click)="novo()" *ngIf="podeEditarModulo">Nova conta</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>

@@ -1,39 +1,15 @@
 .home-hero {
+  width: 78%;
   max-width: 1120px;
   margin: 0 auto;
 }
 
-.hero-copy {
-  min-height: 260px;
+.home-hero img {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 150px);
+  height: auto;
+  object-fit: contain;
   border: 1px solid #dbe3eb;
   border-radius: 8px;
-  background: #ffffff;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 34px;
-}
-
-.eyebrow {
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
-
-.hero-copy h2 {
-  max-width: 620px;
-  margin: 8px 0 10px;
-  font-size: 30px;
-  line-height: 1.15;
-}
-
-.hero-copy p {
-  max-width: 620px;
-  margin: 0;
-  color: #516070;
-  font-size: 15px;
-  line-height: 1.5;
 }

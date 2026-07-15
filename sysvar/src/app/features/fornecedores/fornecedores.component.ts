@@ -13,11 +13,12 @@ import { RouterLink } from '@angular/router';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-fornecedores',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './fornecedores.component.html',
   styleUrls: ['./fornecedores.component.css']
 })
@@ -67,7 +68,6 @@ export class FornecedoresComponent implements OnInit {
     categoria: [''],
     bloqueio: [false],
     mala_direta: [false],
-    conta_contabil: [''],
 
     ativo: [true],
   });
@@ -109,6 +109,17 @@ export class FornecedoresComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    return this.fornecedoresAll.flatMap(f => [
+      f.nome_fornecedor,
+      f.apelido,
+      f.cnpj,
+      f.email,
+      f.cidade,
+      f.estado,
+      this.categoriaLabel(f.categoria),
+    ].filter((v): v is string => !!v));
   }
 
   ngOnInit(): void {
@@ -253,7 +264,6 @@ export class FornecedoresComponent implements OnInit {
       categoria: '',
       bloqueio: false,
       mala_direta: false,
-      conta_contabil: '',
 
       ativo: true,
     });
@@ -293,7 +303,6 @@ export class FornecedoresComponent implements OnInit {
       categoria:      row.categoria ?? '',
       bloqueio:       !!row.bloqueio,
       mala_direta:    !!row.mala_direta,
-      conta_contabil: row.conta_contabil ?? '',
 
       ativo:          row.ativo ?? true,
     });

@@ -2,8 +2,13 @@
   <header class="toolbar">
     <h2>Movimentações Financeiras</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="loadAll()" />
-      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar..."
+        (search)="loadAll()"
+        (cleared)="loadAll()"
+      />
       <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Nova movimentação</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>

@@ -2,8 +2,13 @@
   <header class="toolbar">
     <h2>Ficha Técnica</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar por produto, referência ou versão..." [(ngModel)]="search" (keyup.enter)="load()" />
-      <button class="btn primary" type="button" (click)="load()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar por produto, referência ou versão..."
+        (search)="load()"
+        (cleared)="load()"
+      />
       <button class="btn" type="button" (click)="search=''; load()">Limpar</button>
       <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">Nova</button>
       <a class="btn" routerLink="/home">Home</a>

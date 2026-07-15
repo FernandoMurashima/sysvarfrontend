@@ -89,7 +89,12 @@
         <div class="chooser" *ngIf="form.escopo === 'PRODUTO'">
           <span>Produtos da promoção</span>
           <div class="product-add-row">
-            <input type="text" placeholder="Buscar por descrição, referência ou código" [(ngModel)]="produtoBusca" name="produtoBusca" />
+            <app-search-suggest
+              [(value)]="produtoBusca"
+              [suggestions]="produtoSearchSuggestions"
+              placeholder="Buscar por descrição, referência ou código"
+              (cleared)="produtoBusca=''"
+            />
             <select [(ngModel)]="produtoAdicionarId" name="produtoAdicionarId">
               <option [ngValue]="null">Selecione um produto</option>
               <option *ngFor="let produto of produtosBusca" [ngValue]="produto.Idproduto">

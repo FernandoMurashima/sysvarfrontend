@@ -6,11 +6,12 @@ import { ColecoesService } from '../../core/services/colecoes.service';
 import { Colecao } from '../../core/models/colecao';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-colecoes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './colecoes.component.html',
   styleUrls: ['./colecoes.component.css'],
 })
@@ -42,6 +43,17 @@ export class ColecoesComponent {
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
     return this.colecoes().slice(start, start + this.pageSize());
+  });
+  searchSuggestions = computed(() => {
+    const valores = this.colecoes().flatMap(item => [
+      item.Codigo,
+      item.Descricao,
+      item.Estacao,
+      item.Status,
+      this.estLabel(item.Estacao),
+      this.statusLabel(item.Status)
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   });
 
   get podeEditarModulo(): boolean {

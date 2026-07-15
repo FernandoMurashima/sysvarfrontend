@@ -31,6 +31,7 @@ import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type ItemRef = { id: number; label: string };
 
@@ -44,6 +45,7 @@ type ItemRef = { id: number; label: string };
     RouterLink,
     LojasSelectorComponent,
     CoresSelectorComponent, // <<< adiciona o selector de cores
+    SearchSuggestComponent,
   ],
   templateUrl: './produtos.component.html',
   styleUrls: ['./produtos.component.css'],
@@ -141,6 +143,13 @@ export class ProdutosComponent {
     const start = (this.page() - 1) * this.pageSize();
     return this.produtos().slice(start, start + this.pageSize());
   });
+  searchSuggestions = computed(() => this.produtos().flatMap(p => [
+    p.descricao,
+    p.descricao_reduzida,
+    p.referencia,
+    this.colecaoLabel(p.colecao ?? null),
+    this.tipoProdutoLabel(p.tipo_produto),
+  ].filter((v): v is string => !!v)));
 
   // form
   showForm = false;

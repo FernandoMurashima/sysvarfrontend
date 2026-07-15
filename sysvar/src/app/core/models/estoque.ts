@@ -30,11 +30,19 @@ export interface InventarioEstoque {
   Idinventario?: number;
   Idloja: number;
   descricao: string;
-  status: 'ABERTO' | 'FECHADO' | 'CANCELADO';
+  status: 'ABERTO' | 'VALIDADO' | 'FECHADO' | 'CANCELADO';
   data_abertura: string;
   data_fechamento?: string | null;
   observacao?: string | null;
   itens?: InventarioEstoqueItem[];
+  total_itens?: number;
+  total_contados?: number;
+  total_divergencias?: number;
+  saldo_sistema_total?: number | string;
+  saldo_contado_total?: number | string;
+  diferenca_total?: number | string;
+  movimentos_gerados?: number;
+  documento?: string;
 }
 
 export interface InventarioEstoqueItem {
@@ -45,5 +53,6 @@ export interface InventarioEstoqueItem {
   saldo_sistema: number;
   saldo_contado: number;
   diferenca?: number;
+  contado?: boolean;
   observacao?: string | null;
 }

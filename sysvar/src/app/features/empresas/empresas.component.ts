@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Empresa } from '../../core/models/empresa';
 import { EmpresasService } from '../../core/services/empresas.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-empresas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './empresas.component.html',
   styleUrls: ['./empresas.component.css']
 })
@@ -55,6 +56,14 @@ export class EmpresasComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get pageStart(): number { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
+  get searchSuggestions(): string[] {
+    const valores = this.empresasAll.flatMap(e => [
+      e.nome,
+      e.nome_fantasia,
+      e.documento
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.load();

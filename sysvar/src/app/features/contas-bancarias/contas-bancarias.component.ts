@@ -15,13 +15,14 @@ import { FormasPagamentoService } from '../../core/services/formas-pagamento.ser
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type DestinoTipo = 'CAIXA' | 'CONTA';
 
 @Component({
   selector: 'app-contas-bancarias',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './contas-bancarias.component.html',
   styleUrls: ['./contas-bancarias.component.css']
 })
@@ -74,6 +75,24 @@ export class ContasBancariasComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
+
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.contasTodas.flatMap(c => [
+        c.descricao,
+        c.banco,
+        c.agencia,
+        c.conta,
+        c.pix_chave,
+        c.idloja ? this.lojaNome(c.idloja) : ''
+      ]),
+      ...this.movimentacoes.flatMap(m => [
+        m.documento,
+        m.historico
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   form = this.fb.group({

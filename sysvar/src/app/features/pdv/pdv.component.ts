@@ -32,6 +32,7 @@ import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/servic
 import { TamanhosService } from '../../core/services/tamanhos.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 import { ValeTrocaService } from '../../core/services/vale-troca.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 interface CatalogoItem {
   produto: Produto;
@@ -74,7 +75,7 @@ interface PagamentoVenda {
 @Component({
   selector: 'app-pdv',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent],
   templateUrl: './pdv.component.html',
   styleUrls: ['./pdv.component.css']
 })
@@ -268,6 +269,32 @@ export class PdvComponent implements OnInit {
       item.skus.some(sku => (sku.ean13 || '').includes(q) || (sku.codigo_item_ref || '').includes(q))
     ) : this.catalogo;
     return base.slice(0, 80);
+  }
+
+  get produtoSearchSuggestions(): string[] {
+    const valores = this.catalogo.flatMap(item => [
+      item.produto.descricao,
+      item.produto.descricao_reduzida,
+      item.produto.referencia,
+      String(item.produto.Idproduto || ''),
+      ...item.skus.flatMap(sku => [sku.ean13, sku.codigo_item_ref])
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
+
+  get trocaDocumentoSuggestions(): string[] {
+    const valores = [
+      ...this.trocaVendas.map(venda => venda.documento),
+      ...this.valesTroca.map(vale => vale.documento)
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
+
+  get trocaEanSuggestions(): string[] {
+    const valores = this.trocaVendas.flatMap(venda =>
+      venda.itens.flatMap(item => [item.ean, item.descricao])
+    ).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   get produtoConsultaSelecionado(): CatalogoItem | null {

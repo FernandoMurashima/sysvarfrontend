@@ -5,11 +5,12 @@ import { RouterLink } from '@angular/router';
 import { Tributo } from '../../core/models/tributo';
 import { TributosService } from '../../core/services/tributos.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-tributos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './tributos.component.html',
   styleUrls: ['./tributos.component.css'],
 })
@@ -37,6 +38,15 @@ export class TributosComponent {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
+
+  searchSuggestions = computed(() => {
+    const valores = this.items().flatMap(item => [
+      item.codigo,
+      item.descricao,
+      item.esfera
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  });
 
   showForm = false;
   editingId: number | null = null;

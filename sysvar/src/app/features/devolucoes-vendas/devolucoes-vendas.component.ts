@@ -12,11 +12,12 @@ import { ClientesService } from '../../core/services/clientes.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ValeTrocaService } from '../../core/services/vale-troca.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-devolucoes-vendas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent],
   templateUrl: './devolucoes-vendas.component.html',
   styleUrls: ['./devolucoes-vendas.component.css']
 })
@@ -47,6 +48,31 @@ export class DevolucoesVendasComponent implements OnInit {
   saving = false;
   errorMsg = '';
   successMsg = '';
+
+  get documentoSuggestions(): string[] {
+    const valores = this.vendas.flatMap(venda => [
+      venda.documento,
+      venda.cliente_nome
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
+
+  get eanSuggestions(): string[] {
+    const valores = this.vendas.flatMap(venda =>
+      venda.itens.flatMap(item => [item.ean, item.descricao])
+    ).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
+
+  get cupomTrocaSuggestions(): string[] {
+    const valores = this.valesTroca.flatMap(vale => [
+      vale.documento,
+      vale.cliente_nome,
+      vale.venda_origem_documento,
+      vale.devolucao_documento
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.carregarBase();

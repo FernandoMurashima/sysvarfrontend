@@ -6,11 +6,12 @@ import { RouterLink } from '@angular/router';
 import { TabelaprecoService } from '../../core/services/tabelapreco.service';
 import { TabelaPreco } from '../../core/models/tabelapreco';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-tabelas-preco',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './tabelapreco.component.html',
   styleUrls: ['./tabelapreco.component.css'],
 })
@@ -40,6 +41,15 @@ export class TabelaprecoComponent {
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
     return this.items().slice(start, start + this.pageSize());
+  });
+  searchSuggestions = computed(() => {
+    const valores = this.items().flatMap(item => [
+      item.NomeTabela,
+      item.DataInicio,
+      item.DataFim || '',
+      item.Promocao ? 'Promoção' : 'Tabela'
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   });
 
   get podeEditarModulo(): boolean {

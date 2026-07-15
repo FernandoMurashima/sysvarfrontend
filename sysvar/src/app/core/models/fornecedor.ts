@@ -21,7 +21,6 @@ export interface Fornecedor {
   categoria?: 'MATERIA_PRIMA' | 'AVIAMENTO' | 'REVENDA' | 'FACCAO' | 'PRESTADOR' | 'TRANSPORTADORA' | 'OUTROS' | string;
   bloqueio?: boolean;
   mala_direta?: boolean;
-  conta_contabil?: string;
 
   ativo?: boolean;
   data_cadastro?: string;

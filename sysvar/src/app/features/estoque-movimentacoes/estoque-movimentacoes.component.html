@@ -2,13 +2,13 @@
   <header class="toolbar">
     <h2>Movimentações de Estoque</h2>
     <div class="toolbar-actions">
-      <input
-        type="text"
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
         placeholder="Documento, referência ou EAN..."
-        [(ngModel)]="search"
-        (keyup.enter)="load()"
+        (search)="load()"
+        (cleared)="load()"
       />
-      <button class="btn primary" (click)="load()">Buscar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Nova movimentação</button>
       <button class="btn" [routerLink]="['/home']">Home</button>
     </div>

@@ -8,11 +8,12 @@ import { Loja } from '../../core/models/loja';
 import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-estoque-movimentacoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './estoque-movimentacoes.component.html',
   styleUrls: ['./estoque-movimentacoes.component.css']
 })
@@ -30,6 +31,16 @@ export class EstoqueMovimentacoesComponent implements OnInit {
   lojas: Loja[] = [];
   movimentos: EstoqueMovimentacao[] = [];
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('estoque', true) !== false; }
+  get searchSuggestions(): string[] {
+    const valores = this.movimentos.flatMap(m => [
+      m.documento,
+      m.referencia,
+      m.CodigodeBarra,
+      this.lojaNome(m.Idloja),
+      m.tipo
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
   form = this.fb.group({
     Idloja: [null as number | null, Validators.required],
     CodigodeBarra: ['', [Validators.required, Validators.minLength(13), Validators.maxLength(13)]],

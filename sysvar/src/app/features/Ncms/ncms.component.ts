@@ -6,11 +6,12 @@ import { RouterLink } from '@angular/router';
 import { NcmsService } from '../../core/services/ncms.service';
 import { Ncm } from '../../core/models/ncm';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-ncms',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './ncms.component.html',
   styleUrls: ['./ncms.component.css'],
 })
@@ -45,6 +46,16 @@ export class NcmsComponent {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
+
+  searchSuggestions = computed(() => {
+    const valores = this.items().flatMap(item => [
+      item.ncm,
+      item.descricao,
+      item.categoria,
+      item.campo1
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  });
 
   showForm = false;
   editingId: number | null = null;

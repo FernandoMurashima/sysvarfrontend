@@ -11,11 +11,12 @@ import { CaixasService } from '../../core/services/caixas.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-caixas',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './caixas.component.html',
   styleUrls: ['./caixas.component.css']
 })
@@ -47,6 +48,22 @@ export class CaixasComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
+
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.caixasTodas.flatMap(c => [
+        c.codigo,
+        c.descricao,
+        c.tipo_caixa,
+        c.idloja ? this.lojaNome(c.idloja) : ''
+      ]),
+      ...this.movimentacoes.flatMap(m => [
+        m.documento,
+        m.historico
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   form = this.fb.group({

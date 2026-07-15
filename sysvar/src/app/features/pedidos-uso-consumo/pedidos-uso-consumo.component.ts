@@ -14,6 +14,7 @@ import { NatLancamento } from '../../core/models/natureza-lancamento';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { Unidade } from '../../core/models/unidade';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
@@ -33,7 +34,7 @@ interface PedidoUsoItemUI {
 @Component({
   selector: 'app-pedidos-uso-consumo',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './pedidos-uso-consumo.component.html',
   styleUrls: ['./pedidos-uso-consumo.component.css'],
 })
@@ -155,6 +156,26 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    return this.pedidosAll.flatMap(p => [
+      String(p.id ?? ''),
+      this.labelLoja(p.loja),
+      this.labelFornecedor(p.fornecedor),
+      p.status,
+      p.natureza_label,
+    ].filter(Boolean));
+  }
+  get produtoConsultaSuggestions(): string[] {
+    const base = [...this.produtosConsulta, ...this.produtosSugestoes];
+    const valores = base.flatMap(p => [
+      p.descricao,
+      p.descricao_reduzida,
+      p.referencia,
+      String(p.Idproduto ?? p.id ?? ''),
+      this.produtoTipoLabel(p)
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {

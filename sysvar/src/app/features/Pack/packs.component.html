@@ -2,8 +2,13 @@
   <header class="toolbar">
     <h2>Packs</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar por nome..." [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
-      <button class="btn primary" (click)="doSearch()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar por nome..."
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
+      />
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoPack()">Novo Pack</button>
       <button class="btn primary" (click)="goHome()">Home</button>

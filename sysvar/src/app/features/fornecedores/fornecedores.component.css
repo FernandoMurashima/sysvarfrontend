@@ -102,7 +102,7 @@ input, select {
   #tipo-box, #endereco-box, #numero-box, #complemento-box,
   #cep-box, #bairro-box, #cidade-box, #telefone1-box,
   #telefone2-box, #categoria-box,
-  #conta-contabil-box, #bloqueio-box, #mala-box { grid-column: 1 / -1; }
+  #bloqueio-box, #mala-box { grid-column: 1 / -1; }
 }
 
 /* overlay */
@@ -140,11 +140,10 @@ input, select {
 #cidade-box         { grid-column: 6 / span 3; }
 #estado-box         { grid-column: 9 / span 2; }
 
-/* Linha: telefone1 | telefone2 | categoria | conta contábil (fecha 10 colunas) */
+/* Linha: telefone1 | telefone2 | categoria */
 #telefone1-box      { grid-column: 1 / span 2; } /* 1–2 */
 #telefone2-box      { grid-column: 3 / span 2; } /* 3–4 */
-#categoria-box      { grid-column: 5 / span 2; } /* 5–6 */
-#conta-contabil-box { grid-column: 7 / span 4; } /* 7–10 */
+#categoria-box      { grid-column: 5 / span 3; } /* 5–7 */
 
 /* Última linha: bloqueio | mala direta | ativo */
 #bloqueio-box       { grid-column: 1 / span 2; }

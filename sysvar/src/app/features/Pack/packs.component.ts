@@ -14,11 +14,12 @@ import { PackItemModel } from '../../core/models/pack-item';
 import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-packs',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
   templateUrl: './packs.component.html',
   styleUrls: ['./packs.component.css'],
 })
@@ -50,6 +51,20 @@ export class PacksComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.packs.flatMap(item => [
+        item.nome,
+        item.ativo ? 'Ativo' : 'Inativo',
+        this.getGradeDesc(item.grade)
+      ]),
+      ...this.items.flatMap(item => [
+        this.getTamanhoDesc(item.tamanho),
+        String(item.qtd ?? '')
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   formModePack: 'new' | 'edit' | null = null;

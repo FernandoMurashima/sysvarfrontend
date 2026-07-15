@@ -10,6 +10,7 @@ import { LojasService } from '../../core/services/lojas.service';
 import { OrdemProducaoService } from '../../core/services/ordem-producao.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 interface GradeProducaoRow {
   sku: ProdutoSku;
@@ -29,7 +30,7 @@ interface DistribuicaoRow {
 @Component({
   selector: 'app-ordem-producao',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './ordem-producao.component.html',
   styleUrls: ['./ordem-producao.component.css'],
 })
@@ -67,6 +68,23 @@ export class OrdemProducaoComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('producao', true) !== false;
+  }
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.ordens.flatMap(item => [
+        item.numero,
+        item.produto_descricao,
+        item.produto_referencia,
+        item.status,
+        this.statusLabel(item.status)
+      ]),
+      ...this.fichas.flatMap(item => [
+        item.produto_descricao,
+        item.produto_referencia,
+        item.versao
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {
@@ -282,7 +300,8 @@ export class OrdemProducaoComponent implements OnInit {
       itens,
     }).subscribe({
       next: res => {
-        this.showSuccess(`Distribuição registrada: ${res?.documento || ''}`.trim());
+        const nfe = res?.nfe_numero ? ` NF-e ${res.nfe_serie || ''}/${res.nfe_numero} gerada.` : '';
+        this.showSuccess(`Distribuição registrada: ${res?.documento || ''}.${nfe}`.trim());
         this.showDistribuicaoModal = false;
         this.distribuicao.documento = '';
         this.distribuicaoRows.forEach(row => row.quantidade = 0);

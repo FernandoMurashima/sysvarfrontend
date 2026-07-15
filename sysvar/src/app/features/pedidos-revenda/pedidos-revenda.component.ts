@@ -18,6 +18,7 @@ import { NatLancamentosService } from '../../core/services/natureza-lancamento.s
 import { NatLancamento } from '../../core/models/natureza-lancamento';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
@@ -43,7 +44,7 @@ interface PedidoCompraItemUI {
 @Component({
   selector: 'app-pedidos-revenda',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './pedidos-revenda.component.html',
   styleUrls: ['./pedidos-revenda.component.css'],
 })
@@ -172,6 +173,24 @@ export class PedidosRevendaComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    return this.pedidosAll.flatMap(p => [
+      String(p.id ?? ''),
+      this.labelLoja(p.loja),
+      this.labelFornecedor(p.fornecedor),
+      p.status,
+      p.natureza_label,
+    ].filter(Boolean));
+  }
+  get produtoConsultaSuggestions(): string[] {
+    const valores = this.produtosConsulta.flatMap(p => [
+      p.descricao,
+      p.descricao_reduzida,
+      p.referencia,
+      String(p.Idproduto ?? p.id ?? '')
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {

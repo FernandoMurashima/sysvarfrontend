@@ -16,6 +16,7 @@ import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { TamanhosService } from '../../core/services/tamanhos.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 interface MatrizTamanho {
   id: number;
@@ -41,7 +42,7 @@ interface ColecaoReferenciaRow {
 @Component({
   selector: 'app-estoque-consulta',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './estoque-consulta.component.html',
   styleUrls: ['./estoque-consulta.component.css']
 })
@@ -82,6 +83,30 @@ export class EstoqueConsultaComponent implements OnInit {
   colecaoLojaIds: number[] = [];
   colecaoTotaisLoja: Record<number, number> = {};
   colecaoTotalGeral = 0;
+
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.produtos.flatMap(p => [
+        p.referencia,
+        p.descricao,
+        p.descricao_reduzida
+      ]),
+      ...this.skus.flatMap(s => [
+        s.ean13,
+        s.codigo_item_ref
+      ]),
+      ...this.estoques.flatMap(e => [
+        e.referencia,
+        e.CodigodeBarra
+      ]),
+      ...this.movimentos.flatMap(m => [
+        m.referencia,
+        m.CodigodeBarra,
+        m.documento
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.route.data.subscribe(data => {

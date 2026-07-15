@@ -23,9 +23,6 @@ export interface Cliente {
   bloqueio?: boolean;
   aniversario?: string | null;   // yyyy-MM-dd
   mala_direta?: boolean;
-
-  conta_contabil?: string;
-
   ativo?: boolean;
   data_cadastro?: string;
 }

@@ -9,11 +9,12 @@ import { TamanhosService } from '../../core/services/tamanhos.service';
 import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
   templateUrl: './grades.component.html',
   styleUrls: ['./grades.component.css'],
 })
@@ -41,6 +42,20 @@ export class GradesComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.grades.flatMap(item => [
+        item.Descricao,
+        item.Status
+      ]),
+      ...this.tamanhos.flatMap(item => [
+        item.Tamanho,
+        item.Descricao,
+        item.Status
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   formModeGrade: 'new' | 'edit' | null = null;

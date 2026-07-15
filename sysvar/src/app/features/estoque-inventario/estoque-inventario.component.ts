@@ -30,7 +30,14 @@ export class EstoqueInventarioComponent implements OnInit {
   load(): void {
     this.loading = true;
     forkJoin({ lojas: this.lojasApi.list(), invs: this.api.listInventarios() }).subscribe({
-      next: r => { this.lojas = this.unwrap<Loja>(r.lojas); this.inventarios = this.unwrap<InventarioEstoque>(r.invs); this.loading = false; },
+      next: r => {
+        this.lojas = this.unwrap<Loja>(r.lojas);
+        this.inventarios = this.unwrap<InventarioEstoque>(r.invs);
+        if (this.selecionado?.Idinventario) {
+          this.selecionado = this.inventarios.find(inv => inv.Idinventario === this.selecionado?.Idinventario) || null;
+        }
+        this.loading = false;
+      },
       error: () => { this.loading = false; this.errorMsg = 'Falha ao carregar inventários.'; }
     });
   }
@@ -44,20 +51,36 @@ export class EstoqueInventarioComponent implements OnInit {
       error: () => { this.saving = false; this.errorMsg = 'Falha ao criar inventário.'; }
     });
   }
-  gerarItens(inv: InventarioEstoque): void { if (!this.podeEditarModulo) return; if (!inv.Idinventario) return; this.api.gerarItensInventario(inv.Idinventario).subscribe({ next: () => { this.successMsg = 'Itens gerados.'; this.load(); }, error: () => this.errorMsg = 'Falha ao gerar itens.' }); }
+  gerarItens(inv: InventarioEstoque): void { if (!this.podeEditarModulo) return; if (!inv.Idinventario) return; this.api.gerarItensInventario(inv.Idinventario).subscribe({ next: res => { this.successMsg = `${res.created || 0} item(ns) gerado(s).`; this.load(); }, error: err => this.errorMsg = this.errorText(err, 'Falha ao gerar itens.') }); }
+  validar(inv: InventarioEstoque): void {
+    if (!this.podeEditarModulo || !inv.Idinventario) return;
+    this.api.validarInventario(inv.Idinventario).subscribe({
+      next: res => { this.successMsg = `Inventário validado. Divergências: ${res?.divergencias || 0}.`; this.load(); },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao validar inventário.'),
+    });
+  }
   fechar(inv: InventarioEstoque): void { if (!this.podeEditarModulo) return; if (!inv.Idinventario) return; this.fecharModal = inv; }
   confirmarFechamento(): void {
     if (!this.podeEditarModulo) return;
     const inv = this.fecharModal;
     if (!inv?.Idinventario) return;
-    this.api.fecharInventario(inv.Idinventario).subscribe({
-      next: () => { this.fecharModal = null; this.successMsg = 'Inventário fechado.'; this.load(); },
-      error: () => this.errorMsg = 'Falha ao fechar inventário.'
+    this.api.finalizarInventario(inv.Idinventario).subscribe({
+      next: res => { this.fecharModal = null; this.successMsg = `Inventário finalizado. ${res.movimentos_gerados || 0} ajuste(s) gerado(s).`; this.load(); },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao finalizar inventário.')
     });
   }
   cancelarFechamento(): void { this.fecharModal = null; }
-  atualizarItem(item: InventarioEstoqueItem): void { if (!this.podeEditarModulo) return; if (!item.Idinventarioitem) return; this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: Number(item.saldo_contado), observacao: item.observacao }).subscribe({ next: () => this.successMsg = 'Contagem atualizada.', error: () => this.errorMsg = 'Falha ao atualizar item.' }); }
+  atualizarItem(item: InventarioEstoqueItem): void { if (!this.podeEditarModulo) return; if (!item.Idinventarioitem) return; this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: Number(item.saldo_contado), observacao: item.observacao }).subscribe({ next: atualizado => { Object.assign(item, atualizado); this.successMsg = 'Contagem atualizada.'; }, error: err => this.errorMsg = this.errorText(err, 'Falha ao atualizar item.') }); }
   lojaNome(id: number): string { return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`; }
+  statusLabel(status: string): string {
+    return ({ ABERTO: 'Aberto', VALIDADO: 'Validado', FECHADO: 'Finalizado', CANCELADO: 'Cancelado' } as Record<string, string>)[status] || status;
+  }
+  podeContar(inv?: InventarioEstoque | null): boolean { return !!inv && inv.status === 'ABERTO' && this.podeEditarModulo; }
+  pendentes(inv: InventarioEstoque): number { return Number(inv.total_itens || inv.itens?.length || 0) - Number(inv.total_contados || 0); }
+  moneyLike(value: number | string | null | undefined): string { return String(value ?? '0'); }
   private unwrap<T>(res: any): T[] { return Array.isArray(res) ? res : (res?.results ?? []); }
   private today(): string { return new Date().toISOString().slice(0, 10); }
+  private errorText(err: any, fallback: string): string {
+    return err?.error?.detail || err?.error?.message || fallback;
+  }
 }

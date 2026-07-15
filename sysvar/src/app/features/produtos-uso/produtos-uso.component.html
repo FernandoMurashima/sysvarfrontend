@@ -4,14 +4,13 @@
     <h2>Produtos — Uso/Consumo</h2>
 
     <div class="toolbar-right">
-      <input
-        type="text"
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions()"
         placeholder="Buscar por descrição, referência ou código reduzido"
-        [(ngModel)]="search"
-        (keyup)="onSearchKeyup($event)"
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="doSearch()">Buscar</button>
-      <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>

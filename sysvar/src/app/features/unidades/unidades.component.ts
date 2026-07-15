@@ -6,11 +6,12 @@ import { RouterLink } from '@angular/router';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { Unidade } from '../../core/models/unidade';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-unidades',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './unidades.component.html',
   styleUrls: ['./unidades.component.css'],
 })
@@ -52,6 +53,13 @@ export class UnidadesComponent implements OnInit {
   get pageStart(): number   { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
   get pageEnd(): number     { return Math.min(this.page * this.pageSize, this.total); }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
+  get searchSuggestions(): string[] {
+    const valores = this.unidadesAll.flatMap(item => [
+      item.Descricao,
+      item.Codigo
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void { this.load(); }
 

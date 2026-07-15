@@ -41,7 +41,13 @@
     </label>
 
     <label>Cupom
-      <input type="text" [(ngModel)]="documento" (keyup.enter)="consultar()" placeholder="Ex.: VT-DEV-..." />
+      <app-search-suggest
+        [(value)]="documento"
+        [suggestions]="documentoSuggestions"
+        placeholder="Ex.: VT-DEV-..."
+        (search)="consultar()"
+        (cleared)="consultar()"
+      />
     </label>
 
     <button class="btn primary" type="button" (click)="consultar()" [disabled]="loading">

@@ -185,7 +185,13 @@
       <section class="scan-workbench">
         <div class="scan-entry">
           <label>Código de barras
-            <input class="scan-input" type="text" placeholder="Bipe o EAN ou digite código/referência" [(ngModel)]="codigoRapido" (keyup.enter)="adicionarCodigoRapido()" autofocus />
+            <app-search-suggest
+              [(value)]="codigoRapido"
+              [suggestions]="produtoSearchSuggestions"
+              placeholder="Bipe o EAN ou digite código/referência"
+              (search)="adicionarCodigoRapido()"
+              (cleared)="codigoRapido=''"
+            />
           </label>
           <button class="btn primary scan-button" type="button" (click)="adicionarCodigoRapido()" *ngIf="podeEditarModulo">Lançar item</button>
         </div>
@@ -200,11 +206,23 @@
           </div>
           <div class="exchange-search">
             <label>Cupom
-              <input type="text" [(ngModel)]="trocaDocumento" (keyup.enter)="buscarTrocaPorDocumento()" placeholder="Documento da venda original" />
+              <app-search-suggest
+                [(value)]="trocaDocumento"
+                [suggestions]="trocaDocumentoSuggestions"
+                placeholder="Documento da venda original"
+                (search)="buscarTrocaPorDocumento()"
+                (cleared)="trocaDocumento=''"
+              />
             </label>
             <button class="btn primary" type="button" (click)="buscarTrocaPorDocumento()" [disabled]="trocaLoading" *ngIf="podeEditarModulo">Buscar cupom</button>
             <label>Código de barras
-              <input type="text" [(ngModel)]="trocaCodigoBarra" (keyup.enter)="buscarTrocaPorCodigo()" placeholder="Bipe a peça devolvida" />
+              <app-search-suggest
+                [(value)]="trocaCodigoBarra"
+                [suggestions]="trocaEanSuggestions"
+                placeholder="Bipe a peça devolvida"
+                (search)="buscarTrocaPorCodigo()"
+                (cleared)="trocaCodigoBarra=''"
+              />
             </label>
             <button class="btn primary" type="button" (click)="buscarTrocaPorCodigo()" [disabled]="trocaLoading" *ngIf="podeEditarModulo">Buscar peça</button>
           </div>
@@ -242,7 +260,13 @@
         <section class="quick-product-lookup">
           <label class="lookup-toggle"><input type="checkbox" [(ngModel)]="consultaProdutoAberta" /> Consulta rápida de produto</label>
           <div class="lookup-body" *ngIf="consultaProdutoAberta">
-            <input type="text" placeholder="Buscar descrição, referência, SKU ou EAN" [(ngModel)]="buscaProdutoConsulta" />
+            <app-search-suggest
+              [(value)]="buscaProdutoConsulta"
+              [suggestions]="produtoSearchSuggestions"
+              placeholder="Buscar descrição, referência, SKU ou EAN"
+              (search)="selecionarProdutoConsulta()"
+              (cleared)="buscaProdutoConsulta=''"
+            />
             <select size="7" [(ngModel)]="produtoConsultaId" (ngModelChange)="selecionarProdutoConsulta()">
               <option *ngFor="let item of produtosConsulta" [ngValue]="item.produto.Idproduto">
                 {{ item.produto.referencia || item.produto.Idproduto }} - {{ item.produto.descricao }} - {{ item.preco | currency:'BRL' }}

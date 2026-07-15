@@ -7,11 +7,12 @@ import { Empresa } from '../../core/models/empresa';
 import { PlanoContabil } from '../../core/models/plano-contabil';
 import { EmpresasService } from '../../core/services/empresas.service';
 import { PlanoContabilService } from '../../core/services/plano-contabil.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-plano-contabil',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './plano-contabil.component.html',
   styleUrls: ['./plano-contabil.component.css']
 })
@@ -70,6 +71,17 @@ export class PlanoContabilComponent implements OnInit {
   get pageStart(): number { return this.total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
+  get searchSuggestions(): string[] {
+    const valores = this.contasAll.flatMap(item => [
+      item.codigo,
+      item.descricao,
+      item.classe,
+      item.natureza,
+      item.conta_pai_codigo || '',
+      item.conta_pai_descricao || ''
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.loadEmpresas();

@@ -4,13 +4,13 @@
   <header class="toolbar">
     <h2>Formas de Pagamento</h2>
     <div class="toolbar-actions">
-      <input
-        type="text"
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
         placeholder="Buscar por código ou descrição..."
-        [(ngModel)]="search"
-        (keyup)="onSearchKeyup($event)"
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="doSearch()">Buscar</button>
       <button class="btn primary" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Nova Forma</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>

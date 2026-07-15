@@ -17,11 +17,12 @@ import { FormaPagamento, FormaPagamentoParcela } from '../../core/models/forma-p
 import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-formas-pagamento',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './formas-pagamento.component.html',
   styleUrls: ['./formas-pagamento.component.css']
 })
@@ -84,6 +85,15 @@ export class FormasPagamentoComponent implements OnInit {
   }
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
+  get searchSuggestions(): string[] {
+    const valores = this.formasAll.flatMap(item => [
+      item.codigo,
+      item.descricao,
+      item.adquirente || '',
+      item.ativo ? 'Ativo' : 'Inativo'
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {

@@ -11,11 +11,12 @@ import { NcmsService } from '../../core/services/ncms.service';
 import { RegrasTributariasService } from '../../core/services/regras-tributarias.service';
 import { TributosService } from '../../core/services/tributos.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-regras-tributarias',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './regras-tributarias.component.html',
   styleUrls: ['./regras-tributarias.component.css'],
 })
@@ -49,6 +50,24 @@ export class RegrasTributariasComponent {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
+
+  searchSuggestions = computed(() => {
+    const valores = [
+      ...this.items().flatMap(item => [
+        item.nome,
+        item.tipo_operacao,
+        item.regime_tributario,
+        item.tipo_produto,
+        item.uf_origem,
+        item.uf_destino,
+        item.cst_csosn
+      ]),
+      ...this.tributos().flatMap(t => [t.codigo, t.descricao]),
+      ...this.cfops().flatMap(c => [c.codigo, c.descricao]),
+      ...this.ncms().flatMap(n => [n.ncm, n.descricao])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  });
 
   showForm = false;
   editingId: number | null = null;

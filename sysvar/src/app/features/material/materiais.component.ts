@@ -6,11 +6,12 @@ import { RouterLink } from '@angular/router';
 import { MateriaisService } from '../../core/services/material.service';
 import { Material } from '../../core/models/material';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-materiais',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './materiais.component.html',
   styleUrls: ['./materiais.component.css'],
 })
@@ -40,6 +41,14 @@ export class MateriaisComponent {
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
     return this.items().slice(start, start + this.pageSize());
+  });
+  searchSuggestions = computed(() => {
+    const valores = this.items().flatMap(item => [
+      item.Descricao,
+      item.Codigo,
+      item.Status
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   });
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
 

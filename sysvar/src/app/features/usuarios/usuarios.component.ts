@@ -12,6 +12,7 @@ import { Empresa } from '../../core/models/empresa';
 
 import {Router} from "@angular/router";
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Loja = {
   id?: number;
@@ -36,7 +37,7 @@ type CampoPermissao = {
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule,],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, SearchSuggestComponent],
   templateUrl: './usuarios.component.html',
   styleUrls: ['./usuarios.component.css']
 })
@@ -128,6 +129,19 @@ export class UsuariosComponent implements OnInit {
     'AssistenteReceber',
     'AssistentePagar'
   ]);
+
+  get searchSuggestions(): string[] {
+    return this.usuarios.flatMap(u => [
+      u.username,
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.type,
+      u.empresa?.nome_fantasia,
+      u.empresa?.nome,
+      u.loja?.nome_loja,
+    ].filter((v): v is string => !!v));
+  }
 
   ngOnInit(): void {
     this.loadUsuarioAtual();

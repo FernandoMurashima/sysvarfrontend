@@ -2,9 +2,13 @@
   <header class="toolbar">
     <h2>Plano Contábil</h2>
     <div class="toolbar-actions">
-      <input type="text" placeholder="Buscar por código, descrição, classe..."
-             [(ngModel)]="search" (keyup)="onSearchKeyup($event)" />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar por código, descrição, classe..."
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
+      />
       <button class="btn primary" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Novo</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>

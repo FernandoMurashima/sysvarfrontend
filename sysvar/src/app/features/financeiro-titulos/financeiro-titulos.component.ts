@@ -17,11 +17,12 @@ import { LojasService } from '../../core/services/lojas.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { FormaPagamento } from '../../core/models/forma-pagamento';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-financeiro-titulos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './financeiro-titulos.component.html',
   styleUrls: ['./financeiro-titulos.component.css']
 })
@@ -67,6 +68,29 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('financeiro', true) !== false;
+  }
+
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.titulos.flatMap(t => [
+        t.Titulo,
+        t.Documento,
+        this.parceiroNome(t),
+        t.idloja ? this.lojaNome(t.idloja) : ''
+      ]),
+      ...this.fornecedores.flatMap(f => [
+        f.nome_fornecedor,
+        f.apelido,
+        f.cnpj
+      ]),
+      ...this.clientes.flatMap(c => [
+        c.nome_cliente,
+        c.apelido,
+        c.cpf,
+        c.email
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   form: FormGroup = this.fb.group({

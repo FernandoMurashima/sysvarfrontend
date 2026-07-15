@@ -10,11 +10,12 @@ import { Empresa } from '../../core/models/empresa';
 import { AuthService } from '../../core/auth.service';
 import { PlanoContabil } from '../../core/models/plano-contabil';
 import { PlanoContabilService } from '../../core/services/plano-contabil.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-nat-lancamentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './natureza-lancamento.component.html',
   styleUrls: ['./natureza-lancamento.component.css']
 })
@@ -99,6 +100,22 @@ export class NatLancamentosComponent implements OnInit {
 
   get isSuperUser(): boolean { return !!this.auth.getCurrentUser()?.is_superuser; }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
+  get searchSuggestions(): string[] {
+    const valores = this.itensAll.flatMap(item => [
+      item.codigo,
+      item.descricao,
+      item.categoria_principal,
+      item.subcategoria,
+      item.categoria_gerencial || '',
+      item.tipo,
+      item.status,
+      item.tipo_natureza,
+      item.natureza_operacao || '',
+      item.plano_contabil_codigo || '',
+      item.plano_contabil_descricao || ''
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.loadEmpresas();

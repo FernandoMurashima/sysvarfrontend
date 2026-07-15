@@ -17,11 +17,12 @@ import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
 import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-movimentacoes-financeiras',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './movimentacoes-financeiras.component.html',
   styleUrls: ['./movimentacoes-financeiras.component.css']
 })
@@ -52,6 +53,24 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   cancelarModal: MovimentacaoFinanceira | null = null;
   excluirModal: MovimentacaoFinanceira | null = null;
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.movimentacoes.flatMap(m => [
+        m.documento,
+        m.historico,
+        m.origem,
+        m.tipo,
+        m.status,
+        m.idloja ? this.lojaNome(m.idloja) : ''
+      ]),
+      ...this.naturezas.flatMap(n => [
+        n.codigo,
+        n.descricao,
+        n.subcategoria
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],

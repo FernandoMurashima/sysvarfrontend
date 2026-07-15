@@ -8,11 +8,12 @@ import { SubgruposService } from '../../core/services/subgrupos.service';
 import { GrupoModel } from '../../core/models/grupo';
 import { SubgrupoModel } from '../../core/models/subgrupo';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-grupos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
   templateUrl: './grupos.component.html',
   styleUrls: ['./grupos.component.css']
 })
@@ -41,6 +42,20 @@ export class GruposComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
+  }
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.grupos.flatMap(item => [
+        item.Codigo,
+        item.Descricao,
+        String(item.Margem ?? '')
+      ]),
+      ...this.subgrupos.flatMap(item => [
+        item.Descricao,
+        String(item.Margem ?? '')
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   editingGrupoId: number | null = null;

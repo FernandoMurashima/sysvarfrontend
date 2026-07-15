@@ -39,6 +39,14 @@ export class EstoqueService {
     return this.http.post<InventarioEstoque>(`${this.base}/inventario-estoque/${id}/fechar/`, {});
   }
 
+  validarInventario(id: number): Observable<any> {
+    return this.http.post<any>(`${this.base}/inventario-estoque/${id}/validar/`, {});
+  }
+
+  finalizarInventario(id: number): Observable<InventarioEstoque> {
+    return this.http.post<InventarioEstoque>(`${this.base}/inventario-estoque/${id}/finalizar/`, {});
+  }
+
   updateInventarioItem(id: number, payload: Partial<InventarioEstoqueItem>): Observable<InventarioEstoqueItem> {
     return this.http.patch<InventarioEstoqueItem>(`${this.base}/inventario-estoque-item/${id}/`, payload);
   }

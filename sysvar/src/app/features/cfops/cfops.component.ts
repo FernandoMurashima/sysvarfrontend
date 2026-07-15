@@ -5,11 +5,12 @@ import { RouterLink } from '@angular/router';
 import { Cfop } from '../../core/models/cfop';
 import { CfopsService } from '../../core/services/cfops.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-cfops',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './cfops.component.html',
   styleUrls: ['./cfops.component.css'],
 })
@@ -43,6 +44,16 @@ export class CfopsComponent {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
+
+  searchSuggestions = computed(() => {
+    const valores = this.items().flatMap(item => [
+      item.codigo,
+      item.descricao,
+      item.tipo_operacao,
+      item.destino
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  });
 
   showForm = false;
   editingId: number | null = null;

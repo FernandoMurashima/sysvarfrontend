@@ -13,11 +13,12 @@ import { RouterLink } from '@angular/router';
 import { ClientesService } from '../../core/services/clientes.service';
 import { Cliente } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './clientes.component.html',
   styleUrls: ['./clientes.component.css']
 })
@@ -71,8 +72,6 @@ export class ClientesComponent implements OnInit {
     bloqueio: [false],
     mala_direta: [false],
     ativo: [true],
-
-    conta_contabil: [''],
   });
 
   logradouroOptions: string[] = [
@@ -97,6 +96,16 @@ export class ClientesComponent implements OnInit {
     }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    return this.clientesAll.flatMap(c => [
+      c.nome_cliente,
+      c.apelido,
+      c.cpf,
+      c.email,
+      c.cidade,
+      c.telefone1,
+    ].filter((v): v is string => !!v));
   }
 
   ngOnInit(): void {
@@ -253,8 +262,6 @@ export class ClientesComponent implements OnInit {
       bloqueio: false,
       mala_direta: false,
       ativo: true,
-
-      conta_contabil: '',
     });
   }
 
@@ -296,8 +303,6 @@ export class ClientesComponent implements OnInit {
       bloqueio:       !!row.bloqueio,
       mala_direta:    !!row.mala_direta,
       ativo:          row.ativo ?? true,
-
-      conta_contabil: row.conta_contabil ?? '',
     });
   }
 

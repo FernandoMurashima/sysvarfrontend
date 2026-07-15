@@ -9,11 +9,12 @@ import { LojasService } from '../../core/services/lojas.service';
 import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-funcionarios',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './funcionarios.component.html',
   styleUrls: ['./funcionarios.component.css']
 })
@@ -96,6 +97,15 @@ export class FuncionariosComponent implements OnInit {
   }
   get pageEnd(): number {
     return Math.min(this.page * this.pageSize, this.total);
+  }
+  get searchSuggestions(): string[] {
+    return this.funcionariosAll.flatMap(f => [
+      f.nomefuncionario,
+      f.apelido,
+      f.cpf,
+      f.categoria,
+      this.lojaNome((f as any).idloja),
+    ].filter((v): v is string => !!v));
   }
 
   ngOnInit(): void {
@@ -187,6 +197,11 @@ export class FuncionariosComponent implements OnInit {
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
   doSearch(): void { this.page = 1; this.load(); }
   clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
+
+  lojaNome(id: number | null | undefined): string {
+    if (!id) return '';
+    return this.lojasOptions.find(l => l.id === id)?.nome || '';
+  }
 
   novo(): void {
     this.showForm = true;

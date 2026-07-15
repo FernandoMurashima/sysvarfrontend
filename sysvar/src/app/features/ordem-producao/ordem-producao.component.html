@@ -2,30 +2,13 @@
   <header class="toolbar">
     <h2>Ordens de Produção</h2>
     <div class="toolbar-actions">
-      <div class="search-box">
-        <input
-          placeholder="Buscar por número, produto ou referência..."
-          [(ngModel)]="search"
-          (ngModelChange)="onSearchInput()"
-          (focus)="onSearchInput()"
-          (blur)="esconderSugestoes()"
-          (keyup.enter)="load()"
-        />
-        <div class="suggestions" *ngIf="showSugestoes">
-          <div class="suggestion muted" *ngIf="loadingSugestoes">Buscando...</div>
-          <button
-            class="suggestion"
-            type="button"
-            *ngFor="let ordem of sugestoesOps"
-            (mousedown)="selecionarSugestao(ordem)"
-          >
-            <strong>{{ ordem.numero }}</strong>
-            <span>{{ ordem.produto_referencia || '-' }} - {{ ordem.produto_descricao }}</span>
-            <small>{{ statusLabel(ordem.status) }} · {{ formatQtd(ordem.quantidade) }} peça(s)</small>
-          </button>
-          <div class="suggestion muted" *ngIf="!loadingSugestoes && !sugestoesOps.length">Nenhuma OP encontrada.</div>
-        </div>
-      </div>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar por número, produto ou referência..."
+        (search)="load()"
+        (cleared)="search=''; load()"
+      />
       <select [(ngModel)]="statusFiltro" (change)="load()">
         <option value="">Todos</option>
         <option value="ABERTA">Aberta</option>
@@ -34,7 +17,6 @@
         <option value="FINALIZADA">Finalizada</option>
         <option value="CANCELADA">Cancelada</option>
       </select>
-      <button class="btn primary" type="button" (click)="load()">Buscar</button>
       <button class="btn" type="button" (click)="search=''; statusFiltro=''; load()">Limpar</button>
       <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">Nova</button>
       <a class="btn" routerLink="/home">Home</a>

@@ -1,0 +1,28 @@
+<div class="search-suggest-shell">
+  <div class="search-suggest-field">
+    <input
+      type="text"
+      [placeholder]="placeholder"
+      [ngModel]="value"
+      (ngModelChange)="onInput($event)"
+      (focus)="onFocus()"
+      (keyup.enter)="doSearch()"
+      [disabled]="disabled"
+      autocomplete="off"
+    />
+
+    <div class="suggestions" *ngIf="open && filteredSuggestions.length > 0">
+      <button
+        type="button"
+        class="suggestion"
+        *ngFor="let item of filteredSuggestions"
+        (click)="select(item)"
+      >
+        {{ item }}
+      </button>
+    </div>
+  </div>
+
+  <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+  <button class="btn primary" type="button" (click)="clear()">Limpar</button>
+</div>

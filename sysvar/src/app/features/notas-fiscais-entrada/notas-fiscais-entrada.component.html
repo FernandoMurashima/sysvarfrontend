@@ -3,14 +3,13 @@
     <h2>Notas Fiscais de Entrada</h2>
 
     <div class="toolbar-right">
-      <input
-        type="text"
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
         placeholder="Buscar por pedido, número, série ou chave"
-        [(ngModel)]="search"
-        (keyup)="onSearchKeyup($event)"
+        (search)="applyFilter()"
+        (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="applyFilter()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" type="button" (click)="novo()">Nova</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
     </div>

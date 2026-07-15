@@ -15,6 +15,7 @@ import { UnidadesService } from '../../core/services/unidades.service';
 import { MateriaisService } from '../../core/services/material.service';
 import { NcmsService } from '../../core/services/ncms.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type ItemRef = { id: number; label: string };
 
@@ -26,6 +27,7 @@ type ItemRef = { id: number; label: string };
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
+    SearchSuggestComponent,
   ],
   templateUrl: './produtos-uso.component.html',
   styleUrls: ['./produtos-uso.component.css'],
@@ -78,6 +80,14 @@ export class ProdutosUsoComponent {
     const start = (this.page() - 1) * this.pageSize();
     return this.produtos().slice(start, start + this.pageSize());
   });
+  searchSuggestions = computed(() => this.produtos().flatMap(p => [
+    p.descricao,
+    p.descricao_reduzida,
+    p.referencia,
+    p.ncm,
+    this.unidadeLabel(p.unidade ?? null),
+    this.tipoProdutoLabel(p.tipo_produto),
+  ].filter((v): v is string => !!v)));
 
   // form
   showForm = false;

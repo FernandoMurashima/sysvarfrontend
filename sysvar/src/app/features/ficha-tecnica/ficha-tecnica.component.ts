@@ -11,11 +11,12 @@ import { ProdutosService } from '../../core/services/produtos.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-ficha-tecnica',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './ficha-tecnica.component.html',
   styleUrls: ['./ficha-tecnica.component.css'],
 })
@@ -45,6 +46,24 @@ export class FichaTecnicaComponent implements OnInit {
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('producao', true) !== false;
+  }
+
+  get searchSuggestions(): string[] {
+    const valores = [
+      ...this.fichas.flatMap(f => [
+        f.produto_descricao,
+        f.produto_referencia,
+        f.versao,
+        f.descricao,
+        f.status
+      ]),
+      ...this.produtosProprios.flatMap(p => [
+        p.descricao,
+        p.descricao_reduzida,
+        p.referencia
+      ])
+    ].filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {

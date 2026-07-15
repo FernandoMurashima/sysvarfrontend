@@ -29,20 +29,22 @@
     </label>
 
     <label>Documento da venda
-      <input
-        type="text"
-        [(ngModel)]="documento"
-        (keyup.enter)="filtrarVendas()"
+      <app-search-suggest
+        [(value)]="documento"
+        [suggestions]="documentoSuggestions"
         placeholder="Ex.: PDV-202606..."
+        (search)="filtrarVendas()"
+        (cleared)="filtrarVendas()"
       />
     </label>
 
     <label>Código de barras
-      <input
-        type="text"
-        [(ngModel)]="codigoBarra"
-        (keyup.enter)="buscarPorCodigoBarra()"
+      <app-search-suggest
+        [(value)]="codigoBarra"
+        [suggestions]="eanSuggestions"
         placeholder="Bipe ou digite o EAN"
+        (search)="buscarPorCodigoBarra()"
+        (cleared)="codigoBarra=''"
       />
     </label>
     <button class="btn primary" type="button" (click)="filtrarVendas()" [disabled]="loading">
@@ -60,11 +62,12 @@
         <span>Localize vales válidos por loja, cliente ou número do cupom.</span>
       </div>
       <label>Cupom de troca
-        <input
-          type="text"
-          [(ngModel)]="cupomTrocaBusca"
-          (keyup.enter)="consultarCuponsTroca()"
+        <app-search-suggest
+          [(value)]="cupomTrocaBusca"
+          [suggestions]="cupomTrocaSuggestions"
           placeholder="Ex.: VT-DEV-..."
+          (search)="consultarCuponsTroca()"
+          (cleared)="consultarCuponsTroca()"
         />
       </label>
       <button class="btn primary" type="button" (click)="consultarCuponsTroca()" [disabled]="loading">

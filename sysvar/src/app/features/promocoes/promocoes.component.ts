@@ -16,11 +16,12 @@ import { ProdutosService } from '../../core/services/produtos.service';
 import { PromocoesService } from '../../core/services/promocoes.service';
 import { SubgruposService } from '../../core/services/subgrupos.service';
 import { AuthService } from '../../core/auth.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-promocoes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent],
   templateUrl: './promocoes.component.html',
   styleUrls: ['./promocoes.component.css']
 })
@@ -226,6 +227,16 @@ export class PromocoesComponent implements OnInit {
       String(produto.referencia || '').toLowerCase().includes(q) ||
       String(produto.descricao || '').toLowerCase().includes(q)
     ).slice(0, 20);
+  }
+
+  get produtoSearchSuggestions(): string[] {
+    const valores = this.produtos.flatMap(produto => [
+      produto.descricao,
+      produto.descricao_reduzida,
+      produto.referencia,
+      String(produto.Idproduto || '')
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
   }
 
   get produtosSelecionados(): Produto[] {

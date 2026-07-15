@@ -5,14 +5,13 @@
     <h2>Pedidos de Revenda</h2>
 
     <div class="toolbar-right">
-      <input
-        type="text"
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
         placeholder="Buscar por nº, loja ou fornecedor"
-        [(ngModel)]="search"
-        (keyup)="onSearchKeyup($event)"
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="doSearch()">Buscar</button>
-      <button class="btn" (click)="clearSearch()">Limpar</button>
 
       <button class="btn primary" (click)="setViewList()">Consultar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
@@ -308,16 +307,13 @@
           </label>
 
           <div class="lookup-body" *ngIf="consultaProdutoAberta">
-            <input
-              type="text"
+            <app-search-suggest
+              [(value)]="produtoConsultaBusca"
+              [suggestions]="produtoConsultaSuggestions"
               placeholder="Buscar referência, descrição ou código"
-              [(ngModel)]="produtoConsultaBusca"
-              [ngModelOptions]="{ standalone: true }"
-              (keyup.enter)="buscarProdutosConsulta()"
+              (search)="buscarProdutosConsulta()"
+              (cleared)="produtoConsultaBusca=''"
             />
-            <button class="btn" type="button" (click)="buscarProdutosConsulta()" [disabled]="carregandoProdutosConsulta">
-              {{ carregandoProdutosConsulta ? 'Buscando...' : 'Buscar' }}
-            </button>
             <select
               size="6"
               [(ngModel)]="produtoConsultaId"

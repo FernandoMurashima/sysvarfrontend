@@ -16,11 +16,12 @@ import { EmpresasService } from '../../core/services/empresas.service';
 import { Loja } from '../../core/models/loja';
 import { Empresa } from '../../core/models/empresa';
 import { User } from '../../core/models/user';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-lojas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './lojas.component.html',
   styleUrls: ['./lojas.component.css']
 })
@@ -104,6 +105,17 @@ export class LojasComponent implements OnInit {
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
   get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
   get empresaBloqueada(): boolean { return !!this.usuarioAtual && !this.isSuperUsuario; }
+  get searchSuggestions(): string[] {
+    return this.lojasAll.flatMap(l => [
+      l.nome_loja,
+      l.apelido_loja,
+      l.cnpj,
+      l.email,
+      l.cidade,
+      this.empresaLabel(l),
+      this.tipoUnidadeLabel(l.tipo_unidade),
+    ].filter((v): v is string => !!v));
+  }
 
   ngOnInit(): void {
     this.loadUsuarioAtual();

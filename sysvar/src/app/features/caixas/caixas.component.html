@@ -23,8 +23,13 @@
           </label>
         </div>
       </details>
-      <input type="text" placeholder="Buscar caixa, loja..." [(ngModel)]="search" (keyup.enter)="filtrarCaixas()" />
-      <button class="btn primary" type="button" (click)="filtrarCaixas()">Buscar</button>
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar caixa, loja..."
+        (search)="filtrarCaixas()"
+        (cleared)="filtrarCaixas()"
+      />
       <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Novo caixa</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>

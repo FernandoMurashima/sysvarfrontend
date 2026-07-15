@@ -2,7 +2,14 @@
   <header class="toolbar">
     <h2>{{ tituloConsulta() }}</h2>
     <div class="toolbar-actions">
-      <input *ngIf="!isColecao()" type="text" placeholder="Referência ou EAN..." [(ngModel)]="search" (keyup.enter)="load()" />
+      <app-search-suggest
+        *ngIf="!isColecao()"
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Referência ou EAN..."
+        (search)="load()"
+        (cleared)="load()"
+      />
       <select *ngIf="isColecao()" [(ngModel)]="colecao" (change)="onColecaoChange()">
         <option value="">Selecione a coleção</option>
         <option *ngFor="let c of colecoes" [value]="c.Idcolecao">

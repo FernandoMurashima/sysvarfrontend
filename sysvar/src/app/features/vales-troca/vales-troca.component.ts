@@ -10,11 +10,12 @@ import { ValeTroca, ValeTrocaMovimento } from '../../core/models/vale-troca';
 import { ClientesService } from '../../core/services/clientes.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ValeTrocaService } from '../../core/services/vale-troca.service';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-vales-troca',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent],
   templateUrl: './vales-troca.component.html',
   styleUrls: ['./vales-troca.component.css']
 })
@@ -38,6 +39,16 @@ export class ValesTrocaComponent implements OnInit {
   clienteId: number | null = null;
   status = 'ABERTO';
   documento = '';
+
+  get documentoSuggestions(): string[] {
+    const valores = this.vales.flatMap(vale => [
+      vale.documento,
+      vale.cliente_nome,
+      vale.venda_origem_documento,
+      vale.devolucao_documento
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
 
   ngOnInit(): void {
     this.carregarBase();
