@@ -18,6 +18,7 @@ import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type DestinoTipo = 'CAIXA' | 'CONTA';
+type PainelOperacional = 'contas' | 'extrato' | 'conciliacao' | 'transferencia';
 
 @Component({
   selector: 'app-contas-bancarias',
@@ -39,6 +40,7 @@ export class ContasBancariasComponent implements OnInit {
   saving = false;
   transferindo = false;
   showForm = false;
+  painelAberto: PainelOperacional | null = null;
   editingId: number | null = null;
   search = '';
   lojasFiltro: number[] = [];
@@ -103,6 +105,7 @@ export class ContasBancariasComponent implements OnInit {
     conta: ['', [Validators.required, Validators.maxLength(30)]],
     tipo_conta: ['CORRENTE', Validators.required],
     pix_chave: [''],
+    conta_contabil: ['', Validators.maxLength(50)],
     saldo_inicial: [0, Validators.required],
     saldo_atual: [0, Validators.required],
     ativo: [true]
@@ -136,9 +139,6 @@ export class ContasBancariasComponent implements OnInit {
         this.caixas = this.unwrap<Caixa>(res.caixas);
         this.contasTodas = this.unwrap<ContaBancaria>(res.contas);
         this.formasPagamento = this.unwrap<FormaPagamento>(res.formas);
-        if (!this.conciliacaoForma) {
-          this.conciliacaoForma = this.formasPagamento.find(f => f.gera_recebivel_bancario)?.codigo || this.formasPagamento[0]?.codigo || '';
-        }
         this.filtrarContas();
         if (!this.selectedContaId || !this.contas.some(c => c.Idconta === this.selectedContaId)) {
           this.selectedContaId = this.contas[0]?.Idconta ?? null;
@@ -178,6 +178,7 @@ export class ContasBancariasComponent implements OnInit {
   }
 
   novo(): void {
+    this.painelAberto = null;
     this.showForm = true;
     this.editingId = null;
     this.form.reset({
@@ -188,6 +189,7 @@ export class ContasBancariasComponent implements OnInit {
       conta: '',
       tipo_conta: 'CORRENTE',
       pix_chave: '',
+      conta_contabil: '',
       saldo_inicial: 0,
       saldo_atual: 0,
       ativo: true
@@ -195,6 +197,7 @@ export class ContasBancariasComponent implements OnInit {
   }
 
   editar(item: ContaBancaria): void {
+    this.painelAberto = null;
     this.showForm = true;
     this.editingId = item.Idconta ?? null;
     this.form.reset({
@@ -205,6 +208,7 @@ export class ContasBancariasComponent implements OnInit {
       conta: item.conta,
       tipo_conta: item.tipo_conta,
       pix_chave: item.pix_chave ?? '',
+      conta_contabil: item.conta_contabil ?? '',
       saldo_inicial: Number(item.saldo_inicial),
       saldo_atual: Number(item.saldo_atual),
       ativo: item.ativo
@@ -225,6 +229,7 @@ export class ContasBancariasComponent implements OnInit {
       conta: String(raw.conta || '').trim(),
       tipo_conta: raw.tipo_conta as any,
       pix_chave: String(raw.pix_chave || '').trim() || null,
+      conta_contabil: String(raw.conta_contabil || '').trim() || null,
       saldo_inicial: Number(raw.saldo_inicial || 0),
       saldo_atual: Number(raw.saldo_atual || 0),
       ativo: !!raw.ativo
@@ -270,6 +275,30 @@ export class ContasBancariasComponent implements OnInit {
   cancelar(): void {
     this.showForm = false;
     this.editingId = null;
+  }
+
+  abrirPainel(painel: PainelOperacional): void {
+    this.painelAberto = painel;
+    if (painel === 'extrato') {
+      this.loadMovimentacoes();
+    }
+    if (painel === 'conciliacao') {
+      this.buscarPendentesConciliacao();
+    }
+  }
+
+  fecharPainel(): void {
+    this.painelAberto = null;
+  }
+
+  tituloPainel(): string {
+    const titulos: Record<PainelOperacional, string> = {
+      contas: 'Contas bancárias',
+      extrato: 'Extrato bancário',
+      conciliacao: 'Conciliação bancária',
+      transferencia: 'Transferência'
+    };
+    return this.painelAberto ? titulos[this.painelAberto] : '';
   }
 
   transferir(): void {
@@ -347,14 +376,13 @@ export class ContasBancariasComponent implements OnInit {
   buscarPendentesConciliacao(): void {
     this.errorMsg = '';
     this.successMsg = '';
-    if (!this.conciliacaoData || !this.conciliacaoForma) {
-      this.errorMsg = 'Informe data e forma de pagamento para conciliar.';
+    if (!this.selectedContaId) {
+      this.errorMsg = 'Selecione uma conta bancária para conciliar.';
       return;
     }
     this.carregandoConciliacao = true;
     this.movsApi.pendentesConciliacao({
-      data_movimento: this.conciliacaoData,
-      forma_pagamento: this.conciliacaoForma,
+      forma_pagamento: this.conciliacaoForma || null,
       conta_bancaria: this.selectedContaId
     }).subscribe({
       next: res => {

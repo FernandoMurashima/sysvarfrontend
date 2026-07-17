@@ -53,6 +53,7 @@ export class UnidadesComponent implements OnInit {
   get pageStart(): number   { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
   get pageEnd(): number     { return Math.min(this.page * this.pageSize, this.total); }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
+  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('produtos'); }
   get searchSuggestions(): string[] {
     const valores = this.unidadesAll.flatMap(item => [
       item.Descricao,
@@ -189,12 +190,14 @@ export class UnidadesComponent implements OnInit {
   }
 
   excluir(item: Unidade): void {
+    if (!this.podeExcluirModulo) return;
     const id = (item as any).Idunidade;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item ? (item as any).Idunidade : null;
     if (!id) return;

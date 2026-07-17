@@ -13,8 +13,81 @@
     <div class="quick-actions">
       <a class="btn primary" routerLink="/producao/ficha-tecnica">Ficha Técnica</a>
       <a class="btn primary" routerLink="/producao/ordens">Ordem de Produção</a>
+      <button class="btn" type="button" (click)="abrirModal('insumos')">
+        Alertas de insumos
+        <span class="btn-count">{{ painel?.alertas_insumos?.length || 0 }}</span>
+      </button>
+      <button class="btn" type="button" (click)="abrirModal('faccao')">
+        Pendências de facção
+        <span class="btn-count">{{ painel?.pendencias_faccao?.length || 0 }}</span>
+      </button>
     </div>
   </section>
+
+  <div class="modal-backdrop" *ngIf="modal">
+    <section class="modal-card">
+      <div class="modal-title">
+        <h3>{{ modal === 'insumos' ? 'Alertas de insumos' : 'Pendências de facção' }}</h3>
+        <button class="btn" type="button" (click)="fecharModal()">Fechar</button>
+      </div>
+
+      <ng-container *ngIf="modal === 'insumos'">
+        <table class="table" *ngIf="painel?.alertas_insumos?.length; else emptyInsumos">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th>Referência</th>
+              <th>Estoque central</th>
+              <th class="num">Necessário</th>
+              <th class="num">Saldo</th>
+              <th class="num">Falta</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of painel.alertas_insumos">
+              <td>{{ item.produto }}</td>
+              <td>{{ item.referencia || '-' }}</td>
+              <td>{{ item.loja_central }}</td>
+              <td class="num">{{ qtd(item.necessario) }}</td>
+              <td class="num">{{ qtd(item.saldo) }}</td>
+              <td class="num danger-text">{{ qtd(item.falta) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #emptyInsumos>
+          <div class="empty">Nenhum alerta de insumo para as OPs em aberto.</div>
+        </ng-template>
+      </ng-container>
+
+      <ng-container *ngIf="modal === 'faccao'">
+        <table class="table" *ngIf="painel?.pendencias_faccao?.length; else emptyFaccao">
+          <thead>
+            <tr>
+              <th>OP</th>
+              <th>Produto</th>
+              <th>Facção</th>
+              <th>Serviço</th>
+              <th class="num">Qtd</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of painel.pendencias_faccao">
+              <td>{{ item.op }}</td>
+              <td>{{ item.produto }}</td>
+              <td>{{ item.fornecedor || '-' }}</td>
+              <td>{{ item.servico }}</td>
+              <td class="num">{{ qtd(item.quantidade) }}</td>
+              <td><span class="badge warning">{{ statusLabel(item.status) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #emptyFaccao>
+          <div class="empty">Nenhuma pendência de facção.</div>
+        </ng-template>
+      </ng-container>
+    </section>
+  </div>
 
   <section class="kpis">
     <div class="kpi">
@@ -101,67 +174,4 @@
     </ng-template>
   </section>
 
-  <section class="panel">
-    <div class="panel-title">
-      <h3>Alertas de insumos</h3>
-      <span>{{ painel?.alertas_insumos?.length || 0 }} alerta(s)</span>
-    </div>
-    <table class="table" *ngIf="painel?.alertas_insumos?.length; else emptyInsumos">
-      <thead>
-        <tr>
-          <th>Insumo</th>
-          <th>Referência</th>
-          <th>Estoque central</th>
-          <th class="num">Necessário</th>
-          <th class="num">Saldo</th>
-          <th class="num">Falta</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of painel.alertas_insumos">
-          <td>{{ item.produto }}</td>
-          <td>{{ item.referencia || '-' }}</td>
-          <td>{{ item.loja_central }}</td>
-          <td class="num">{{ qtd(item.necessario) }}</td>
-          <td class="num">{{ qtd(item.saldo) }}</td>
-          <td class="num danger-text">{{ qtd(item.falta) }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyInsumos>
-      <div class="empty">Nenhum alerta de insumo para as OPs em aberto.</div>
-    </ng-template>
-  </section>
-
-  <section class="panel">
-    <div class="panel-title">
-      <h3>Pendências de facção</h3>
-      <span>{{ painel?.pendencias_faccao?.length || 0 }} pendência(s)</span>
-    </div>
-    <table class="table" *ngIf="painel?.pendencias_faccao?.length; else emptyFaccao">
-      <thead>
-        <tr>
-          <th>OP</th>
-          <th>Produto</th>
-          <th>Facção</th>
-          <th>Serviço</th>
-          <th class="num">Qtd</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of painel.pendencias_faccao">
-          <td>{{ item.op }}</td>
-          <td>{{ item.produto }}</td>
-          <td>{{ item.fornecedor || '-' }}</td>
-          <td>{{ item.servico }}</td>
-          <td class="num">{{ qtd(item.quantidade) }}</td>
-          <td><span class="badge warning">{{ statusLabel(item.status) }}</span></td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyFaccao>
-      <div class="empty">Nenhuma pendência de facção.</div>
-    </ng-template>
-  </section>
 </section>

@@ -1,0 +1,162 @@
+<div class="etiquetas-page">
+  <section class="toolbar">
+    <h2>Impressão de Etiquetas</h2>
+    <div class="toolbar-actions">
+      <button class="btn" type="button" (click)="load()">Atualizar</button>
+      <button class="btn primary" type="button" (click)="imprimir()">Imprimir</button>
+      <button class="btn" type="button" routerLink="/home">Home</button>
+    </div>
+  </section>
+
+  <div class="alert error" *ngIf="errorMsg">{{ errorMsg }}</div>
+  <div class="alert success" *ngIf="successMsg">{{ successMsg }}</div>
+
+  <section class="panel">
+    <div class="form-line">
+      <label class="field grow">
+        Produto / SKU
+        <app-search-suggest
+          [(value)]="search"
+          [suggestions]="sugestoes"
+          [showActions]="false"
+          placeholder="Digite nome, referência, cor, tamanho ou EAN"
+          (search)="buscar()"
+          (cleared)="selecionado = null"
+        />
+      </label>
+      <label class="field qtd">
+        Qtde
+        <input type="number" min="1" [(ngModel)]="quantidade" />
+      </label>
+      <button class="btn primary action" type="button" (click)="buscar()" [disabled]="loading">Buscar</button>
+      <button class="btn action" type="button" (click)="limparBusca()">Limpar</button>
+      <button class="btn primary action" type="button" (click)="adicionar()" [disabled]="loading">Adicionar</button>
+      <button class="btn action" type="button" (click)="limpar()" [disabled]="!etiquetas.length">Limpar seleção</button>
+    </div>
+  </section>
+
+  <section class="panel print-config">
+    <div class="form-line">
+      <label class="field small">
+        Papel
+        <select [(ngModel)]="papel">
+          <option value="A4">A4</option>
+          <option value="ROLO">Rolo</option>
+        </select>
+      </label>
+      <label class="field small">
+        Largura etiqueta
+        <input type="number" min="20" [(ngModel)]="larguraEtiquetaMm" />
+      </label>
+      <label class="field small">
+        Altura etiqueta
+        <input type="number" min="10" [(ngModel)]="alturaEtiquetaMm" />
+      </label>
+      <label class="field small">
+        Margem
+        <input type="number" min="0" [(ngModel)]="margemMm" />
+      </label>
+      <label class="field small">
+        Espaço H
+        <input type="number" min="0" [(ngModel)]="espacoHorizontalMm" />
+      </label>
+      <label class="field small">
+        Espaço V
+        <input type="number" min="0" [(ngModel)]="espacoVerticalMm" />
+      </label>
+      <div class="sheet-summary">
+        <strong>{{ etiquetasPorFolha }}</strong>
+        <span>etiqueta(s) por folha</span>
+      </div>
+      <div class="sheet-summary">
+        <strong>{{ totalFolhas }}</strong>
+        <span>folha(s)</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="etiquetas.length">
+    <div class="list-header">
+      <h3>Etiquetas selecionadas</h3>
+      <span>{{ etiquetasImpressao.length }} etiqueta(s)</span>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Referência</th>
+          <th>Cor</th>
+          <th>Tamanho</th>
+          <th>EAN</th>
+          <th class="num">Qtde</th>
+          <th class="actions-col">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of etiquetas">
+          <td>{{ row.produto.descricao_reduzida || row.produto.descricao }}</td>
+          <td>{{ row.produto.referencia || '-' }}</td>
+          <td>{{ row.sku.cor_descricao || '-' }}</td>
+          <td>{{ row.sku.tamanho_descricao || '-' }}</td>
+          <td>{{ row.sku.ean13 }}</td>
+          <td class="num">
+            <div class="qty-cell">
+              <input class="qty-grid" type="number" min="1" [(ngModel)]="row.quantidade" />
+            </div>
+          </td>
+          <td class="actions-col">
+            <div class="row-actions">
+              <button class="btn sm primary" type="button" (click)="imprimirLinha(row)">Imprimir</button>
+              <button class="btn danger sm" type="button" (click)="remover(row)">Remover</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel preview-panel">
+    <div class="list-header">
+      <h3>Prévia da impressão</h3>
+      <span>{{ etiquetasImpressao.length }} etiqueta(s) · {{ totalFolhas }} folha(s)</span>
+    </div>
+    <div class="sheet-preview-wrap" *ngIf="paginasPreview.length; else emptyState">
+      <section class="sheet-page" *ngFor="let pagina of paginasPreview; let pageIndex = index" [ngStyle]="sheetVars">
+        <article class="label-card" *ngFor="let label of pagina">
+          <div class="barcode" aria-label="Código de barras">
+            <span
+              *ngFor="let bar of label.bars"
+              [class.black]="bar.black"
+              [class.guard]="bar.guard"
+              [style.width.px]="bar.width * 2"
+            ></span>
+          </div>
+          <div class="label-ean">{{ label.ean }}</div>
+          <div class="label-name">{{ label.nome }}</div>
+          <div class="label-meta">REF: {{ label.referencia }}</div>
+        </article>
+      </section>
+    </div>
+    <ng-template #emptyState>
+      <div class="empty">Selecione um SKU para montar as etiquetas.</div>
+    </ng-template>
+  </section>
+</div>
+
+<div class="print-area" [class.roll-print]="papel === 'ROLO'">
+  <section class="sheet-page print-sheet" *ngFor="let pagina of paginasPreview" [ngStyle]="sheetVars">
+    <article class="label-card print-label" *ngFor="let label of pagina">
+      <div class="barcode">
+        <span
+          *ngFor="let bar of label.bars"
+          [class.black]="bar.black"
+          [class.guard]="bar.guard"
+          [style.width.px]="bar.width * 2"
+        ></span>
+      </div>
+      <div class="label-ean">{{ label.ean }}</div>
+      <div class="label-name">{{ label.nome }}</div>
+      <div class="label-meta">REF: {{ label.referencia }}</div>
+    </article>
+  </section>
+</div>

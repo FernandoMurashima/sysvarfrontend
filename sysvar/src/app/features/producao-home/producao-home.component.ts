@@ -16,6 +16,7 @@ export class ProducaoHomeComponent implements OnInit {
   loading = false;
   errorMsg = '';
   painel: any = null;
+  modal: 'insumos' | 'faccao' | null = null;
 
   ngOnInit(): void {
     this.load();
@@ -51,5 +52,13 @@ export class ProducaoHomeComponent implements OnInit {
       RETORNADO: 'Retornado',
     };
     return labels[String(status || '')] || '-';
+  }
+
+  abrirModal(tipo: 'insumos' | 'faccao'): void {
+    this.modal = tipo;
+  }
+
+  fecharModal(): void {
+    this.modal = null;
   }
 }

@@ -150,6 +150,16 @@ input, select {
   color: #fff !important;
 }
 .btn.danger:hover { filter: brightness(0.95); }
+
+.clientes-page { border: 0 !important; gap: 10px; margin: 5px; padding: 0; }
+.toolbar { gap: 12px; padding: 8px 10px; border-bottom: 1px solid #d7e0eb; }
+.toolbar-actions { flex: 1 1 auto; justify-content: flex-end; flex-wrap: nowrap; min-width: 0; }
+.toolbar-search { flex: 0 1 520px; min-width: 280px; }
+.card { background: #fff !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 10px !important; }
+.table-wrapper { overflow-x: hidden; }
+.actions { justify-content: flex-end; white-space: nowrap; flex-wrap: nowrap; }
+.btn { border-radius: 6px; white-space: nowrap; }
+.btn.sm { min-width: 64px; }
 .form-pending { margin-top:12px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff7f7; color:#991b1b; }
 .form-pending strong { display:block; margin-bottom:6px; }
 .form-pending ul { margin:0; padding-left:18px; }

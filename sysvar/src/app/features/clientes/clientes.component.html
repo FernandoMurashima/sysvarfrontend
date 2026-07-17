@@ -4,13 +4,17 @@
     <h2>Clientes</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
+        [showActions]="false"
         placeholder="Buscar por nome, apelido, CPF, email..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -23,20 +27,12 @@
       <p>Confirma a exclusão do cliente <strong>{{ cliente.nome_cliente }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
 
   <div class="content">
-    <!-- Placeholder quando o form estiver fechado -->
-    <section class="card form-placeholder" *ngIf="!showForm">
-      <div class="placeholder-inner">
-        <p>Para cadastrar um cliente, clique em <strong>Novo</strong>.</p>
-        <p>Para editar, localize na lista e clique em <strong>Editar</strong>.</p>
-      </div>
-    </section>
-
     <!-- FORM -->
     <section class="card form" *ngIf="showForm">
       <h3>{{ consultando ? 'Consultar Cliente' : (editingId ? 'Editar Cliente' : 'Novo Cliente') }}</h3>
@@ -248,7 +244,7 @@
               <td class="actions">
                 <button class="btn sm" (click)="consultar(c)">Consultar</button>
                 <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(c)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(c)">Excluir</button>
+                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(c)">Excluir</button>
               </td>
             </tr>
           </tbody>

@@ -2,32 +2,17 @@
   <header class="toolbar">
     <h2>Contas Bancárias</h2>
     <div class="toolbar-actions">
-      <details class="store-picker">
-        <summary>{{ lojaFiltroLabel() }}</summary>
-        <div class="store-picker-menu">
-          <label class="store-option">
-            <input type="checkbox" [checked]="!lojasFiltro.length" (change)="selecionarTodasLojas()" />
-            Todas as lojas
-          </label>
-          <label class="store-option" *ngFor="let loja of lojas">
-            <input
-              type="checkbox"
-              [checked]="lojaFiltroSelecionada(loja.id)"
-              (change)="alternarLojaFiltro(loja.id, $any($event.target).checked)"
-            />
-            {{ loja.nome_loja }}
-          </label>
-        </div>
-      </details>
       <app-search-suggest
         [(value)]="search"
         [suggestions]="searchSuggestions"
         placeholder="Buscar conta, banco, loja..."
+        [showActions]="false"
         (search)="filtrarContas()"
         (cleared)="filtrarContas()"
       />
+      <button class="btn primary" type="button" (click)="filtrarContas()">Buscar</button>
       <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()" *ngIf="podeEditarModulo">Nova conta</button>
+      <button class="btn primary" type="button" (click)="novo()" *ngIf="podeEditarModulo">Nova</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -107,9 +92,13 @@
     </section>
   </div>
 
-  <section class="panel" *ngIf="showForm">
-    <h3>{{ editingId ? 'Editar conta bancária' : 'Nova conta bancária' }}</h3>
-    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+  <div class="modal-backdrop work-backdrop" *ngIf="showForm">
+    <section class="modal-card work-modal">
+      <div class="modal-head">
+        <h3>{{ editingId ? 'Editar conta bancária' : 'Nova conta bancária' }}</h3>
+        <button class="btn" type="button" (click)="cancelar()">Fechar</button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
       <label>
         Loja*
         <select formControlName="idloja">
@@ -130,15 +119,23 @@
       <label>Agência*<input type="text" formControlName="agencia" /></label>
       <label>Conta*<input type="text" formControlName="conta" /></label>
       <label>Pix<input type="text" formControlName="pix_chave" /></label>
-      <label>Saldo inicial*<input type="number" step="0.01" formControlName="saldo_inicial" /></label>
-      <label>Saldo atual*<input type="number" step="0.01" formControlName="saldo_atual" /></label>
-      <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
-      <div class="form-actions span-2">
+      <label>Conta contábil<input type="text" formControlName="conta_contabil" placeholder="Ex.: 1.1.02.001" /></label>
+      <label>
+        Saldo inicial*
+        <span class="money-input"><span>R$</span><input type="number" step="0.01" formControlName="saldo_inicial" /></span>
+      </label>
+      <label>
+        Saldo atual*
+        <span class="money-input"><span>R$</span><input type="number" step="0.01" formControlName="saldo_atual" /></span>
+      </label>
+      <div class="form-actions">
         <button class="btn primary" type="submit" [disabled]="saving" *ngIf="podeEditarModulo">Salvar</button>
         <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
       </div>
-    </form>
-  </section>
+      <label class="check-row"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+      </form>
+    </section>
+  </div>
 
   <section class="summary-grid" *ngIf="contaSelecionada() as conta">
     <div class="summary-card wide">
@@ -164,204 +161,249 @@
     </div>
   </section>
 
-  <section class="panel filters">
-    <strong>Período do extrato</strong>
-    <input type="date" [(ngModel)]="dataIni" aria-label="Data inicial" />
-    <input type="date" [(ngModel)]="dataFim" aria-label="Data final" />
-    <button class="btn primary" type="button" (click)="loadMovimentacoes()">Atualizar extrato</button>
+  <section class="panel action-tabs">
+    <button class="btn primary" type="button" (click)="abrirPainel('contas')">Contas bancárias</button>
+    <button class="btn" type="button" (click)="abrirPainel('extrato')" [disabled]="!selectedContaId">Extrato</button>
+    <button class="btn" type="button" (click)="abrirPainel('conciliacao')" *ngIf="podeEditarModulo">Conciliação</button>
+    <button class="btn" type="button" (click)="abrirPainel('transferencia')" *ngIf="podeEditarModulo">Transferência</button>
   </section>
 
-  <section class="panel conciliacao-panel" *ngIf="podeEditarModulo">
-    <div class="conciliacao-bar">
-      <strong>Conciliação</strong>
-      <select [(ngModel)]="conciliacaoForma" aria-label="Forma de pagamento">
-        <option value="">Forma de pagamento</option>
-        <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">
-          {{ forma.codigo }} - {{ forma.descricao }}
-        </option>
-      </select>
-      <input type="date" [(ngModel)]="conciliacaoData" aria-label="Data prevista" />
-      <button class="btn primary" type="button" (click)="buscarPendentesConciliacao()" [disabled]="carregandoConciliacao">
-        {{ carregandoConciliacao ? 'Buscando...' : 'Buscar recebíveis' }}
-      </button>
-      <button class="btn" type="button" (click)="marcarTodosConciliacao()" [disabled]="!conciliacaoPendentes.length">
-        Marcar todos
-      </button>
-      <button class="btn" type="button" (click)="limparSelecaoConciliacao()" [disabled]="!quantidadeConciliacaoSelecionada()">
-        Limpar seleção
-      </button>
-      <span class="conciliacao-total">
-        {{ quantidadeConciliacaoSelecionada() }} selecionado(s) · {{ totalConciliacaoSelecionada() | currency:'BRL' }}
-      </span>
-      <button class="btn primary" type="button" (click)="abrirConciliacaoLote()" [disabled]="!quantidadeConciliacaoSelecionada()">
-        Conciliar selecionados
-      </button>
-    </div>
+  <div class="modal-backdrop work-backdrop" *ngIf="painelAberto">
+    <section class="modal-card work-modal">
+      <div class="modal-head">
+        <h3>{{ tituloPainel() }}</h3>
+        <button class="btn" type="button" (click)="fecharPainel()">Fechar</button>
+      </div>
 
-    <div class="table-wrapper conciliation-table" *ngIf="conciliacaoPendentes.length">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="select-col"></th>
-            <th>Data prevista</th>
-            <th>Documento</th>
-            <th>Histórico</th>
-            <th>Forma</th>
-            <th class="money-col">Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let mov of conciliacaoPendentes">
-            <td class="select-col">
+      <ng-container [ngSwitch]="painelAberto">
+        <ng-container *ngSwitchCase="'contas'">
+          <div class="loja-checks">
+            <strong>Lojas</strong>
+            <label class="store-option inline">
+              <input type="checkbox" [checked]="!lojasFiltro.length" (change)="selecionarTodasLojas()" />
+              Todas
+            </label>
+            <label class="store-option inline" *ngFor="let loja of lojas">
               <input
                 type="checkbox"
-                [checked]="movConciliacaoSelecionado(mov)"
-                (change)="alternarMovConciliacao(mov, $any($event.target).checked)"
+                [checked]="lojaFiltroSelecionada(loja.id)"
+                (change)="alternarLojaFiltro(loja.id, $any($event.target).checked)"
               />
-            </td>
-            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
-            <td class="doc">{{ mov.documento || '-' }}</td>
-            <td>{{ mov.historico }}</td>
-            <td>{{ mov.FormaPagamento || '-' }}</td>
-            <td class="money money-col entry">{{ mov.valor | currency:'BRL' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+              {{ loja.nome_loja }}
+            </label>
+          </div>
+          <div class="list-header">
+            <strong>{{ contas.length }} conta(s)</strong>
+            <span *ngIf="loading">Carregando...</span>
+          </div>
+          <div class="table-wrapper compact work-table">
+            <table class="table" *ngIf="contas.length; else vazioTpl">
+              <thead>
+                <tr>
+                  <th class="select-col"></th>
+                  <th>Descrição</th>
+                  <th>Banco</th>
+                  <th>Agência</th>
+                  <th>Conta</th>
+                  <th>Loja</th>
+                  <th>Saldo atual</th>
+                  <th>Ativo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let conta of contas"
+                  [class.selected]="conta.Idconta === selectedContaId"
+                  (click)="selecionarConta(conta)"
+                >
+                  <td class="select-col">
+                    <input
+                      type="checkbox"
+                      [checked]="conta.Idconta === selectedContaId"
+                      (change)="selecionarConta(conta)"
+                    />
+                  </td>
+                  <td>{{ conta.descricao }}</td>
+                  <td>{{ conta.banco }}</td>
+                  <td>{{ conta.agencia }}</td>
+                  <td>{{ conta.conta }}</td>
+                  <td>{{ lojaNome(conta.idloja) }}</td>
+                  <td [class.negative]="(+conta.saldo_atual || 0) < 0">{{ conta.saldo_atual | currency:'BRL' }}</td>
+                  <td><span class="badge" [ngClass]="conta.ativo ? 'ok' : 'off'">{{ conta.ativo ? 'Ativo' : 'Inativo' }}</span></td>
+                  <td class="actions" (click)="$event.stopPropagation()">
+                    <button class="btn sm" (click)="editar(conta)" *ngIf="podeEditarModulo">Editar</button>
+                    <button class="btn sm danger" (click)="excluir(conta)" *ngIf="podeEditarModulo">Excluir</button>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td></td>
+                  <td>Total</td>
+                  <td>{{ contas.length }} conta(s)</td>
+                  <td colspan="3"></td>
+                  <td [class.negative]="totalSaldoContas() < 0">{{ totalSaldoContas() | currency:'BRL' }}</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+            <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
+          </div>
+        </ng-container>
 
-  <section class="panel transfer-panel" [formGroup]="transferenciaForm" *ngIf="podeEditarModulo">
-    <strong>Transferência</strong>
-    <select formControlName="origem_tipo" aria-label="Tipo de origem" (change)="sincronizarTransferencia()">
-      <option value="CAIXA">Caixa</option>
-      <option value="CONTA">Banco</option>
-    </select>
-    <select formControlName="origem_id" aria-label="Origem" (change)="sincronizarTransferencia()">
-      <option [ngValue]="null">Origem</option>
-      <option *ngFor="let item of endpoints(transferenciaForm.value.origem_tipo || 'CAIXA')" [ngValue]="item.id">{{ item.label }}</option>
-    </select>
-    <select formControlName="destino_tipo" aria-label="Tipo de destino" (change)="sincronizarTransferencia()">
-      <option value="CONTA">Banco</option>
-      <option value="CAIXA">Caixa</option>
-    </select>
-    <select formControlName="destino_id" aria-label="Destino" (change)="sincronizarTransferencia()">
-      <option [ngValue]="null">Destino</option>
-      <option *ngFor="let item of endpoints(transferenciaForm.value.destino_tipo || 'CONTA')" [ngValue]="item.id">{{ item.label }}</option>
-    </select>
-    <input type="text" formControlName="documento" placeholder="Documento" maxlength="50" aria-label="Documento" />
-    <input type="date" formControlName="data_movimento" aria-label="Data" />
-    <input type="number" step="0.01" min="0.01" formControlName="valor" placeholder="Valor" aria-label="Valor" />
-    <input type="text" formControlName="observacao" placeholder="Observação" aria-label="Observação" />
-    <button class="btn primary" type="button" (click)="transferir()" [disabled]="transferindo">
-      {{ transferindo ? 'Transferindo...' : 'Transferir' }}
-    </button>
-  </section>
+        <ng-container *ngSwitchCase="'extrato'">
+          <section class="filters modal-filters">
+            <strong>Período</strong>
+            <input type="date" [(ngModel)]="dataIni" aria-label="Data inicial" />
+            <input type="date" [(ngModel)]="dataFim" aria-label="Data final" />
+            <button class="btn primary" type="button" (click)="loadMovimentacoes()">Atualizar extrato</button>
+          </section>
+          <div class="list-header">
+            <strong>Extrato bancário</strong>
+            <span>{{ movimentacoes.length }} movimentação(ões)</span>
+          </div>
+          <div class="table-wrapper work-table">
+            <table class="table" *ngIf="movimentacoes.length; else semMovimentosTpl">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Documento</th>
+                  <th>Histórico</th>
+                  <th>Origem</th>
+                  <th class="money-col">Entrada</th>
+                  <th class="money-col">Saída</th>
+                  <th>Conciliado</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let mov of movimentacoes">
+                  <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+                  <td class="doc">{{ mov.documento || '-' }}</td>
+                  <td>{{ mov.historico }}</td>
+                  <td>{{ mov.origem }}</td>
+                  <td class="money money-col entry">{{ valorEntrada(mov) !== null ? (valorEntrada(mov) | currency:'BRL') : '-' }}</td>
+                  <td class="money money-col exit">{{ valorSaida(mov) !== null ? (valorSaida(mov) | currency:'BRL') : '-' }}</td>
+                  <td>
+                    <span *ngIf="mov.data_conciliacao; else naoConciliadoTpl">
+                      {{ mov.data_conciliacao | date:'dd/MM/yyyy' }}
+                      · {{ mov.valor_conciliado | currency:'BRL' }}
+                    </span>
+                    <ng-template #naoConciliadoTpl>-</ng-template>
+                  </td>
+                  <td>{{ mov.status }}</td>
+                  <td class="actions" *ngIf="podeEditarModulo">
+                    <button class="btn sm primary" type="button" *ngIf="mov.status === 'PREVISTA'" (click)="conciliar(mov)">
+                      Conciliar
+                    </button>
+                    <button
+                      class="btn sm"
+                      type="button"
+                      *ngIf="podeDesfazerConciliacao(mov)"
+                      (click)="desfazerConciliacao(mov)"
+                    >
+                      Desfazer
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #semMovimentosTpl><div class="empty">Nenhuma movimentação encontrada para esta conta.</div></ng-template>
+          </div>
+        </ng-container>
 
-  <section class="panel">
-    <div class="list-header">
-      <strong>Contas bancárias</strong>
-      <span *ngIf="loading">Carregando...</span>
-    </div>
-    <div class="table-wrapper compact">
-      <table class="table" *ngIf="contas.length; else vazioTpl">
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <th>Banco</th>
-            <th>Agência</th>
-            <th>Conta</th>
-            <th>Loja</th>
-            <th>Saldo atual</th>
-            <th>Ativo</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            *ngFor="let conta of contas"
-            [class.selected]="conta.Idconta === selectedContaId"
-            (click)="selecionarConta(conta)"
-          >
-            <td>{{ conta.descricao }}</td>
-            <td>{{ conta.banco }}</td>
-            <td>{{ conta.agencia }}</td>
-            <td>{{ conta.conta }}</td>
-            <td>{{ lojaNome(conta.idloja) }}</td>
-            <td [class.negative]="(+conta.saldo_atual || 0) < 0">{{ conta.saldo_atual | currency:'BRL' }}</td>
-            <td><span class="badge" [ngClass]="conta.ativo ? 'ok' : 'off'">{{ conta.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-            <td class="actions" (click)="$event.stopPropagation()">
-              <button class="btn sm" (click)="editar(conta)" *ngIf="podeEditarModulo">Editar</button>
-              <button class="btn sm danger" (click)="excluir(conta)" *ngIf="podeEditarModulo">Excluir</button>
-            </td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td>Total</td>
-            <td>{{ contas.length }} conta(s)</td>
-            <td colspan="3"></td>
-            <td [class.negative]="totalSaldoContas() < 0">{{ totalSaldoContas() | currency:'BRL' }}</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="list-header">
-      <strong>Extrato bancário</strong>
-      <span>{{ movimentacoes.length }} movimentação(ões)</span>
-    </div>
-    <div class="table-wrapper">
-      <table class="table" *ngIf="movimentacoes.length; else semMovimentosTpl">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Documento</th>
-            <th>Histórico</th>
-            <th>Origem</th>
-            <th class="money-col">Entrada</th>
-            <th class="money-col">Saída</th>
-            <th>Conciliado</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let mov of movimentacoes">
-            <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
-            <td class="doc">{{ mov.documento || '-' }}</td>
-            <td>{{ mov.historico }}</td>
-            <td>{{ mov.origem }}</td>
-            <td class="money money-col entry">{{ valorEntrada(mov) !== null ? (valorEntrada(mov) | currency:'BRL') : '-' }}</td>
-            <td class="money money-col exit">{{ valorSaida(mov) !== null ? (valorSaida(mov) | currency:'BRL') : '-' }}</td>
-            <td>
-              <span *ngIf="mov.data_conciliacao; else naoConciliadoTpl">
-                {{ mov.data_conciliacao | date:'dd/MM/yyyy' }}
-                · {{ mov.valor_conciliado | currency:'BRL' }}
+        <ng-container *ngSwitchCase="'conciliacao'">
+          <section class="conciliacao-panel" *ngIf="podeEditarModulo">
+            <div class="conciliacao-bar">
+              <strong>Conciliação</strong>
+              <select [(ngModel)]="conciliacaoForma" aria-label="Forma de pagamento">
+                <option value="">Todas as formas</option>
+                <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">
+                  {{ forma.codigo }} - {{ forma.descricao }}
+                </option>
+              </select>
+              <input type="date" [(ngModel)]="conciliacaoData" aria-label="Data da conciliação" />
+              <button class="btn primary" type="button" (click)="buscarPendentesConciliacao()" [disabled]="carregandoConciliacao">
+                {{ carregandoConciliacao ? 'Buscando...' : 'Atualizar' }}
+              </button>
+              <button class="btn" type="button" (click)="marcarTodosConciliacao()" [disabled]="!conciliacaoPendentes.length">
+                Marcar todos
+              </button>
+              <button class="btn" type="button" (click)="limparSelecaoConciliacao()" [disabled]="!quantidadeConciliacaoSelecionada()">
+                Limpar seleção
+              </button>
+              <span class="conciliacao-total">
+                {{ quantidadeConciliacaoSelecionada() }} selecionado(s) · {{ totalConciliacaoSelecionada() | currency:'BRL' }}
               </span>
-              <ng-template #naoConciliadoTpl>-</ng-template>
-            </td>
-            <td>{{ mov.status }}</td>
-            <td class="actions" *ngIf="podeEditarModulo">
-              <button class="btn sm primary" type="button" *ngIf="mov.status === 'PREVISTA'" (click)="conciliar(mov)">
-                Conciliar
+              <button class="btn primary" type="button" (click)="abrirConciliacaoLote()" [disabled]="!quantidadeConciliacaoSelecionada()">
+                Conciliar selecionados
               </button>
-              <button
-                class="btn sm"
-                type="button"
-                *ngIf="podeDesfazerConciliacao(mov)"
-                (click)="desfazerConciliacao(mov)"
-              >
-                Desfazer
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <ng-template #semMovimentosTpl><div class="empty">Nenhuma movimentação encontrada para esta conta.</div></ng-template>
-    </div>
-  </section>
+            </div>
+
+            <div class="table-wrapper conciliation-table work-table" *ngIf="conciliacaoPendentes.length">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="select-col"></th>
+                    <th>Data prevista</th>
+                    <th>Documento</th>
+                    <th>Histórico</th>
+                    <th>Forma</th>
+                    <th class="money-col">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let mov of conciliacaoPendentes">
+                    <td class="select-col">
+                      <input
+                        type="checkbox"
+                        [checked]="movConciliacaoSelecionado(mov)"
+                        (change)="alternarMovConciliacao(mov, $any($event.target).checked)"
+                      />
+                    </td>
+                    <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
+                    <td class="doc">{{ mov.documento || '-' }}</td>
+                    <td>{{ mov.historico }}</td>
+                    <td>{{ mov.FormaPagamento || '-' }}</td>
+                    <td class="money money-col entry">{{ mov.valor | currency:'BRL' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </ng-container>
+
+        <ng-container *ngSwitchCase="'transferencia'">
+          <section class="transfer-panel" [formGroup]="transferenciaForm" *ngIf="podeEditarModulo">
+            <strong>Transferência</strong>
+            <select formControlName="origem_tipo" aria-label="Tipo de origem" (change)="sincronizarTransferencia()">
+              <option value="CAIXA">Caixa</option>
+              <option value="CONTA">Banco</option>
+            </select>
+            <select formControlName="origem_id" aria-label="Origem" (change)="sincronizarTransferencia()">
+              <option [ngValue]="null">Origem</option>
+              <option *ngFor="let item of endpoints(transferenciaForm.value.origem_tipo || 'CAIXA')" [ngValue]="item.id">{{ item.label }}</option>
+            </select>
+            <select formControlName="destino_tipo" aria-label="Tipo de destino" (change)="sincronizarTransferencia()">
+              <option value="CONTA">Banco</option>
+              <option value="CAIXA">Caixa</option>
+            </select>
+            <select formControlName="destino_id" aria-label="Destino" (change)="sincronizarTransferencia()">
+              <option [ngValue]="null">Destino</option>
+              <option *ngFor="let item of endpoints(transferenciaForm.value.destino_tipo || 'CONTA')" [ngValue]="item.id">{{ item.label }}</option>
+            </select>
+            <input type="text" formControlName="documento" placeholder="Documento" maxlength="50" aria-label="Documento" />
+            <input type="date" formControlName="data_movimento" aria-label="Data" />
+            <span class="money-input transfer-money"><span>R$</span><input type="number" step="0.01" min="0.01" formControlName="valor" placeholder="0,00" aria-label="Valor" /></span>
+            <input type="text" formControlName="observacao" placeholder="Observação" aria-label="Observação" />
+            <button class="btn primary" type="button" (click)="transferir()" [disabled]="transferindo">
+              {{ transferindo ? 'Transferindo...' : 'Transferir' }}
+            </button>
+          </section>
+        </ng-container>
+      </ng-container>
+    </section>
+  </div>
 </div>

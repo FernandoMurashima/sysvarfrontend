@@ -4,13 +4,16 @@
     <h2>Grades</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
+        [showActions]="false"
         placeholder="Filtrar por descrição/status..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrade()">Nova Grade</button>
       <button class="btn primary" (click)="goHome()">Home</button>
     </div>
@@ -25,17 +28,10 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
-
-  <section class="card form-placeholder" *ngIf="formModeGrade === null && !submitted">
-    <div class="placeholder-inner">
-      <p>Para cadastrar uma <strong>grade</strong>, clique em <strong>Nova Grade</strong>.</p>
-      <p>Para editar, localize uma <strong>grade</strong> na lista e clique em <strong>Editar</strong>.</p>
-    </div>
-  </section>
 
   <div class="content">
     <!-- FORM GRADE -->
@@ -103,7 +99,7 @@
               <button class="btn sm" (click)="consultarGrade(g)">Consultar</button>
               <button class="btn sm" (click)="selecionarGrade(g.Idgrade!)">Tamanhos</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrade(g)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirGrade(g)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirGrade(g)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -191,7 +187,7 @@
             <td class="actions">
               <button class="btn sm" (click)="consultarTamanho(t)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarTamanho(t)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirTamanho(t)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirTamanho(t)">Excluir</button>
             </td>
           </tr>
         </tbody>

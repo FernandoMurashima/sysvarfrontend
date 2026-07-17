@@ -3,12 +3,15 @@
     <h2>Regras Tributárias</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
+        [showActions]="false"
         placeholder="Buscar por regra, tributo, CFOP ou NCM..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Nova</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
@@ -21,13 +24,9 @@
     <div class="overlay-card">
       <h4>Excluir regra</h4>
       <p>Confirma a exclusão da regra <strong>{{ regra.nome }}</strong>?</p>
-      <div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" type="button" *ngIf="podeEditarModulo" (click)="confirmarExclusao()">Excluir</button></div>
+      <div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button></div>
     </div>
   </div>
-
-  <section class="panel hint" *ngIf="!showForm">
-    <span>Configure alíquotas por tributo, CFOP, NCM, regime, UF e tipo de produto.</span>
-  </section>
 
   <section class="panel" *ngIf="showForm">
     <h3>{{ consultando ? 'Consultar regra' : (editingId ? 'Editar regra' : 'Nova regra') }}</h3>
@@ -62,7 +61,7 @@
     <div class="list-header"><strong>Total: {{ total() }}</strong><label>Itens por página <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></label></div>
     <table class="table" *ngIf="paged().length; else emptyTpl">
       <thead><tr><th>Regra</th><th>Tributo</th><th>Operação</th><th>CFOP</th><th>NCM</th><th>Regime</th><th>Alíquota</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody><tr *ngFor="let r of paged()"><td>{{ r.nome }}</td><td>{{ r.tributo_codigo }}</td><td>{{ r.tipo_operacao }}</td><td>{{ r.cfop_codigo || 'Todos' }}</td><td>{{ r.ncm_codigo || 'Todos' }}</td><td>{{ r.regime_tributario }}</td><td>{{ r.aliquota }}%</td><td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativa' : 'Inativa' }}</span></td><td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button></td></tr></tbody>
+      <tbody><tr *ngFor="let r of paged()"><td>{{ r.nome }}</td><td>{{ r.tributo_codigo }}</td><td>{{ r.tipo_operacao }}</td><td>{{ r.cfop_codigo || 'Todos' }}</td><td>{{ r.ncm_codigo || 'Todos' }}</td><td>{{ r.regime_tributario }}</td><td>{{ r.aliquota }}%</td><td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativa' : 'Inativa' }}</span></td><td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(r)">Excluir</button></td></tr></tbody>
     </table>
     <ng-template #emptyTpl><div class="empty-hint">{{ loading() ? 'Carregando...' : 'Nenhuma regra tributária cadastrada.' }}</div></ng-template>
     <div class="pager" *ngIf="total() > 0"><div><button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button></div><div>Página {{ page() }} de {{ totalPages() }} — Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</div><div><button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button></div></div>

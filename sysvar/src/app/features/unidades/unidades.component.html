@@ -4,14 +4,17 @@
     <h2>Unidades</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
+        [showActions]="false"
         placeholder="Buscar por código/descrição..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
   </header>
@@ -25,21 +28,13 @@
       <p>Confirma a exclusão da unidade <strong>{{ unidade.Descricao }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
 
   <div class="content">
-    <!-- Placeholder -->
-    <section class="card form-placeholder" *ngIf="!showForm">
-      <div class="placeholder-inner">
-        <p>Para cadastrar uma unidade, clique em <strong>Novo</strong>.</p>
-        <p>Para editar, localize na lista e clique em <strong>Editar</strong>.</p>
-      </div>
-    </section>
-
-    <!-- FORM -->
+<!-- FORM -->
     <section class="card form" *ngIf="showForm">
       <h3>{{ consultando ? 'Consultar Unidade' : (editingId ? 'Editar Unidade' : 'Nova Unidade') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
@@ -126,7 +121,7 @@
               <td class="actions">
                 <button class="btn sm" (click)="consultar(u)">Consultar</button>
                 <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(u)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(u)">Excluir</button>
+                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(u)">Excluir</button>
               </td>
             </tr>
           </tbody>
@@ -154,3 +149,5 @@
     </section>
   </div>
 </div>
+
+

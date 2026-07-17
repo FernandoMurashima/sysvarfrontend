@@ -5,12 +5,14 @@
       <app-search-suggest
         [(value)]="search"
         [suggestions]="searchSuggestions"
-        placeholder="Buscar..."
+        placeholder="Buscar por documento, histórico ou destino..."
+        [showActions]="false"
         (search)="loadAll()"
         (cleared)="loadAll()"
       />
+      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
       <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Nova movimentação</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Nova</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </header>

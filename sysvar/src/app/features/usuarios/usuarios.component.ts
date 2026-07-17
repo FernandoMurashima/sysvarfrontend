@@ -70,6 +70,10 @@ export class UsuariosComponent implements OnInit {
     return this.auth.podeAcessarModulo('configuracoes', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('configuracoes');
+  }
+
   usuarios: User[] = [];
   empresas: Empresa[] = [];
   lojas: Loja[] = [];
@@ -151,6 +155,9 @@ export class UsuariosComponent implements OnInit {
 
   get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
   get empresaBloqueada(): boolean { return !!this.usuarioAtual && !this.isSuperUsuario; }
+  get usuarioFormularioAdmin(): boolean {
+    return this.form.getRawValue().type === 'Admin';
+  }
 
   private empresaUsuarioId(): number | null {
     return this.usuarioAtual?.Idempresa ?? this.usuarioAtual?.empresa?.id ?? null;
@@ -262,6 +269,7 @@ export class UsuariosComponent implements OnInit {
       confirm_password: '',
     });
     this.resetPermissoes();
+    this.normalizarPermissoesPorTipo();
     this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
@@ -288,6 +296,7 @@ export class UsuariosComponent implements OnInit {
       confirm_password: '',
     });
     this.aplicarPermissoesUsuario(item);
+    this.normalizarPermissoesPorTipo();
     this.aplicarEmpresaBloqueada();
     this.successMsg = '';
     this.errorMsg = '';
@@ -350,6 +359,7 @@ export class UsuariosComponent implements OnInit {
     };
     this.modulosPermissao = this.modulosPermissao.map(m => ({ ...m, acesso: padrao[m.key] || 'NONE' }));
     this.camposPermissao = this.camposPermissao.map(c => ({ ...c, pode_ver: false }));
+    this.normalizarPermissoesPorTipo();
   }
 
   private aplicarPermissoesUsuario(item: User): void {
@@ -362,6 +372,18 @@ export class UsuariosComponent implements OnInit {
     this.camposPermissao = this.camposPermissao.map(c => ({
       ...c,
       pode_ver: campos.has(c.key) ? Boolean(campos.get(c.key)) : false,
+    }));
+  }
+
+  onTipoChange(): void {
+    this.normalizarPermissoesPorTipo();
+  }
+
+  private normalizarPermissoesPorTipo(): void {
+    if (this.usuarioFormularioAdmin) return;
+    this.modulosPermissao = this.modulosPermissao.map(m => ({
+      ...m,
+      acesso: m.acesso === 'EDIT' ? 'VIEW' : m.acesso,
     }));
   }
 
@@ -488,6 +510,7 @@ export class UsuariosComponent implements OnInit {
     this.successMsg = '';
     this.errorOverlayOpen = false;
 
+    this.normalizarPermissoesPorTipo();
     const payload = this.normalizePayload(raw);
 
     const req$ = this.editingId
@@ -514,11 +537,13 @@ export class UsuariosComponent implements OnInit {
   }
 
   excluir(item: User) {
+    if (!this.podeExcluirModulo) return;
     if (!item.id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     if (!item?.id) return;
     this.api.remove(item.id).subscribe({

@@ -43,6 +43,10 @@ export class GradesComponent implements OnInit {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
+
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
   get searchSuggestions(): string[] {
     const valores = [
       ...this.grades.flatMap(item => [
@@ -159,11 +163,13 @@ export class GradesComponent implements OnInit {
   }
 
   excluirGrade(g: GradeModel) {
+    if (!this.podeExcluirModulo) return;
     if (!g.Idgrade) return;
     this.excluirModal = { tipo: 'grade', titulo: `Excluir a grade "${g.Descricao}"?`, grade: g };
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const modal = this.excluirModal;
     if (!modal) return;
     if (modal.tipo === 'grade' && modal.grade) {
@@ -292,6 +298,7 @@ export class GradesComponent implements OnInit {
   }
 
   excluirTamanho(t: TamanhoModel) {
+    if (!this.podeExcluirModulo) return;
     if (!t.Idtamanho) return;
     this.excluirModal = { tipo: 'tamanho', titulo: `Excluir o tamanho "${t.Tamanho}"?`, tamanho: t };
   }

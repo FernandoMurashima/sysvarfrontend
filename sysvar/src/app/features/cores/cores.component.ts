@@ -55,6 +55,9 @@ export class CoresComponent implements OnInit {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
   total = 0;
 
   get totalPages(): number {
@@ -228,12 +231,14 @@ export class CoresComponent implements OnInit {
   }
 
   excluir(item: Cor): void {
+    if (!this.podeExcluirModulo) return;
     const id = (item as any).Idcor;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item ? (item as any).Idcor : null;
     if (!id) return;

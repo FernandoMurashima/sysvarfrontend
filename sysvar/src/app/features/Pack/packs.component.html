@@ -3,13 +3,16 @@
     <h2>Packs</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
+        [showActions]="false"
         placeholder="Buscar por nome..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoPack()">Novo Pack</button>
       <button class="btn primary" (click)="goHome()">Home</button>
     </div>
@@ -24,17 +27,10 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
-
-  <section class="card form-placeholder" *ngIf="formModePack === null && !submitted">
-    <div class="placeholder-inner">
-      <p>Para cadastrar um <strong>pack</strong>, clique em <strong>Novo Pack</strong>.</p>
-      <p>Para editar, localize um <strong>pack</strong> na lista e clique em <strong>Editar</strong>.</p>
-    </div>
-  </section>
 
   <div class="content">
     <section class="card form" *ngIf="formModePack !== null || submitted">
@@ -102,7 +98,7 @@
               <button class="btn sm" (click)="consultarPack(p)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarPack(p)">Editar</button>
               <button class="btn sm" (click)="selecionarPack(p.id!, p.grade)">Itens</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirPack(p)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirPack(p)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -166,7 +162,7 @@
             <td class="actions">
               <button class="btn sm" (click)="consultarItem(it)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarItem(it)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirItem(it)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirItem(it)">Excluir</button>
             </td>
           </tr>
         </tbody>

@@ -60,6 +60,10 @@ export class ColecoesComponent {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
+
   // form
   showForm = false;
   editingId: number | null = null;
@@ -197,11 +201,13 @@ export class ColecoesComponent {
   }
 
   excluir(row: Colecao) {
+    if (!this.podeExcluirModulo) return;
     if (!row.Idcolecao) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.Idcolecao) return;
     this.api.delete(row.Idcolecao).subscribe(() => {

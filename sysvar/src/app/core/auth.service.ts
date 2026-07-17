@@ -159,6 +159,16 @@ export class AuthService {
     return acesso === 'VIEW' || acesso === 'EDIT';
   }
 
+  isAdministrador(): boolean {
+    const user = this.getCurrentUser();
+    const tipo = (user?.type || this.getUserType() || '').toString().toLowerCase().trim();
+    return user?.is_superuser === true || tipo === 'admin' || tipo === 'administrador';
+  }
+
+  podeExcluirModulo(modulo?: string | null): boolean {
+    return this.isAdministrador() && this.podeAcessarModulo(modulo, true) !== false;
+  }
+
   permissaoCampo(campo: string): boolean | null {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return true;

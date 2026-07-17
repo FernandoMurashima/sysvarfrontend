@@ -32,3 +32,15 @@ input, select { width:100%; padding:8px 10px; border:1px solid #c9d6e4; border-r
 .overlay { position:fixed; inset:0; background:rgba(0,0,0,.28); display:flex; align-items:center; justify-content:center; z-index:60; }
 .overlay-card { background:#fff; border-radius:12px; padding:16px; width:520px; max-width:calc(100% - 24px); border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.15); }
 .overlay-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+
+.clientes-page, .page { border: 0 !important; gap: 10px; margin: 5px; padding: 0; max-width: 100%; overflow-x: hidden; }
+.toolbar { gap: 8px; padding: 8px 10px; border: 1px solid #d7e0eb; border-radius: 6px; background: #fff; min-width: 0; }
+.toolbar-actions { flex: 1 1 auto; justify-content: flex-end; flex-wrap: nowrap; min-width: 0; gap: 6px; overflow: hidden; }
+.toolbar-search { flex: 0 1 440px; min-width: 220px; }
+.card, .panel { background: #fff !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 10px !important; margin: 0 !important; overflow: hidden; }
+.table-wrapper { overflow-x: hidden !important; max-width: 100%; }
+.table { width: 100%; table-layout: fixed; }
+.table th, .table td { padding: 7px 8px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actions { justify-content: flex-end; white-space: nowrap; flex-wrap: nowrap; gap: 4px; }
+.actions .btn, .btn.sm { min-height: 24px !important; padding: 3px 6px !important; font-size: 11px !important; border-radius: 6px !important; }
+.btn { border-radius: 6px; white-space: nowrap; }

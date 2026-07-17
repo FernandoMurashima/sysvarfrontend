@@ -52,6 +52,11 @@ export class EstoqueMovimentacoesComponent implements OnInit {
 
   ngOnInit(): void { this.load(); }
 
+  clearSearch(): void {
+    this.search = '';
+    this.load();
+  }
+
   load(): void {
     this.loading = true;
     forkJoin({

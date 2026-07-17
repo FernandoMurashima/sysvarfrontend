@@ -54,13 +54,13 @@ export class MovimentacoesFinanceirasService {
   }
 
   pendentesConciliacao(params: {
-    data_movimento: string;
-    forma_pagamento: string;
+    data_movimento?: string | null;
+    forma_pagamento?: string | null;
     conta_bancaria?: number | null;
   }): Observable<MovimentacaoFinanceira[]> {
-    let p = new HttpParams()
-      .set('data_movimento', params.data_movimento)
-      .set('forma_pagamento', params.forma_pagamento);
+    let p = new HttpParams();
+    if (params.data_movimento) p = p.set('data_movimento', params.data_movimento);
+    if (params.forma_pagamento) p = p.set('forma_pagamento', params.forma_pagamento);
     if (params.conta_bancaria) p = p.set('conta_bancaria', String(params.conta_bancaria));
     return this.http.get<MovimentacaoFinanceira[]>(`${this.base}pendentes-conciliacao/`, { params: p });
   }

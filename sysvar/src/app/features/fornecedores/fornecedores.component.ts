@@ -39,6 +39,10 @@ export class FornecedoresComponent implements OnInit {
     return this.auth.podeAcessarModulo('cadastros', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('cadastros');
+  }
+
   search = '';
   successMsg = '';
   errorMsg = '';
@@ -374,12 +378,14 @@ export class FornecedoresComponent implements OnInit {
   }
 
   excluir(item: Fornecedor): void {
+    if (!this.podeExcluirModulo) return;
     const id = item.id;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item?.id;
     if (!id) return;

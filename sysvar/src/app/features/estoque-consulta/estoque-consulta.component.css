@@ -1,16 +1,24 @@
 .estoque-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+  margin: 5px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0 10px;
-  border-bottom: 1px solid #e5e7eb;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #d7e0eb;
+  border-radius: 6px;
+  background: #fff;
+  min-width: 0;
+  position: relative;
+  z-index: 20;
 }
 
 .toolbar h2 {
@@ -23,16 +31,35 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
 }
 
 .toolbar-actions input {
-  min-width: 180px;
+  min-width: 120px;
+  flex: 0 1 160px;
 }
 
 .toolbar-actions select {
-  min-width: 180px;
+  min-width: 150px;
+  flex: 0 1 190px;
+}
+
+.toolbar-search {
+  flex: 0 1 380px;
+  min-width: 220px;
+}
+
+.toolbar-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 input,

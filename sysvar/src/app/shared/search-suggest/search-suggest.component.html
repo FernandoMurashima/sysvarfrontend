@@ -23,6 +23,6 @@
     </div>
   </div>
 
-  <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-  <button class="btn primary" type="button" (click)="clear()">Limpar</button>
+  <button class="btn primary" type="button" (click)="doSearch()" *ngIf="showActions">Buscar</button>
+  <button class="btn primary" type="button" (click)="clear()" *ngIf="showActions">Limpar</button>
 </div>

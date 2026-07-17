@@ -9,6 +9,7 @@ export interface ContaBancaria {
   conta: string;
   tipo_conta: TipoContaBancaria;
   pix_chave?: string | null;
+  conta_contabil?: string | null;
   saldo_inicial: string | number;
   saldo_atual: string | number;
   ativo: boolean;

@@ -4,13 +4,16 @@
     <h2>Grupos</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
+        [showActions]="false"
         placeholder="Buscar por código/descrição..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="clearSearch()">Limpar</button>
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrupo()">Novo Grupo</button>
       <button class="btn primary" (click)=" goHome()">Home</button>
     </div>
@@ -25,17 +28,10 @@
       <p>{{ modal.titulo }}</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
-
-  <section class="card form-placeholder" *ngIf="formModeGrupo === null && !submitted">
-    <div class="placeholder-inner">
-      <p>Para cadastrar um <strong>grupo</strong>, clique em <strong>Novo Grupo</strong>.</p>
-      <p>Para editar, localize um <strong>grupo</strong> na lista e clique em <strong>Editar</strong>.</p>
-    </div>
-  </section>
 
   <div class="content">
 
@@ -113,7 +109,7 @@
               <button class="btn sm" (click)="consultarGrupo(g)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrupo(g)">Editar</button>
               <button class="btn sm" (click)="selecionarGrupo(g.Idgrupo!)">Subgrupos</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirGrupo(g)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirGrupo(g)">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -191,7 +187,7 @@
             <td class="actions">
               <button class="btn sm" (click)="consultarSubgrupo(s)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarSubgrupo(s)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluirSubgrupo(s)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirSubgrupo(s)">Excluir</button>
             </td>
           </tr>
         </tbody>

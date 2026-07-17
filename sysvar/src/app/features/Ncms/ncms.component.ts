@@ -47,6 +47,10 @@ export class NcmsComponent {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('fiscal');
+  }
+
   searchSuggestions = computed(() => {
     const valores = this.items().flatMap(item => [
       item.ncm,
@@ -145,11 +149,13 @@ export class NcmsComponent {
   }
 
   excluir(row: Ncm) {
+    if (!this.podeExcluirModulo) return;
     if (!row.id) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.id) return;
     this.api.delete(row.id).subscribe(() => {

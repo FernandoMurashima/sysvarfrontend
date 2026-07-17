@@ -39,6 +39,10 @@ export class TributosComponent {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('fiscal');
+  }
+
   searchSuggestions = computed(() => {
     const valores = this.items().flatMap(item => [
       item.codigo,
@@ -108,9 +112,9 @@ export class TributosComponent {
       error: () => this.saving = false,
     });
   }
-  excluir(row: Tributo) { if (this.podeEditarModulo) this.excluirModal = row; }
+  excluir(row: Tributo) { if (this.podeExcluirModulo) this.excluirModal = row; }
   confirmarExclusao() {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     if (!this.excluirModal?.id) return;
     this.api.delete(this.excluirModal.id).subscribe(() => { this.excluirModal = null; this.successMsg.set('Tributo excluído.'); this.load(); });
   }

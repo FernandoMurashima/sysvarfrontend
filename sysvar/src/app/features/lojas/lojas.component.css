@@ -1,14 +1,15 @@
 /* página */
-.clientes-page { display: flex; flex-direction: column; gap: 12px; border-style: solid; margin-left: 5px; padding-bottom: 5px; padding-top: 5px; margin-right: 5px ; }
+.clientes-page { display: flex; flex-direction: column; gap: 10px; margin: 5px; padding-bottom: 5px; padding-top: 5px; }
 
 /* toolbar */
-.toolbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; gap: 12px; }
 .toolbar h2 { margin: 5px; }
-.toolbar-actions { display: flex; gap: 8px; align-items: center; margin-right: 5px;}
+.toolbar-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-right: 5px; flex: 1 1 auto; flex-wrap: nowrap; min-width: 0; }
+.toolbar-search { flex: 0 1 520px; min-width: 280px; }
 .toolbar-actions input { min-width: 280px; padding: 8px 10px; border-radius: 6px; border: 1px solid #0a0a0a; }
 
 /* conteúdo vertical */
-.content { display: flex; flex-direction: column; gap: 16px; }
+.content { display: flex; flex-direction: column; gap: 10px; }
 
 /* alerts */
 .alert { padding: 10px 12px; border-radius: 8px; }
@@ -16,14 +17,14 @@
 .alert.success { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
 
 /* cards */
-.card { background:#98bbd3; border:1px solid #0a0a0a; border-radius: 10px; padding: 12px; margin-left: 5px; margin-right: 5px; }
+.card { background:#fff; border:1px solid #cbd5e1; border-radius: 6px; padding: 10px; margin-left: 2px; margin-right: 2px; }
 
 /* lista */
 .table { width: 100%; border-collapse: collapse; }
-.table thead th { position: sticky; top: 0; z-index: 1; background:#a2c4e7; border-bottom:1px solid #e5e7eb; font-weight:600; text-align:left; padding: 10px 12px; }
-.table td { border-bottom:1px solid #f1f5f9; padding:10px 12px; vertical-align: middle; }
+.table thead th { position: sticky; top: 0; z-index: 1; background:#f8fafc; border-bottom:1px solid #e5e7eb; font-weight:600; text-align:left; padding: 8px 10px; }
+.table td { border-bottom:1px solid #e5e7eb; padding:8px 10px; vertical-align: middle; }
 .table .email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
-.actions { display:flex; gap:6px; }
+.actions { display:flex; gap:6px; justify-content:flex-end; white-space:nowrap; }
 .loading, .empty-hint { text-align:center; color:#64748b; padding: 12px; }
 
 /* wrapper com rolagem */
@@ -58,12 +59,12 @@ input, select { padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb
 .actions-form { margin-top: 12px; display: flex; gap: 8px; }
 
 /* botões */
-.btn { padding: 8px 12px; border: 1px solid #e5e7eb; background: #fff; border-radius: 8px; cursor: pointer; }
+.btn { padding: 7px 11px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: #f8fafc; }
 .btn.primary { background: #111827; color: #fff; border-color: #111827; }
 .btn.primary:hover { filter: brightness(1.06); }
 .btn.ghost { background: transparent; }
-.btn.sm { padding: 6px 10px; font-size: 13px; }
+.btn.sm { padding: 5px 9px; font-size: 13px; min-width: 64px; }
 .btn.danger { border-color: #fecaca; color: #991b1b; }
 .btn.danger:hover { background: #fef2f2; }
 

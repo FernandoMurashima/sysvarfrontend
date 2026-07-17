@@ -3,12 +3,15 @@
     <h2>Tributos</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
+        [showActions]="false"
         placeholder="Buscar por código ou descrição..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
@@ -23,14 +26,10 @@
       <p>Confirma a exclusão de <strong>{{ tributo.codigo }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" *ngIf="podeEditarModulo" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
-
-  <section class="panel hint" *ngIf="!showForm">
-    <span>Cadastre os tributos usados nas regras fiscais: ICMS, PIS, COFINS, CBS, IBS e outros.</span>
-  </section>
 
   <section class="panel" *ngIf="showForm">
     <h3>{{ consultando ? 'Consultar tributo' : (editingId ? 'Editar tributo' : 'Novo tributo') }}</h3>
@@ -59,7 +58,7 @@
         <tr *ngFor="let r of paged()">
           <td>{{ r.codigo }}</td><td>{{ r.descricao }}</td><td>{{ r.esfera }}</td><td>{{ r.atual ? 'Sim' : 'Não' }}</td>
           <td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-          <td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button></td>
+          <td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(r)">Excluir</button></td>
         </tr>
       </tbody>
     </table>

@@ -35,6 +35,10 @@ export class FuncionariosComponent implements OnInit {
     return this.auth.podeAcessarModulo('cadastros', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('cadastros');
+  }
+
   search = '';
   successMsg = '';
   errorMsg = '';
@@ -329,12 +333,14 @@ export class FuncionariosComponent implements OnInit {
   }
 
   excluir(item: Funcionario): void {
+    if (!this.podeExcluirModulo) return;
     const id = (item as any).id;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item ? (item as any).id : null;
     if (!id) return;

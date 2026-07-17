@@ -100,6 +100,7 @@ export class NatLancamentosComponent implements OnInit {
 
   get isSuperUser(): boolean { return !!this.auth.getCurrentUser()?.is_superuser; }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
+  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('financeiro'); }
   get searchSuggestions(): string[] {
     const valores = this.itensAll.flatMap(item => [
       item.codigo,
@@ -289,14 +290,14 @@ export class NatLancamentosComponent implements OnInit {
   }
 
   excluir(row: NatLancamento): void {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     const id = row.idnatureza;
     if (!id) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     const id = row?.idnatureza;
     if (!id) return;

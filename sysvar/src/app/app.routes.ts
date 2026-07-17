@@ -46,6 +46,7 @@ import { ConfigFinanceiraComponent } from './features/config-financeira/config-f
 import { EstoqueConsultaComponent } from './features/estoque-consulta/estoque-consulta.component';
 import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/estoque-movimentacoes.component';
 import { EstoqueInventarioComponent } from './features/estoque-inventario/estoque-inventario.component';
+import { EstoqueEtiquetasComponent } from './features/estoque-etiquetas/estoque-etiquetas.component';
 import { PdvComponent } from './features/pdv/pdv.component';
 import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatorios-vendas.component';
 import { RelatorioMargemComponent } from './features/relatorio-margem/relatorio-margem.component';
@@ -112,16 +113,17 @@ export const routes: Routes = [
       { path: 'financeiro/contas', component: ContasBancariasComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/antecipacoes', component: AntecipacaoRecebiveisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
-      { path: 'financeiro/configuracao', component: ConfigFinanceiraComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
+      { path: 'financeiro/configuracao', component: ConfigFinanceiraComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
       { path: 'financeiro/consulta-naturezas', component: ConsultaFinanceiraNaturezaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
-      { path: 'financeiro/lancamentos-contabeis', component: LancamentosContabeisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
-      { path: 'financeiro/dre', component: DreGerencialComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
-      { path: 'financeiro/vales-troca', component: ValesTrocaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber'], moduloEmpresa: 'financeiro' } },
+      { path: 'financeiro/lancamentos-contabeis', component: LancamentosContabeisComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
+      { path: 'financeiro/dre', component: DreGerencialComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
+      { path: 'financeiro/vales-troca', component: ValesTrocaComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
       { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { modo: 'matriz', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/consulta-movimentacao-referencia', component: EstoqueConsultaComponent, data: { modo: 'movimentos', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/movimentacoes', component: EstoqueMovimentacoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/inventario', component: EstoqueInventarioComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
+      { path: 'estoque/etiquetas', component: EstoqueEtiquetasComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
 
@@ -129,7 +131,7 @@ export const routes: Routes = [
 
       
       { path: '', pathMatch: 'full', redirectTo: 'home' },
-      { path: 'financeiro/formas-pagamento', component: FormasPagamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
+      { path: 'financeiro/formas-pagamento', component: FormasPagamentoComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
 
     ]
   },

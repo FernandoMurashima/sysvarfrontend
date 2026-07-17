@@ -71,6 +71,7 @@ export class PlanoContabilComponent implements OnInit {
   get pageStart(): number { return this.total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
+  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('financeiro'); }
   get searchSuggestions(): string[] {
     const valores = this.contasAll.flatMap(item => [
       item.codigo,
@@ -211,7 +212,7 @@ export class PlanoContabilComponent implements OnInit {
   }
 
   excluir(row: PlanoContabil): void {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     if (!row.id || !confirm(`Excluir a conta ${row.codigo} - ${row.descricao}?`)) return;
     this.api.remove(row.id).subscribe({
       next: () => { this.successMsg = 'Conta excluída.'; this.load(); },

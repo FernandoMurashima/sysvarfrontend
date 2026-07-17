@@ -78,6 +78,10 @@ export class ProdutosComponent {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
+
   // navegação
   view = signal<'list' | 'form'>('list');
   setViewList() { this.view.set('list'); this.cancelarEdicao(); this.load(); }
@@ -691,11 +695,13 @@ export class ProdutosComponent {
   }
 
   excluir(row: Produto) {
+    if (!this.podeExcluirModulo) return;
     if (!row.Idproduto) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.Idproduto) return;
     this.api.remove(row.Idproduto).subscribe({

@@ -98,6 +98,10 @@ export class ProdutosUsoComponent {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
+
   form: FormGroup = this.fb.group({
     tipo_produto: ['2', [Validators.required]],
     referencia: [{ value: '', disabled: true }],
@@ -377,11 +381,13 @@ export class ProdutosUsoComponent {
   }
 
   excluir(row: Produto) {
+    if (!this.podeExcluirModulo) return;
     if (!row.Idproduto) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.Idproduto) return;
     this.api.remove(row.Idproduto).subscribe({

@@ -3,12 +3,15 @@
     <h2>CFOPs</h2>
     <div class="toolbar-actions">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
+        [showActions]="false"
         placeholder="Buscar por CFOP/descrição..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
@@ -23,7 +26,7 @@
       <p>Confirma a exclusão do CFOP <strong>{{ cfop.codigo }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" *ngIf="podeEditarModulo" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -41,13 +44,6 @@
       </div>
     </div>
   </div>
-
-  <section class="card form-placeholder" *ngIf="!showForm">
-    <div class="placeholder-inner">
-      <p>Para cadastrar um CFOP, clique em <strong>Novo</strong>.</p>
-      <p>Para editar, localize na lista e clique em <strong>Editar</strong>.</p>
-    </div>
-  </section>
 
   <section class="card form" *ngIf="showForm">
     <h3>{{ consultando ? 'Consultar CFOP' : (editingId ? 'Editar CFOP' : 'Novo CFOP') }}</h3>
@@ -139,7 +135,7 @@
             <td class="actions">
               <button class="btn sm" type="button" (click)="consultar(r)">Consultar</button>
               <button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
-              <button class="btn sm danger" type="button" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button>
+              <button class="btn sm danger" type="button" *ngIf="podeExcluirModulo" (click)="excluir(r)">Excluir</button>
             </td>
           </tr>
         </tbody>

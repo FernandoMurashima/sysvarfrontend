@@ -45,6 +45,10 @@ export class CfopsComponent {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('fiscal');
+  }
+
   searchSuggestions = computed(() => {
     const valores = this.items().flatMap(item => [
       item.codigo,
@@ -146,11 +150,13 @@ export class CfopsComponent {
   }
 
   excluir(row: Cfop) {
+    if (!this.podeExcluirModulo) return;
     if (!row.id) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.id) return;
     this.api.delete(row.id).subscribe(() => {

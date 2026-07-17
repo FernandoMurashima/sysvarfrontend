@@ -1,0 +1,416 @@
+.etiquetas-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 5px;
+  padding: 5px;
+}
+
+.toolbar,
+.toolbar-actions,
+.list-header,
+.form-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.toolbar,
+.list-header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toolbar {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.toolbar h2,
+.panel h3 {
+  margin: 0;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.alert {
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.alert.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.form-line {
+  flex-wrap: nowrap;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.field.grow {
+  flex: 1 1 auto;
+  min-width: 460px;
+}
+
+.field.qtd {
+  flex: 0 0 80px;
+}
+
+.field.small {
+  flex: 0 0 128px;
+}
+
+.action {
+  flex: 0 0 auto;
+  min-width: 72px;
+  height: 31px;
+}
+
+input,
+select {
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  height: 31px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.btn {
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn.primary {
+  background: #111827;
+  color: #fff;
+}
+
+.btn.danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn.sm {
+  padding: 5px 9px;
+  font-size: 12px;
+  height: 28px;
+}
+
+.btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.sheet-summary {
+  height: 31px;
+  min-width: 126px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding: 0 9px;
+  background: #f8fafc;
+}
+
+.sheet-summary strong {
+  font-size: 15px;
+}
+
+.sheet-summary span {
+  font-size: 12px;
+  color: #334155;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin-top: 8px;
+}
+
+.table th {
+  background: #f8fafc;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.table th.num,
+.table td.num {
+  text-align: center;
+  width: 120px;
+}
+
+.actions-col {
+  text-align: right;
+  width: 190px;
+  white-space: nowrap;
+}
+
+.qty-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+}
+
+.qty-grid {
+  width: 70px;
+  height: 28px;
+  padding: 4px 7px;
+  margin: 0;
+  display: block;
+  text-align: center;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 34px;
+}
+
+.row-actions .btn {
+  min-width: 76px;
+}
+
+.empty {
+  background: #fff;
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+}
+
+.preview-panel {
+  min-height: 360px;
+}
+
+.sheet-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+  max-height: 680px;
+  overflow: auto;
+  background: #eef2f7;
+  border: 1px solid #d7dee8;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.sheet-page {
+  --paper-w: 210mm;
+  --paper-h: 297mm;
+  --label-w: 80mm;
+  --label-h: 30mm;
+  --sheet-margin: 6mm;
+  --gap-x: 2mm;
+  --gap-y: 2mm;
+  width: var(--paper-w);
+  min-height: var(--paper-h);
+  background: #fff;
+  box-shadow: 0 1px 8px rgba(15, 23, 42, .18);
+  box-sizing: border-box;
+  padding: var(--sheet-margin);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--label-w));
+  grid-auto-rows: var(--label-h);
+  gap: var(--gap-y) var(--gap-x);
+  align-content: start;
+  transform-origin: top left;
+  max-width: 100%;
+}
+
+.sheet-preview-wrap .sheet-page {
+  transform: scale(.58);
+  margin-bottom: calc(var(--paper-h) * -.42);
+}
+
+.label-card {
+  width: var(--label-w);
+  height: var(--label-h);
+  background: #fff;
+  border: 1px solid #111;
+  border-radius: 2px;
+  padding: 2mm 3mm;
+  display: grid;
+  grid-template-rows: 1fr auto auto auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: #000;
+  text-align: center;
+}
+
+.label-name {
+  font-size: 8.5pt;
+  font-weight: 800;
+  line-height: 1.08;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.label-meta {
+  font-size: 6.5pt;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.barcode {
+  height: 15mm;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 1mm;
+}
+
+.barcode span {
+  height: 13mm;
+  background: transparent;
+  display: block;
+}
+
+.barcode span.black {
+  background: #000;
+}
+
+.barcode span.guard {
+  height: 15mm;
+}
+
+.label-ean {
+  text-align: center;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin: 1mm 0 .8mm;
+}
+
+.print-area {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .form-line {
+    flex-wrap: wrap;
+  }
+
+  .field.grow {
+    min-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .action {
+    align-self: end;
+  }
+}
+
+@media (max-width: 800px) {
+  .toolbar,
+  .toolbar-actions,
+  .form-line {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .field.qtd,
+  .field.small {
+    width: 100%;
+    flex: auto;
+  }
+
+  .action {
+    align-self: stretch;
+  }
+
+  .sheet-preview-wrap {
+    display: none;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  app-estoque-etiquetas .print-area,
+  app-estoque-etiquetas .print-area * {
+    visibility: visible !important;
+  }
+
+  app-estoque-etiquetas .print-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+  }
+
+  app-estoque-etiquetas .print-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    page-break-after: always;
+    break-after: page;
+    transform: none !important;
+  }
+
+  app-estoque-etiquetas .print-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  app-estoque-etiquetas .print-label {
+    border: 0;
+    border-radius: 0;
+  }
+
+  app-estoque-etiquetas .roll-print .print-sheet {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}

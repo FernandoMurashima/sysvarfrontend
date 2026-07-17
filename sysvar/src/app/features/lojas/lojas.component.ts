@@ -42,6 +42,10 @@ export class LojasComponent implements OnInit {
     return this.auth.podeAcessarModulo('cadastros', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('cadastros');
+  }
+
   search = '';
   successMsg = '';
   errorMsg = '';
@@ -487,12 +491,14 @@ export class LojasComponent implements OnInit {
   }
 
   excluir(item: Loja): void {
+    if (!this.podeExcluirModulo) return;
     const id = (item as any).id ?? (item as any).Idloja;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item ? ((item as any).id ?? (item as any).Idloja) : null;
     if (!id) return;

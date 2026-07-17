@@ -46,6 +46,8 @@
 
 .filters {
   flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .filters label {
@@ -54,6 +56,7 @@
   gap: 3px;
   color: #31415a;
   font-size: 12px;
+  flex: 0 0 auto;
 }
 
 .filters select,
@@ -65,8 +68,32 @@
   padding: 4px 8px;
 }
 
+.filters label:nth-child(1) select {
+  min-width: 200px;
+}
+
+.filters label:nth-child(2) select,
+.filters label:nth-child(4) select {
+  min-width: 118px;
+}
+
 .filters label:nth-child(3) select {
   min-width: 310px;
+}
+
+.filters label:nth-child(5) input,
+.filters label:nth-child(6) input {
+  min-width: 130px;
+}
+
+.filters .btn {
+  height: 30px;
+  align-self: flex-end;
+  padding: 0 12px;
+}
+
+.filters .btn:first-of-type {
+  margin-left: auto;
 }
 
 .summary-grid {

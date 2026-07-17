@@ -27,13 +27,22 @@
   border-bottom: 1px solid #dbe4ee;
 }
 
+.toolbar-actions {
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
 .toolbar h2,
 .panel h3 {
   margin: 0;
 }
 
-.toolbar-actions input {
-  min-width: 280px;
+.toolbar-actions app-search-suggest {
+  flex: 0 1 340px;
+  width: 340px;
+  min-width: 240px;
 }
 
 .panel,
@@ -140,6 +149,32 @@
   margin-top: 14px;
 }
 
+.work-backdrop {
+  z-index: 90;
+  align-items: start;
+  justify-items: center;
+  padding: 22px;
+  overflow: auto;
+}
+
+.work-modal {
+  width: min(1500px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.modal-head h3 {
+  margin: 0;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -164,6 +199,37 @@ label {
   min-height: 34px;
 }
 
+.form-actions {
+  justify-content: flex-end;
+  align-self: end;
+  min-height: 32px;
+}
+
+.money-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  height: 32px;
+  border: 1px solid #cbd6e2;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.money-input span {
+  padding: 0 8px;
+  color: #334155;
+  font-weight: 700;
+  border-right: 1px solid #dbe4ee;
+}
+
+.money-input input {
+  height: 30px;
+  border: 0;
+  border-radius: 0;
+  text-align: right;
+}
+
 input,
 select {
   height: 32px;
@@ -171,55 +237,6 @@ select {
   border: 1px solid #cbd6e2;
   border-radius: 6px;
   outline: none;
-}
-
-.store-picker {
-  position: relative;
-  min-width: 170px;
-}
-
-.store-picker summary {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  padding: 4px 24px 4px 8px;
-  border: 1px solid #cbd6e2;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.store-picker summary::-webkit-details-marker {
-  display: none;
-}
-
-.store-picker summary::after {
-  content: "";
-  position: absolute;
-  right: 8px;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid #52627a;
-}
-
-.store-picker-menu {
-  position: absolute;
-  z-index: 20;
-  top: 34px;
-  left: 0;
-  width: 230px;
-  max-height: 210px;
-  overflow: auto;
-  padding: 6px;
-  border: 1px solid #cbd6e2;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
 }
 
 .store-option {
@@ -236,6 +253,12 @@ select {
   white-space: nowrap;
 }
 
+.store-option.inline {
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #d7e0eb;
+}
+
 .store-option:hover {
   background: #f4f7fb;
 }
@@ -250,10 +273,32 @@ select {
   margin: 0;
 }
 
+.loja-checks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #d7e0eb;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.loja-checks strong {
+  margin-right: 4px;
+}
+
 .filters {
   justify-content: flex-start;
   min-height: 38px;
   padding: 6px 10px;
+}
+
+.modal-filters {
+  border: 1px solid #d7e0eb;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
 
 .filters strong {
@@ -271,6 +316,10 @@ select {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
+}
+
+.transfer-money {
+  height: 32px;
 }
 
 .transfer-panel strong {
@@ -327,6 +376,10 @@ select {
   margin-top: 8px;
 }
 
+.work-table {
+  max-height: calc(100vh - 210px);
+}
+
 .table-wrapper.compact {
   max-height: 260px;
 }
@@ -372,6 +425,17 @@ select {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+}
+
+.action-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.action-tabs .btn {
+  min-width: 140px;
 }
 
 .btn {
@@ -481,6 +545,16 @@ select {
   .toolbar-actions input {
     min-width: 0;
     width: 100%;
+  }
+
+  .toolbar-actions app-search-suggest {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .action-tabs {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .form-grid,

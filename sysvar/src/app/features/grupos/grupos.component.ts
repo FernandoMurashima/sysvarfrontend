@@ -43,6 +43,10 @@ export class GruposComponent implements OnInit {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
+
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
   get searchSuggestions(): string[] {
     const valores = [
       ...this.grupos.flatMap(item => [
@@ -178,11 +182,13 @@ export class GruposComponent implements OnInit {
   }
 
   excluirGrupo(g: GrupoModel) {
+    if (!this.podeExcluirModulo) return;
     if (!g.Idgrupo) return;
     this.excluirModal = { tipo: 'grupo', titulo: `Excluir o grupo "${g.Descricao}"?`, grupo: g };
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const modal = this.excluirModal;
     if (!modal) return;
     if (modal.tipo === 'grupo' && modal.grupo) {
@@ -320,6 +326,7 @@ export class GruposComponent implements OnInit {
   }
 
   excluirSubgrupo(s: SubgrupoModel) {
+    if (!this.podeExcluirModulo) return;
     if (!s.Idsubgrupo) return;
     this.excluirModal = { tipo: 'subgrupo', titulo: `Excluir o subgrupo "${s.Descricao}"?`, subgrupo: s };
   }

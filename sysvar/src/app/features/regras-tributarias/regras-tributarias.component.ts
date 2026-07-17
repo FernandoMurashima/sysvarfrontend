@@ -51,6 +51,10 @@ export class RegrasTributariasComponent {
     return this.auth.podeAcessarModulo('fiscal', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('fiscal');
+  }
+
   searchSuggestions = computed(() => {
     const valores = [
       ...this.items().flatMap(item => [
@@ -158,9 +162,9 @@ export class RegrasTributariasComponent {
       error: () => this.saving = false,
     });
   }
-  excluir(row: RegraTributaria) { if (this.podeEditarModulo) this.excluirModal = row; }
+  excluir(row: RegraTributaria) { if (this.podeExcluirModulo) this.excluirModal = row; }
   confirmarExclusao() {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     if (!this.excluirModal?.id) return;
     this.api.delete(this.excluirModal.id).subscribe(() => { this.excluirModal = null; this.successMsg.set('Regra excluída.'); this.load(); });
   }

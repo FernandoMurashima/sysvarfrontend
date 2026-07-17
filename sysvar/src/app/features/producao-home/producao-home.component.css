@@ -41,6 +41,7 @@
 .quick-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .actions-panel {
@@ -120,6 +121,18 @@
   color: #fff;
 }
 
+.btn-count {
+  min-width: 22px;
+  height: 18px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e8f3ff;
+  color: #081225;
+  font-size: 11px;
+  line-height: 18px;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -181,6 +194,39 @@
 .msg.error {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, .45);
+}
+
+.modal-card {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #cbd6e2;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .22);
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.modal-title h3 {
+  margin: 0;
 }
 
 @media (max-width: 900px) {

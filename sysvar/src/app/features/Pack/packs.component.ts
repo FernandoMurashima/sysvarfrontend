@@ -52,6 +52,10 @@ export class PacksComponent implements OnInit {
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
   }
+
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('produtos');
+  }
   get searchSuggestions(): string[] {
     const valores = [
       ...this.packs.flatMap(item => [
@@ -192,6 +196,7 @@ export class PacksComponent implements OnInit {
   }
 
   excluirPack(p: PackModel) {
+    if (!this.podeExcluirModulo) return;
     if (!p.id) return;
     this.excluirModal = {
       tipo: 'pack',
@@ -201,6 +206,7 @@ export class PacksComponent implements OnInit {
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const modal = this.excluirModal;
     if (!modal) return;
     if (modal.tipo === 'pack' && modal.pack) {
@@ -336,6 +342,7 @@ export class PacksComponent implements OnInit {
   }
 
   excluirItem(it: PackItemModel) {
+    if (!this.podeExcluirModulo) return;
     if (!it.id) return;
     this.excluirModal = {
       tipo: 'item',

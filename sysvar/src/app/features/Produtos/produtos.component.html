@@ -5,13 +5,17 @@
 
     <div class="toolbar-right">
       <app-search-suggest
+        class="toolbar-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
+        [showActions]="false"
         placeholder="Buscar por descrição ou referência"
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
 
+      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
       <button class="btn primary" (click)="setViewList()">Consultar</button>
       <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
       <button class="btn primary" [routerLink]="['/home']">Home</button>
@@ -51,7 +55,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -78,14 +82,6 @@
       </div>
     </div>
   </div>
-
-  <!-- DICA -->
-  <section class="card hint">
-    <p>
-      Para cadastrar um <strong>produto</strong>, clique em <strong>Novo</strong>.
-      Para editar, localize um <strong>Produto</strong> na lista e clique em <strong>Editar</strong>.
-    </p>
-  </section>
 
   <!-- LISTA -->
   <section class="card list" *ngIf="view() === 'list'">
@@ -127,7 +123,7 @@
             <td class="actions">
               <button class="btn sm" (click)="consultar(p)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(p)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(p)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(p)">Excluir</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleAtivo(p)">{{ p.ativo ? 'Inativar' : 'Ativar' }}</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="toggleBloqueio(p)">{{ p.bloqueado_venda ? 'Desbloquear' : 'Bloquear' }}</button>
             </td>

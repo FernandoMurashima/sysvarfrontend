@@ -50,7 +50,8 @@ export class MateriaisComponent {
     ]).filter((v): v is string => !!v);
     return Array.from(new Set(valores));
   });
-  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('fiscal', true) !== false; }
+  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('fiscal'); }
 
   showForm = false;
   editingId: number | null = null;
@@ -132,13 +133,13 @@ export class MateriaisComponent {
   }
 
   excluir(row: Material) {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     if (!row.Idmaterial) return;
     this.excluirModal = row;
   }
 
   confirmarExclusao(): void {
-    if (!this.podeEditarModulo) return;
+    if (!this.podeExcluirModulo) return;
     const row = this.excluirModal;
     if (!row?.Idmaterial) return;
     this.api.delete(row.Idmaterial).subscribe(() => {

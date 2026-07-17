@@ -39,6 +39,10 @@ export class ClientesComponent implements OnInit {
     return this.auth.podeAcessarModulo('cadastros', true) !== false;
   }
 
+  get podeExcluirModulo(): boolean {
+    return this.auth.podeExcluirModulo('cadastros');
+  }
+
   search = '';
   successMsg = '';
   errorMsg = '';
@@ -373,12 +377,14 @@ export class ClientesComponent implements OnInit {
   }
 
   excluir(item: Cliente): void {
+    if (!this.podeExcluirModulo) return;
     const id = item.id;
     if (!id) return;
     this.excluirModal = item;
   }
 
   confirmarExclusao(): void {
+    if (!this.podeExcluirModulo) return;
     const item = this.excluirModal;
     const id = item?.id;
     if (!id) return;

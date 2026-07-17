@@ -87,9 +87,7 @@ export class EstoqueConsultaComponent implements OnInit {
   get searchSuggestions(): string[] {
     const valores = [
       ...this.produtos.flatMap(p => [
-        p.referencia,
-        p.descricao,
-        p.descricao_reduzida
+        this.produtoSugestao(p)
       ]),
       ...this.skus.flatMap(s => [
         s.ean13,
@@ -106,6 +104,12 @@ export class EstoqueConsultaComponent implements OnInit {
       ])
     ].filter((v): v is string => !!v);
     return Array.from(new Set(valores));
+  }
+
+  buscar(valor?: string): void {
+    const termo = String(valor ?? this.search ?? '').trim();
+    this.search = this.normalizarBuscaReferencia(termo);
+    this.load();
   }
 
   ngOnInit(): void {
@@ -125,7 +129,7 @@ export class EstoqueConsultaComponent implements OnInit {
       lojas: this.lojasApi.list({ page_size: 500 }),
       estoque: this.api.list(estoqueParams),
       movimentos: this.api.listMovimentacoes({ search: this.search, loja: this.loja, page_size: 500 }),
-      produtos: this.produtosApi.list({ tipo_produto: '1', ativo: 'true', page_size: 5000 }),
+      produtos: this.produtosApi.list({ ativo: 'true', page_size: 5000 }),
       colecoes: this.colecoesApi.list(),
       skus: this.skusApi.list({ page_size: 5000 }),
       cores: this.coresApi.list({ page_size: 2000, ordering: 'Descricao' }),
@@ -149,6 +153,46 @@ export class EstoqueConsultaComponent implements OnInit {
         this.errorMsg = 'Falha ao consultar estoque.';
       }
     });
+  }
+
+  clearFilters(): void {
+    this.search = '';
+    this.loja = '';
+    this.colecao = '';
+    this.estacao = '';
+    this.filtroSaldo = 'todos';
+    this.load();
+  }
+
+  private produtoSugestao(produto: Produto): string | null {
+    const referencia = produto.referencia || '';
+    if (!referencia) return null;
+    const descricao = produto.descricao_reduzida || produto.descricao || '';
+    return descricao ? `${referencia} - ${descricao}` : referencia;
+  }
+
+  private normalizarBuscaReferencia(valor: string): string {
+    const termo = valor.includes(' - ') ? valor.split(' - ')[0].trim() : valor;
+    const normalizado = this.normalizarTexto(termo);
+    const produto = this.produtos.find(p =>
+      this.normalizarTexto(p.referencia).includes(normalizado) ||
+      this.normalizarTexto(p.descricao).includes(normalizado) ||
+      this.normalizarTexto(p.descricao_reduzida).includes(normalizado)
+    );
+    if (produto?.referencia) return produto.referencia;
+    const sku = this.skus.find(s =>
+      this.normalizarTexto(s.ean13).includes(normalizado) ||
+      this.normalizarTexto(s.codigo_item_ref).includes(normalizado)
+    );
+    return sku?.codigo_item_ref || termo;
+  }
+
+  private normalizarTexto(valor: unknown): string {
+    return String(valor ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   lojaNome(id: number): string {

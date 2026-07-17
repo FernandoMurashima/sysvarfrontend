@@ -24,7 +24,7 @@
       <p>Confirma a exclusão do usuário <strong>{{ usuario.username }}</strong>?</p>
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>
@@ -68,7 +68,7 @@
 
           <label id="type-box" class="input-item" [class.invalid]="form.get('type')?.invalid && (form.get('type')?.touched || submitted)">
             Tipo*
-            <select formControlName="type"
+            <select formControlName="type" (change)="onTipoChange()"
               [attr.aria-invalid]="form.get('type')?.invalid && (form.get('type')?.touched || submitted) ? 'true' : null">
               <option *ngFor="let t of typeOptions" [value]="t">{{ t }}</option>
             </select>
@@ -142,7 +142,7 @@
               <select [(ngModel)]="modulo.acesso" [ngModelOptions]="{standalone: true}" [disabled]="consultando || !podeEditarModulo">
                 <option value="NONE">Sem acesso</option>
                 <option value="VIEW">Consultar</option>
-                <option value="EDIT">Completo</option>
+                <option value="EDIT" *ngIf="usuarioFormularioAdmin">Completo</option>
               </select>
             </label>
           </div>
@@ -209,7 +209,7 @@
             <td class="actions">
               <button class="btn sm" (click)="consultar(u)">Consultar</button>
               <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(u)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(u)">Excluir</button>
+              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(u)">Excluir</button>
             </td>
           </tr>
         </tbody>

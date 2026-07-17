@@ -16,6 +16,7 @@ export class SearchSuggestComponent {
   @Input() minChars = 1;
   @Input() maxItems = 8;
   @Input() disabled = false;
+  @Input() showActions = true;
 
   @Output() valueChange = new EventEmitter<string>();
   @Output() search = new EventEmitter<string>();
