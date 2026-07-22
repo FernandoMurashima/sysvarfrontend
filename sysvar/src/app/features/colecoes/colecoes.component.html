@@ -1,23 +1,82 @@
-<div class="clientes-page">
-  <!-- TOOLBAR -->
-  <header class="toolbar">
-    <h2>Coleções</h2>
-    <div class="toolbar-actions">
+<div class="colecoes-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Coleções"
+      subtitle="Gerencie coleções dos produtos"
+      primaryActionLabel="Nova Coleção"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
         [showActions]="false"
-        placeholder="Buscar por descrição/código..."
+        placeholder="Buscar por descrição, código, estação ou status..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+
+      <label>
+        Estação
+        <select [(ngModel)]="filterEstacao" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let e of estacoes" [value]="e.value">{{ e.label }}</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option *ngFor="let s of statusOpts" [value]="s.value">{{ s.label }}</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" (click)="doSearch()">Pesquisar</button>
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-wrap">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            <span>{{ col.label }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-wrap">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv(); exportOpen = false">CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use estação e status para refinar a lista.</span>
+    </div>
+  </section>
 
   <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
 
@@ -32,164 +91,118 @@
     </div>
   </div>
 
-  <div class="content">
-<!-- FORM -->
-    <section class="card form" *ngIf="showForm">
-      <h3>{{ consultando ? 'Consultar Coleção' : (editingId ? 'Editar Coleção' : 'Nova Coleção') }}</h3>
+  <section class="panel form-panel" *ngIf="showForm">
+    <h3>{{ consultando ? 'Consultar Coleção' : (editingId ? 'Editar Coleção' : 'Nova Coleção') }}</h3>
 
-      <form [formGroup]="form" (ngSubmit)="salvar()">
-        <div class="grid-10">
-          <!-- Linha 1: Descrição | Código -->
-          <label id="descricao-box" class="input-item"
-                 [class.invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted)">
-            Descrição*
-            <input type="text" formControlName="Descricao"
-                   [attr.aria-invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted) ? 'true' : null"/>
-            <span class="field-error" *ngIf="form.get('Descricao')?.touched || submitted">
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['required']">Informe a descrição.</ng-container>
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['maxlength']">Máx. 100 caracteres.</ng-container>
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['server']">{{ form.get('Descricao')?.errors?.['server'] }}</ng-container>
-            </span>
-          </label>
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="colecao-form-grid">
+        <label class="span-2" [class.invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted)">
+          Descrição*
+          <input type="text" formControlName="Descricao" />
+        </label>
 
-          <label id="codigo-box" class="input-item"
-                 [class.invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted)">
-            Código (2 dig.)*
-            <input type="text" formControlName="Codigo" maxlength="2" placeholder="26"
-                   [attr.aria-invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted) ? 'true' : null"/>
-            <span class="field-error" *ngIf="form.get('Codigo')?.touched || submitted">
-              <ng-container *ngIf="form.get('Codigo')?.errors?.['required']">Obrigatório.</ng-container>
-              <ng-container *ngIf="form.get('Codigo')?.errors?.['pattern']">Use dois dígitos, ex.: 26.</ng-container>
-              <ng-container *ngIf="form.get('Codigo')?.errors?.['server']">{{ form.get('Codigo')?.errors?.['server'] }}</ng-container>
-            </span>
-          </label>
+        <label [class.invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted)">
+          Código*
+          <input type="text" formControlName="Codigo" maxlength="2" placeholder="26" />
+        </label>
 
-          <!-- Linha 2: Estação | Status | Contador -->
-          <label id="estacao-box" class="input-item"
-                 [class.invalid]="form.get('Estacao')?.invalid && (form.get('Estacao')?.touched || submitted)">
-            Estação*
-            <select formControlName="Estacao">
-              <option [ngValue]="null">— selecione —</option>
-              <option *ngFor="let e of estacoes" [ngValue]="e.value">{{ e.label }}</option>
-            </select>
-            <span class="field-error" *ngIf="form.get('Estacao')?.touched || submitted">
-              <ng-container *ngIf="form.get('Estacao')?.errors?.['required']">Obrigatória.</ng-container>
-              <ng-container *ngIf="form.get('Estacao')?.errors?.['server']">{{ form.get('Estacao')?.errors?.['server'] }}</ng-container>
-            </span>
-          </label>
-
-          <label id="status-box" class="input-item"
-                 [class.invalid]="form.get('Status')?.invalid && (form.get('Status')?.touched || submitted)">
-            Status*
-            <select formControlName="Status">
-              <option [ngValue]="null">— selecione —</option>
-              <option *ngFor="let s of statusOpts" [ngValue]="s.value">{{ s.label }}</option>
-            </select>
-            <span class="field-error" *ngIf="form.get('Status')?.touched || submitted">
-              <ng-container *ngIf="form.get('Status')?.errors?.['required']">Obrigatório.</ng-container>
-              <ng-container *ngIf="form.get('Status')?.errors?.['server']">{{ form.get('Status')?.errors?.['server'] }}</ng-container>
-            </span>
-          </label>
-
-          <label id="contador-box" class="input-item">
-            Contador
-            <input type="number" formControlName="Contador" />
-            <span class="field-error" *ngIf="form.get('Contador')?.errors?.['server']">{{ form.get('Contador')?.errors?.['server'] }}</span>
-          </label>
-        </div>
-
-        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
-          <strong>Pendências</strong>
-          <ul>
-            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-          </ul>
-        </div>
-
-        <div class="actions-form">
-          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
-            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
-          </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- LISTA -->
-    <section class="card list">
-      <div class="list-header">
-        <div class="list-inline">
-          <strong>Total:</strong> {{ total() }}
-        </div>
-        <div class="list-inline">
-          <label for="pageSize">Itens por página</label>
-          <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
-            <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        <label [class.invalid]="form.get('Estacao')?.invalid && (form.get('Estacao')?.touched || submitted)">
+          Estação*
+          <select formControlName="Estacao">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let e of estacoes" [ngValue]="e.value">{{ e.label }}</option>
           </select>
-        </div>
+        </label>
+
+        <label [class.invalid]="form.get('Status')?.invalid && (form.get('Status')?.touched || submitted)">
+          Status*
+          <select formControlName="Status">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let s of statusOpts" [ngValue]="s.value">{{ s.label }}</option>
+          </select>
+        </label>
+
+        <label>
+          Contador
+          <input type="number" formControlName="Contador" />
+        </label>
       </div>
 
-      <div class="table-wrapper">
-        <table class="table" *ngIf="paged().length > 0; else emptyTpl">
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th style="width: 120px;">Código</th>
-              <th style="width: 180px;">Estação</th>
-              <th style="width: 180px;">Status</th>
-              <th style="width: 120px;">Contador</th>
-              <th style="width:200px;">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let c of paged()">
-              <td>{{ c.Descricao }}</td>
-              <td>{{ c.Codigo }}</td>
-              <td>{{ estLabel(c.Estacao) }}</td>
-
-              <!-- <td>{{ statusLabel(c.Status) }}</td> -->
-              <td>
-                <span class="badge" [ngClass]="c.Status ? 'badge-ok' : 'badge-off'">
-                  {{ c.Status ? 'Ativo' : 'Inativo' }}
-                </span>
-              </td>
-              
-              
-              
-              <td>{{ c.Contador || 0 }}</td>
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(c)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(c)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(c)">Excluir</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #emptyTpl>
-          <div class="empty-hint" *ngIf="!loading()">Nenhuma coleção encontrada.</div>
-          <div class="loading" *ngIf="loading()">Carregando...</div>
-        </ng-template>
+      <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+        <strong>Pendências</strong>
+        <ul>
+          <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+        </ul>
       </div>
 
-      <!-- Pager -->
-      <div class="pager" *ngIf="total() > 0">
-        <div class="left">
-          <button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
-          <button class="btn" (click)="prevPage()"  [disabled]="page() === 1">‹ Anterior</button>
-        </div>
-        <div class="center">
-          Página {{ page() }} de {{ totalPages() }}
-          <span class="range">
-            — Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}
-          </span>
-        </div>
-        <div class="right">
-          <button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button>
-          <button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button>
-        </div>
+      <div class="actions-form">
+        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
+          {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+        </button>
+        <button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
       </div>
-    </section>
-  </div>
+    </form>
+  </section>
 
+  <section class="panel list-panel">
+    <div class="list-title-row">
+      <div><strong>Coleções cadastradas</strong> <span>{{ total() }} registro(s) encontrado(s)</span></div>
+      <label class="page-size">
+        Itens por página
+        <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paged().length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('codigo')">Código</th>
+            <th *ngIf="visibleColumn('estacao')">Estação</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th *ngIf="visibleColumn('contador')">Contador</th>
+            <th class="actions-col">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of paged()" (click)="consultar(c)">
+            <td *ngIf="visibleColumn('descricao')">{{ c.Descricao }}</td>
+            <td *ngIf="visibleColumn('codigo')">{{ c.Codigo }}</td>
+            <td *ngIf="visibleColumn('estacao')">{{ estLabel(c.Estacao) }}</td>
+            <td *ngIf="visibleColumn('status')">
+              <span class="badge" [ngClass]="isAtiva(c.Status) ? 'badge-ok' : 'badge-off'">
+                {{ statusLabel(c.Status) }}
+              </span>
+            </td>
+            <td *ngIf="visibleColumn('contador')">{{ c.Contador || 0 }}</td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu [actions]="rowActions()" (action)="executarAcao($event, c)" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading()">Nenhuma coleção encontrada.</div>
+        <div class="loading" *ngIf="loading()">Carregando...</div>
+      </ng-template>
+    </div>
+
+    <div class="pager" *ngIf="total() > 0">
+      <div class="left">
+        <button class="btn" type="button" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
+        <button class="btn" type="button" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button>
+      </div>
+      <div class="center">
+        Página {{ page() }} de {{ totalPages() }}
+        <span class="range">— Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</span>
+      </div>
+      <div class="right">
+        <button class="btn" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button>
+        <button class="btn" type="button" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button>
+      </div>
+    </div>
+  </section>
 </div>
-
-

@@ -19,6 +19,9 @@ import { NatLancamento } from '../../core/models/natureza-lancamento';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
@@ -44,7 +47,7 @@ interface PedidoCompraItemUI {
 @Component({
   selector: 'app-pedidos-revenda',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './pedidos-revenda.component.html',
   styleUrls: ['./pedidos-revenda.component.css'],
 })
@@ -182,6 +185,18 @@ export class PedidosRevendaComponent implements OnInit {
       p.status,
       p.natureza_label,
     ].filter(Boolean));
+  }
+  get abertos(): number {
+    return this.pedidosAll.filter(p => (p.status || '').toUpperCase() === 'AB').length;
+  }
+  get aprovados(): number {
+    return this.pedidosAll.filter(p => (p.status || '').toUpperCase() === 'AP').length;
+  }
+  get atendidos(): number {
+    return this.pedidosAll.filter(p => (p.status || '').toUpperCase() === 'AT').length;
+  }
+  get valorTotalListado(): number {
+    return this.pedidosFiltered.reduce((acc, p) => acc + Number(p.total_pedido || 0), 0);
   }
   get produtoConsultaSuggestions(): string[] {
     const valores = this.produtosConsulta.flatMap(p => [
@@ -347,7 +362,7 @@ export class PedidosRevendaComponent implements OnInit {
   }
 
   private applyFilter() {
-    const term = (this.search || '').toLowerCase().trim();
+    const term = this.normalizeSearch(this.search);
     let base = this.pedidosAll.slice();
 
     if (term) {
@@ -355,15 +370,17 @@ export class PedidosRevendaComponent implements OnInit {
         const id = String(p.id ?? '');
         const lojaId = Number(p.loja ?? 0);
         const fornId = Number(p.fornecedor ?? 0);
-
-        const lojaNome = (this.lojaMap.get(lojaId) || '').toLowerCase();
-        const fornNome = (this.fornecedorMap.get(fornId) || '').toLowerCase();
-
-        return (
-          id.includes(term) ||
-          lojaNome.includes(term) ||
-          fornNome.includes(term)
-        );
+        const alvo = this.normalizeSearch([
+          id,
+          p.status,
+          p.natureza_label,
+          p.total_pedido,
+          this.labelLoja(lojaId),
+          this.lojaMap.get(lojaId),
+          this.labelFornecedor(fornId),
+          this.fornecedorMap.get(fornId),
+        ].filter(Boolean).join(' '));
+        return alvo.includes(term);
       });
     }
 
@@ -1088,6 +1105,27 @@ export class PedidosRevendaComponent implements OnInit {
     };
   }
 
+  rowActions(p: any): RowAction[] {
+    const status = (p.status || '').toUpperCase();
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo, disabled: status !== 'AB' },
+      { key: 'aprovar', label: 'Aprovar', icon: '✓', visible: this.podeEditarModulo, disabled: status !== 'AB' },
+      { key: 'natureza', label: 'Natureza', icon: '☷', visible: this.podeEditarModulo, disabled: !['AP', 'AT'].includes(status) },
+      { key: 'cancelar', label: 'Cancelar', icon: '×', visible: this.podeEditarModulo, disabled: status !== 'AB' },
+      { key: 'excluir', label: 'Excluir', icon: '!', visible: this.podeEditarModulo, disabled: status !== 'AB', danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, p: any): void {
+    if (action === 'consultar') this.consultarPedido(p);
+    if (action === 'editar') this.editarPedido(p);
+    if (action === 'aprovar') this.aprovarPedido(p);
+    if (action === 'natureza') this.editarNaturezaPedido(p);
+    if (action === 'cancelar') this.cancelarPedido(p);
+    if (action === 'excluir') this.excluirPedido(p);
+  }
+
   private executarCancelamentoPedido(p: any): void {
     this.pedidosApi.cancelar(p.id).subscribe({
       next: () => {
@@ -1103,6 +1141,14 @@ export class PedidosRevendaComponent implements OnInit {
         this.showError('Erro ao cancelar pedido.');
       },
     });
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   // ===== Salvar pedido (finalizar) =====

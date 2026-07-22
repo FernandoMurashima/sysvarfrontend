@@ -1,22 +1,113 @@
 <div class="clientes-page">
-  <header class="toolbar">
-    <h2>Funcionários</h2>
-    <div class="toolbar-actions">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Cadastro de Funcionários"
+      subtitle="Gerencie equipe, funções e vínculos por loja"
+      primaryActionLabel="Novo Funcionário"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button" [routerLink]="['/ajuda/funcionarios']">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="summary-grid" aria-label="Resumo dos funcionários">
+    <app-summary-card label="Total de Funcionários" [value]="indicadores.total" icon="▣" [percentage]="percentual(indicadores.total)" />
+    <app-summary-card label="Funcionários Ativos" [value]="indicadores.ativos" icon="▤" variant="green" [percentage]="percentual(indicadores.ativos)" />
+    <app-summary-card label="Vendedores" [value]="indicadores.vendedores" icon="⌂" variant="orange" [percentage]="percentual(indicadores.vendedores)" />
+    <app-summary-card label="Caixas" [value]="indicadores.caixas" icon="▥" variant="purple" [percentage]="percentual(indicadores.caixas)" />
+    <app-summary-card label="Gerentes" [value]="indicadores.gerentes" icon="▧" variant="cyan" [percentage]="percentual(indicadores.gerentes)" />
+  </section>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Buscar por nome, apelido ou CPF..."
+        placeholder="Buscar por nome, apelido, CPF, categoria ou loja..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+
+      <label>
+        Loja
+        <select [(ngModel)]="filterLoja" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option>
+        </select>
+      </label>
+
+      <label>
+        Categoria
+        <select [(ngModel)]="filterCategoria" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let categoria of categoriasOptions" [value]="categoria">{{ categoria }}</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="ATIVO">Ativos</option>
+          <option value="INATIVO">Inativos</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            <span>{{ col.label }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button class="btn" type="button" (click)="exportarCsv()">CSV</button>
+          <button class="btn" type="button" disabled>Excel</button>
+          <button class="btn" type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <label>
+        CPF
+        <input type="text" [(ngModel)]="filterCpf" (keyup.enter)="doSearch()" />
+      </label>
+      <label>
+        Início de
+        <input type="date" [(ngModel)]="filterInicio" (change)="doSearch()" />
+      </label>
+      <label>
+        Início até
+        <input type="date" [(ngModel)]="filterFim" (change)="doSearch()" />
+      </label>
+      <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
+    </div>
+  </section>
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
@@ -32,8 +123,19 @@
   </div>
 
   <div class="content">
-    <section class="card form" *ngIf="showForm">
-      <h3>{{ consultando ? 'Consultar Funcionário' : (editingId ? 'Editar Funcionário' : 'Novo Funcionário') }}</h3>
+    <section class="card form form-panel" *ngIf="showForm">
+      <div class="form-title">
+        <div>
+          <h3>{{ consultando ? 'Consultar Funcionário' : (editingId ? 'Editar Funcionário' : 'Novo Funcionário') }}</h3>
+          <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações do funcionário.' }}</p>
+        </div>
+        <div class="form-title-actions">
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+          <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+          </button>
+        </div>
+      </div>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
@@ -135,7 +237,7 @@
           </ul>
         </div>
 
-        <div class="actions-form">
+        <div class="actions-form bottom-actions">
           <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
@@ -163,41 +265,38 @@
           <thead>
             <tr>
               <th>Nome</th>
-              <th>Apelido</th>
-              <th>CPF</th>
-              <th>Loja</th>
-              <th>Categoria</th>
-              <th>Meta</th>
-              <th>Comissão %</th>
-              <th>Salário</th>
-              <th>Ativo</th>
-              <th style="width:200px;">Ações</th>
+              <th *ngIf="visibleColumn('apelido')">Apelido</th>
+              <th *ngIf="visibleColumn('cpf')">CPF</th>
+              <th *ngIf="visibleColumn('loja')">Loja</th>
+              <th *ngIf="visibleColumn('categoria')">Categoria</th>
+              <th *ngIf="visibleColumn('meta')">Meta</th>
+              <th *ngIf="visibleColumn('comissao')">Comissão %</th>
+              <th *ngIf="visibleColumn('salario')">Salário</th>
+              <th *ngIf="visibleColumn('status')">Status</th>
+              <th *ngIf="visibleColumn('cadastro')">Cadastro</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let f of funcionarios">
+            <tr *ngFor="let f of funcionarios; trackBy: trackFuncionario" (click)="consultar(f)" tabindex="0" (keyup.enter)="consultar(f)">
               <td>{{ f.nomefuncionario }}</td>
-              <td>{{ f.apelido }}</td>
-              <td>{{ f.cpf }}</td>
-              <td>{{ f.idloja }}</td>
-              <td>{{ f.categoria }}</td>
-              <td>{{ f.meta }}</td>
-              <td>{{ f.comissao_percentual || 0 }}</td>
-              <td>{{ f.salario_oculto ? 'Restrito' : (f.salario || 0) }}</td>
-
-              <!-- <td>{{ f.ativo ? 'Sim' : 'Não' }}</td> -->
-
-              <td>
-                <span class="badge" [ngClass]="f.ativo ? 'badge-ok' : 'badge-off'">
-                  {{ f.ativo ? 'Ativo' : 'Inativo' }}
-                </span>
+              <td *ngIf="visibleColumn('apelido')">{{ f.apelido || '-' }}</td>
+              <td *ngIf="visibleColumn('cpf')">{{ formatCpf(f.cpf) }}</td>
+              <td *ngIf="visibleColumn('loja')">{{ lojaNome(f.idloja) || '-' }}</td>
+              <td *ngIf="visibleColumn('categoria')">{{ f.categoria || '-' }}</td>
+              <td *ngIf="visibleColumn('meta')">{{ formatMoney(f.meta || 0) }}</td>
+              <td *ngIf="visibleColumn('comissao')">{{ f.comissao_percentual || 0 }}</td>
+              <td *ngIf="visibleColumn('salario')">{{ f.salario_oculto ? 'Restrito' : formatMoney(f.salario || 0) }}</td>
+              <td *ngIf="visibleColumn('status')">
+                <span class="status-pill" [class.inactive]="f.ativo === false">• {{ f.ativo === false ? 'Inativo' : 'Ativo' }}</span>
               </td>
-              
-              
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(f)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(f)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(f)">Excluir</button>
+              <td *ngIf="visibleColumn('cadastro')">{{ formatDate(f.data_cadastro) }}</td>
+              <td class="actions actions-col" (click)="$event.stopPropagation()">
+                <app-row-actions-menu
+                  [actions]="rowActions(f)"
+                  [ariaLabel]="'Abrir ações do funcionário ' + f.nomefuncionario"
+                  (action)="executarAcao($event, f)"
+                />
               </td>
             </tr>
           </tbody>

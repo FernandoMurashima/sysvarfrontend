@@ -9,6 +9,7 @@ import { ShellComponent } from './layout/shell/shell.component';
 import { ClientesComponent } from './features/clientes/clientes.component';
 import { EmpresasComponent } from './features/empresas/empresas.component';
 import { LojasComponent } from './features/lojas/lojas.component';
+import { LojasAjudaComponent } from './features/ajuda/lojas-ajuda/lojas-ajuda.component';
 import { FornecedoresComponent } from './features/fornecedores/fornecedores.component';
 import { FuncionariosComponent } from './features/funcionarios/funcionarios.component';
 import { NatLancamentosComponent } from './features/natureza-lancamento/natureza-lancamento.component';
@@ -48,6 +49,7 @@ import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/
 import { EstoqueInventarioComponent } from './features/estoque-inventario/estoque-inventario.component';
 import { EstoqueEtiquetasComponent } from './features/estoque-etiquetas/estoque-etiquetas.component';
 import { PdvComponent } from './features/pdv/pdv.component';
+import { PdvDesktopComponent } from './features/pdv-desktop/pdv-desktop.component';
 import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatorios-vendas.component';
 import { RelatorioMargemComponent } from './features/relatorio-margem/relatorio-margem.component';
 import { CashbackComponent } from './features/cashback/cashback.component';
@@ -76,6 +78,7 @@ export const routes: Routes = [
       { path: 'empresas', component: EmpresasComponent, data: { roles: ['Admin'], superOnly: true } },
       { path: 'clientes', component: ClientesComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'], moduloEmpresa: 'cadastros' } },
       { path: 'lojas', component: LojasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
+      { path: 'ajuda/lojas', component: LojasAjudaComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'cadastros' } },
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
@@ -89,6 +92,7 @@ export const routes: Routes = [
       { path: 'produtos', component: ProdutosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
+      { path: 'vendas/pdv-desktop', component: PdvDesktopComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/relatorios', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/cashback', component: CashbackComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/promocoes', component: PromocoesComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },

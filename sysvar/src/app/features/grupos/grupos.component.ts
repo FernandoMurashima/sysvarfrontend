@@ -9,11 +9,14 @@ import { GrupoModel } from '../../core/models/grupo';
 import { SubgrupoModel } from '../../core/models/subgrupo';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-grupos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './grupos.component.html',
   styleUrls: ['./grupos.component.css']
 })
@@ -37,8 +40,20 @@ export class GruposComponent implements OnInit {
 
   grupos: GrupoModel[] = [];
   subgrupos: SubgrupoModel[] = [];
+  allSubgrupos: SubgrupoModel[] = [];
 
   search = '';
+  filterMargem = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.grupos.columns';
+  columns = [
+    { key: 'codigo', label: 'Codigo', visible: true, required: true },
+    { key: 'descricao', label: 'Descricao', visible: true, required: true },
+    { key: 'margem', label: 'Margem', visible: true, required: false },
+    { key: 'subgrupos', label: 'Subgrupos', visible: true, required: false },
+  ];
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
@@ -54,12 +69,46 @@ export class GruposComponent implements OnInit {
         item.Descricao,
         String(item.Margem ?? '')
       ]),
-      ...this.subgrupos.flatMap(item => [
+      ...this.allSubgrupos.flatMap(item => [
         item.Descricao,
         String(item.Margem ?? '')
       ])
     ].filter((v): v is string => !!v);
     return Array.from(new Set(valores));
+  }
+
+  get gruposFiltrados(): GrupoModel[] {
+    const termo = this.normalize(this.search);
+    return this.grupos.filter(g => {
+      const matchesSearch = !termo || [
+        g.Codigo,
+        g.Descricao,
+        String(g.Margem ?? '')
+      ].some(v => this.normalize(v).includes(termo));
+      const margem = Number(g.Margem ?? 0);
+      const matchesMargem =
+        !this.filterMargem ||
+        (this.filterMargem === 'sem' && margem === 0) ||
+        (this.filterMargem === 'com' && margem > 0);
+      return matchesSearch && matchesMargem;
+    });
+  }
+
+  get indicadores() {
+    const total = this.grupos.length;
+    const comMargem = this.grupos.filter(g => Number(g.Margem ?? 0) > 0).length;
+    return {
+      total,
+      comMargem,
+      semMargem: total - comMargem,
+      subgrupos: this.allSubgrupos.length
+    };
+  }
+
+  percentual(valor: number): string {
+    const total = this.grupos.length || 0;
+    if (!total) return '0% do total';
+    return `${Math.round((valor / total) * 100)}% do total`;
   }
 
   editingGrupoId: number | null = null;
@@ -88,6 +137,7 @@ export class GruposComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.loadGrupos();
   }
 
@@ -95,9 +145,10 @@ export class GruposComponent implements OnInit {
   loadGrupos() {
     this.loading = true;
     this.errorMsg = '';
-    this.gruposApi.list({ search: this.search, ordering: '-data_cadastro' }).subscribe({
+    this.gruposApi.list({ ordering: '-data_cadastro', page_size: 2000 }).subscribe({
       next: (data) => {
         this.grupos = Array.isArray(data) ? data : (data as any).results ?? [];
+        this.carregarTodosSubgrupos();
       },
       error: (err) => {
         console.error(err);
@@ -108,8 +159,8 @@ export class GruposComponent implements OnInit {
   }
 
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadGrupos(); }
-  doSearch() { this.loadGrupos(); }
-  clearSearch() { this.search = ''; this.loadGrupos(); }
+  doSearch() { this.errorMsg = ''; }
+  clearSearch() { this.search = ''; this.filterMargem = ''; this.doSearch(); }
 
   novoGrupo() {
     this.editingGrupoId = null;
@@ -243,6 +294,18 @@ export class GruposComponent implements OnInit {
   }
 
   // ===== SUBGRUPOS =====
+  carregarTodosSubgrupos() {
+    this.subgruposApi.list({ ordering: 'Descricao' }).subscribe({
+      next: (data) => {
+        this.allSubgrupos = Array.isArray(data) ? data : (data as any).results ?? [];
+      },
+      error: (err) => {
+        console.error(err);
+        this.allSubgrupos = [];
+      }
+    });
+  }
+
   selecionarGrupo(id: number) {
     this.selectedGrupoId = id;
     this.carregarSubgrupos(id);
@@ -316,6 +379,7 @@ export class GruposComponent implements OnInit {
       next: () => {
         this.successMsg = this.editingSubgrupoId ? 'Subgrupo atualizado.' : 'Subgrupo criado.';
         if (this.selectedGrupoId) this.carregarSubgrupos(this.selectedGrupoId);
+        this.carregarTodosSubgrupos();
         this.novoSubgrupo();
       },
       error: (err: HttpErrorResponse) => {
@@ -337,6 +401,7 @@ export class GruposComponent implements OnInit {
         this.excluirModal = null;
         this.successMsg = 'Subgrupo excluído.';
         if (this.selectedGrupoId) this.carregarSubgrupos(this.selectedGrupoId);
+        this.carregarTodosSubgrupos();
       },
       error: (err) => {
         console.error(err);
@@ -358,5 +423,90 @@ export class GruposComponent implements OnInit {
     if (this.fieldInvalidSubgrupo('Descricao')) msgs.push('Informe a Descrição (máx. 100).');
     if (this.fieldInvalidSubgrupo('Margem')) msgs.push('Informe a Margem (>= 0).');
     return msgs;
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnsPreference();
+  }
+
+  rowActionsGrupo(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'subgrupos', label: 'Subgrupos', icon: '▦' },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcaoGrupo(action: string, g: GrupoModel): void {
+    if (action === 'consultar') this.consultarGrupo(g);
+    if (action === 'editar') this.editarGrupo(g);
+    if (action === 'subgrupos' && g.Idgrupo) this.selecionarGrupo(g.Idgrupo);
+    if (action === 'excluir') this.excluirGrupo(g);
+  }
+
+  rowActionsSubgrupo(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcaoSubgrupo(action: string, s: SubgrupoModel): void {
+    if (action === 'consultar') this.consultarSubgrupo(s);
+    if (action === 'editar') this.editarSubgrupo(s);
+    if (action === 'excluir') this.excluirSubgrupo(s);
+  }
+
+  subgrupoCount(grupo: GrupoModel): number {
+    if (!grupo.Idgrupo) return 0;
+    return this.allSubgrupos.filter(s => Number((s as any).Idgrupo?.Idgrupo ?? (s as any).Idgrupo) === grupo.Idgrupo).length;
+  }
+
+  exportarCsv(): void {
+    const headers = ['Codigo', 'Descricao', 'Margem'];
+    const rows = this.gruposFiltrados.map(g => [
+      g.Codigo ?? '',
+      g.Descricao ?? '',
+      String(g.Margem ?? 0).replace('.', ',')
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grupos.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private normalize(value: any): string {
+    return String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    try {
+      const raw = localStorage.getItem(this.columnsStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(col => col.required ? col : { ...col, visible: saved[col.key] ?? col.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

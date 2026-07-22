@@ -1,23 +1,77 @@
 <div class="grupos-page">
-  <!-- TOOLBAR -->
-  <header class="toolbar">
-    <h2>Grupos</h2>
-    <div class="toolbar-actions">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Grupos e Subgrupos"
+      subtitle="Gerencie grupos comerciais e seus subgrupos"
+      primaryActionLabel="Novo Grupo"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novoGrupo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" (click)="goHome()">Home</button>
+    </div>
+  </div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Buscar por código/descrição..."
+        placeholder="Buscar por código, descrição ou margem..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrupo()">Novo Grupo</button>
-      <button class="btn primary" (click)=" goHome()">Home</button>
+
+      <label>
+        Margem
+        <select [(ngModel)]="filterMargem" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option value="com">Com margem</option>
+          <option value="sem">Sem margem</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use a busca principal para localizar por código, descrição ou margem.</span>
+    </div>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
@@ -34,38 +88,24 @@
   </div>
 
   <div class="content">
-
-    <!-- FORM GRUPO (agora controlado por formModeGrupo) -->
-    <section class="card form" *ngIf="formModeGrupo !== null || submitted">
+    <section class="card form form-panel" *ngIf="formModeGrupo !== null || submitted">
       <h3>{{ consultandoGrupo ? 'Consultar Grupo' : (formModeGrupo === 'edit' ? 'Editar Grupo' : 'Novo Grupo') }}</h3>
 
       <form [formGroup]="formGrupo" (ngSubmit)="salvarGrupo()">
-        <div class="grid-10">
+        <div class="grupo-form-grid">
           <label id="codigo-box">
             Código*
-            <input type="text" formControlName="Codigo" maxlength="12"
-                   [attr.aria-invalid]="fieldInvalidGrupo('Codigo')" />
-            <span class="field-error" *ngIf="fieldInvalidGrupo('Codigo')">
-              Informe o Código (máx. 12).
-            </span>
+            <input type="text" formControlName="Codigo" maxlength="12" [attr.aria-invalid]="fieldInvalidGrupo('Codigo')" />
           </label>
 
           <label id="descricao-box">
             Descrição*
-            <input type="text" formControlName="Descricao" maxlength="100"
-                   [attr.aria-invalid]="fieldInvalidGrupo('Descricao')" />
-            <span class="field-error" *ngIf="fieldInvalidGrupo('Descricao')">
-              Informe a Descrição (máx. 100).
-            </span>
+            <input type="text" formControlName="Descricao" maxlength="100" [attr.aria-invalid]="fieldInvalidGrupo('Descricao')" />
           </label>
 
           <label id="margem-box">
-            Margem (%)* 
-            <input type="number" step="0.01" formControlName="Margem"
-                   [attr.aria-invalid]="fieldInvalidGrupo('Margem')" />
-            <span class="field-error" *ngIf="fieldInvalidGrupo('Margem')">
-              Informe a Margem (>= 0).
-            </span>
+            Margem (%)*
+            <input type="number" step="0.01" formControlName="Margem" [attr.aria-invalid]="fieldInvalidGrupo('Margem')" />
           </label>
         </div>
 
@@ -85,31 +125,37 @@
       </form>
     </section>
 
-    <!-- LISTA DE GRUPOS -->
     <section class="card list">
-      <div class="empty-hint" *ngIf="!loading && grupos.length === 0">
+      <div class="list-header">
+        <h3>Grupos cadastrados <span>{{ gruposFiltrados.length }} registro(s) encontrado(s)</span></h3>
+      </div>
+
+      <div class="empty-hint" *ngIf="!loading && gruposFiltrados.length === 0">
         Nenhum grupo encontrado.
       </div>
 
-      <table class="table" *ngIf="grupos.length > 0">
+      <table class="table" *ngIf="gruposFiltrados.length > 0">
         <thead>
           <tr>
-            <th>Código</th>
-            <th>Descrição</th>
-            <th>Margem (%)</th>
-            <th style="width:330px;">Ações</th>
+            <th *ngIf="visibleColumn('codigo')">Código</th>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('margem')">Margem (%)</th>
+            <th *ngIf="visibleColumn('subgrupos')">Subgrupos</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let g of grupos">
-            <td>{{ g.Codigo }}</td>
-            <td>{{ g.Descricao }}</td>
-            <td>{{ g.Margem | number:'1.2-2' }}</td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarGrupo(g)">Consultar</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrupo(g)">Editar</button>
-              <button class="btn sm" (click)="selecionarGrupo(g.Idgrupo!)">Subgrupos</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirGrupo(g)">Excluir</button>
+          <tr *ngFor="let g of gruposFiltrados" (click)="consultarGrupo(g)">
+            <td *ngIf="visibleColumn('codigo')">{{ g.Codigo }}</td>
+            <td *ngIf="visibleColumn('descricao')">{{ g.Descricao }}</td>
+            <td *ngIf="visibleColumn('margem')">{{ g.Margem | number:'1.2-2' }}</td>
+            <td *ngIf="visibleColumn('subgrupos')">{{ subgrupoCount(g) }}</td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActionsGrupo()"
+                ariaLabel="Ações do grupo"
+                (action)="executarAcaoGrupo($event, g)"
+              />
             </td>
           </tr>
         </tbody>
@@ -118,35 +164,26 @@
       <div class="loading" *ngIf="loading">Carregando...</div>
     </section>
 
-    <!-- BLOCO DE SUBGRUPOS -->
     <section class="card subgrupos" *ngIf="selectedGrupoId !== null">
+      <div class="list-header">
+        <h3>Subgrupos <span>{{ subgrupos.length }} registro(s) encontrado(s)</span></h3>
+      </div>
 
-
-      <!-- Form Subgrupo -->
       <form [formGroup]="formSubgrupo" (ngSubmit)="salvarSubgrupo()">
-        <div class="grid-10">
+        <div class="subgrupo-form-grid">
           <label id="grp-box">
             Grupo*
-            <input type="number" formControlName="Idgrupo" [readonly]="true" />
-            <span class="field-error" *ngIf="fieldInvalidSubgrupo('Idgrupo')">Selecione um Grupo.</span>
+            <input type="number" formControlName="Idgrupo" readonly />
           </label>
 
           <label id="descsub-box">
             Descrição*
-            <input type="text" formControlName="Descricao" maxlength="100"
-                   [attr.aria-invalid]="fieldInvalidSubgrupo('Descricao')" />
-            <span class="field-error" *ngIf="fieldInvalidSubgrupo('Descricao')">
-              Informe a Descrição (máx. 100).
-            </span>
+            <input type="text" formControlName="Descricao" maxlength="100" [attr.aria-invalid]="fieldInvalidSubgrupo('Descricao')" />
           </label>
 
           <label id="margemsub-box">
-            Margem (%)* 
-            <input type="number" step="0.01" formControlName="Margem"
-                   [attr.aria-invalid]="fieldInvalidSubgrupo('Margem')" />
-            <span class="field-error" *ngIf="fieldInvalidSubgrupo('Margem')">
-              Informe a Margem (>= 0).
-            </span>
+            Margem (%)*
+            <input type="number" step="0.01" formControlName="Margem" [attr.aria-invalid]="fieldInvalidSubgrupo('Margem')" />
           </label>
         </div>
 
@@ -162,12 +199,10 @@
             {{ editingSubgrupoId ? 'Salvar alterações' : 'Adicionar' }}
           </button>
           <button class="btn ghost" type="button" (click)="cancelarEdicaoSubgrupo()">{{ consultandoSubgrupo ? 'Voltar' : 'Limpar' }}</button>
-          <button class="btn ghost" (click)="fecharSubgrupos()">Fechar</button>
-     
+          <button class="btn ghost" type="button" (click)="fecharSubgrupos()">Fechar</button>
         </div>
       </form>
 
-      <!-- Lista de Subgrupos -->
       <div class="empty-hint" *ngIf="subgrupos.length === 0">
         Nenhum subgrupo cadastrado para este grupo.
       </div>
@@ -177,22 +212,23 @@
           <tr>
             <th>Descrição</th>
             <th>Margem (%)</th>
-            <th style="width:240px;">Ações</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let s of subgrupos">
+          <tr *ngFor="let s of subgrupos" (click)="consultarSubgrupo(s)">
             <td>{{ s.Descricao }}</td>
             <td>{{ s.Margem | number:'1.2-2' }}</td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarSubgrupo(s)">Consultar</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarSubgrupo(s)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirSubgrupo(s)">Excluir</button>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActionsSubgrupo()"
+                ariaLabel="Ações do subgrupo"
+                (action)="executarAcaoSubgrupo($event, s)"
+              />
             </td>
           </tr>
         </tbody>
       </table>
     </section>
-
   </div>
 </div>

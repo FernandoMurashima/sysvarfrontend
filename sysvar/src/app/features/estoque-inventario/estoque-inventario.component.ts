@@ -8,11 +8,13 @@ import { Loja } from '../../core/models/loja';
 import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { AuthService } from '../../core/auth.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-estoque-inventario',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, PageHeaderComponent, RowActionsMenuComponent],
   templateUrl: './estoque-inventario.component.html',
   styleUrls: ['./estoque-inventario.component.css']
 })
@@ -71,12 +73,31 @@ export class EstoqueInventarioComponent implements OnInit {
   }
   cancelarFechamento(): void { this.fecharModal = null; }
   atualizarItem(item: InventarioEstoqueItem): void { if (!this.podeEditarModulo) return; if (!item.Idinventarioitem) return; this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: Number(item.saldo_contado), observacao: item.observacao }).subscribe({ next: atualizado => { Object.assign(item, atualizado); this.successMsg = 'Contagem atualizada.'; }, error: err => this.errorMsg = this.errorText(err, 'Falha ao atualizar item.') }); }
+  rowActions(inv: InventarioEstoque): RowAction[] {
+    return [
+      { key: 'ver', label: 'Consultar', icon: '⌕' },
+      { key: 'gerar', label: 'Gerar itens', icon: '☷', visible: this.podeEditarModulo && inv.status === 'ABERTO' },
+      { key: 'validar', label: 'Validar', icon: '✓', visible: this.podeEditarModulo && inv.status === 'ABERTO' },
+      { key: 'finalizar', label: 'Finalizar', icon: '⏹', danger: true, visible: this.podeEditarModulo && inv.status === 'VALIDADO' },
+    ];
+  }
+  executarAcao(action: string, inv: InventarioEstoque): void {
+    if (action === 'ver') this.selecionado = inv;
+    if (action === 'gerar') this.gerarItens(inv);
+    if (action === 'validar') this.validar(inv);
+    if (action === 'finalizar') this.fechar(inv);
+  }
   lojaNome(id: number): string { return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`; }
   statusLabel(status: string): string {
     return ({ ABERTO: 'Aberto', VALIDADO: 'Validado', FECHADO: 'Finalizado', CANCELADO: 'Cancelado' } as Record<string, string>)[status] || status;
   }
   podeContar(inv?: InventarioEstoque | null): boolean { return !!inv && inv.status === 'ABERTO' && this.podeEditarModulo; }
   pendentes(inv: InventarioEstoque): number { return Number(inv.total_itens || inv.itens?.length || 0) - Number(inv.total_contados || 0); }
+  get totalInventarios(): number { return this.inventarios.length; }
+  get abertos(): number { return this.inventarios.filter(i => i.status === 'ABERTO').length; }
+  get validados(): number { return this.inventarios.filter(i => i.status === 'VALIDADO').length; }
+  get finalizados(): number { return this.inventarios.filter(i => i.status === 'FECHADO').length; }
+  percent(part: number): string { return this.totalInventarios ? `${Math.round((part / this.totalInventarios) * 100)}% do total` : '0% do total'; }
   moneyLike(value: number | string | null | undefined): string { return String(value ?? '0'); }
   private unwrap<T>(res: any): T[] { return Array.isArray(res) ? res : (res?.results ?? []); }
   private today(): string { return new Date().toISOString().slice(0, 10); }

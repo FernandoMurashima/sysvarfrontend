@@ -17,11 +17,29 @@ import { Loja } from '../../core/models/loja';
 import { Empresa } from '../../core/models/empresa';
 import { User } from '../../core/models/user';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { ListPaginationComponent } from '../../shared/components/list-pagination/list-pagination.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-lojas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    RouterLink,
+    SearchSuggestComponent,
+    PageHeaderComponent,
+    SummaryCardComponent,
+    StatusBadgeComponent,
+    RowActionsMenuComponent,
+    ListPaginationComponent,
+    EmptyStateComponent
+  ],
   templateUrl: './lojas.component.html',
   styleUrls: ['./lojas.component.css']
 })
@@ -50,7 +68,34 @@ export class LojasComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   excluirModal: Loja | null = null;
+  consultaModal: Loja | null = null;
+  inativarModal: Loja | null = null;
+  reativarModal: Loja | null = null;
+  historicoModal: Loja | null = null;
   errorOverlayOpen = false;
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  filterEmpresa: number | '' = '';
+  filterTipo = '';
+  filterCidade = '';
+  filterEstado = '';
+  filterStatus = '';
+  filterCnpj = '';
+  sortKey: 'nome' | 'empresa' | 'tipo' | 'cidade' | 'status' | 'data' = 'nome';
+  sortDir: 'asc' | 'desc' = 'asc';
+  private readonly columnsStorageKey = 'sysvar.list.lojas.columns';
+  columns = [
+    { key: 'empresa', label: 'Empresa', visible: true, required: false },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'apelido', label: 'Apelido', visible: true, required: false },
+    { key: 'cnpj', label: 'CNPJ', visible: true, required: false },
+    { key: 'cidade', label: 'Cidade/UF', visible: true, required: false },
+    { key: 'email', label: 'E-mail', visible: true, required: false },
+    { key: 'telefone', label: 'Telefone', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'data', label: 'Cadastro', visible: true, required: false },
+  ];
 
   form: FormGroup = this.fb.group({
     empresa: [null, [Validators.required]],
@@ -101,7 +146,7 @@ export class LojasComponent implements OnInit {
 
   page = 1;
   pageSize = 20;
-  pageSizeOptions = [10, 20, 50, 100];
+  pageSizeOptions = [20, 50, 100];
   total = 0;
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
@@ -121,13 +166,33 @@ export class LojasComponent implements OnInit {
     ].filter((v): v is string => !!v));
   }
 
+  get lojasFiltradas(): Loja[] {
+    return this.lojasAll.filter(l => this.matchesFilters(l)).sort((a, b) => this.compareLojas(a, b));
+  }
+
+  get cidadesOptions(): string[] {
+    return Array.from(new Set(this.lojasAll.map(l => (l.cidade || '').trim()).filter(Boolean))).sort();
+  }
+
+  get indicadores() {
+    const base = this.lojasAll;
+    const total = base.length;
+    const count = (fn: (l: Loja) => boolean) => base.filter(fn).length;
+    const ativas = count(l => this.isAtiva(l));
+    const fabricas = count(l => (l.tipo_unidade || '').toUpperCase() === 'FABRICA');
+    const matrizes = count(l => (l.tipo_unidade || '').toUpperCase() === 'MATRIZ' || (l.Matriz || '').toUpperCase() === 'SIM');
+    const filiais = count(l => (l.tipo_unidade || '').toUpperCase() === 'LOJA');
+    return { total, ativas, fabricas, matrizes, filiais };
+  }
+
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.loadUsuarioAtual();
     this.load();
   }
 
   // ===== Helpers =====
-  private formatPhone(v?: string | null): string {
+  formatPhone(v?: string | null): string {
     const d = (v || '').replace(/\D/g, '').slice(0, 11);
     if (!d) return '';
     const ddd = d.slice(0, 2);
@@ -263,7 +328,6 @@ export class LojasComponent implements OnInit {
           ambiente_fiscal: (item as any).ambiente_fiscal ?? 'HOMOLOGACAO',
         })) as Loja[];
         this.lojasAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number') ? res.count : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -280,18 +344,39 @@ export class LojasComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.lojasFiltradas;
+    this.total = filtered.length;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.lojas = this.lojasAll.slice(start, end);
+    this.lojas = filtered.slice(start, end);
   }
-  onPageSizeChange(sizeStr: string): void { this.pageSize = Number(sizeStr) || 10; this.page = 1; this.applyPage(); }
+  onPageSizeChange(size: number | string): void {
+    this.pageSize = Number(size) || 20;
+    localStorage.setItem('sysvar.list.lojas.pageSize', String(this.pageSize));
+    this.page = 1;
+    this.applyPage();
+  }
+  onPageChange(page: number): void {
+    this.page = Math.max(1, Math.min(page, this.totalPages));
+    this.applyPage();
+  }
   firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
   prevPage(): void  { if (this.page > 1) { this.page--; this.applyPage(); } }
   nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
   lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.load(); }
-  clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
+  doSearch(): void { this.page = 1; this.applyPage(); }
+  clearSearch(): void {
+    this.search = '';
+    this.filterEmpresa = '';
+    this.filterTipo = '';
+    this.filterCidade = '';
+    this.filterEstado = '';
+    this.filterStatus = '';
+    this.filterCnpj = '';
+    this.page = 1;
+    this.applyPage();
+  }
 
   novo(): void {
     this.showForm = true;
@@ -385,8 +470,42 @@ export class LojasComponent implements OnInit {
 
   consultar(row: Loja): void {
     this.editar(row);
-    this.consultando = true;
-    this.form.disable({ emitEvent: false });
+  }
+
+  duplicar(row: Loja): void {
+    if (!this.podeEditarModulo) return;
+    this.novo();
+    this.form.patchValue({
+      empresa: (row as any).empresa ?? this.defaultEmpresaId(),
+      nome_loja: `${row.nome_loja || ''} - cópia`,
+      apelido_loja: '',
+      cnpj: '',
+      email: '',
+      logradouro: row.logradouro ?? 'Rua',
+      endereco: row.endereco ?? '',
+      numero: row.numero ?? '',
+      complemento: row.complemento ?? '',
+      cep: row.cep ?? '',
+      bairro: row.bairro ?? '',
+      cidade: row.cidade ?? '',
+      estado: (row as any).estado ?? '',
+      telefone1: '',
+      telefone2: '',
+      EstoqueNegativo: (row as any).EstoqueNegativo ?? 'NAO',
+      Rede: (row as any).Rede ?? 'NAO',
+      Matriz: 'NAO',
+      tipo_unidade: (row as any).tipo_unidade ?? 'LOJA',
+      regime_tributario: (row as any).regime_tributario ?? 'SIMPLES',
+      ambiente_fiscal: (row as any).ambiente_fiscal ?? 'HOMOLOGACAO',
+      inscricao_estadual: '',
+      serie_nfce: 1,
+      proximo_numero_nfce: 1,
+      serie_nfe: 1,
+      proximo_numero_nfe: 1,
+      emite_nfce: (row as any).emite_nfce !== false,
+      emite_nfe: (row as any).emite_nfe !== false,
+    });
+    this.successMsg = 'Revise os dados antes de salvar a nova loja.';
   }
 
   cancelarEdicao(): void {
@@ -517,6 +636,227 @@ export class LojasComponent implements OnInit {
 
   fecharExclusao(): void {
     this.excluirModal = null;
+  }
+
+  abrirInativar(item: Loja): void {
+    if (!this.podeEditarModulo) return;
+    this.inativarModal = item;
+  }
+
+  abrirReativar(item: Loja): void {
+    if (!this.podeEditarModulo) return;
+    this.reativarModal = item;
+  }
+
+  confirmarInativar(): void {
+    const id = this.inativarModal ? ((this.inativarModal as any).id ?? (this.inativarModal as any).Idloja) : null;
+    if (!id) return;
+    this.api.patch(id, { ativo: false } as any).subscribe({
+      next: () => {
+        this.inativarModal = null;
+        this.successMsg = 'Loja inativada com sucesso.';
+        this.load();
+      },
+      error: () => this.errorMsg = 'Não foi possível inativar a loja.'
+    });
+  }
+
+  confirmarReativar(): void {
+    const id = this.reativarModal ? ((this.reativarModal as any).id ?? (this.reativarModal as any).Idloja) : null;
+    if (!id) return;
+    this.api.patch(id, { ativo: true } as any).subscribe({
+      next: () => {
+        this.reativarModal = null;
+        this.successMsg = 'Loja reativada com sucesso.';
+        this.load();
+      },
+      error: () => this.errorMsg = 'Não foi possível reativar a loja.'
+    });
+  }
+
+  executarAcao(key: string, loja: Loja): void {
+    if (key === 'consultar') this.consultar(loja);
+    if (key === 'editar') this.editar(loja);
+    if (key === 'duplicar') this.duplicar(loja);
+    if (key === 'historico') this.historicoModal = loja;
+    if (key === 'inativar') this.abrirInativar(loja);
+    if (key === 'reativar') this.abrirReativar(loja);
+    if (key === 'excluir') this.excluir(loja);
+  }
+
+  rowActions(loja: Loja): RowAction[] {
+    const ativa = this.isAtiva(loja);
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'duplicar', label: 'Duplicar', icon: '⧉', visible: this.podeEditarModulo },
+      { key: ativa ? 'inativar' : 'reativar', label: ativa ? 'Inativar' : 'Reativar', icon: ativa ? '⊘' : '↻', visible: this.podeEditarModulo },
+      { key: 'historico', label: 'Histórico', icon: '↺' },
+      { key: 'excluir', label: 'Excluir', icon: '×', danger: true, dividerBefore: true, visible: this.podeExcluirModulo },
+    ];
+  }
+
+  sortBy(key: typeof this.sortKey): void {
+    if (this.sortKey === key) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortKey = key;
+      this.sortDir = 'asc';
+    }
+    this.applyPage();
+  }
+
+  sortIcon(key: typeof this.sortKey): string {
+    if (this.sortKey !== key) return '↕';
+    return this.sortDir === 'asc' ? '↓' : '↑';
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const rows = this.lojasFiltradas;
+    const headers = ['Loja', 'Empresa', 'Tipo', 'Apelido', 'CNPJ', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
+    const body = rows.map(l => [
+      l.nome_loja,
+      this.empresaLabel(l),
+      this.tipoUnidadeLabel(l.tipo_unidade),
+      l.apelido_loja || '',
+      this.formatCnpj(l.cnpj),
+      this.cidadeUf(l),
+      l.email || '',
+      this.formatPhone(l.telefone1),
+      this.isAtiva(l) ? 'Ativa' : 'Inativa',
+      this.formatDate(l.data_cadastro),
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'lojas.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
+
+  formatCnpj(value?: string | null): string {
+    const d = (value || '').replace(/\D/g, '').slice(0, 14);
+    if (d.length !== 14) return value || '-';
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}`;
+  }
+
+  cidadeUf(loja: Loja): string {
+    const cidade = (loja.cidade || '').trim();
+    const uf = ((loja as any).estado || '').trim().toUpperCase();
+    if (cidade && uf) return `${cidade}/${uf}`;
+    return cidade || uf || '-';
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+  }
+
+  isAtiva(loja: Loja): boolean {
+    return loja.ativo !== false;
+  }
+
+  statusVariant(loja: Loja): 'success' | 'muted' {
+    return this.isAtiva(loja) ? 'success' : 'muted';
+  }
+
+  tipoVariant(tipo?: string | null): 'info' | 'purple' | 'warning' | 'muted' {
+    const t = (tipo || '').toUpperCase();
+    if (t === 'LOJA') return 'info';
+    if (t === 'MATRIZ') return 'purple';
+    if (t === 'FABRICA') return 'warning';
+    return 'muted';
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores.total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}% do total`;
+  }
+
+  trackLoja(_: number, loja: Loja): number | string {
+    return (loja as any).id ?? (loja as any).Idloja ?? loja.cnpj ?? loja.nome_loja;
+  }
+
+  private matchesFilters(l: Loja): boolean {
+    const term = this.normalize(this.search);
+    const all = this.normalize([
+      l.nome_loja,
+      l.apelido_loja,
+      l.cnpj,
+      l.cidade,
+      l.email,
+      l.telefone1,
+      l.telefone2,
+      this.empresaLabel(l),
+      this.tipoUnidadeLabel(l.tipo_unidade)
+    ].join(' '));
+    if (term && !all.includes(term)) return false;
+    if (this.filterEmpresa && Number(l.empresa) !== Number(this.filterEmpresa)) return false;
+    if (this.filterTipo && (l.tipo_unidade || '').toUpperCase() !== this.filterTipo) return false;
+    if (this.filterCidade && (l.cidade || '') !== this.filterCidade) return false;
+    if (this.filterEstado && this.normalize((l as any).estado) !== this.normalize(this.filterEstado)) return false;
+    if (this.filterStatus === 'ATIVA' && !this.isAtiva(l)) return false;
+    if (this.filterStatus === 'INATIVA' && this.isAtiva(l)) return false;
+    if (this.filterCnpj && !this.normalize(l.cnpj).includes(this.normalize(this.filterCnpj))) return false;
+    return true;
+  }
+
+  private compareLojas(a: Loja, b: Loja): number {
+    const val = (l: Loja) => {
+      if (this.sortKey === 'nome') return l.nome_loja || '';
+      if (this.sortKey === 'empresa') return this.empresaLabel(l);
+      if (this.sortKey === 'tipo') return this.tipoUnidadeLabel(l.tipo_unidade);
+      if (this.sortKey === 'cidade') return this.cidadeUf(l);
+      if (this.sortKey === 'status') return this.isAtiva(l) ? 'Ativa' : 'Inativa';
+      return l.data_cadastro || '';
+    };
+    const result = String(val(a)).localeCompare(String(val(b)), 'pt-BR', { numeric: true });
+    return this.sortDir === 'asc' ? result : -result;
+  }
+
+  private normalize(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.lojas.pageSize'));
+    if ([20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 
   // ====== Overlay de erros ======

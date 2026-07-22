@@ -1,0 +1,8 @@
+<article class="summary-card" [class.loading]="loading" [class]="variant">
+  <div class="summary-icon" aria-hidden="true">{{ icon }}</div>
+  <div>
+    <strong>{{ loading ? '...' : value }}</strong>
+    <span>{{ label }}</span>
+    <small *ngIf="percentage || helperText">{{ percentage || helperText }}</small>
+  </div>
+</article>

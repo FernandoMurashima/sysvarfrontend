@@ -12,6 +12,9 @@ import {
   NotaFiscalEntradaPedidoItem,
 } from '../../core/models/nota-fiscal-entrada';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type Option = { id: number; label: string };
 
@@ -25,7 +28,7 @@ type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
 @Component({
   selector: 'app-notas-fiscais-entrada',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './notas-fiscais-entrada.component.html',
   styleUrls: ['./notas-fiscais-entrada.component.css'],
 })
@@ -51,6 +54,13 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   } | null = null;
 
   search = '';
+  filtroStatus = '';
+  filtroEmissaoDe = '';
+  filtroEmissaoAte = '';
+  filtroEntradaDe = '';
+  filtroEntradaAte = '';
+  filtroValorMin: number | null = null;
+  filtroValorMax: number | null = null;
   notas: NotaFiscalEntrada[] = [];
   notasFiltradas: NotaFiscalEntrada[] = [];
   notasPagina: NotaFiscalEntrada[] = [];
@@ -95,6 +105,18 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       n.chave_acesso,
       this.statusLabel(n.status),
     ].filter(Boolean));
+  }
+  get abertas(): number {
+    return this.notas.filter(n => n.status === 'AB').length;
+  }
+  get fechadas(): number {
+    return this.notas.filter(n => n.status === 'FE').length;
+  }
+  get canceladas(): number {
+    return this.notas.filter(n => n.status === 'CA').length;
+  }
+  get valorTotalListado(): number {
+    return this.notasFiltradas.reduce((acc, n) => acc + Number(n.valor_total || 0), 0);
   }
 
   ngOnInit(): void {
@@ -171,17 +193,52 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   applyFilter(): void {
-    const term = (this.search || '').toLowerCase().trim();
+    const term = this.normalizeSearch(this.search);
     let base = this.notas.slice();
 
     if (term) {
       base = base.filter(n => {
-        const pedido = String(n.pedido_compra ?? '');
-        const numero = String(n.numero ?? '').toLowerCase();
-        const serie = String(n.serie ?? '').toLowerCase();
-        const chave = String(n.chave_acesso ?? '').toLowerCase();
-        return pedido.includes(term) || numero.includes(term) || serie.includes(term) || chave.includes(term);
+        const alvo = this.normalizeSearch([
+          n.pedido_compra,
+          n.modelo,
+          n.serie,
+          n.numero,
+          n.chave_acesso,
+          n.dt_emissao,
+          n.dt_entrada,
+          n.valor_total,
+          this.statusLabel(n.status),
+        ].filter(Boolean).join(' '));
+        return alvo.includes(term);
       });
+    }
+
+    if (this.filtroStatus) {
+      base = base.filter(n => n.status === this.filtroStatus);
+    }
+
+    if (this.filtroEmissaoDe) {
+      base = base.filter(n => String(n.dt_emissao || '') >= this.filtroEmissaoDe);
+    }
+    if (this.filtroEmissaoAte) {
+      base = base.filter(n => String(n.dt_emissao || '') <= this.filtroEmissaoAte);
+    }
+
+    if (this.filtroEntradaDe) {
+      base = base.filter(n => String(n.dt_entrada || '') >= this.filtroEntradaDe);
+    }
+    if (this.filtroEntradaAte) {
+      base = base.filter(n => String(n.dt_entrada || '') <= this.filtroEntradaAte);
+    }
+
+    const valorMin = Number(this.filtroValorMin);
+    if (this.filtroValorMin !== null && this.filtroValorMin !== undefined && !Number.isNaN(valorMin)) {
+      base = base.filter(n => Number(n.valor_total || 0) >= valorMin);
+    }
+
+    const valorMax = Number(this.filtroValorMax);
+    if (this.filtroValorMax !== null && this.filtroValorMax !== undefined && !Number.isNaN(valorMax)) {
+      base = base.filter(n => Number(n.valor_total || 0) <= valorMax);
     }
 
     this.notasFiltradas = base;
@@ -200,6 +257,13 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   clearSearch(): void {
     this.search = '';
+    this.filtroStatus = '';
+    this.filtroEmissaoDe = '';
+    this.filtroEmissaoAte = '';
+    this.filtroEntradaDe = '';
+    this.filtroEntradaAte = '';
+    this.filtroValorMin = null;
+    this.filtroValorMax = null;
     this.applyFilter();
   }
 
@@ -275,6 +339,34 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
     this.view.set('form');
     this.carregarItensPedido(nota.id);
+  }
+
+  rowActions(nota: NotaFiscalEntrada): RowAction[] {
+    return [
+      { key: 'abrir', label: 'Abrir', icon: '⌕' },
+      { key: 'cancelar', label: 'Cancelar NF', icon: '×', disabled: nota.status === 'CA', danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string | Event, nota: NotaFiscalEntrada): void {
+    if (action === 'abrir') this.editar(nota);
+    if (action === 'cancelar') {
+      this.notaAtual.set(nota);
+      this.cancelarNota();
+    }
+  }
+
+  itemRowActions(item: ItemRecebimentoUI): RowAction[] {
+    const bloqueada = this.notaAtual()?.status !== 'AB';
+    return [
+      { key: 'gravar', label: 'Gravar', icon: '✓', disabled: bloqueada || this.saving },
+      { key: 'remover', label: 'Remover', icon: '×', disabled: bloqueada || !item.nota_item, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarItemAcao(action: string | Event, item: ItemRecebimentoUI): void {
+    if (action === 'gravar') this.salvarItem(item);
+    if (action === 'remover') this.removerItem(item);
   }
 
   salvarCabecalho(): void {
@@ -550,5 +642,13 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (status === 'FE') return 'badge-ok';
     if (status === 'CA') return 'badge-danger';
     return 'badge-off';
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 }

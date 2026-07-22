@@ -10,11 +10,13 @@ import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
   templateUrl: './grades.component.html',
   styleUrls: ['./grades.component.css'],
 })
@@ -36,8 +38,20 @@ export class GradesComponent implements OnInit {
 
   grades: GradeModel[] = [];
   tamanhos: TamanhoModel[] = [];
+  allTamanhos: TamanhoModel[] = [];
 
   search = '';
+  filterStatus = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.grades.columns';
+  columns = [
+    { key: 'id', label: 'ID', visible: true, required: false },
+    { key: 'descricao', label: 'Descrição', visible: true, required: true },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'tamanhos', label: 'Tamanhos', visible: true, required: false },
+  ];
   selectedGradeId: number | null = null;
 
   get podeEditarModulo(): boolean {
@@ -53,13 +67,30 @@ export class GradesComponent implements OnInit {
         item.Descricao,
         item.Status
       ]),
-      ...this.tamanhos.flatMap(item => [
+      ...this.allTamanhos.flatMap(item => [
         item.Tamanho,
         item.Descricao,
         item.Status
       ])
     ].filter((v): v is string => !!v);
     return Array.from(new Set(valores));
+  }
+
+  get gradesFiltradas(): GradeModel[] {
+    const termo = this.normalize(this.search);
+    return this.grades.filter(g => {
+      const matchesSearch = !termo || [
+        g.Idgrade,
+        g.Descricao,
+        g.Status
+      ].some(v => this.normalize(v).includes(termo));
+      const ativo = this.isAtiva(g.Status);
+      const matchesStatus =
+        !this.filterStatus ||
+        (this.filterStatus === 'ATIVA' && ativo) ||
+        (this.filterStatus === 'INATIVA' && !ativo);
+      return matchesSearch && matchesStatus;
+    });
   }
 
   formModeGrade: 'new' | 'edit' | null = null;
@@ -82,7 +113,10 @@ export class GradesComponent implements OnInit {
     Status: [''],
   });
 
-  ngOnInit(): void { this.loadGrades(); }
+  ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadGrades();
+  }
 
   // ===== GRADES =====
   loadGrades() {
@@ -93,6 +127,7 @@ export class GradesComponent implements OnInit {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
         this.grades = Array.isArray(rows) ? rows : [];
+        this.carregarTodosTamanhos();
       },
       error: () => { this.errorMsg = 'Falha ao carregar grades.'; },
       complete: () => { this.loading = false; }
@@ -100,10 +135,9 @@ export class GradesComponent implements OnInit {
   }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   doSearch() {
-    // filtro client-side simples
-    // nada a fazer aqui além de disparar change detection; lista usa *ngFor="grades | filtro"
+    this.errorMsg = '';
   }
-  clearSearch() { this.search = ''; }
+  clearSearch() { this.search = ''; this.filterStatus = ''; }
 
   novoGrade() {
     this.editingGradeId = null;
@@ -218,6 +252,17 @@ export class GradesComponent implements OnInit {
   }
 
   // ===== TAMANHOS =====
+  carregarTodosTamanhos() {
+    this.tamanhosApi.list({ ordering: 'Tamanho' }).subscribe({
+      next: (data) => {
+        const payload: any = data as any;
+        const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
+        this.allTamanhos = Array.isArray(rows) ? rows : [];
+      },
+      error: () => this.allTamanhos = []
+    });
+  }
+
   selecionarGrade(id: number) {
     this.selectedGradeId = id;
     this.carregarTamanhos(id);
@@ -291,6 +336,7 @@ export class GradesComponent implements OnInit {
       next: () => {
         this.successMsg = this.editingTamId ? 'Tamanho atualizado.' : 'Tamanho criado.';
         if (this.selectedGradeId) this.carregarTamanhos(this.selectedGradeId);
+        this.carregarTodosTamanhos();
         this.novoTamanho();
       },
       error: () => this.errorMsg = 'Falha ao salvar o tamanho.'
@@ -309,6 +355,7 @@ export class GradesComponent implements OnInit {
         this.excluirModal = null;
         this.successMsg = 'Tamanho excluído.';
         if (this.selectedGradeId) this.carregarTamanhos(this.selectedGradeId);
+        this.carregarTodosTamanhos();
       },
       error: () => this.errorMsg = 'Falha ao excluir o tamanho.'
     });
@@ -326,5 +373,98 @@ export class GradesComponent implements OnInit {
     if (this.fieldInvalidTamanho('Tamanho')) msgs.push('Informe o código do Tamanho (máx. 10).');
     if (this.fieldInvalidTamanho('Descricao')) msgs.push('Informe a Descrição (máx. 100).');
     return msgs;
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnsPreference();
+  }
+
+  rowActionsGrade(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'tamanhos', label: 'Tamanhos', icon: '▦' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcaoGrade(action: string, g: GradeModel): void {
+    if (action === 'consultar') this.consultarGrade(g);
+    if (action === 'tamanhos' && g.Idgrade) this.selecionarGrade(g.Idgrade);
+    if (action === 'editar') this.editarGrade(g);
+    if (action === 'excluir') this.excluirGrade(g);
+  }
+
+  rowActionsTamanho(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcaoTamanho(action: string, t: TamanhoModel): void {
+    if (action === 'consultar') this.consultarTamanho(t);
+    if (action === 'editar') this.editarTamanho(t);
+    if (action === 'excluir') this.excluirTamanho(t);
+  }
+
+  tamanhoCount(grade: GradeModel): number {
+    if (!grade.Idgrade) return 0;
+    return this.allTamanhos.filter(t => Number((t as any).idgrade?.Idgrade ?? (t as any).idgrade) === grade.Idgrade).length;
+  }
+
+  statusLabel(status: any): string {
+    return status || '—';
+  }
+
+  exportarCsv(): void {
+    const headers = ['ID', 'Descrição', 'Status'];
+    const rows = this.gradesFiltradas.map(g => [
+      String(g.Idgrade ?? ''),
+      g.Descricao ?? '',
+      this.statusLabel(g.Status)
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grades.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  isAtiva(status: any): boolean {
+    return this.normalize(status) === 'ativa' || this.normalize(status) === 'ativo' || status === true;
+  }
+
+  private normalize(value: any): string {
+    return String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    try {
+      const raw = localStorage.getItem(this.columnsStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(col => col.required ? col : { ...col, visible: saved[col.key] ?? col.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

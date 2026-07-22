@@ -14,11 +14,14 @@ import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-fornecedores',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './fornecedores.component.html',
   styleUrls: ['./fornecedores.component.css']
 })
@@ -44,10 +47,29 @@ export class FornecedoresComponent implements OnInit {
   }
 
   search = '';
+  filterCategoria = '';
+  filterCidade = '';
+  filterStatus = '';
+  filterEstado = '';
+  filterCnpj = '';
+  filterEmail = '';
+  advancedOpen = false;
   successMsg = '';
   errorMsg = '';
   excluirModal: Fornecedor | null = null;
   errorOverlayOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.fornecedores.columns';
+  columns = [
+    { key: 'apelido', label: 'Apelido', visible: true, required: false },
+    { key: 'categoria', label: 'Categoria', visible: true, required: false },
+    { key: 'cnpj', label: 'CNPJ', visible: true, required: false },
+    { key: 'cidade', label: 'Cidade/UF', visible: true, required: false },
+    { key: 'email', label: 'E-mail', visible: true, required: false },
+    { key: 'telefone', label: 'Telefone', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
 
   // ======== Form ========
   form: FormGroup = this.fb.group({
@@ -126,7 +148,60 @@ export class FornecedoresComponent implements OnInit {
     ].filter((v): v is string => !!v));
   }
 
+  get indicadores() {
+    const total = this.fornecedoresAll.length;
+    const ativos = this.fornecedoresAll.filter(f => f.ativo !== false).length;
+    const faccoes = this.fornecedoresAll.filter(f => f.categoria === 'FACCAO').length;
+    const bloqueados = this.fornecedoresAll.filter(f => !!f.bloqueio).length;
+    const comCidade = this.fornecedoresAll.filter(f => !!(f.cidade || '').trim()).length;
+    return { total, ativos, faccoes, bloqueados, comCidade };
+  }
+
+  get cidadesOptions(): string[] {
+    return Array.from(new Set(
+      this.fornecedoresAll
+        .map(f => (f.cidade || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  get fornecedoresFiltrados(): Fornecedor[] {
+    const term = this.normalize(this.search);
+    const categoria = this.filterCategoria;
+    const cidade = this.normalize(this.filterCidade);
+    const status = this.filterStatus;
+    const estado = this.normalize(this.filterEstado);
+    const cnpj = this.onlyDigits(this.filterCnpj);
+    const email = this.normalize(this.filterEmail);
+
+    return this.fornecedoresAll.filter(f => {
+      const haystack = this.normalize([
+        f.nome_fornecedor,
+        f.apelido,
+        f.cnpj,
+        f.email,
+        f.cidade,
+        f.estado,
+        f.telefone1,
+        f.telefone2,
+        this.categoriaLabel(f.categoria),
+      ].filter(Boolean).join(' '));
+
+      if (term && !haystack.includes(term)) return false;
+      if (categoria && f.categoria !== categoria) return false;
+      if (cidade && this.normalize(f.cidade || '') !== cidade) return false;
+      if (status === 'ATIVO' && f.ativo === false) return false;
+      if (status === 'INATIVO' && f.ativo !== false) return false;
+      if (status === 'BLOQUEADO' && !f.bloqueio) return false;
+      if (estado && this.normalize(f.estado || '') !== estado) return false;
+      if (cnpj && !this.onlyDigits(f.cnpj || '').includes(cnpj)) return false;
+      if (email && !this.normalize(f.email || '').includes(email)) return false;
+      return true;
+    });
+  }
+
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.load();
   }
 
@@ -135,7 +210,7 @@ export class FornecedoresComponent implements OnInit {
     return (v ?? '').toString().replace(/\D/g, '');
   }
 
-  private formatPhone(digits: string): string {
+  formatPhone(digits: string): string {
     const d = this.onlyDigits(digits).slice(0, 11);
     if (d.length < 10) return d;
     const ddd = d.slice(0, 2);
@@ -184,13 +259,10 @@ export class FornecedoresComponent implements OnInit {
   // ========= Fluxo =========
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000 }).subscribe({
+    this.api.list({ page_size: 2000 }).subscribe({
       next: (res: any) => {
         const arr: Fornecedor[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.fornecedoresAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number')
-          ? res.count
-          : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -208,14 +280,18 @@ export class FornecedoresComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.fornecedoresFiltrados;
+    this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.fornecedores = this.fornecedoresAll.slice(start, end);
+    this.fornecedores = filtered.slice(start, end);
   }
 
   onPageSizeChange(sizeStr: string): void {
     const size = Number(sizeStr) || 10;
     this.pageSize = size;
+    localStorage.setItem('sysvar.list.fornecedores.pageSize', String(size));
     this.page = 1;
     this.applyPage();
   }
@@ -229,12 +305,18 @@ export class FornecedoresComponent implements OnInit {
   }
   doSearch(): void {
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
   clearSearch(): void {
     this.search = '';
+    this.filterCategoria = '';
+    this.filterCidade = '';
+    this.filterStatus = '';
+    this.filterEstado = '';
+    this.filterCnpj = '';
+    this.filterEmail = '';
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
 
   novo(): void {
@@ -316,6 +398,88 @@ export class FornecedoresComponent implements OnInit {
     this.editar(row);
     this.consultando = true;
     this.form.disable({ emitEvent: false });
+  }
+
+  rowActions(row: Fornecedor): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: Fornecedor): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Fornecedor', 'Apelido', 'Categoria', 'CNPJ', 'Cidade/UF', 'Email', 'Telefone', 'Status'];
+    const body = this.fornecedoresFiltrados.map(f => [
+      f.nome_fornecedor,
+      f.apelido || '',
+      this.categoriaLabel(f.categoria),
+      this.formatCnpj(f.cnpj),
+      this.cidadeUf(f),
+      f.email || '',
+      this.formatPhone(f.telefone1 || ''),
+      f.ativo === false ? 'Inativo' : 'Ativo',
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fornecedores.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
+
+  cidadeUf(fornecedor: Fornecedor): string {
+    const cidade = (fornecedor.cidade || '').trim();
+    const uf = (fornecedor.estado || '').trim().toUpperCase();
+    if (cidade && uf) return `${cidade}/${uf}`;
+    return cidade || uf || '-';
+  }
+
+  formatCnpj(value?: string | null): string {
+    const d = (value || '').replace(/\D/g, '').slice(0, 14);
+    if (d.length !== 14) return value || '-';
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}`;
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores.total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  trackFornecedor(_: number, fornecedor: Fornecedor): number | string {
+    return fornecedor.id ?? fornecedor.cnpj ?? fornecedor.nome_fornecedor;
   }
 
   cancelarEdicao(): void {
@@ -451,5 +615,23 @@ export class FornecedoresComponent implements OnInit {
   }
   closeErrorOverlay(): void {
     this.errorOverlayOpen = false;
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.fornecedores.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

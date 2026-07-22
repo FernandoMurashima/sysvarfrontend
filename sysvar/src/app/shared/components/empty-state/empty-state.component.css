@@ -1,0 +1,27 @@
+.empty-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  color: var(--sysvar-text-secondary, #64748b);
+  text-align: center;
+}
+
+.empty-state strong {
+  color: var(--sysvar-text-primary, #111827);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--sysvar-primary, #0f62fe);
+  border-radius: 8px;
+  background: var(--sysvar-primary, #0f62fe);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}

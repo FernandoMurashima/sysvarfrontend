@@ -1,22 +1,16 @@
 <div class="pc-page">
-  <!-- BARRA SUPERIOR -->
-  <header class="toolbar toolbar-like-cores">
-    <h2>Pedidos de Uso / Consumo</h2>
-
-    <div class="toolbar-right">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por nº, loja ou fornecedor"
-        (search)="doSearch()"
-        (cleared)="clearSearch()"
-      />
-
-      <button class="btn primary" (click)="setViewList()">Consultar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+  <div class="header-with-actions">
+    <app-page-header
+      title="Pedidos de Uso / Consumo"
+      subtitle="Gerencie compras de consumo, materiais e insumos"
+      [showPrimaryAction]="false"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="novo()">+ Novo Pedido</button>
     </div>
-  </header>
+  </div>
 
   <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
   <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
@@ -72,18 +66,32 @@
     </section>
   </div>
 
-  <!-- DICA -->
-  <section class="card hint">
-    <p>
-      Para cadastrar um <strong>pedido de uso/consumo</strong>, clique em <strong>Novo</strong>.
-      Para consultar, use a lista abaixo em <strong>Consultar</strong>.
-    </p>
+  <section class="summary-grid" *ngIf="view() === 'list'">
+    <app-summary-card label="Total de Pedidos" [value]="pedidosAll.length" icon="□" variant="blue" helperText="Uso/consumo e insumos" />
+    <app-summary-card label="Abertos" [value]="abertos" icon="☷" variant="green" helperText="Aguardando aprovação" />
+    <app-summary-card label="Aprovados" [value]="aprovados" icon="✓" variant="orange" helperText="Liberados para nota" />
+    <app-summary-card label="Atendidos" [value]="atendidos" icon="■" variant="cyan" helperText="Com entrada registrada" />
+    <app-summary-card label="Total listado" [value]="'R$ ' + (valorTotalListado | number : '1.2-2')" icon="$" variant="purple" helperText="Pedidos filtrados" />
+  </section>
+
+  <section class="filters-panel" *ngIf="view() === 'list'">
+    <app-search-suggest
+      [(value)]="search"
+      [suggestions]="searchSuggestions"
+      placeholder="Buscar por nº, loja ou fornecedor"
+      [showActions]="false"
+      (search)="doSearch()"
+      (cleared)="clearSearch()"
+    />
+    <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+    <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+    <button class="btn" type="button" (click)="setViewList()">Atualizar</button>
   </section>
 
   <!-- LISTA -->
-  <section class="card list" *ngIf="view() === 'list'">
+  <section class="card list table-card" *ngIf="view() === 'list'">
     <div class="list-bar">
-      <div class="left"><strong>Total:</strong> {{ total }}</div>
+      <div class="left"><strong>Pedidos cadastrados</strong> <span>{{ total }} registro(s) encontrado(s)</span></div>
       <div class="right">
         <label for="pageSize">Itens por página</label>
         <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
@@ -107,7 +115,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of pedidos">
+          <tr *ngFor="let p of pedidos" (click)="consultarPedido(p)">
             <td>{{ p.id }}</td>
             <td>{{ labelLoja(p.loja) }}</td>
             <td>{{ labelFornecedor(p.fornecedor) }}</td>
@@ -119,66 +127,12 @@
             </td>
             <td>{{ p.natureza_label || '-' }}</td>
             <td>{{ p.total_pedido | number : '1.2-2' }}</td>
-            <td class="actions-cell">
-              <div class="actions-list-cell">
-              <button
-                class="btn sm"
-                type="button"
-                (click)="consultarPedido(p)"
-              >
-                Consultar
-              </button>
-              <button
-                class="btn sm"
-                *ngIf="podeEditarModulo"
-                type="button"
-                (click)="editarPedido(p)"
-                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
-                style="margin-left:4px;"
-              >
-                Editar
-              </button>
-              <button
-                class="btn sm danger"
-                *ngIf="podeEditarModulo"
-                type="button"
-                (click)="excluirPedido(p)"
-                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
-                style="margin-left:4px;"
-              >
-                Excluir
-              </button>
-              <button
-                class="btn sm"
-                *ngIf="podeEditarModulo"
-                type="button"
-                (click)="aprovarPedido(p)"
-                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
-                style="margin-left:4px;"
-              >
-                Aprovar
-              </button>
-              <button
-                class="btn sm"
-                *ngIf="podeEditarModulo"
-                type="button"
-                (click)="editarNaturezaPedido(p)"
-                [disabled]="!['AP', 'AT'].includes((p.status || '').toUpperCase())"
-                style="margin-left:4px;"
-              >
-                Natureza
-              </button>
-              <button
-                class="btn sm"
-                *ngIf="podeEditarModulo"
-                type="button"
-                (click)="cancelarPedido(p)"
-                [disabled]="(p.status || '').toUpperCase() !== 'AB'"
-                style="margin-left:4px;"
-              >
-                Cancelar
-              </button>
-              </div>
+            <td class="actions-cell" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions(p)"
+                [ariaLabel]="'Ações do pedido'"
+                (action)="executarAcao($event, p)"
+              />
             </td>
           </tr>
         </tbody>

@@ -1,0 +1,402 @@
+<section class="pdv-desktop">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">S</div>
+      <div>
+        <strong>sysvar</strong>
+        <span>SISTEMA DE AUTOMAÇÃO DE LOJAS</span>
+      </div>
+      <b>PDV</b>
+    </div>
+
+    <div class="search">
+      <span>⌕</span>
+      <input [(ngModel)]="busca" (ngModelChange)="aoDigitarBusca()" (keydown.enter)="aoEnterBusca($event)" placeholder="Digite código, referência, descrição ou leia o código de barras..." />
+      <div class="search-suggestions" *ngIf="busca.trim().length >= 2 && produtos.length">
+        <button type="button" *ngFor="let produto of produtos.slice(0, 8)" (click)="adicionarProduto(produto)">
+          <strong>{{ produto.descricao }}</strong>
+          <span>{{ produto.codigo }} · Estoque: {{ formatarQuantidade(produto.estoque) }}</span>
+          <b *ngIf="produto.estoque <= 0">SEM ESTOQUE</b>
+        </button>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <span>NFC-e</span>
+      <span>TEF</span>
+      <div class="operator">
+        <div class="avatar">◯</div>
+        <div>
+          <strong>{{ caixa }}</strong>
+          <small>Usuário: {{ vendedor }}</small>
+        </div>
+      </div>
+      <div class="clock">
+        <strong>{{ hora }}</strong>
+        <small>{{ data }}</small>
+      </div>
+      <button type="button" (click)="imprimirCupom()">☰</button>
+    </div>
+  </header>
+
+  <main class="pdv-body">
+    <aside class="left-panel">
+      <div class="panel">
+        <h3>INFORMAÇÕES DA VENDA</h3>
+        <label>
+          Venda
+          <div class="select-like readonly-like">{{ numeroVendaAtual }}</div>
+        </label>
+        <label>
+          Código do Cliente
+          <div class="client-search">
+            <input
+              class="select-like"
+              type="text"
+              [(ngModel)]="buscaCliente"
+              (input)="aoDigitarCliente()"
+              (focus)="mostrarSugestoesCliente = true"
+              placeholder="Digite nome, CPF ou telefone"
+            />
+            <div class="client-suggestions" *ngIf="mostrarSugestoesCliente">
+              <button type="button" *ngFor="let c of clientesFiltrados()" (click)="selecionarClienteBusca(c)">
+                <strong>{{ c.nome_cliente }}</strong>
+                <span>{{ c.cpf || c.apelido || c.telefone1 || '' }}</span>
+              </button>
+              <small *ngIf="!clientesFiltrados().length">Cliente não encontrado.</small>
+            </div>
+          </div>
+        </label>
+        <label>
+          Vendedor
+          <select class="select-like" [(ngModel)]="vendedorId" (ngModelChange)="selecionarVendedor($event)">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let v of vendedoresDaLoja()" [ngValue]="v.id">{{ v.nomefuncionario }}</option>
+          </select>
+        </label>
+        <label>
+          Tabela de Preço
+          <div class="select-like readonly-like">{{ tabela }}</div>
+        </label>
+        <label>
+          Loja
+          <select class="select-like" [(ngModel)]="lojaId" (ngModelChange)="selecionarLoja($event)" [disabled]="lojas.length <= 1">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let l of lojas" [ngValue]="lojaIdValor(l)">{{ l.nome_loja }}</option>
+          </select>
+        </label>
+        <label>
+          Caixa
+          <select class="select-like" [(ngModel)]="caixaId" (ngModelChange)="selecionarCaixa($event)" [disabled]="caixasDaLoja().length <= 1">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let c of caixasDaLoja()" [ngValue]="c.Idcaixa">{{ c.codigo }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="panel shortcuts">
+        <h3>ATALHOS</h3>
+        <button type="button" (click)="abrirAtalho($event, 'cliente')">F2<br><span>Cliente</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'vendedor')">F3<br><span>Vendedor</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'resumo')">F4<br><span>Resumo</span></button>
+        <button type="button" (click)="cancelarItemSelecionado()">F5<br><span>Cancelar Item</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'cancelar-venda')">F6<br><span>Cancelar Venda</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'preco')">F7<br><span>Consultar Preço</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'despesa')">F8<br><span>Despesa</span></button>
+        <button type="button" (click)="abrirAtalho($event, 'pagamentos')">F9<br><span>Pagamentos</span></button>
+        <button type="button" (click)="fecharCaixaAtalho()">F10<br><span>Fechar Caixa</span></button>
+      </div>
+    </aside>
+
+    <section class="center-panel">
+      <section class="product-box">
+        <div class="box-head">
+          <h3>ITENS DE VENDA</h3>
+        </div>
+        <div class="items-grid">
+          <div class="items-header">
+            <span>#</span>
+            <span>CÓDIGO / EAN</span>
+            <span>PRODUTO</span>
+            <span>COR / TAM</span>
+            <span>QTD</span>
+            <span>UN</span>
+            <span>UNITÁRIO</span>
+            <span>DESC.</span>
+            <span>TOTAL</span>
+            <span>AÇÕES</span>
+          </div>
+          <div
+            class="sale-row"
+            *ngFor="let item of carrinho; let i = index"
+            [class.selected]="itemSelecionado === item"
+            (click)="selecionarItem(item)"
+          >
+            <span class="line-number">{{ (i + 1).toString().padStart(2, '0') }}</span>
+            <span class="code-cell">
+              <strong>{{ item.codigo }}</strong>
+              <small>{{ item.codigo }}</small>
+            </span>
+            <span class="product-cell">
+              <strong>{{ item.descricao }}</strong>
+              <small>Ref. {{ item.produto.referencia || '-' }}</small>
+            </span>
+            <span class="variant-cell">
+              <strong>{{ item.cor }}</strong>
+              <small>{{ item.tamanho }}</small>
+            </span>
+            <span class="quantity-stepper" (click)="$event.stopPropagation()">
+              <button type="button" (click)="alterarQuantidade(item, -1)">−</button>
+              <input type="number" min="1" [max]="item.estoque" [(ngModel)]="item.qtd" (ngModelChange)="atualizarItem(item)" />
+              <button type="button" (click)="alterarQuantidade(item, 1)">+</button>
+            </span>
+            <span>UN</span>
+            <span>{{ formatar(item.valorUnitario) }}</span>
+            <span class="discount-cell" (click)="$event.stopPropagation()">
+              <input type="number" min="0" [(ngModel)]="item.desconto" (ngModelChange)="atualizarItem(item)" />
+            </span>
+            <span class="row-total">{{ formatar(item.total) }}</span>
+            <span><button type="button" class="remove-line" (click)="$event.stopPropagation(); remover(item)">×</button></span>
+          </div>
+          <div *ngIf="!carrinho.length" class="empty">Bipe ou digite um produto para iniciar a venda.</div>
+        </div>
+      </section>
+
+      <section class="bottom-totals">
+        <div class="subtotal-display">
+          <span>SUBTOTAL</span>
+          <strong>{{ subtotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</strong>
+        </div>
+        <div>
+          <span>TOTAL RECEBIDO</span>
+          <strong>{{ totalPago().toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</strong>
+        </div>
+        <div>
+          <span>TROCO</span>
+          <strong>{{ troco().toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</strong>
+        </div>
+      </section>
+    </section>
+
+    <aside class="right-panel">
+      <div class="sale-head">
+        <h3>PRODUTO SELECIONADO</h3>
+        <button (click)="limpar()">🗑 LIMPAR</button>
+      </div>
+
+      <div class="selected-product-photo">
+        <div class="photo-frame">
+          <img src="assets/logosysvar.png" alt="Sysvar" />
+        </div>
+        <strong>{{ itemSelecionado?.descricao || produtoSelecionado?.descricao || 'Nenhum produto selecionado' }}</strong>
+        <span>{{ itemSelecionado?.codigo || produtoSelecionado?.codigo || 'Aguardando bipagem' }}</span>
+        <small *ngIf="itemSelecionado || produtoSelecionado">✓ Em estoque</small>
+        <em *ngIf="itemSelecionado || produtoSelecionado">Estoque na loja: {{ formatarQuantidade(itemSelecionado?.estoque || produtoSelecionado?.estoque || 0) }}</em>
+      </div>
+
+      <div class="discount">
+        <span>DESCONTO</span>
+        <button class="active">%</button>
+        <button>R$</button>
+        <input type="number" [(ngModel)]="desconto" (ngModelChange)="atualizarValorPagamento()" />
+      </div>
+
+      <div class="total-card">
+        <p><span>SUBTOTAL</span><strong>{{ formatar(subtotal()) }}</strong></p>
+        <p><span>DESCONTOS</span><strong>{{ formatar(desconto) }}</strong></p>
+        <p><span>ACRÉSCIMOS</span><strong>R$ 0,00</strong></p>
+        <p><span>PAGO</span><strong>{{ formatar(totalPago()) }}</strong></p>
+        <p><span>PENDENTE</span><strong>{{ formatar(pendente()) }}</strong></p>
+        <div><span>TOTAL</span><strong>{{ formatar(total()) }}</strong></div>
+      </div>
+
+      <div class="payment-entry">
+        <input type="number" min="0" [(ngModel)]="valorPagamento" placeholder="Valor" />
+        <select *ngIf="formaPagamento === 'CARTAO'" [(ngModel)]="tipoCartao">
+          <option value="CREDITO">Crédito</option>
+          <option value="DEBITO">Débito</option>
+        </select>
+        <input *ngIf="formaPagamento === 'CARTAO'" [(ngModel)]="autorizacaoCartao" placeholder="Autorização" />
+        <button type="button" (click)="adicionarPagamento()">Adicionar pagamento</button>
+      </div>
+
+      <div class="payment-list">
+        <div *ngFor="let pagamento of pagamentosVenda; let i = index">
+          <span>{{ pagamento.descricao }}</span>
+          <strong>{{ formatar(pagamento.valor) }}</strong>
+          <button type="button" (click)="removerPagamento(i)">×</button>
+        </div>
+        <small *ngIf="!pagamentosVenda.length">Nenhum pagamento adicionado.</small>
+      </div>
+
+      <div class="payments">
+        <button class="cash" [class.selected]="formaPagamento === 'DINHEIRO'" (click)="pagarCom('DINHEIRO')"><span>▣</span>DINHEIRO</button>
+        <button class="card" [class.selected]="formaPagamento === 'CARTAO'" (click)="pagarCom('CARTAO')"><span>▭</span>CARTÃO</button>
+        <button class="pix" [class.selected]="formaPagamento === 'PIX'" (click)="pagarCom('PIX')"><span>▦</span>PIX</button>
+        <button class="finish" (click)="finalizar()" [disabled]="finalizando"><span>✓</span>{{ finalizando ? 'ENVIANDO' : 'FINALIZAR' }}</button>
+      </div>
+      <small class="message">{{ mensagem }}</small>
+    </aside>
+  </main>
+
+  <footer>
+    <span>SYSVAR PDV · Versão 1.0.0</span>
+    <span>Itens {{ carrinho.length }} · Quantidade {{ formatarQuantidade(quantidadeTotal()) }} · Desconto {{ formatar(desconto) }}</span>
+    <button type="button" class="sync-button" (click)="atualizarCatalogoOffline()" [disabled]="atualizandoCatalogo">
+      {{ atualizandoCatalogo ? 'Atualizando catálogo' : 'Atualizar catálogo' }}
+    </button>
+    <button type="button" class="sync-button" (click)="caixaLocalAberto ? fecharCaixaLocal() : abrirCaixaLocal()">
+      {{ caixaLocalAberto ? 'Caixa local aberto' : 'Abrir caixa local' }}
+    </button>
+    <button type="button" class="sync-button" (click)="sincronizarPendentes($event)" [disabled]="!pendentesOffline || finalizando">
+      Sincronizar {{ pendentesOffline }} pendente(s)
+    </button>
+    <b [class.offline]="status?.online === false">{{ status?.online === false ? 'OFFLINE' : 'ONLINE' }}</b>
+    <span>{{ sincronizacaoOffline || 'NFC-e em contingência' }}</span>
+  </footer>
+
+  <div class="pdv-alert-backdrop" *ngIf="mensagemAlerta">
+    <div class="pdv-alert">
+      <strong>{{ mensagemAlerta }}</strong>
+      <span>Pressione ENTER para continuar</span>
+    </div>
+  </div>
+
+  <div class="pdv-modal-backdrop" *ngIf="modalAtalho">
+    <section class="pdv-modal">
+      <header>
+        <div>
+          <strong *ngIf="modalAtalho === 'cliente'">Consulta de Cliente</strong>
+          <strong *ngIf="modalAtalho === 'vendedor'">Seleção de Vendedor</strong>
+          <strong *ngIf="modalAtalho === 'resumo'">Resumo do Dia por Vendedor</strong>
+          <strong *ngIf="modalAtalho === 'pagamentos'">Resumo do Dia por Pagamento</strong>
+          <strong *ngIf="modalAtalho === 'preco'">Consulta de Preço</strong>
+          <strong *ngIf="modalAtalho === 'despesa'">Despesa da Loja</strong>
+          <strong *ngIf="modalAtalho === 'cancelar-venda'">Cancelar Venda</strong>
+          <span>{{ data }} · {{ caixa }}</span>
+        </div>
+        <button type="button" (click)="fecharAtalho()">Fechar</button>
+      </header>
+
+      <div class="modal-search" *ngIf="modalAtalho === 'cliente' || modalAtalho === 'vendedor'">
+        <input [(ngModel)]="buscaModal" [placeholder]="modalAtalho === 'cliente' ? 'Digite nome, CPF ou telefone' : 'Digite o nome do vendedor'" />
+      </div>
+
+      <div class="modal-search" *ngIf="modalAtalho === 'preco'">
+        <input [(ngModel)]="buscaModal" (keydown.enter)="buscarPrecoAtalho()" placeholder="Digite código, referência, descrição ou EAN" />
+        <button type="button" (click)="buscarPrecoAtalho()">Buscar</button>
+      </div>
+
+      <div class="modal-list" *ngIf="modalAtalho === 'cliente'">
+        <button type="button" *ngFor="let c of clientesAtalho()" (click)="selecionarClienteModal(c)">
+          <strong>{{ c.nome_cliente }}</strong>
+          <span>{{ c.cpf || c.apelido || '-' }}</span>
+          <span>{{ c.telefone1 || c.email || '-' }}</span>
+        </button>
+        <p *ngIf="!clientesAtalho().length">Nenhum cliente encontrado.</p>
+      </div>
+
+      <div class="modal-list" *ngIf="modalAtalho === 'vendedor'">
+        <button type="button" *ngFor="let v of vendedoresAtalho()" (click)="selecionarVendedorModal(v)">
+          <strong>{{ v.nomefuncionario }}</strong>
+          <span>{{ v.categoria }}</span>
+          <span>{{ v.idloja }}</span>
+        </button>
+        <p *ngIf="!vendedoresAtalho().length">Nenhum vendedor encontrado para esta loja.</p>
+      </div>
+
+      <div class="modal-table" *ngIf="modalAtalho === 'resumo'">
+        <div class="modal-summary-row">
+          <span>Vendedor</span>
+          <span>Vendas</span>
+          <span>Itens</span>
+          <span>Ticket</span>
+          <span>Total</span>
+          <span>Comissão</span>
+        </div>
+        <div class="modal-summary-row" *ngFor="let r of resumoVendedores">
+          <strong>{{ r.vendedor }}</strong>
+          <span>{{ r.vendas }}</span>
+          <span>{{ r.itens }}</span>
+          <span>R$ {{ r.ticket_medio }}</span>
+          <span>R$ {{ r.total }}</span>
+          <span>R$ {{ r.comissao }}</span>
+        </div>
+        <p *ngIf="resumoCarregando">Carregando resumo...</p>
+        <p *ngIf="!resumoCarregando && !resumoVendedores.length">Nenhuma venda encontrada hoje.</p>
+      </div>
+
+      <div class="modal-table payment-summary" *ngIf="modalAtalho === 'pagamentos'">
+        <div class="modal-payment-total">
+          <span>Total recebido hoje</span>
+          <strong>{{ formatar(totalResumoPagamentos()) }}</strong>
+        </div>
+        <div class="modal-payment-row">
+          <span>Forma</span>
+          <span>Vendas</span>
+          <span>Total</span>
+        </div>
+        <div class="modal-payment-row" *ngFor="let p of resumoPagamentos">
+          <strong>{{ p.descricao || p.forma }}</strong>
+          <span>{{ p.vendas }}</span>
+          <span>{{ formatarRelatorio(p.total) }}</span>
+        </div>
+        <p *ngIf="resumoPagamentosCarregando">Carregando pagamentos...</p>
+        <p *ngIf="!resumoPagamentosCarregando && !resumoPagamentos.length">Nenhuma venda encontrada hoje para esta loja.</p>
+      </div>
+
+      <div class="modal-table" *ngIf="modalAtalho === 'preco'">
+        <div class="modal-price-row">
+          <span>Código / EAN</span>
+          <span>Produto</span>
+          <span>Cor / Tam</span>
+          <span>Estoque</span>
+          <span>Preço</span>
+        </div>
+        <button type="button" class="modal-price-row" *ngFor="let p of produtosPreco" (click)="adicionarProduto(p); fecharAtalho()">
+          <strong>{{ p.codigo }}</strong>
+          <span>{{ p.descricao }}</span>
+          <span>{{ p.sku?.cor_descricao || '-' }} / {{ p.sku?.tamanho_descricao || '-' }}</span>
+          <span>{{ formatarQuantidade(p.estoque) }}</span>
+          <strong>{{ formatar(p.valorUnitario) }}</strong>
+        </button>
+        <p *ngIf="buscaModal && !produtosPreco.length">Digite e pressione ENTER para consultar.</p>
+      </div>
+
+      <div class="modal-expense" *ngIf="modalAtalho === 'despesa'">
+        <label>
+          Tipo de despesa
+          <select [(ngModel)]="despesaForm.tipoDespesa">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let t of tiposDespesaPdv" [ngValue]="t.Idtipodespesapdv">{{ t.descricao }}</option>
+          </select>
+        </label>
+        <label>
+          Valor
+          <input type="number" min="0" step="0.01" [(ngModel)]="despesaForm.valor" />
+        </label>
+        <label>
+          Documento
+          <input [(ngModel)]="despesaForm.documento" placeholder="Opcional" />
+        </label>
+        <label class="wide">
+          Histórico
+          <input [(ngModel)]="despesaForm.historico" placeholder="Ex.: material de limpeza, motoboy..." />
+        </label>
+        <div class="modal-actions">
+          <button type="button" (click)="fecharAtalho()">Voltar</button>
+          <button type="button" class="danger" (click)="lancarDespesaLoja()">Lançar despesa</button>
+        </div>
+      </div>
+
+      <div class="modal-confirm" *ngIf="modalAtalho === 'cancelar-venda'">
+        <strong>Cancelar a venda atual?</strong>
+        <span>{{ carrinho.length }} item(ns) serão removidos.</span>
+        <div>
+          <button type="button" (click)="fecharAtalho()">Voltar</button>
+          <button type="button" class="danger" (click)="confirmarCancelarVenda()">Cancelar venda</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</section>

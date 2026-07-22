@@ -1,22 +1,120 @@
 <div class="clientes-page">
-  <header class="toolbar">
-    <h2>Naturezas de Lançamento</h2>
-    <div class="toolbar-actions">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Naturezas de Lançamento"
+      subtitle="Organize receitas, despesas e classificações financeiras"
+      primaryActionLabel="Nova Natureza"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button" [routerLink]="['/ajuda/natureza-lancamento']">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="summary-grid" aria-label="Resumo das naturezas">
+    <app-summary-card label="Total de Naturezas" [value]="indicadores.total" icon="▣" [percentage]="percentual(indicadores.total)" />
+    <app-summary-card label="Naturezas Ativas" [value]="indicadores.ativas" icon="▤" variant="green" [percentage]="percentual(indicadores.ativas)" />
+    <app-summary-card label="Receitas" [value]="indicadores.receitas" icon="⌂" variant="orange" [percentage]="percentual(indicadores.receitas)" />
+    <app-summary-card label="Despesas" [value]="indicadores.despesas" icon="▥" variant="purple" [percentage]="percentual(indicadores.despesas)" />
+    <app-summary-card label="Entram no DRE" [value]="indicadores.dre" icon="▧" variant="cyan" [percentage]="percentual(indicadores.dre)" />
+  </section>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Buscar por código/descrição/categoria..."
+        placeholder="Buscar por código, descrição, categoria, conta..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+
+      <label>
+        Operação
+        <select [(ngModel)]="filterOperacao" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let operacao of operacoes" [value]="operacao.value">{{ operacao.label }}</option>
+        </select>
+      </label>
+
+      <label>
+        Categoria
+        <select [(ngModel)]="filterCategoria" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let categoria of categoriasOptions" [value]="categoria">{{ categoria }}</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="ATIVO">Ativas</option>
+          <option value="INATIVO">Inativas</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            <span>{{ col.label }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button class="btn" type="button" (click)="exportarCsv()">CSV</button>
+          <button class="btn" type="button" disabled>Excel</button>
+          <button class="btn" type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <label>
+        Tipo
+        <select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option *ngFor="let tipo of tiposOptions" [value]="tipo.value">{{ tipo.label }}</option>
+        </select>
+      </label>
+      <label>
+        DRE
+        <select [(ngModel)]="filterDre" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="SIM">Entra no DRE</option>
+          <option value="NAO">Não entra no DRE</option>
+        </select>
+      </label>
+      <label>
+        Conta
+        <input type="text" [(ngModel)]="filterConta" (keyup.enter)="doSearch()" />
+      </label>
+      <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
+    </div>
+  </section>
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
@@ -33,8 +131,19 @@
 
   <div class="content">
     <!-- Form -->
-    <section class="card form" *ngIf="showForm">
-      <h3>{{ consultando ? 'Consultar Natureza' : (editingId ? 'Editar Natureza' : 'Nova Natureza') }}</h3>
+    <section class="card form form-panel" *ngIf="showForm">
+      <div class="form-title">
+        <div>
+          <h3>{{ consultando ? 'Consultar Natureza' : (editingId ? 'Editar Natureza' : 'Nova Natureza') }}</h3>
+          <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha a classificação financeira e contábil.' }}</p>
+        </div>
+        <div class="form-title-actions">
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+          <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+          </button>
+        </div>
+      </div>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="empresa-row" *ngIf="isSuperUser">
@@ -185,7 +294,7 @@
           </ul>
         </div>
 
-        <div class="actions-form">
+        <div class="actions-form bottom-actions">
           <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
@@ -211,42 +320,38 @@
           <thead>
             <tr>
               <th>Código</th>
-              <th>Categoria</th>
-              <th>Subcategoria</th>
-              <th>Tipo</th>
-              <th>Operação</th>
-              <th>DRE</th>
-              <th>Status</th>
-              <th>Tipo Natureza</th>
-              <th>Conta</th>
-              <th>Descrição</th>
-              <th style="width:200px;">Ações</th>
+              <th *ngIf="visibleColumn('categoria')">Categoria</th>
+              <th *ngIf="visibleColumn('subcategoria')">Subcategoria</th>
+              <th *ngIf="visibleColumn('tipo')">Tipo</th>
+              <th *ngIf="visibleColumn('operacao')">Operação</th>
+              <th *ngIf="visibleColumn('dre')">DRE</th>
+              <th *ngIf="visibleColumn('status')">Status</th>
+              <th *ngIf="visibleColumn('tipo_natureza')">Tipo Natureza</th>
+              <th *ngIf="visibleColumn('conta')">Conta</th>
+              <th *ngIf="visibleColumn('descricao')">Descrição</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let n of itens">
+            <tr *ngFor="let n of itens; trackBy: trackNatureza" (click)="consultar(n)" tabindex="0" (keyup.enter)="consultar(n)">
               <td>{{ n.codigo }}</td>
-              <td>{{ n.categoria_principal }}</td>
-              <td>{{ n.subcategoria }}</td>
-              <td>{{ n.tipo }}</td>
-              <td>{{ n.natureza_operacao }}</td>
-              <td>{{ n.entra_dre ? 'Sim' : 'Não' }}</td>
-
-              <!-- <td>{{ n.status }}</td> -->
-              <td>
-                <span class="badge" [ngClass]="n.ativo ? 'badge-ok' : 'badge-off'">
-                  {{ n.ativo ? 'Ativo' : 'Inativo' }}
-                </span>
+              <td *ngIf="visibleColumn('categoria')">{{ n.categoria_principal || '-' }}</td>
+              <td *ngIf="visibleColumn('subcategoria')">{{ n.subcategoria || '-' }}</td>
+              <td *ngIf="visibleColumn('tipo')">{{ n.tipo || '-' }}</td>
+              <td *ngIf="visibleColumn('operacao')">{{ n.natureza_operacao || '-' }}</td>
+              <td *ngIf="visibleColumn('dre')">{{ n.entra_dre ? 'Sim' : 'Não' }}</td>
+              <td *ngIf="visibleColumn('status')">
+                <span class="status-pill" [class.inactive]="n.ativo === false">• {{ n.ativo === false ? 'Inativo' : 'Ativo' }}</span>
               </td>
-              
-              
-              <td>{{ n.tipo_natureza }}</td>
-              <td>{{ contaLabel(n) }}</td>
-              <td class="email">{{ n.descricao }}</td>
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(n)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(n)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(n)">Excluir</button>
+              <td *ngIf="visibleColumn('tipo_natureza')">{{ n.tipo_natureza || '-' }}</td>
+              <td *ngIf="visibleColumn('conta')">{{ contaLabel(n) }}</td>
+              <td *ngIf="visibleColumn('descricao')" class="email">{{ n.descricao }}</td>
+              <td class="actions actions-col" (click)="$event.stopPropagation()">
+                <app-row-actions-menu
+                  [actions]="rowActions(n)"
+                  [ariaLabel]="'Abrir ações da natureza ' + n.descricao"
+                  (action)="executarAcao($event, n)"
+                />
               </td>
             </tr>
           </tbody>

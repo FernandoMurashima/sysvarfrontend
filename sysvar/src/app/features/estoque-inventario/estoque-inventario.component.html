@@ -1,45 +1,101 @@
 <div class="estoque-page">
-  <header class="toolbar">
-    <h2>Inventário de Estoque</h2>
-    <div class="toolbar-actions">
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo inventário</button>
-      <button class="btn" (click)="load()">Atualizar</button>
-      <button class="btn" [routerLink]="['/home']">Home</button>
+  <div class="header-with-actions">
+    <app-page-header
+      title="Inventário de Estoque"
+      subtitle="Controle e ajuste físico dos saldos por loja"
+      [showPrimaryAction]="false"
+    />
+    <div class="header-extra-actions">
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="novo()">+ Novo Inventário</button>
+      <button class="btn" type="button" (click)="load()">Atualizar</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
-  </header>
+  </div>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
-  <div class="overlay" *ngIf="fecharModal as inventario">
-    <div class="overlay-card">
+  <section class="stats-grid">
+    <article class="stat-card blue">
+      <span class="stat-icon">□</span>
+      <div><strong>{{ totalInventarios }}</strong><span>Total de inventários</span><small>100% do total</small></div>
+    </article>
+    <article class="stat-card green">
+      <span class="stat-icon">☷</span>
+      <div><strong>{{ abertos }}</strong><span>Abertos</span><small>{{ percent(abertos) }}</small></div>
+    </article>
+    <article class="stat-card orange">
+      <span class="stat-icon">✓</span>
+      <div><strong>{{ validados }}</strong><span>Validados</span><small>{{ percent(validados) }}</small></div>
+    </article>
+    <article class="stat-card cyan">
+      <span class="stat-icon">■</span>
+      <div><strong>{{ finalizados }}</strong><span>Finalizados</span><small>{{ percent(finalizados) }}</small></div>
+    </article>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="showForm">
+    <section class="form-panel">
+      <div class="modal-head">
+        <h3>Novo inventário</h3>
+        <button class="icon-close" type="button" (click)="showForm=false">×</button>
+      </div>
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
+        <label class="field col-4">Loja*
+          <select formControlName="Idloja">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option>
+          </select>
+        </label>
+        <label class="field col-5">Descrição*
+          <input formControlName="descricao" />
+        </label>
+        <label class="field col-3">Data*
+          <input type="date" formControlName="data_abertura" />
+        </label>
+        <label class="field col-12">Observação
+          <input formControlName="observacao" />
+        </label>
+        <div class="form-actions col-12">
+          <button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button>
+          <button class="btn" type="button" (click)="showForm=false">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="fecharModal as inventario">
+    <div class="confirm-card">
       <h4>Finalizar inventário</h4>
       <p>Confirma a finalização do inventário <strong>{{ inventario.descricao }}</strong> e a geração dos ajustes de estoque?</p>
-      <div class="overlay-actions">
+      <div class="modal-actions">
         <button class="btn" type="button" (click)="cancelarFechamento()">Voltar</button>
         <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarFechamento()">Finalizar</button>
       </div>
     </div>
   </div>
 
-  <section class="panel" *ngIf="showForm">
-    <h3>Novo inventário</h3>
-    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
-      <label>Loja*<select formControlName="Idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option></select></label>
-      <label>Descrição*<input formControlName="descricao" /></label>
-      <label>Data*<input type="date" formControlName="data_abertura" /></label>
-      <label>Observação<input formControlName="observacao" /></label>
-      <div class="form-actions"><button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button><button class="btn" type="button" (click)="showForm=false">Cancelar</button></div>
-    </form>
-  </section>
-
-  <section class="panel">
-    <div class="list-header"><strong>Total: {{ inventarios.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+  <section class="panel table-panel">
+    <div class="list-header">
+      <h3>Inventários cadastrados <span>{{ inventarios.length }} registro(s) encontrado(s)</span></h3>
+      <span *ngIf="loading" class="loading">Carregando...</span>
+    </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="inventarios.length; else vazioTpl">
-        <thead><tr><th>Descrição</th><th>Loja</th><th>Data</th><th>Status</th><th>Itens</th><th>Contados</th><th>Diverg.</th><th>Ações</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Loja</th>
+            <th>Data</th>
+            <th>Status</th>
+            <th>Itens</th>
+            <th>Contados</th>
+            <th>Diverg.</th>
+            <th class="actions-col">Ações</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr *ngFor="let inv of inventarios" [class.selected]="selecionado?.Idinventario === inv.Idinventario">
+          <tr *ngFor="let inv of inventarios" [class.selected]="selecionado?.Idinventario === inv.Idinventario" (click)="selecionado = inv">
             <td>{{ inv.descricao }}</td>
             <td>{{ lojaNome(inv.Idloja) }}</td>
             <td>{{ inv.data_abertura | date:'dd/MM/yyyy' }}</td>
@@ -47,11 +103,12 @@
             <td>{{ inv.total_itens ?? inv.itens?.length ?? 0 }}</td>
             <td>{{ inv.total_contados || 0 }}</td>
             <td>{{ inv.total_divergencias || 0 }}</td>
-            <td class="actions">
-              <button class="btn sm" (click)="selecionado = inv">Ver</button>
-              <button class="btn sm" *ngIf="podeEditarModulo && inv.status === 'ABERTO'" (click)="gerarItens(inv)">Gerar itens</button>
-              <button class="btn sm primary" *ngIf="podeEditarModulo && inv.status === 'ABERTO'" (click)="validar(inv)">Validar</button>
-              <button class="btn sm danger" *ngIf="podeEditarModulo && inv.status === 'VALIDADO'" (click)="fechar(inv)">Finalizar</button>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions(inv)"
+                [ariaLabel]="'Ações do inventário'"
+                (action)="executarAcao($event, inv)"
+              />
             </td>
           </tr>
         </tbody>
@@ -60,7 +117,7 @@
     </div>
   </section>
 
-  <section class="panel" *ngIf="selecionado">
+  <section class="panel table-panel" *ngIf="selecionado">
     <div class="detail-head">
       <h3>Itens - {{ selecionado.descricao }}</h3>
       <div class="summary">
@@ -72,7 +129,9 @@
     </div>
     <div class="table-wrapper">
       <table class="table">
-        <thead><tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th><th></th></tr></thead>
+        <thead>
+          <tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th><th class="actions-col">Ações</th></tr>
+        </thead>
         <tbody>
           <tr *ngFor="let item of selecionado.itens || []">
             <td>{{ item.referencia }}</td>
@@ -81,7 +140,7 @@
             <td><input class="count-input" type="number" step="0.001" [(ngModel)]="item.saldo_contado" [disabled]="!podeContar(selecionado)" /></td>
             <td class="num" [class.negative]="(item.diferenca || 0) < 0" [class.positive]="(item.diferenca || 0) > 0">{{ item.diferenca }}</td>
             <td><span class="status" [class.closed]="item.contado">{{ item.contado ? 'Contado' : 'Pendente' }}</span></td>
-            <td><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
+            <td class="actions-col"><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
           </tr>
         </tbody>
       </table>

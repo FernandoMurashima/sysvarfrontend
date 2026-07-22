@@ -10,6 +10,7 @@ export interface User {
   is_staff?: boolean;
   is_superuser?: boolean;
   Idloja?: number | null;
+  loja_id?: number | null;
   loja?: { Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string } | null;
   Idlojas?: number[];
   lojas?: Array<{ Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string }>;

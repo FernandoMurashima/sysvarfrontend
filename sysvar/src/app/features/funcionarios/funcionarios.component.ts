@@ -10,11 +10,14 @@ import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-funcionarios',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './funcionarios.component.html',
   styleUrls: ['./funcionarios.component.css']
 })
@@ -40,10 +43,31 @@ export class FuncionariosComponent implements OnInit {
   }
 
   search = '';
+  filterLoja: number | '' = '';
+  filterCategoria = '';
+  filterStatus = '';
+  filterCpf = '';
+  filterInicio = '';
+  filterFim = '';
+  advancedOpen = false;
   successMsg = '';
   errorMsg = '';
   excluirModal: Funcionario | null = null;
   errorOverlayOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.funcionarios.columns';
+  columns = [
+    { key: 'apelido', label: 'Apelido', visible: true, required: false },
+    { key: 'cpf', label: 'CPF', visible: true, required: false },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'categoria', label: 'Categoria', visible: true, required: false },
+    { key: 'meta', label: 'Meta', visible: true, required: false },
+    { key: 'comissao', label: 'Comissão %', visible: true, required: false },
+    { key: 'salario', label: 'Salário', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'cadastro', label: 'Cadastro', visible: true, required: false },
+  ];
 
   lojasOptions: { id: number; nome: string }[] = [];
 
@@ -112,7 +136,55 @@ export class FuncionariosComponent implements OnInit {
     ].filter((v): v is string => !!v));
   }
 
+  get indicadores() {
+    const total = this.funcionariosAll.length;
+    const ativos = this.funcionariosAll.filter(f => f.ativo !== false).length;
+    const vendedores = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('vendedor')).length;
+    const caixas = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('caixa')).length;
+    const gerentes = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('gerente')).length;
+    return { total, ativos, vendedores, caixas, gerentes };
+  }
+
+  get categoriasOptions(): string[] {
+    return Array.from(new Set(
+      this.funcionariosAll
+        .map(f => (f.categoria || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  get funcionariosFiltrados(): Funcionario[] {
+    const term = this.normalize(this.search);
+    const categoria = this.normalize(this.filterCategoria);
+    const status = this.filterStatus;
+    const cpf = this.onlyDigits(this.filterCpf);
+    const inicio = this.filterInicio;
+    const fim = this.filterFim;
+
+    return this.funcionariosAll.filter(f => {
+      const loja = this.lojaNome((f as any).idloja);
+      const haystack = this.normalize([
+        f.nomefuncionario,
+        f.apelido,
+        f.cpf,
+        f.categoria,
+        loja,
+      ].filter(Boolean).join(' '));
+
+      if (term && !haystack.includes(term)) return false;
+      if (this.filterLoja !== '' && Number((f as any).idloja || 0) !== Number(this.filterLoja)) return false;
+      if (categoria && this.normalize(f.categoria || '') !== categoria) return false;
+      if (status === 'ATIVO' && f.ativo === false) return false;
+      if (status === 'INATIVO' && f.ativo !== false) return false;
+      if (cpf && !this.onlyDigits(f.cpf || '').includes(cpf)) return false;
+      if (inicio && (f.inicio || '') < inicio) return false;
+      if (fim && (f.inicio || '') > fim) return false;
+      return true;
+    });
+  }
+
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.load();
     this.loadLojas();
   }
@@ -159,14 +231,17 @@ export class FuncionariosComponent implements OnInit {
     ctrl.setValue(out, { emitEvent: false });
   }
 
+  private onlyDigits(value: string): string {
+    return (value || '').replace(/\D/g, '');
+  }
+
   // ========= Ações =========
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000, ordering: 'nomefuncionario' }).subscribe({
+    this.api.list({ page_size: 2000, ordering: 'nomefuncionario' }).subscribe({
       next: (res: any) => {
         const arr: Funcionario[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.funcionariosAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number') ? res.count : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -183,13 +258,17 @@ export class FuncionariosComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.funcionariosFiltrados;
+    this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.funcionarios = this.funcionariosAll.slice(start, end);
+    this.funcionarios = filtered.slice(start, end);
   }
 
   onPageSizeChange(sizeStr: string): void {
     this.pageSize = Number(sizeStr) || 10;
+    localStorage.setItem('sysvar.list.funcionarios.pageSize', String(this.pageSize));
     this.page = 1;
     this.applyPage();
   }
@@ -199,8 +278,18 @@ export class FuncionariosComponent implements OnInit {
   lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.load(); }
-  clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
+  doSearch(): void { this.page = 1; this.applyPage(); }
+  clearSearch(): void {
+    this.search = '';
+    this.filterLoja = '';
+    this.filterCategoria = '';
+    this.filterStatus = '';
+    this.filterCpf = '';
+    this.filterInicio = '';
+    this.filterFim = '';
+    this.page = 1;
+    this.applyPage();
+  }
 
   lojaNome(id: number | null | undefined): string {
     if (!id) return '';
@@ -261,6 +350,94 @@ export class FuncionariosComponent implements OnInit {
     this.editar(row);
     this.consultando = true;
     this.form.disable({ emitEvent: false });
+  }
+
+  rowActions(row: Funcionario): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: Funcionario): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Funcionário', 'Apelido', 'CPF', 'Loja', 'Categoria', 'Meta', 'Comissão %', 'Salário', 'Status', 'Cadastro'];
+    const body = this.funcionariosFiltrados.map(f => [
+      f.nomefuncionario,
+      f.apelido || '',
+      this.formatCpf(f.cpf),
+      this.lojaNome((f as any).idloja) || '',
+      f.categoria || '',
+      this.formatMoney(f.meta || 0),
+      f.comissao_percentual || 0,
+      f.salario_oculto ? 'Restrito' : this.formatMoney(f.salario || 0),
+      f.ativo === false ? 'Inativo' : 'Ativo',
+      this.formatDate(f.data_cadastro),
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'funcionarios.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
+
+  formatCpf(value?: string | null): string {
+    const d = (value || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length !== 11) return value || '-';
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+  }
+
+  formatMoney(value: number | string | null | undefined): string {
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores.total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  trackFuncionario(_: number, funcionario: Funcionario): number | string {
+    return funcionario.id ?? funcionario.cpf ?? funcionario.nomefuncionario;
   }
 
   cancelarEdicao(): void {
@@ -387,4 +564,22 @@ export class FuncionariosComponent implements OnInit {
     this.errorOverlayOpen = this.getFormErrors().length > 0;
   }
   closeErrorOverlay(): void { this.errorOverlayOpen = false; }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.funcionarios.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
 }

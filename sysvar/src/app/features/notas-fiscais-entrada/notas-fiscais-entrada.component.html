@@ -1,19 +1,16 @@
 <div class="nfe-page">
-  <header class="toolbar">
-    <h2>Notas Fiscais de Entrada</h2>
-
-    <div class="toolbar-right">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por pedido, número, série ou chave"
-        (search)="applyFilter()"
-        (cleared)="clearSearch()"
-      />
-      <button class="btn primary" type="button" (click)="novo()">Nova</button>
-      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+  <div class="header-with-actions">
+    <app-page-header
+      title="Entrada de NF-e"
+      subtitle="Registre recebimentos de pedidos de compra"
+      [showPrimaryAction]="false"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn primary" type="button" (click)="novo()">+ Nova NF-e</button>
     </div>
-  </header>
+  </div>
 
   <section class="alert success" *ngIf="mensagem">{{ mensagem }}</section>
   <section class="alert error" *ngIf="erro">{{ erro }}</section>
@@ -29,9 +26,69 @@
     </section>
   </div>
 
-  <section class="card list" *ngIf="view() === 'list'">
+  <section class="summary-grid" *ngIf="view() === 'list'">
+    <div class="mini-indicator"><strong>{{ notas.length }}</strong><span>NF-e total</span></div>
+    <div class="mini-indicator"><strong>{{ abertas }}</strong><span>abertas</span></div>
+    <div class="mini-indicator"><strong>{{ fechadas }}</strong><span>fechadas geradas</span></div>
+    <div class="mini-indicator"><strong>{{ canceladas }}</strong><span>canceladas</span></div>
+    <div class="mini-indicator value"><strong>R$ {{ valorTotalListado | number : '1.2-2' }}</strong><span>valor listado</span></div>
+  </section>
+
+  <section class="filters-panel" *ngIf="view() === 'list'">
+    <div class="filter-main">
+      <app-search-suggest
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        placeholder="Buscar por pedido, número, série ou chave"
+        [showActions]="false"
+        (search)="applyFilter()"
+        (cleared)="clearSearch()"
+      />
+      <button class="btn primary" type="button" (click)="applyFilter()">Buscar</button>
+      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" (click)="loadNotas()">Atualizar</button>
+    </div>
+
+    <div class="filter-extra">
+      <label>
+        Status
+        <select [(ngModel)]="filtroStatus">
+          <option value="">Todos</option>
+          <option value="AB">Aberta</option>
+          <option value="FE">Fechada</option>
+          <option value="CA">Cancelada</option>
+        </select>
+      </label>
+      <label>
+        Emissão de
+        <input type="date" [(ngModel)]="filtroEmissaoDe" />
+      </label>
+      <label>
+        Emissão até
+        <input type="date" [(ngModel)]="filtroEmissaoAte" />
+      </label>
+      <label>
+        Entrada de
+        <input type="date" [(ngModel)]="filtroEntradaDe" />
+      </label>
+      <label>
+        Entrada até
+        <input type="date" [(ngModel)]="filtroEntradaAte" />
+      </label>
+      <label>
+        Valor mín.
+        <input type="number" [(ngModel)]="filtroValorMin" min="0" step="0.01" />
+      </label>
+      <label>
+        Valor máx.
+        <input type="number" [(ngModel)]="filtroValorMax" min="0" step="0.01" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card list table-card" *ngIf="view() === 'list'">
     <div class="list-bar">
-      <div><strong>Total:</strong> {{ total }}</div>
+      <div class="left"><strong>Notas cadastradas</strong> <span>{{ total }} registro(s) encontrado(s)</span></div>
       <div class="list-tools">
         <label>Itens por página</label>
         <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
@@ -56,7 +113,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let nota of notasPagina">
+          <tr *ngFor="let nota of notasPagina" (click)="editar(nota)">
             <td>{{ nota.pedido_compra }}</td>
             <td>{{ nota.modelo }}</td>
             <td>{{ nota.serie || '-' }}</td>
@@ -69,8 +126,12 @@
               </span>
             </td>
             <td>{{ nota.valor_total | number : '1.2-2' }}</td>
-            <td>
-              <button class="btn sm" type="button" (click)="editar(nota)">Abrir</button>
+            <td class="actions-cell" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions(nota)"
+                [ariaLabel]="'Ações da nota fiscal'"
+                (action)="executarAcao($event, nota)"
+              />
             </td>
           </tr>
         </tbody>
@@ -83,9 +144,9 @@
     </div>
 
     <div class="pager" *ngIf="total > 0">
-      <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">Anterior</button>
+      <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
       <span>Página {{ page }} de {{ totalPages }}</span>
-      <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima</button>
+      <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
     </div>
   </section>
 
@@ -220,13 +281,12 @@
               />
             </td>
             <td>{{ item.total_item | number : '1.2-2' }}</td>
-            <td>
-              <button class="btn sm" type="button" (click)="salvarItem(item)" [disabled]="saving || notaAtual()?.status !== 'AB'">
-                Gravar
-              </button>
-              <button class="btn sm danger" type="button" (click)="removerItem(item)" [disabled]="!item.nota_item || notaAtual()?.status !== 'AB'">
-                Remover
-              </button>
+            <td class="actions-cell">
+              <app-row-actions-menu
+                [actions]="itemRowActions(item)"
+                [ariaLabel]="'Ações do item da nota'"
+                (action)="executarItemAcao($event, item)"
+              />
             </td>
           </tr>
         </tbody>

@@ -1,10 +1,24 @@
-<div class="clientes-page">
-  <!-- TOOLBAR -->
-  <header class="toolbar">
-    <h2>Cores</h2>
-    <div class="toolbar-actions">
+<div class="cores-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Cores"
+      subtitle="Gerencie as cores dos produtos"
+      primaryActionLabel="Nova Cor"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
@@ -12,12 +26,52 @@
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="ATIVO">Ativos</option>
+          <option value="INATIVO">Inativos</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use a busca principal para localizar por descrição, código ou nome da cor.</span>
+    </div>
+  </section>
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
@@ -34,51 +88,31 @@
   </div>
 
   <div class="content">
-<!-- FORM -->
-    <section class="card form" *ngIf="showForm">
+    <section class="card form form-panel" *ngIf="showForm">
       <h3>{{ consultando ? 'Consultar Cor' : (editingId ? 'Editar Cor' : 'Nova Cor') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
-        <div class="grid-10">
-          <!-- Linha 1 -->
+        <div class="cor-form-grid">
           <label id="descricao-box" class="input-item" [class.invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted)">
             Descrição*
-            <input type="text" formControlName="Descricao"
-              [attr.aria-invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted) ? 'true' : null" />
-            <span class="field-error" *ngIf="form.get('Descricao')?.touched || submitted">
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['required']">Informe a descrição.</ng-container>
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['maxlength']">Máx. 100 caracteres.</ng-container>
-              <ng-container *ngIf="form.get('Descricao')?.errors?.['server']">{{ form.get('Descricao')?.errors?.['server'] }}</ng-container>
-            </span>
+            <input type="text" formControlName="Descricao" [attr.aria-invalid]="form.get('Descricao')?.invalid && (form.get('Descricao')?.touched || submitted) ? 'true' : null" />
           </label>
 
           <label id="codigo-box" class="input-item" [class.invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted)">
             Código
-            <input type="text" formControlName="Codigo" maxlength="12"
-              [attr.aria-invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted) ? 'true' : null" />
-            <span class="field-error" *ngIf="form.get('Codigo')?.touched || submitted">
-              <ng-container *ngIf="form.get('Codigo')?.errors?.['maxlength']">Máx. 12 caracteres.</ng-container>
-              <ng-container *ngIf="form.get('Codigo')?.errors?.['server']">{{ form.get('Codigo')?.errors?.['server'] }}</ng-container>
-            </span>
+            <input type="text" formControlName="Codigo" maxlength="12" [attr.aria-invalid]="form.get('Codigo')?.invalid && (form.get('Codigo')?.touched || submitted) ? 'true' : null" />
           </label>
 
-          <!-- Linha 2 -->
           <label id="cor-box" class="input-item" [class.invalid]="form.get('Cor')?.invalid && (form.get('Cor')?.touched || submitted)">
             Nome da Cor*
-            <input type="text" formControlName="Cor"
-              [attr.aria-invalid]="form.get('Cor')?.invalid && (form.get('Cor')?.touched || submitted) ? 'true' : null" />
-            <span class="field-error" *ngIf="form.get('Cor')?.touched || submitted">
-              <ng-container *ngIf="form.get('Cor')?.errors?.['required']">Informe o nome da cor.</ng-container>
-              <ng-container *ngIf="form.get('Cor')?.errors?.['maxlength']">Máx. 30 caracteres.</ng-container>
-              <ng-container *ngIf="form.get('Cor')?.errors?.['server']">{{ form.get('Cor')?.errors?.['server'] }}</ng-container>
-            </span>
+            <input type="text" formControlName="Cor" [attr.aria-invalid]="form.get('Cor')?.invalid && (form.get('Cor')?.touched || submitted) ? 'true' : null" />
           </label>
 
           <label id="status-box" class="input-item">
             Status
             <input type="text" formControlName="Status" />
-            <span class="field-error" *ngIf="form.get('Status')?.errors?.['server']">{{ form.get('Status')?.errors?.['server'] }}</span>
           </label>
         </div>
+
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
           <ul>
@@ -95,12 +129,9 @@
       </form>
     </section>
 
-    <!-- LISTA -->
     <section class="card list">
       <div class="list-header">
-        <div class="list-info">
-          <span>Total: {{ total }}</span>
-        </div>
+        <h3>Cores cadastradas <span>{{ total }} registro(s) encontrado(s)</span></h3>
         <div class="list-controls">
           <label for="pageSize">Itens por página</label>
           <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
@@ -109,48 +140,46 @@
         </div>
       </div>
 
-      <div class="table-wrapper">
-        <table class="table" *ngIf="cores.length > 0; else emptyTpl">
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Código</th>
-              <th>Nome da Cor</th>
-              <th>Status</th>
-              <th style="width:200px;">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let c of cores">
-              <td>{{ c.Descricao }}</td>
-              <td>{{ c.Codigo }}</td>
-              <td>{{ c.Cor }}</td>
+      <table class="table" *ngIf="cores.length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('codigo')">Código</th>
+            <th *ngIf="visibleColumn('cor')">Nome da Cor</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th class="actions-col">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cores" (click)="consultar(c)">
+            <td *ngIf="visibleColumn('descricao')">{{ c.Descricao }}</td>
+            <td *ngIf="visibleColumn('codigo')">{{ c.Codigo }}</td>
+            <td *ngIf="visibleColumn('cor')">{{ c.Cor }}</td>
+            <td *ngIf="visibleColumn('status')">
+              <span class="badge" [ngClass]="isAtivo(c) ? 'badge-ok' : 'badge-off'">
+                {{ statusLabel(c) }}
+              </span>
+            </td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions()"
+                ariaLabel="Ações da cor"
+                (action)="executarAcao($event, c)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-              <!-- <td>{{ c.Status }}</td> -->
-              <td>
-                <span class="badge" [ngClass]="c.Status ? 'badge-ok' : 'badge-off'">
-                  {{ c.Status ? 'Ativo' : 'Inativo' }}
-                </span>
-              </td>
-              
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(c)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(c)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(c)">Excluir</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #emptyTpl>
-          <div class="empty-hint" *ngIf="!loading">Nenhuma cor encontrada.</div>
-          <div class="loading" *ngIf="loading">Carregando...</div>
-        </ng-template>
-      </div>
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading">Nenhuma cor encontrada.</div>
+        <div class="loading" *ngIf="loading">Carregando...</div>
+      </ng-template>
 
       <div class="pager" *ngIf="total > 0">
         <div class="left">
           <button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
-          <button class="btn" (click)="prevPage()"  [disabled]="page === 1">‹ Anterior</button>
+          <button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
         </div>
         <div class="center">
           Página {{ page }} de {{ totalPages }}
@@ -164,5 +193,3 @@
     </section>
   </div>
 </div>
-
-

@@ -6,11 +6,13 @@ import { Cfop } from '../../core/models/cfop';
 import { CfopsService } from '../../core/services/cfops.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-cfops',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
   templateUrl: './cfops.component.html',
   styleUrls: ['./cfops.component.css'],
 })
@@ -26,19 +28,48 @@ export class CfopsComponent {
   submitted = false;
   saving = false;
   excluirModal: Cfop | null = null;
+  columnsOpen = false;
+  exportOpen = false;
+  advancedOpen = false;
+  filterTipo = '';
+  filterDestino = '';
+  filterStatus = '';
+  private readonly columnsStorageKey = 'sysvar.list.cfops.columns';
+  columns = [
+    { key: 'codigo', label: 'CFOP', visible: true, required: true },
+    { key: 'descricao', label: 'Descrição', visible: true, required: true },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'destino', label: 'Destino', visible: true, required: false },
+    { key: 'estoque', label: 'Estoque', visible: true, required: false },
+    { key: 'financeiro', label: 'Financeiro', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
 
   items = signal<Cfop[]>([]);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
 
-  total = computed(() => this.items().length);
+  filteredItems = computed(() => {
+    const tipo = this.filterTipo;
+    const destino = this.filterDestino;
+    const status = this.filterStatus;
+    return this.items().filter(item => {
+      if (tipo && item.tipo_operacao !== tipo) return false;
+      if (destino && item.destino !== destino) return false;
+      if (status === 'ativo' && item.ativo === false) return false;
+      if (status === 'inativo' && item.ativo !== false) return false;
+      return true;
+    });
+  });
+
+  total = computed(() => this.filteredItems().length);
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
-    return this.items().slice(start, start + this.pageSize());
+    return this.filteredItems().slice(start, start + this.pageSize());
   });
 
   get podeEditarModulo(): boolean {
@@ -75,6 +106,7 @@ export class CfopsComponent {
 
   constructor() {
     effect(() => { const tp = this.totalPages(); if (this.page() > tp) this.page.set(tp); });
+    this.loadColumnsPreference();
     this.load();
   }
 
@@ -90,6 +122,8 @@ export class CfopsComponent {
   doSearch() { this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   clearSearch() { this.search = ''; this.load(); }
+  doFilter() { this.page.set(1); }
+  clearFilters() { this.search = ''; this.filterTipo = ''; this.filterDestino = ''; this.filterStatus = ''; this.load(); }
   onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
@@ -168,6 +202,72 @@ export class CfopsComponent {
 
   fecharExclusao(): void {
     this.excluirModal = null;
+  }
+
+  rowActions(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '×', danger: true, dividerBefore: true, visible: this.podeExcluirModulo },
+    ];
+  }
+
+  executarAcao(key: string | Event, row: Cfop): void {
+    if (typeof key !== 'string') return;
+    if (key === 'consultar') this.consultar(row);
+    if (key === 'editar') this.editar(row);
+    if (key === 'excluir') this.excluir(row);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['CFOP', 'Descrição', 'Tipo', 'Destino', 'Estoque', 'Financeiro', 'Status'];
+    const body = this.filteredItems().map(r => [
+      r.codigo || '',
+      r.descricao || '',
+      this.tipoLabel(r.tipo_operacao),
+      this.destinoLabel(r.destino),
+      r.movimenta_estoque ? 'Sim' : 'Não',
+      r.gera_financeiro ? 'Sim' : 'Não',
+      r.ativo ? 'Ativo' : 'Inativo',
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'cfops.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state: Record<string, boolean> = {};
+    this.columns.forEach(c => state[c.key] = c.visible);
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 
   tipoLabel(v: string): string {

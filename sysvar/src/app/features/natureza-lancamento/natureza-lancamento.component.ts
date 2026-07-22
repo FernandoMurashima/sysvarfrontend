@@ -11,11 +11,14 @@ import { AuthService } from '../../core/auth.service';
 import { PlanoContabil } from '../../core/models/plano-contabil';
 import { PlanoContabilService } from '../../core/services/plano-contabil.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-nat-lancamentos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './natureza-lancamento.component.html',
   styleUrls: ['./natureza-lancamento.component.css']
 })
@@ -27,6 +30,13 @@ export class NatLancamentosComponent implements OnInit {
   private planoApi = inject(PlanoContabilService);
 
   search = '';
+  filterOperacao = '';
+  filterTipo = '';
+  filterStatus = '';
+  filterCategoria = '';
+  filterConta = '';
+  filterDre = '';
+  advancedOpen = false;
   loading = false;
   saving = false;
   submitted = false;
@@ -39,6 +49,20 @@ export class NatLancamentosComponent implements OnInit {
   errorMsg = '';
   excluirModal: NatLancamento | null = null;
   errorOverlayOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.naturezas.columns';
+  columns = [
+    { key: 'categoria', label: 'Categoria', visible: true, required: false },
+    { key: 'subcategoria', label: 'Subcategoria', visible: true, required: false },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'operacao', label: 'Operação', visible: true, required: false },
+    { key: 'dre', label: 'DRE', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'tipo_natureza', label: 'Tipo Natureza', visible: true, required: false },
+    { key: 'conta', label: 'Conta', visible: true, required: false },
+    { key: 'descricao', label: 'Descrição', visible: true, required: false },
+  ];
   empresas: Empresa[] = [];
   planoContabil: PlanoContabil[] = [];
 
@@ -99,8 +123,8 @@ export class NatLancamentosComponent implements OnInit {
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.total); }
 
   get isSuperUser(): boolean { return !!this.auth.getCurrentUser()?.is_superuser; }
-  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('financeiro', true) !== false; }
-  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('financeiro'); }
+  get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('cadastros', true) !== false; }
+  get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('cadastros'); }
   get searchSuggestions(): string[] {
     const valores = this.itensAll.flatMap(item => [
       item.codigo,
@@ -118,7 +142,61 @@ export class NatLancamentosComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get indicadores() {
+    const total = this.itensAll.length;
+    const ativas = this.itensAll.filter(n => n.ativo !== false).length;
+    const receitas = this.itensAll.filter(n => n.natureza_operacao === 'RECEITA').length;
+    const despesas = this.itensAll.filter(n => n.natureza_operacao === 'DESPESA').length;
+    const dre = this.itensAll.filter(n => !!n.entra_dre).length;
+    return { total, ativas, receitas, despesas, dre };
+  }
+
+  get categoriasOptions(): string[] {
+    return Array.from(new Set(
+      this.itensAll
+        .map(n => (n.categoria_principal || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  get itensFiltrados(): NatLancamento[] {
+    const term = this.normalize(this.search);
+    const operacao = this.filterOperacao;
+    const tipo = this.filterTipo;
+    const status = this.filterStatus;
+    const categoria = this.normalize(this.filterCategoria);
+    const conta = this.normalize(this.filterConta);
+    const dre = this.filterDre;
+
+    return this.itensAll.filter(n => {
+      const haystack = this.normalize([
+        n.codigo,
+        n.descricao,
+        n.categoria_principal,
+        n.subcategoria,
+        n.categoria_gerencial,
+        n.tipo,
+        n.status,
+        n.tipo_natureza,
+        n.natureza_operacao,
+        this.contaLabel(n),
+      ].filter(Boolean).join(' '));
+
+      if (term && !haystack.includes(term)) return false;
+      if (operacao && n.natureza_operacao !== operacao) return false;
+      if (tipo && n.tipo !== tipo) return false;
+      if (status === 'ATIVO' && n.ativo === false) return false;
+      if (status === 'INATIVO' && n.ativo !== false) return false;
+      if (categoria && this.normalize(n.categoria_principal || '') !== categoria) return false;
+      if (conta && !this.normalize(this.contaLabel(n)).includes(conta)) return false;
+      if (dre === 'SIM' && !n.entra_dre) return false;
+      if (dre === 'NAO' && n.entra_dre) return false;
+      return true;
+    });
+  }
+
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.loadEmpresas();
     this.loadPlanoContabil();
     this.load();
@@ -156,11 +234,10 @@ export class NatLancamentosComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000, ordering: 'codigo' }).subscribe({
+    this.api.list({ page_size: 2000, ordering: 'codigo' }).subscribe({
       next: (res: any) => {
         const arr: NatLancamento[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.itensAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number') ? res.count : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -174,20 +251,38 @@ export class NatLancamentosComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.itensFiltrados;
+    this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const a = (this.page - 1) * this.pageSize;
     const b = a + this.pageSize;
-    this.itens = this.itensAll.slice(a, b);
+    this.itens = filtered.slice(a, b);
   }
 
-  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 10; this.page = 1; this.applyPage(); }
+  onPageSizeChange(v: string): void {
+    this.pageSize = Number(v) || 10;
+    localStorage.setItem('sysvar.list.naturezas.pageSize', String(this.pageSize));
+    this.page = 1;
+    this.applyPage();
+  }
   firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
   prevPage(): void { if (this.page > 1) { this.page--; this.applyPage(); } }
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
   lastPage(): void { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.load(); }
-  clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
+  doSearch(): void { this.page = 1; this.applyPage(); }
+  clearSearch(): void {
+    this.search = '';
+    this.filterOperacao = '';
+    this.filterTipo = '';
+    this.filterStatus = '';
+    this.filterCategoria = '';
+    this.filterConta = '';
+    this.filterDre = '';
+    this.page = 1;
+    this.applyPage();
+  }
 
   novo(): void {
     if (!this.podeEditarModulo) return;
@@ -236,6 +331,62 @@ export class NatLancamentosComponent implements OnInit {
   consultar(row: NatLancamento): void {
     this.editar(row, true);
     this.form.disable({ emitEvent: false });
+  }
+
+  rowActions(row: NatLancamento): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: NatLancamento): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Código', 'Categoria', 'Subcategoria', 'Tipo', 'Operação', 'DRE', 'Status', 'Tipo Natureza', 'Conta', 'Descrição'];
+    const body = this.itensFiltrados.map(n => [
+      n.codigo,
+      n.categoria_principal || '',
+      n.subcategoria || '',
+      n.tipo || '',
+      n.natureza_operacao || '',
+      n.entra_dre ? 'Sim' : 'Não',
+      n.ativo === false ? 'Inativo' : 'Ativo',
+      n.tipo_natureza || '',
+      this.contaLabel(n),
+      n.descricao || '',
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'naturezas-lancamento.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
+
+  trackNatureza(_: number, natureza: NatLancamento): number | string {
+    return natureza.idnatureza ?? natureza.codigo ?? natureza.descricao;
   }
 
   cancelarEdicao(): void {
@@ -347,6 +498,39 @@ export class NatLancamentosComponent implements OnInit {
     return n.conta_contabil || '-';
   }
 
+  percentual(valor: number): string {
+    const total = this.indicadores.total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
   openErrorOverlayIfNeeded(): void { this.errorOverlayOpen = this.getFormErrors().length > 0; }
   closeErrorOverlay(): void { this.errorOverlayOpen = false; }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.naturezas.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
 }

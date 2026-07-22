@@ -1,72 +1,240 @@
-<div class="page">
-  <header class="toolbar">
-    <h2>Tributos</h2>
-    <div class="toolbar-actions">
-      <app-search-suggest
-        class="toolbar-search"
-        [(value)]="search"
-        [suggestions]="searchSuggestions()"
-        [showActions]="false"
-        placeholder="Buscar por código ou descrição..."
-        (search)="doSearch()"
-        (cleared)="clearSearch()"
-      />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
-    </div>
-  </header>
-
-  <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
-
-  <div class="overlay" *ngIf="excluirModal as tributo">
-    <div class="overlay-card">
-      <h4>Excluir tributo</h4>
-      <p>Confirma a exclusão de <strong>{{ tributo.codigo }}</strong>?</p>
-      <div class="overlay-actions">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
-      </div>
+<div class="tributos-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Tributos"
+      subtitle="Gerencie os impostos utilizados nas regras fiscais"
+      primaryActionLabel="Novo Tributo"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
   </div>
 
-  <section class="panel" *ngIf="showForm">
-    <h3>{{ consultando ? 'Consultar tributo' : (editingId ? 'Editar tributo' : 'Novo tributo') }}</h3>
-    <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
-      <label class="field small" [class.invalid]="form.get('codigo')?.invalid && submitted">Código*<input formControlName="codigo" /></label>
-      <label class="field wide" [class.invalid]="form.get('descricao')?.invalid && submitted">Descrição*<input formControlName="descricao" /></label>
-      <label class="field">Esfera*<select formControlName="esfera"><option value="FEDERAL">Federal</option><option value="ESTADUAL">Estadual</option><option value="MUNICIPAL">Municipal</option></select></label>
-      <label class="check"><input type="checkbox" formControlName="atual" /> Tributo atual</label>
-      <label class="check"><input type="checkbox" formControlName="ativo" /> Ativo</label>
-      <label class="field full">Observações<input formControlName="observacoes" /></label>
-      <div class="form-actions">
-        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving">Salvar</button>
+  <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
+      <app-search-suggest
+        class="main-search"
+        [(value)]="search"
+        [suggestions]="searchSuggestions()"
+        [showActions]="false"
+        placeholder="Buscar por código, descrição ou esfera..."
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
+      />
+
+      <label>
+        Esfera
+        <select [(ngModel)]="filterEsfera" (ngModelChange)="doFilter()">
+          <option value="">Todas</option>
+          <option value="FEDERAL">Federal</option>
+          <option value="ESTADUAL">Estadual</option>
+          <option value="MUNICIPAL">Municipal</option>
+        </select>
+      </label>
+
+      <label>
+        Atual
+        <select [(ngModel)]="filterAtual" (ngModelChange)="doFilter()">
+          <option value="">Todos</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doFilter()">
+          <option value="">Todos</option>
+          <option value="ativo">Ativos</option>
+          <option value="inativo">Inativos</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading()" (click)="clearFilters()">Limpar</button>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use a busca principal e os filtros de esfera, atual e status para refinar a lista de tributos.</span>
+    </div>
+  </section>
+
+  <section class="panel form-panel" *ngIf="showForm">
+    <div class="form-title">
+      <div>
+        <h2>{{ consultando ? 'Consultar Tributo' : (editingId ? 'Editar Tributo' : 'Novo Tributo') }}</h2>
+        <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha a identificação do tributo.' }}</p>
+      </div>
+      <div class="form-title-actions">
         <button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+          {{ saving ? 'Salvando...' : (editingId ? 'Salvar alterações' : 'Salvar') }}
+        </button>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-grid">
+        <label class="col-code" [class.invalid]="form.get('codigo')?.invalid && (form.get('codigo')?.touched || submitted)">
+          Código*
+          <input type="text" formControlName="codigo" />
+        </label>
+
+        <label class="col-description" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
+          Descrição*
+          <input type="text" formControlName="descricao" />
+        </label>
+
+        <label>
+          Esfera*
+          <select formControlName="esfera">
+            <option value="FEDERAL">Federal</option>
+            <option value="ESTADUAL">Estadual</option>
+            <option value="MUNICIPAL">Municipal</option>
+          </select>
+        </label>
+
+        <label class="col-observacoes">
+          Observações
+          <input type="text" formControlName="observacoes" maxlength="255" />
+        </label>
+
+        <div class="check-row">
+          <label><input type="checkbox" formControlName="atual" /> Tributo atual</label>
+          <label><input type="checkbox" formControlName="ativo" /> Ativo</label>
+        </div>
+      </div>
+
+      <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
+        <strong>Pendências</strong>
+        <ul>
+          <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+        </ul>
       </div>
     </form>
   </section>
 
-  <section class="panel">
+  <section class="panel table-panel">
     <div class="list-header">
-      <strong>Total: {{ total() }}</strong>
-      <label>Itens por página <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></label>
+      <h3>Tributos cadastrados <span>{{ total() }} registro(s) encontrado(s)</span></h3>
+      <div class="list-inline">
+        <label for="pageSize">Itens por página</label>
+        <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
     </div>
-    <table class="table" *ngIf="paged().length; else emptyTpl">
-      <thead><tr><th>Código</th><th>Descrição</th><th>Esfera</th><th>Atual</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let r of paged()">
-          <td>{{ r.codigo }}</td><td>{{ r.descricao }}</td><td>{{ r.esfera }}</td><td>{{ r.atual ? 'Sim' : 'Não' }}</td>
-          <td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-          <td class="actions"><button class="btn sm" (click)="consultar(r)">Consultar</button><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button><button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(r)">Excluir</button></td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyTpl><div class="empty-hint">{{ loading() ? 'Carregando...' : 'Nenhum tributo encontrado.' }}</div></ng-template>
+
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paged().length; else emptyTpl">
+        <thead>
+          <tr>
+            <th *ngIf="visibleColumn('codigo')">Código</th>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('esfera')">Esfera</th>
+            <th *ngIf="visibleColumn('atual')">Atual</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th class="actions-col">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of paged()" (click)="consultar(r)">
+            <td *ngIf="visibleColumn('codigo')">{{ r.codigo }}</td>
+            <td *ngIf="visibleColumn('descricao')">{{ r.descricao }}</td>
+            <td *ngIf="visibleColumn('esfera')">{{ esferaLabel(r.esfera) }}</td>
+            <td *ngIf="visibleColumn('atual')">{{ r.atual ? 'Sim' : 'Não' }}</td>
+            <td *ngIf="visibleColumn('status')">
+              <span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativo' : 'Inativo' }}</span>
+            </td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions()"
+                [ariaLabel]="'Ações do tributo ' + r.codigo"
+                (action)="executarAcao($event, r)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #emptyTpl>
+        <div class="empty-hint">{{ loading() ? 'Carregando...' : 'Nenhum tributo encontrado.' }}</div>
+      </ng-template>
+    </div>
+
     <div class="pager" *ngIf="total() > 0">
-      <div><button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button></div>
-      <div>Página {{ page() }} de {{ totalPages() }} — Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</div>
-      <div><button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button></div>
+      <div class="left">
+        <button class="btn" type="button" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
+        <button class="btn" type="button" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button>
+      </div>
+      <div class="center">
+        Página {{ page() }} de {{ totalPages() }}
+        <span class="range">— Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</span>
+      </div>
+      <div class="right">
+        <button class="btn" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button>
+        <button class="btn" type="button" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button>
+      </div>
     </div>
   </section>
+</div>
+
+<div class="overlay" *ngIf="excluirModal as tributo">
+  <div class="overlay-card">
+    <h4>Excluir tributo</h4>
+    <p>Confirma a exclusão de <strong>{{ tributo.codigo }}</strong>?</p>
+    <div class="overlay-actions">
+      <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+      <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" *ngIf="errorOverlayOpen()">
+  <div class="overlay-card">
+    <h4>Ops! Revise as informações</h4>
+    <p>Encontramos {{ getFormErrors().length || 1 }} pendência(s):</p>
+    <ul>
+      <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
+      <li *ngIf="!getFormErrors().length">Não foi possível carregar ou salvar o cadastro.</li>
+    </ul>
+    <div class="overlay-actions">
+      <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
+    </div>
+  </div>
 </div>

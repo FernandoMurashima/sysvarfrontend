@@ -1,22 +1,78 @@
-<div class="grupos-page">
-  <header class="toolbar">
-    <h2>Packs</h2>
-    <div class="toolbar-actions">
+<div class="packs-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Packs"
+      subtitle="Gerencie packs de compra por grade"
+      primaryActionLabel="Novo Pack"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novoPack()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" (click)="goHome()">Home</button>
+    </div>
+  </div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Buscar por nome..."
+        placeholder="Buscar por nome, grade ou status..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
+
+      <label>
+        Grade
+        <select [(ngModel)]="filterGrade" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let g of grades" [value]="g.Idgrade">{{ g.Descricao }}</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" (click)="doSearch()">Pesquisar</button>
       <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoPack()">Novo Pack</button>
-      <button class="btn primary" (click)="goHome()">Home</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+      <div class="menu-wrap">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            <span>{{ col.label }}</span>
+          </label>
+        </div>
+      </div>
+      <div class="menu-wrap">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv(); exportOpen = false">CSV</button>
+        </div>
+      </div>
+    </div>
+    <div class="advanced-filters" *ngIf="advancedOpen">Use grade e status para refinar a lista.</div>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
@@ -32,141 +88,141 @@
     </div>
   </div>
 
-  <div class="content">
-    <section class="card form" *ngIf="formModePack !== null || submitted">
-      <h3>{{ consultandoPack ? 'Consultar Pack' : (formModePack === 'edit' ? 'Editar Pack' : 'Novo Pack') }}</h3>
+  <section class="panel form-panel" *ngIf="formModePack !== null || submitted">
+    <h3>{{ consultandoPack ? 'Consultar Pack' : (formModePack === 'edit' ? 'Editar Pack' : 'Novo Pack') }}</h3>
 
-      <form [formGroup]="formPack" (ngSubmit)="salvarPack()">
-        <div class="grid-10">
-          <label id="nome-box">
-            Nome
-            <input type="text" formControlName="nome" maxlength="80" />
-          </label>
+    <form [formGroup]="formPack" (ngSubmit)="salvarPack()">
+      <div class="pack-form-grid">
+        <label class="span-2">
+          Nome
+          <input type="text" formControlName="nome" maxlength="80" />
+        </label>
 
-          <label id="grade-box">
-            Grade*
-            <select formControlName="grade" [attr.aria-invalid]="fieldInvalidPack('grade')">
-              <option [ngValue]="null">Selecione...</option>
-              <option *ngFor="let g of grades" [ngValue]="g.Idgrade">{{ g.Descricao }}</option>
-            </select>
-            <span class="field-error" *ngIf="fieldInvalidPack('grade')">Selecione a Grade.</span>
-          </label>
+        <label [class.invalid]="fieldInvalidPack('grade')">
+          Grade*
+          <select formControlName="grade">
+            <option [ngValue]="null">Selecione...</option>
+            <option *ngFor="let g of grades" [ngValue]="g.Idgrade">{{ g.Descricao }}</option>
+          </select>
+        </label>
 
-          <label id="ativo-box" style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" formControlName="ativo" /> Ativo
-          </label>
-        </div>
+        <label class="check-field">
+          <input type="checkbox" formControlName="ativo" />
+          <span>Ativo</span>
+        </label>
+      </div>
 
-        <div class="form-pending" *ngIf="submitted && getPackErrors().length">
-          <strong>Pendências</strong>
-          <ul><li *ngFor="let m of getPackErrors()">{{ m }}</li></ul>
-        </div>
+      <div class="form-pending" *ngIf="submitted && getPackErrors().length">
+        <strong>Pendências</strong>
+        <ul><li *ngFor="let m of getPackErrors()">{{ m }}</li></ul>
+      </div>
 
-        <div class="actions-form">
-          <button class="btn primary" type="submit" *ngIf="!consultandoPack && podeEditarModulo" [disabled]="saving || (formPack.invalid && submitted)">
-            {{ formModePack === 'edit' ? 'Salvar alterações' : 'Salvar' }}
-          </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoPack()">{{ consultandoPack ? 'Voltar' : 'Cancelar' }}</button>
-        </div>
-      </form>
-    </section>
+      <div class="actions-form">
+        <button class="btn primary" type="submit" *ngIf="!consultandoPack && podeEditarModulo" [disabled]="saving || (formPack.invalid && submitted)">
+          {{ formModePack === 'edit' ? 'Salvar alterações' : 'Salvar' }}
+        </button>
+        <button class="btn" type="button" (click)="cancelarEdicaoPack()">{{ consultandoPack ? 'Voltar' : 'Cancelar' }}</button>
+      </div>
+    </form>
+  </section>
 
-    <section class="card list">
-      <div class="empty-hint" *ngIf="!loading && packs.length === 0">Nenhum pack encontrado.</div>
+  <section class="panel list-panel">
+    <div class="list-title-row">
+      <div><strong>Packs cadastrados</strong> <span>{{ packs.length }} registro(s) encontrado(s)</span></div>
+    </div>
 
-      <table class="table" *ngIf="packs.length > 0">
+    <div class="empty-hint" *ngIf="!loading && packs.length === 0">Nenhum pack encontrado.</div>
+
+    <div class="table-wrapper" *ngIf="packs.length > 0">
+      <table class="table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Grade</th>
-            <th>Status</th>
-            <th style="width:330px;">Ações</th>
+            <th *ngIf="visibleColumn('id')">ID</th>
+            <th *ngIf="visibleColumn('nome')">Nome</th>
+            <th *ngIf="visibleColumn('grade')">Grade</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of packs">
-            <td>{{ p.id }}</td>
-            <td>{{ p.nome || '-' }}</td>
-            <td>{{ getGradeDesc(p.grade) }}</td>
-            <td>
+          <tr *ngFor="let p of packs" (click)="consultarPack(p)">
+            <td *ngIf="visibleColumn('id')">{{ p.id }}</td>
+            <td *ngIf="visibleColumn('nome')">{{ p.nome || '-' }}</td>
+            <td *ngIf="visibleColumn('grade')">{{ getGradeDesc(p.grade) }}</td>
+            <td *ngIf="visibleColumn('status')">
               <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
                 {{ p.ativo ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarPack(p)">Consultar</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarPack(p)">Editar</button>
-              <button class="btn sm" (click)="selecionarPack(p.id!, p.grade)">Itens</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirPack(p)">Excluir</button>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu [actions]="packActions()" (action)="executarAcaoPack($event, p)" />
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
 
-      <div class="loading" *ngIf="loading">Carregando...</div>
-    </section>
+    <div class="loading" *ngIf="loading">Carregando...</div>
+  </section>
 
-    <section class="card subgrupos" *ngIf="selectedPackId !== null">
-      <h3>Itens do Pack #{{ selectedPackId }}</h3>
+  <section class="panel sub-panel" *ngIf="selectedPackId !== null">
+    <div class="list-title-row">
+      <div><strong>Itens do Pack #{{ selectedPackId }}</strong> <span>{{ items.length }} item(ns)</span></div>
+      <button class="btn" type="button" (click)="fecharItens()">Fechar</button>
+    </div>
 
-      <form [formGroup]="formItem" (ngSubmit)="salvarItem()">
-        <div class="grid-10">
-          <label id="tam-box">
-            Tamanho*
-            <select formControlName="tamanho" [attr.aria-invalid]="fieldInvalidItem('tamanho')">
-              <option [ngValue]="null">Selecione...</option>
-              <option *ngFor="let t of tamanhosDaGrade" [ngValue]="t.Idtamanho">
-                {{ t.Tamanho }} — {{ t.Descricao || 'Tamanho' }}
-              </option>
-            </select>
-            <span class="field-error" *ngIf="fieldInvalidItem('tamanho')">Selecione o Tamanho.</span>
-          </label>
+    <form [formGroup]="formItem" (ngSubmit)="salvarItem()">
+      <div class="item-form-grid">
+        <label [class.invalid]="fieldInvalidItem('tamanho')">
+          Tamanho*
+          <select formControlName="tamanho">
+            <option [ngValue]="null">Selecione...</option>
+            <option *ngFor="let t of tamanhosDaGrade" [ngValue]="t.Idtamanho">
+              {{ t.Tamanho }} - {{ t.Descricao || 'Tamanho' }}
+            </option>
+          </select>
+        </label>
 
-          <label id="qtd-box">
-            Quantidade*
-            <input type="number" min="1" step="1" formControlName="qtd"
-                   [attr.aria-invalid]="fieldInvalidItem('qtd')" />
-            <span class="field-error" *ngIf="fieldInvalidItem('qtd')">Informe a Quantidade (>= 1).</span>
-          </label>
-        </div>
+        <label [class.invalid]="fieldInvalidItem('qtd')">
+          Quantidade*
+          <input type="number" min="1" step="1" formControlName="qtd" />
+        </label>
 
-        <div class="form-pending" *ngIf="submittedSub && getItemErrors().length">
-          <strong>Pendências</strong>
-          <ul><li *ngFor="let m of getItemErrors()">{{ m }}</li></ul>
-        </div>
-
-        <div class="actions-form">
+        <div class="inline-actions">
           <button class="btn primary" type="submit" *ngIf="!consultandoItem && podeEditarModulo" [disabled]="formItem.invalid">
-            {{ editingItemId ? 'Salvar alterações' : 'Adicionar' }}
+            {{ editingItemId ? 'Salvar' : 'Adicionar' }}
           </button>
-          <button class="btn ghost" type="button" (click)="cancelarEdicaoItem()">{{ consultandoItem ? 'Voltar' : 'Limpar' }}</button>
-          <button class="btn ghost" type="button" (click)="fecharItens()">Fechar</button>
+          <button class="btn" type="button" (click)="cancelarEdicaoItem()">{{ consultandoItem ? 'Voltar' : 'Limpar' }}</button>
         </div>
-      </form>
+      </div>
 
-      <div class="empty-hint" *ngIf="items.length === 0">Nenhum item neste pack.</div>
+      <div class="form-pending" *ngIf="submittedSub && getItemErrors().length">
+        <strong>Pendências</strong>
+        <ul><li *ngFor="let m of getItemErrors()">{{ m }}</li></ul>
+      </div>
+    </form>
 
-      <table class="table" *ngIf="items.length > 0">
+    <div class="empty-hint" *ngIf="items.length === 0">Nenhum item neste pack.</div>
+
+    <div class="table-wrapper" *ngIf="items.length > 0">
+      <table class="table">
         <thead>
           <tr>
             <th>Tamanho</th>
             <th>Quantidade</th>
-            <th style="width:240px;">Ações</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let it of items">
+          <tr *ngFor="let it of items" (click)="consultarItem(it)">
             <td>{{ getTamanhoDesc(it.tamanho) }}</td>
             <td>{{ it.qtd }}</td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarItem(it)">Consultar</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarItem(it)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirItem(it)">Excluir</button>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu [actions]="itemActions()" (action)="executarAcaoItem($event, it)" />
             </td>
           </tr>
         </tbody>
       </table>
-    </section>
-  </div>
+    </div>
+  </section>
 </div>

@@ -1,0 +1,248 @@
+<div class="ajuda-page">
+  <header class="ajuda-toolbar">
+    <div>
+      <span class="breadcrumb">Ajuda / Cadastros</span>
+      <h1>Cadastro de Lojas</h1>
+      <p>Manual operacional da consulta, inclusão, alteração e configuração fiscal das lojas.</p>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn" type="button" [routerLink]="['/lojas']">Voltar para Lojas</button>
+      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </header>
+
+  <main class="ajuda-layout">
+    <aside class="sumario">
+      <strong>Nesta página</strong>
+      <a href="#objetivo">Objetivo</a>
+      <a href="#quando-usar">Quando utilizar</a>
+      <a href="#tela-inicial">Tela inicial</a>
+      <a href="#nova-loja">Nova loja</a>
+      <a href="#campos-gerais">Campos gerais</a>
+      <a href="#configuracao-operacional">Configuração operacional</a>
+      <a href="#configuracao-fiscal">Configuração fiscal</a>
+      <a href="#passo-a-passo">Passo a passo</a>
+      <a href="#cuidados">Cuidados importantes</a>
+    </aside>
+
+    <article class="artigo">
+      <section id="objetivo">
+        <h2>Objetivo</h2>
+        <p>
+          O Cadastro de Lojas registra cada unidade operacional pertencente a uma empresa no
+          Sysvar. As operações de estoque, compras, vendas, financeiro e emissão fiscal são
+          vinculadas à loja responsável.
+        </p>
+
+        <div class="destaque">
+          Uma empresa pode possuir várias lojas, mas cada loja deve representar uma unidade
+          operacional real, como matriz, filial, estoque central ou fábrica.
+        </div>
+      </section>
+
+      <section id="quando-usar">
+        <h2>Quando utilizar</h2>
+        <ul>
+          <li>Na implantação inicial do Sysvar.</li>
+          <li>Na abertura de uma filial ou novo ponto de venda.</li>
+          <li>Na criação de uma matriz ou estoque central.</li>
+          <li>Na criação de uma fábrica ou unidade de produção.</li>
+          <li>Quando for necessário controlar estoques e operações separadamente.</li>
+        </ul>
+      </section>
+
+      <section id="tela-inicial">
+        <h2>Tela inicial</h2>
+        <p>
+          A tela inicial apresenta as lojas cadastradas e permite pesquisar, consultar,
+          editar ou excluir um cadastro, conforme as permissões do usuário.
+        </p>
+
+        <h3>Pesquisa</h3>
+        <p>
+          O campo de pesquisa localiza lojas pelo nome, apelido ou CNPJ. Após informar o
+          conteúdo, clique em <strong>Buscar</strong>. O botão <strong>Limpar</strong> remove
+          o filtro e apresenta novamente todas as lojas.
+        </p>
+
+        <h3>Botões da tela</h3>
+        <div class="tabela-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Botão</th>
+                <th>Função</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Buscar</td><td>Executa a pesquisa informada.</td></tr>
+              <tr><td>Limpar</td><td>Remove a pesquisa atual e recarrega a lista.</td></tr>
+              <tr><td>Novo</td><td>Abre o formulário de inclusão de uma nova loja.</td></tr>
+              <tr><td>Home</td><td>Retorna à página inicial do Sysvar.</td></tr>
+              <tr><td>Consultar</td><td>Abre o cadastro somente para leitura.</td></tr>
+              <tr><td>Editar</td><td>Abre o cadastro para alteração.</td></tr>
+              <tr><td>Excluir</td><td>Solicita a exclusão da loja, quando permitida.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="nova-loja">
+        <h2>Nova loja</h2>
+        <p>
+          Clique em <strong>Novo</strong> para abrir o formulário. Os campos marcados com
+          asterisco são obrigatórios.
+        </p>
+      </section>
+
+      <section id="campos-gerais">
+        <h2>Campos gerais</h2>
+        <div class="tabela-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Como preencher</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Empresa</td>
+                <td>Selecione a empresa proprietária da unidade.</td>
+              </tr>
+              <tr>
+                <td>Nome da Loja</td>
+                <td>Informe o nome completo utilizado para identificar a unidade.</td>
+              </tr>
+              <tr>
+                <td>Apelido</td>
+                <td>Informe um nome reduzido, como MATRIZ, SHOPPING ou FÁBRICA.</td>
+              </tr>
+              <tr>
+                <td>CNPJ</td>
+                <td>Informe o CNPJ da unidade. O Sysvar valida os dígitos informados.</td>
+              </tr>
+              <tr>
+                <td>Email</td>
+                <td>Informe o endereço eletrônico principal da loja.</td>
+              </tr>
+              <tr>
+                <td>Endereço</td>
+                <td>Preencha logradouro, endereço, número, complemento, CEP, bairro, cidade e UF.</td>
+              </tr>
+              <tr>
+                <td>Telefone 1 e 2</td>
+                <td>Informe os telefones de contato com DDD.</td>
+              </tr>
+              <tr>
+                <td>Data de Abertura</td>
+                <td>Informe a data oficial de início das atividades.</td>
+              </tr>
+              <tr>
+                <td>Data de Encerramento</td>
+                <td>Preencha somente quando a unidade tiver encerrado suas atividades.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="configuracao-operacional">
+        <h2>Configuração operacional</h2>
+
+        <h3>Estoque Negativo</h3>
+        <p>
+          Define se a unidade poderá registrar operações que deixem o saldo do produto
+          abaixo de zero. Recomenda-se manter <strong>Não</strong>, salvo quando existir
+          uma regra operacional específica.
+        </p>
+
+        <h3>Rede</h3>
+        <p>Identifica se a unidade pertence a uma operação organizada em rede.</p>
+
+        <h3>Matriz</h3>
+        <p>
+          Indica se a loja é a unidade matriz. Normalmente, apenas uma unidade da empresa
+          deve ser definida como matriz.
+        </p>
+
+        <h3>Tipo da unidade</h3>
+        <ul>
+          <li><strong>Loja:</strong> ponto de venda ou filial operacional.</li>
+          <li><strong>Matriz / estoque central:</strong> unidade administrativa ou centralizadora.</li>
+          <li><strong>Fábrica / produção:</strong> unidade responsável pela fabricação.</li>
+        </ul>
+      </section>
+
+      <section id="configuracao-fiscal">
+        <h2>Configuração fiscal</h2>
+
+        <h3>Regime tributário</h3>
+        <p>
+          Selecione o enquadramento tributário correto: Simples Nacional, Lucro Presumido
+          ou Lucro Real. A informação deve estar de acordo com a orientação contábil da empresa.
+        </p>
+
+        <h3>Ambiente fiscal</h3>
+        <ul>
+          <li><strong>Homologação:</strong> ambiente destinado a testes.</li>
+          <li><strong>Produção:</strong> ambiente utilizado para documentos fiscais oficiais.</li>
+        </ul>
+
+        <div class="aviso">
+          Não altere para Produção antes de concluir a configuração fiscal, instalar o
+          certificado digital e realizar os testes de emissão.
+        </div>
+
+        <h3>Inscrição estadual</h3>
+        <p>Informe a inscrição estadual da unidade quando ela for contribuinte do ICMS.</p>
+
+        <h3>NFC-e</h3>
+        <p>
+          Marque <strong>Emite NFC-e</strong> quando a loja realizar emissão de Nota Fiscal
+          de Consumidor Eletrônica. Informe a série e o próximo número conforme a sequência
+          fiscal da unidade.
+        </p>
+
+        <h3>NF-e</h3>
+        <p>
+          Marque <strong>Emite NF-e</strong> quando a unidade realizar emissão de Nota Fiscal
+          Eletrônica modelo 55. Informe a série e o próximo número correspondente.
+        </p>
+
+        <div class="aviso">
+          A série e o próximo número fiscal não devem ser alterados sem conferência da
+          sequência já autorizada pela SEFAZ.
+        </div>
+      </section>
+
+      <section id="passo-a-passo">
+        <h2>Passo a passo para cadastrar uma loja</h2>
+        <ol>
+          <li>Acesse <strong>Cadastros &gt; Lojas</strong>.</li>
+          <li>Clique em <strong>Novo</strong>.</li>
+          <li>Selecione a empresa.</li>
+          <li>Informe nome, apelido e CNPJ.</li>
+          <li>Preencha endereço e contatos.</li>
+          <li>Defina o tipo da unidade e as regras operacionais.</li>
+          <li>Preencha as configurações fiscais.</li>
+          <li>Confira os dados.</li>
+          <li>Clique em <strong>Salvar</strong>.</li>
+        </ol>
+      </section>
+
+      <section id="cuidados">
+        <h2>Cuidados importantes</h2>
+        <ul>
+          <li>Não cadastre a mesma unidade mais de uma vez.</li>
+          <li>Confirme o CNPJ antes de salvar.</li>
+          <li>Não utilize Produção durante testes.</li>
+          <li>Não altere sequências fiscais sem conferência.</li>
+          <li>Evite excluir lojas que já possuam movimentações.</li>
+          <li>Use a data de encerramento para unidades que deixaram de operar.</li>
+        </ul>
+      </section>
+    </article>
+  </main>
+</div>

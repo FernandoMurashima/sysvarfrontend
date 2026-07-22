@@ -1,0 +1,24 @@
+IMPLEMENTAÇÃO — AJUDA DO CADASTRO DE LOJAS
+
+Copie a pasta "src" deste pacote para:
+
+C:\SysvarProjeto\Frontend\sysvar\
+
+Confirme a substituição de:
+- src\app\app.routes.ts
+- src\app\features\lojas\lojas.component.html
+
+Serão criados:
+- src\app\features\ajuda\lojas-ajuda\lojas-ajuda.component.ts
+- src\app\features\ajuda\lojas-ajuda\lojas-ajuda.component.html
+- src\app\features\ajuda\lojas-ajuda\lojas-ajuda.component.css
+
+Depois execute:
+
+cd C:\SysvarProjeto\Frontend\sysvar
+ng serve
+
+Teste:
+1. Entre em Lojas.
+2. Clique em Ajuda.
+3. A documentação deverá abrir dentro do Shell do Sysvar.

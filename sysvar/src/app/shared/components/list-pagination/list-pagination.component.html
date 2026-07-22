@@ -1,0 +1,14 @@
+<div class="list-pagination" *ngIf="totalItems > 0">
+  <span>Mostrando {{ start }} a {{ end }} de {{ totalItems }} registros</span>
+  <div class="pager-buttons">
+    <button type="button" [disabled]="disabled || currentPage <= 1" (click)="pageChange.emit(currentPage - 1)">‹</button>
+    <strong>{{ currentPage }}</strong>
+    <button type="button" [disabled]="disabled || currentPage >= totalPages" (click)="pageChange.emit(currentPage + 1)">›</button>
+  </div>
+  <label>
+    Itens por página:
+    <select [ngModel]="pageSize" [disabled]="disabled" (ngModelChange)="pageSizeChange.emit(+$event)">
+      <option *ngFor="let opt of pageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+    </select>
+  </label>
+</div>

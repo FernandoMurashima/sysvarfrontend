@@ -1,0 +1,21 @@
+<header class="sys-page-header">
+  <div>
+    <nav class="breadcrumbs" *ngIf="breadcrumbs.length" aria-label="Caminho">
+      <span *ngFor="let item of breadcrumbs; let last = last" [class.current]="last">
+        {{ item }}<ng-container *ngIf="!last">/</ng-container>
+      </span>
+    </nav>
+    <h1>{{ title }}</h1>
+    <p *ngIf="subtitle">{{ subtitle }}</p>
+  </div>
+
+  <button
+    *ngIf="showPrimaryAction"
+    class="sys-primary-action"
+    type="button"
+    [disabled]="disabled"
+    (click)="primaryAction.emit()">
+    <span aria-hidden="true">{{ primaryActionIcon }}</span>
+    {{ primaryActionLabel }}
+  </button>
+</header>

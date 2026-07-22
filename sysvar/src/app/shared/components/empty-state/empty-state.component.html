@@ -1,0 +1,5 @@
+<div class="empty-state">
+  <strong>{{ title }}</strong>
+  <p *ngIf="message">{{ message }}</p>
+  <button *ngIf="showAction" type="button" (click)="action.emit()">{{ actionLabel }}</button>
+</div>

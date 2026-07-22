@@ -8,11 +8,13 @@ import { LancamentoContabil, LancamentoContabilListResp, StatusLancamentoContabi
 import { Loja } from '../../core/models/loja';
 import { LancamentosContabeisService } from '../../core/services/lancamentos-contabeis.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 @Component({
   selector: 'app-lancamentos-contabeis',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PageHeaderComponent, SearchSuggestComponent],
   templateUrl: './lancamentos-contabeis.component.html',
   styleUrls: ['./lancamentos-contabeis.component.css'],
 })
@@ -22,6 +24,23 @@ export class LancamentosContabeisComponent implements OnInit {
 
   loading = false;
   errorMsg = '';
+  search = '';
+  columnsOpen = false;
+  exportOpen = false;
+  advancedOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.lancamentos-contabeis.columns';
+  columns = [
+    { key: 'data', label: 'Data', visible: true, required: true },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'documento', label: 'Documento', visible: true, required: false },
+    { key: 'origem', label: 'Origem', visible: true, required: false },
+    { key: 'historico', label: 'Histórico', visible: true, required: true },
+    { key: 'natureza', label: 'Natureza', visible: true, required: false },
+    { key: 'debito', label: 'Débito', visible: true, required: false },
+    { key: 'credito', label: 'Crédito', visible: true, required: false },
+    { key: 'valor', label: 'Valor', visible: true, required: true },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
   lojas: Loja[] = [];
   lancamentos: LancamentoContabil[] = [];
   totalRegistrosApi = 0;
@@ -35,6 +54,7 @@ export class LancamentosContabeisComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.definirPeriodoPadrao();
     this.carregarBase();
   }
@@ -85,6 +105,10 @@ export class LancamentosContabeisComponent implements OnInit {
     this.consultar();
   }
 
+  clearSearch(): void {
+    this.search = '';
+  }
+
   alternarTelaCheia(): void {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.();
@@ -118,19 +142,89 @@ export class LancamentosContabeisComponent implements OnInit {
   }
 
   get totalValor(): number {
-    return this.lancamentos.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+    return this.listaVisivel.reduce((acc, item) => acc + Number(item.valor || 0), 0);
   }
 
   get totalGerados(): number {
-    return this.lancamentos.filter(item => item.status === 'GERADO').length;
+    return this.listaVisivel.filter(item => item.status === 'GERADO').length;
   }
 
   get totalPendentes(): number {
-    return this.lancamentos.filter(item => item.status === 'PENDENTE').length;
+    return this.listaVisivel.filter(item => item.status === 'PENDENTE').length;
   }
 
   get totalEstornados(): number {
-    return this.lancamentos.filter(item => item.status === 'ESTORNADO').length;
+    return this.listaVisivel.filter(item => item.status === 'ESTORNADO').length;
+  }
+
+  get listaVisivel(): LancamentoContabil[] {
+    const term = this.search.trim().toLowerCase();
+    if (!term) return this.lancamentos;
+    return this.lancamentos.filter(item => [
+      item.loja_nome,
+      item.documento,
+      item.origem,
+      item.historico,
+      item.natureza_descricao,
+      item.conta_debito_codigo,
+      item.conta_debito_descricao,
+      item.conta_credito_codigo,
+      item.conta_credito_descricao,
+      item.status,
+    ].some(value => String(value || '').toLowerCase().includes(term)));
+  }
+
+  get searchSuggestions(): string[] {
+    const valores = this.lancamentos.flatMap(item => [
+      item.loja_nome,
+      item.documento,
+      item.origem,
+      item.historico,
+      item.natureza_descricao,
+      item.conta_debito_codigo,
+      item.conta_debito_descricao,
+      item.conta_credito_codigo,
+      item.conta_credito_descricao,
+      item.status,
+    ]).filter((v): v is string => !!v);
+    return Array.from(new Set(valores));
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Data', 'Loja', 'Documento', 'Origem', 'Histórico', 'Natureza', 'Débito', 'Crédito', 'Valor', 'Status'];
+    const body = this.listaVisivel.map(item => [
+      item.data_lancamento || '',
+      item.loja_nome || item.idloja || '',
+      item.documento || '',
+      item.origem || '',
+      item.historico || '',
+      item.natureza_descricao || '',
+      this.contaLabel(item.conta_debito_codigo, item.conta_debito_descricao),
+      this.contaLabel(item.conta_credito_codigo, item.conta_credito_descricao),
+      this.money(item.valor),
+      item.status || '',
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'lancamentos-contabeis.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   private definirPeriodoPadrao(): void {
@@ -168,5 +262,22 @@ export class LancamentosContabeisComponent implements OnInit {
   private extractError(err: unknown): string {
     const detail = (err as { error?: { detail?: string } })?.error?.detail;
     return detail || 'Nao foi possivel carregar os lancamentos contabeis.';
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state: Record<string, boolean> = {};
+    this.columns.forEach(c => state[c.key] = c.visible);
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

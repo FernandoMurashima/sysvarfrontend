@@ -1,0 +1,44 @@
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 84px;
+  padding: 16px;
+  border: 1px solid var(--sysvar-border, #d7e0ea);
+  border-radius: var(--sysvar-radius-md, 10px);
+  background: var(--sysvar-panel-background, #fff);
+  box-shadow: var(--sysvar-shadow-sm, 0 8px 24px rgba(15, 23, 42, .06));
+}
+
+.summary-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  font-size: 24px;
+  font-weight: 700;
+  background: #e8f1ff;
+  color: #0f62fe;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--sysvar-text-primary, #111827);
+}
+
+.summary-card span,
+.summary-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--sysvar-text-secondary, #64748b);
+  font-size: 13px;
+}
+
+.summary-card.green .summary-icon { background: #dcfce7; color: #16a34a; }
+.summary-card.orange .summary-icon { background: #ffedd5; color: #ea580c; }
+.summary-card.purple .summary-icon { background: #ede9fe; color: #7c3aed; }
+.summary-card.cyan .summary-icon { background: #cffafe; color: #0891b2; }
+.summary-card.gray .summary-icon { background: #f1f5f9; color: #64748b; }

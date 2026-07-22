@@ -32,6 +32,9 @@ import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type ItemRef = { id: number; label: string };
 
@@ -46,6 +49,9 @@ type ItemRef = { id: number; label: string };
     LojasSelectorComponent,
     CoresSelectorComponent, // <<< adiciona o selector de cores
     SearchSuggestComponent,
+    PageHeaderComponent,
+    RowActionsMenuComponent,
+    SummaryCardComponent,
   ],
   templateUrl: './produtos.component.html',
   styleUrls: ['./produtos.component.css'],
@@ -89,6 +95,13 @@ export class ProdutosComponent {
 
   // flags
   search = '';
+  filterGrupo = '';
+  filterColecao = '';
+  filterStatus = '';
+  filterTipo = '';
+  filterReferencia = '';
+  filterCodigo = '';
+  advancedOpen = false;
   loading = signal(false);
   successMsg = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
@@ -104,6 +117,17 @@ export class ProdutosComponent {
     motivo: string;
     senha: string;
   } | null = null;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.produtos-revenda.columns';
+  columns = [
+    { key: 'reduzido', label: 'Código reduzido', visible: true, required: false },
+    { key: 'referencia', label: 'Referência', visible: true, required: false },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'grupo', label: 'Grupo', visible: true, required: false },
+    { key: 'colecao', label: 'Coleção', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
 
   // lista/pager
   produtos = signal<Produto[]>([]);
@@ -138,14 +162,45 @@ export class ProdutosComponent {
     this.fecharModalCores();
   }
 
-  total = computed(() => this.produtos().length);
+  produtosFiltrados = computed(() => {
+    const term = this.normalize(this.search);
+    const grupo = this.normalize(this.filterGrupo);
+    const colecao = this.normalize(this.filterColecao);
+    const status = this.filterStatus;
+    const tipo = this.filterTipo;
+    const referencia = this.normalize(this.filterReferencia);
+    const codigo = this.normalize(this.filterCodigo);
+
+    return this.produtos().filter(p => {
+      const haystack = this.normalize([
+        p.descricao,
+        p.descricao_reduzida,
+        p.referencia,
+        this.colecaoLabel(p.colecao ?? null),
+        this.grupoLabel(p.grupo ?? null),
+        this.tipoProdutoLabel(p.tipo_produto),
+      ].filter(Boolean).join(' '));
+      if (term && !haystack.includes(term)) return false;
+      if (grupo && this.normalize(this.grupoLabel(p.grupo ?? null)) !== grupo) return false;
+      if (colecao && this.normalize(this.colecaoLabel(p.colecao ?? null)) !== colecao) return false;
+      if (status === 'ATIVO' && p.ativo === false) return false;
+      if (status === 'INATIVO' && p.ativo !== false) return false;
+      if (status === 'BLOQUEADO' && !p.bloqueado_venda) return false;
+      if (tipo && p.tipo_produto !== tipo) return false;
+      if (referencia && !this.normalize(p.referencia || '').includes(referencia)) return false;
+      if (codigo && !this.normalize(p.descricao_reduzida || '').includes(codigo)) return false;
+      return true;
+    });
+  });
+
+  total = computed(() => this.produtosFiltrados().length);
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
-    return this.produtos().slice(start, start + this.pageSize());
+    return this.produtosFiltrados().slice(start, start + this.pageSize());
   });
   searchSuggestions = computed(() => this.produtos().flatMap(p => [
     p.descricao,
@@ -154,6 +209,16 @@ export class ProdutosComponent {
     this.colecaoLabel(p.colecao ?? null),
     this.tipoProdutoLabel(p.tipo_produto),
   ].filter((v): v is string => !!v)));
+
+  indicadores = computed(() => {
+    const rows = this.produtos();
+    const total = rows.length;
+    const ativos = rows.filter(p => p.ativo !== false).length;
+    const proprios = rows.filter(p => p.tipo_produto === '3').length;
+    const bloqueados = rows.filter(p => !!p.bloqueado_venda).length;
+    const colecoes = new Set(rows.map(p => p.colecao).filter(Boolean)).size;
+    return { total, ativos, proprios, bloqueados, colecoes };
+  });
 
   // form
   showForm = false;
@@ -192,6 +257,7 @@ export class ProdutosComponent {
   tabelas: ItemRef[] = [];
 
   private colecaoMap = new Map<number, string>();
+  private grupoMap = new Map<number, string>();
   private subGrupoSub?: Subscription;
 
   constructor() {
@@ -201,6 +267,7 @@ export class ProdutosComponent {
     });
 
     this.loadLookups();
+    this.loadColumnsPreference();
     this.wireGrupoToSubgrupo();
     this.load();
     this.loadCores(); // carrega as cores uma vez (lista completa)
@@ -242,6 +309,8 @@ export class ProdutosComponent {
           .slice()
           .sort((a, b) => (a.Descricao || '').localeCompare(b.Descricao || ''))
           .map(g => ({ id: g.Idgrupo as number, label: `${g.Descricao}` }));
+        this.grupoMap.clear();
+        this.grupos.forEach(g => this.grupoMap.set(g.id, g.label));
       },
       error: () => { this.grupos = []; }
     });
@@ -358,7 +427,7 @@ export class ProdutosComponent {
   // lista/pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1,3', page_size: 100 }).subscribe({
+    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1,3', page_size: 2000 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
           .filter(p => p.tipo_produto === '1' || p.tipo_produto === '3');
@@ -373,9 +442,18 @@ export class ProdutosComponent {
       complete: () => this.loading.set(false),
     });
   }
-  doSearch() { this.load(); }
+  doSearch() { this.page.set(1); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
-  clearSearch() { this.search = ''; this.load(); }
+  clearSearch() {
+    this.search = '';
+    this.filterGrupo = '';
+    this.filterColecao = '';
+    this.filterStatus = '';
+    this.filterTipo = '';
+    this.filterReferencia = '';
+    this.filterCodigo = '';
+    this.page.set(1);
+  }
   onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
@@ -391,6 +469,75 @@ export class ProdutosComponent {
   tipoProdutoLabel(tipo?: string | null): string {
     if (tipo === '3') return 'Produto Próprio';
     return 'Revenda';
+  }
+
+  grupoLabel(id?: number | null): string {
+    if (!id) return '';
+    return this.grupoMap.get(id) ?? String(id);
+  }
+
+  statusLabel(p: Produto): string {
+    if (p.bloqueado_venda) return 'Bloqueado';
+    return p.ativo === false ? 'Inativo' : 'Ativo';
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores().total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  rowActions(row: Produto): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'inativar', label: row.ativo ? 'Inativar' : 'Ativar', icon: '⊘', visible: this.podeEditarModulo },
+      { key: 'bloquear', label: row.bloqueado_venda ? 'Desbloquear' : 'Bloquear', icon: '▣', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: Produto): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'inativar') this.toggleAtivo(row);
+    if (action === 'bloquear') this.toggleBloqueio(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  exportarCsv(): void {
+    const headers = ['Descrição', 'Código reduzido', 'Referência', 'Tipo', 'Grupo', 'Coleção', 'Status'];
+    const body = this.produtosFiltrados().map(p => [
+      p.descricao || '',
+      p.descricao_reduzida || '',
+      p.referencia || '',
+      this.tipoProdutoLabel(p.tipo_produto),
+      this.grupoLabel(p.grupo ?? null),
+      this.colecaoLabel(p.colecao ?? null),
+      this.statusLabel(p),
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'produtos-revenda.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
   }
 
   lojaId(loja: Loja | any): number | null {
@@ -824,6 +971,31 @@ export class ProdutosComponent {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}%`;
+  }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 
   // overlay

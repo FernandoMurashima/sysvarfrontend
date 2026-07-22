@@ -16,6 +16,9 @@ import { MateriaisService } from '../../core/services/material.service';
 import { NcmsService } from '../../core/services/ncms.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type ItemRef = { id: number; label: string };
 
@@ -28,6 +31,9 @@ type ItemRef = { id: number; label: string };
     FormsModule,
     RouterLink,
     SearchSuggestComponent,
+    PageHeaderComponent,
+    RowActionsMenuComponent,
+    SummaryCardComponent,
   ],
   templateUrl: './produtos-uso.component.html',
   styleUrls: ['./produtos-uso.component.css'],
@@ -50,6 +56,13 @@ export class ProdutosUsoComponent {
 
   // flags
   search = '';
+  filterTipo = '';
+  filterUnidade = '';
+  filterStatus = '';
+  filterNcm = '';
+  filterReferencia = '';
+  filterCodigo = '';
+  advancedOpen = false;
   loading = signal(false);
   successMsg = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
@@ -64,6 +77,17 @@ export class ProdutosUsoComponent {
     motivo: string;
     senha: string;
   } | null = null;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.produtos-uso.columns';
+  columns = [
+    { key: 'reduzido', label: 'Código reduzido', visible: true, required: false },
+    { key: 'referencia', label: 'Referência', visible: true, required: false },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'unidade', label: 'Unidade', visible: true, required: false },
+    { key: 'ncm', label: 'NCM', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
 
   // lista / pager
   produtos = signal<Produto[]>([]);
@@ -71,14 +95,45 @@ export class ProdutosUsoComponent {
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
 
-  total = computed(() => this.produtos().length);
+  produtosFiltrados = computed(() => {
+    const term = this.normalize(this.search);
+    const tipo = this.filterTipo;
+    const unidade = this.normalize(this.filterUnidade);
+    const status = this.filterStatus;
+    const ncm = this.normalize(this.filterNcm);
+    const referencia = this.normalize(this.filterReferencia);
+    const codigo = this.normalize(this.filterCodigo);
+
+    return this.produtos().filter(p => {
+      const haystack = this.normalize([
+        p.descricao,
+        p.descricao_reduzida,
+        p.referencia,
+        p.ncm,
+        this.unidadeLabel(p.unidade ?? null),
+        this.tipoProdutoLabel(p.tipo_produto),
+      ].filter(Boolean).join(' '));
+      if (term && !haystack.includes(term)) return false;
+      if (tipo && p.tipo_produto !== tipo) return false;
+      if (unidade && this.normalize(this.unidadeLabel(p.unidade ?? null)) !== unidade) return false;
+      if (status === 'ATIVO' && p.ativo === false) return false;
+      if (status === 'INATIVO' && p.ativo !== false) return false;
+      if (status === 'BLOQUEADO' && !p.bloqueado_venda) return false;
+      if (ncm && !this.normalize(p.ncm || '').includes(ncm)) return false;
+      if (referencia && !this.normalize(p.referencia || '').includes(referencia)) return false;
+      if (codigo && !this.normalize(p.descricao_reduzida || '').includes(codigo)) return false;
+      return true;
+    });
+  });
+
+  total = computed(() => this.produtosFiltrados().length);
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
   paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
-    return this.produtos().slice(start, start + this.pageSize());
+    return this.produtosFiltrados().slice(start, start + this.pageSize());
   });
   searchSuggestions = computed(() => this.produtos().flatMap(p => [
     p.descricao,
@@ -88,6 +143,16 @@ export class ProdutosUsoComponent {
     this.unidadeLabel(p.unidade ?? null),
     this.tipoProdutoLabel(p.tipo_produto),
   ].filter((v): v is string => !!v)));
+
+  indicadores = computed(() => {
+    const rows = this.produtos();
+    const total = rows.length;
+    const ativos = rows.filter(p => p.ativo !== false).length;
+    const insumos = rows.filter(p => p.tipo_produto === '4').length;
+    const usoConsumo = rows.filter(p => p.tipo_produto === '2').length;
+    const bloqueados = rows.filter(p => !!p.bloqueado_venda).length;
+    return { total, ativos, usoConsumo, insumos, bloqueados };
+  });
 
   // form
   showForm = false;
@@ -138,6 +203,7 @@ export class ProdutosUsoComponent {
     });
 
     this.loadLookups();
+    this.loadColumnsPreference();
     this.wireGrupoToSubgrupo();
     this.wireTipoProduto();
     this.load();
@@ -226,7 +292,7 @@ export class ProdutosUsoComponent {
   // lista / pager
   load() {
     this.loading.set(true);
-    this.api.list({ search: this.search, ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2,4', page_size: 100 }).subscribe({
+    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2,4', page_size: 2000 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
           .filter(p => p.tipo_produto === '2' || p.tipo_produto === '4');
@@ -242,9 +308,18 @@ export class ProdutosUsoComponent {
     });
   }
 
-  doSearch() { this.load(); }
+  doSearch() { this.page.set(1); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
-  clearSearch() { this.search = ''; this.load(); }
+  clearSearch() {
+    this.search = '';
+    this.filterTipo = '';
+    this.filterUnidade = '';
+    this.filterStatus = '';
+    this.filterNcm = '';
+    this.filterReferencia = '';
+    this.filterCodigo = '';
+    this.page.set(1);
+  }
   onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
@@ -269,6 +344,70 @@ export class ProdutosUsoComponent {
   tipoProdutoLabel(tipo?: string | null): string {
     if (tipo === '4') return 'Insumo de Produção';
     return 'Uso/Consumo';
+  }
+
+  statusLabel(p: Produto): string {
+    if (p.bloqueado_venda) return 'Bloqueado';
+    return p.ativo === false ? 'Inativo' : 'Ativo';
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores().total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  rowActions(row: Produto): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'inativar', label: row.ativo ? 'Inativar' : 'Ativar', icon: '⊘', visible: this.podeEditarModulo },
+      { key: 'bloquear', label: row.bloqueado_venda ? 'Desbloquear' : 'Bloquear', icon: '▣', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: Produto): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'inativar') this.toggleAtivo(row);
+    if (action === 'bloquear') this.toggleBloqueio(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  exportarCsv(): void {
+    const headers = ['Descrição', 'Código reduzido', 'Referência', 'Tipo', 'Unidade', 'NCM', 'Status'];
+    const body = this.produtosFiltrados().map(p => [
+      p.descricao || '',
+      p.descricao_reduzida || '',
+      p.referencia || '',
+      this.tipoProdutoLabel(p.tipo_produto),
+      this.unidadeLabel(p.unidade ?? null),
+      p.ncm || '',
+      this.statusLabel(p),
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'produtos-uso-consumo.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
   }
 
   isInsumoProducao(): boolean {
@@ -519,4 +658,29 @@ export class ProdutosUsoComponent {
 
   openErrorOverlay() { this.errorOverlayOpen.set(true); }
   closeErrorOverlay() { this.errorOverlayOpen.set(false); }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
 }

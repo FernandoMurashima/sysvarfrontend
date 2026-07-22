@@ -107,6 +107,7 @@ export class ShellComponent {
       label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'], moduloEmpresa: 'vendas',
       children: [
         { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles, moduloEmpresa: 'vendas' },
+        { label: 'PDV Desktop'          , link: '/vendas/pdv-desktop', icon: 'bi bi-pc-display',             roles: this.pdvRoles, moduloEmpresa: 'vendas' },
         { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
         { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
         { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },

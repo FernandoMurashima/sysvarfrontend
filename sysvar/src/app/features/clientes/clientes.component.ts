@@ -14,11 +14,14 @@ import { ClientesService } from '../../core/services/clientes.service';
 import { Cliente } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
   templateUrl: './clientes.component.html',
   styleUrls: ['./clientes.component.css']
 })
@@ -44,10 +47,29 @@ export class ClientesComponent implements OnInit {
   }
 
   search = '';
+  filterTipo = '';
+  filterCidade = '';
+  filterStatus = '';
+  filterEstado = '';
+  filterCpf = '';
+  filterEmail = '';
+  advancedOpen = false;
   successMsg = '';
   errorMsg = '';
   excluirModal: Cliente | null = null;
   errorOverlayOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.clientes.columns';
+  columns = [
+    { key: 'apelido', label: 'Apelido', visible: true, required: false },
+    { key: 'cpf', label: 'CPF', visible: true, required: false },
+    { key: 'cidade', label: 'Cidade/UF', visible: true, required: false },
+    { key: 'email', label: 'E-mail', visible: true, required: false },
+    { key: 'telefone', label: 'Telefone', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'cadastro', label: 'Cadastro', visible: true, required: false },
+  ];
 
   // ======== Formulário ========
   form: FormGroup = this.fb.group({
@@ -108,11 +130,66 @@ export class ClientesComponent implements OnInit {
       c.cpf,
       c.email,
       c.cidade,
+      c.estado,
       c.telefone1,
     ].filter((v): v is string => !!v));
   }
 
+  get indicadores() {
+    const total = this.clientesAll.length;
+    const ativos = this.clientesAll.filter(c => c.ativo !== false).length;
+    const bloqueados = this.clientesAll.filter(c => !!c.bloqueio).length;
+    const malaDireta = this.clientesAll.filter(c => !!c.mala_direta).length;
+    const comCidade = this.clientesAll.filter(c => !!(c.cidade || '').trim()).length;
+    return { total, ativos, bloqueados, malaDireta, comCidade };
+  }
+
+  get cidadesOptions(): string[] {
+    return Array.from(new Set(
+      this.clientesAll
+        .map(c => (c.cidade || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  get clientesFiltrados(): Cliente[] {
+    const term = this.normalize(this.search);
+    const tipo = this.filterTipo;
+    const cidade = this.normalize(this.filterCidade);
+    const status = this.filterStatus;
+    const estado = this.normalize(this.filterEstado);
+    const cpf = this.digits(this.filterCpf);
+    const email = this.normalize(this.filterEmail);
+
+    return this.clientesAll.filter(c => {
+      const haystack = this.normalize([
+        c.nome_cliente,
+        c.apelido,
+        c.cpf,
+        c.email,
+        c.cidade,
+        c.estado,
+        c.telefone1,
+        c.telefone2,
+      ].filter(Boolean).join(' '));
+      const cpfCliente = this.digits(c.cpf || '');
+      const tipoCliente = this.tipoCliente(c);
+
+      if (term && !haystack.includes(term)) return false;
+      if (tipo && tipoCliente !== tipo) return false;
+      if (cidade && this.normalize(c.cidade || '') !== cidade) return false;
+      if (status === 'ATIVO' && c.ativo === false) return false;
+      if (status === 'INATIVO' && c.ativo !== false) return false;
+      if (status === 'BLOQUEADO' && !c.bloqueio) return false;
+      if (estado && this.normalize(c.estado || '') !== estado) return false;
+      if (cpf && !cpfCliente.includes(cpf)) return false;
+      if (email && !this.normalize(c.email || '').includes(email)) return false;
+      return true;
+    });
+  }
+
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.load();
   }
 
@@ -124,7 +201,7 @@ export class ClientesComponent implements OnInit {
   }
 
   /** Formata dígitos em (99)-9999-9999 ou (99)-99999-9999 */
-  private formatPhone(digits: string): string {
+  formatPhone(digits: string): string {
     const d = this.onlyDigits(digits);
     if (d.length < 10) return d; // deixa como está enquanto digita
     const ddd = d.slice(0, 2);
@@ -177,13 +254,10 @@ export class ClientesComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000 }).subscribe({
+    this.api.list({ page_size: 2000 }).subscribe({
       next: (res: any) => {
         const arr: Cliente[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.clientesAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number')
-          ? res.count
-          : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -201,14 +275,18 @@ export class ClientesComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.clientesFiltrados;
+    this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.clientes = this.clientesAll.slice(start, end);
+    this.clientes = filtered.slice(start, end);
   }
 
   onPageSizeChange(sizeStr: string): void {
     const size = Number(sizeStr) || 10;
     this.pageSize = size;
+    localStorage.setItem('sysvar.list.clientes.pageSize', String(size));
     this.page = 1;
     this.applyPage();
   }
@@ -223,12 +301,18 @@ export class ClientesComponent implements OnInit {
   }
   doSearch(): void {
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
   clearSearch(): void {
     this.search = '';
+    this.filterTipo = '';
+    this.filterCidade = '';
+    this.filterStatus = '';
+    this.filterEstado = '';
+    this.filterCpf = '';
+    this.filterEmail = '';
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
 
   // Novo / Editar
@@ -314,6 +398,111 @@ export class ClientesComponent implements OnInit {
     this.editar(row);
     this.consultando = true;
     this.form.disable({ emitEvent: false });
+  }
+
+  rowActions(row: Cliente): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, row: Cliente): void {
+    if (action === 'consultar') this.consultar(row);
+    if (action === 'editar') this.editar(row);
+    if (action === 'excluir') this.excluir(row);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Cliente', 'Apelido', 'CPF', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
+    const body = this.clientesFiltrados.map(c => [
+      c.nome_cliente,
+      c.apelido || '',
+      this.formatCpf(c.cpf),
+      this.cidadeUf(c),
+      c.email || '',
+      this.formatPhone(c.telefone1 || ''),
+      c.ativo === false ? 'Inativo' : 'Ativo',
+      this.formatDate(c.data_cadastro),
+    ]);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'clientes.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
+
+  cidadeUf(cliente: Cliente): string {
+    const cidade = (cliente.cidade || '').trim();
+    const uf = (cliente.estado || '').trim().toUpperCase();
+    if (cidade && uf) return `${cidade}/${uf}`;
+    return cidade || uf || '-';
+  }
+
+  percentual(valor: number): string {
+    const total = this.indicadores.total || 0;
+    if (!total) return '0% do total';
+    return `${((valor / total) * 100).toFixed(0)}% do total`;
+  }
+
+  tipoCliente(cliente: Cliente): 'CONSUMIDOR' | 'PJ' | 'PF' {
+    const nome = this.normalize(`${cliente.nome_cliente || ''} ${cliente.apelido || ''}`);
+    if (nome.includes('consumidor')) return 'CONSUMIDOR';
+    return this.digits(cliente.cpf || '').length > 11 ? 'PJ' : 'PF';
+  }
+
+  tipoClienteLabel(cliente: Cliente): string {
+    const tipo = this.tipoCliente(cliente);
+    if (tipo === 'CONSUMIDOR') return 'Consumidor final';
+    return tipo === 'PJ' ? 'Pessoa jurídica' : 'Pessoa física';
+  }
+
+  private normalize(value: string): string {
+    return (value || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private digits(value: string): string {
+    return (value || '').replace(/\D/g, '');
+  }
+
+  formatCpf(value?: string | null): string {
+    const d = (value || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length !== 11) return value || '-';
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+  }
+
+  trackCliente(_: number, cliente: Cliente): number | string {
+    return cliente.id ?? cliente.cpf ?? cliente.nome_cliente;
   }
 
   cancelarEdicao(): void {
@@ -450,5 +639,23 @@ export class ClientesComponent implements OnInit {
   }
   closeErrorOverlay(): void {
     this.errorOverlayOpen = false;
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.clientes.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

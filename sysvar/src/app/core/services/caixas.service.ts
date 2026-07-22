@@ -38,6 +38,17 @@ export class CaixasService {
     return this.http.post<any>(`${this.base}transferir/`, payload);
   }
 
+  lancarDespesa(id: number, payload: {
+    tipo_despesa?: number | null;
+    natureza?: number | null;
+    valor: number;
+    documento?: string | null;
+    historico?: string | null;
+    data_movimento?: string | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}${id}/lancar-despesa/`, payload);
+  }
+
   remove(id: number): Observable<unknown> {
     return this.http.delete(`${this.base}${id}/`);
   }

@@ -7,11 +7,27 @@ import { UnidadesService } from '../../core/services/unidades.service';
 import { Unidade } from '../../core/models/unidade';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
+import { ListPaginationComponent } from '../../shared/components/list-pagination/list-pagination.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-unidades',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    RouterLink,
+    SearchSuggestComponent,
+    PageHeaderComponent,
+    StatusBadgeComponent,
+    RowActionsMenuComponent,
+    ListPaginationComponent,
+    EmptyStateComponent
+  ],
   templateUrl: './unidades.component.html',
   styleUrls: ['./unidades.component.css'],
 })
@@ -33,6 +49,14 @@ export class UnidadesComponent implements OnInit {
   errorMsg = '';
   excluirModal: Unidade | null = null;
   errorOverlayOpen = false;
+  columnsOpen = false;
+  sortKey: 'descricao' | 'codigo' | 'decimal' = 'descricao';
+  sortDir: 'asc' | 'desc' = 'asc';
+  private readonly columnsStorageKey = 'sysvar.list.unidades.columns';
+  columns = [
+    { key: 'codigo', label: 'Codigo', visible: true, required: false },
+    { key: 'decimal', label: 'Decimal', visible: true, required: false },
+  ];
 
   // form
   form: FormGroup = this.fb.group({
@@ -46,7 +70,7 @@ export class UnidadesComponent implements OnInit {
   unidades: Unidade[] = [];
   page = 1;
   pageSize = 20;
-  pageSizeOptions = [10, 20, 50, 100];
+  pageSizeOptions = [20, 50, 100];
   total = 0;
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
@@ -54,6 +78,11 @@ export class UnidadesComponent implements OnInit {
   get pageEnd(): number     { return Math.min(this.page * this.pageSize, this.total); }
   get podeEditarModulo(): boolean { return this.auth.podeAcessarModulo('produtos', true) !== false; }
   get podeExcluirModulo(): boolean { return this.auth.podeExcluirModulo('produtos'); }
+  get indicadores() {
+    const total = this.unidadesAll.length;
+    const decimais = this.unidadesAll.filter(u => !!u.permite_decimal).length;
+    return { total, inteiras: total - decimais, decimais };
+  }
   get searchSuggestions(): string[] {
     const valores = this.unidadesAll.flatMap(item => [
       item.Descricao,
@@ -62,7 +91,10 @@ export class UnidadesComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.load();
+  }
 
   // --------- Fluxo ---------
   load(): void {
@@ -71,7 +103,6 @@ export class UnidadesComponent implements OnInit {
       next: (res: any) => {
         const arr: Unidade[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.unidadesAll = arr;
-        this.total = (res && typeof res === 'object' && typeof res.count === 'number') ? res.count : arr.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -89,15 +120,22 @@ export class UnidadesComponent implements OnInit {
   }
 
   applyPage(): void {
+    const filtered = this.unidadesFiltradas;
+    this.total = filtered.length;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.unidades = this.unidadesAll.slice(start, end);
+    this.unidades = filtered.slice(start, end);
   }
 
-  onPageSizeChange(sizeStr: string): void {
-    const size = Number(sizeStr) || 10;
+  onPageSizeChange(sizeStr: string | number): void {
+    const size = Number(sizeStr) || 20;
     this.pageSize = size;
+    localStorage.setItem('sysvar.list.unidades.pageSize', String(this.pageSize));
     this.page = 1;
+    this.applyPage();
+  }
+  onPageChange(page: number): void {
+    this.page = Math.max(1, Math.min(page, this.totalPages));
     this.applyPage();
   }
   firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
@@ -106,8 +144,8 @@ export class UnidadesComponent implements OnInit {
   lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.load(); }
-  clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
+  doSearch(): void { this.page = 1; this.applyPage(); }
+  clearSearch(): void { this.search = ''; this.page = 1; this.applyPage(); }
 
   // --------- CRUD ---------
   novo(): void {
@@ -219,6 +257,109 @@ export class UnidadesComponent implements OnInit {
 
   fecharExclusao(): void {
     this.excluirModal = null;
+  }
+
+  executarAcao(key: string | Event, unidade: Unidade): void {
+    if (typeof key !== 'string') return;
+    if (key === 'consultar') this.consultar(unidade);
+    if (key === 'editar') this.editar(unidade);
+    if (key === 'excluir') this.excluir(unidade);
+  }
+
+  rowActions(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '×', danger: true, dividerBefore: true, visible: this.podeExcluirModulo },
+    ];
+  }
+
+  get unidadesFiltradas(): Unidade[] {
+    const term = this.normalize(this.search);
+    return this.unidadesAll
+      .filter(u => {
+        if (!term) return true;
+        return this.normalize([u.Descricao, u.Codigo, u.permite_decimal ? 'decimal' : 'inteira'].join(' ')).includes(term);
+      })
+      .sort((a, b) => this.compareUnidades(a, b));
+  }
+
+  sortBy(key: 'descricao' | 'codigo' | 'decimal'): void {
+    if (this.sortKey === key) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortKey = key;
+      this.sortDir = 'asc';
+    }
+    this.applyPage();
+  }
+
+  sortIcon(key: 'descricao' | 'codigo' | 'decimal'): string {
+    if (this.sortKey !== key) return '↕';
+    return this.sortDir === 'asc' ? '↓' : '↑';
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, checked: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = checked;
+    this.saveColumnsPreference();
+  }
+
+  exportarCsv(): void {
+    const headers = ['Descricao', 'Codigo', 'Aceita decimal'];
+    const body = this.unidadesFiltradas.map(u => [u.Descricao || '', u.Codigo || '', u.permite_decimal ? 'Sim' : 'Nao']);
+    const csv = [headers, ...body]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'unidades.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private compareUnidades(a: Unidade, b: Unidade): number {
+    const val = (u: Unidade) => {
+      if (this.sortKey === 'codigo') return u.Codigo || '';
+      if (this.sortKey === 'decimal') return u.permite_decimal ? '1' : '0';
+      return u.Descricao || '';
+    };
+    const result = String(val(a)).localeCompare(String(val(b)), 'pt-BR', { numeric: true });
+    return this.sortDir === 'asc' ? result : -result;
+  }
+
+  private normalize(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.unidades.pageSize'));
+    if ([20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {
+      return;
+    }
+  }
+
+  private saveColumnsPreference(): void {
+    const state: Record<string, boolean> = {};
+    this.columns.forEach(c => state[c.key] = c.visible);
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 
   // --------- Overlay de erros ---------

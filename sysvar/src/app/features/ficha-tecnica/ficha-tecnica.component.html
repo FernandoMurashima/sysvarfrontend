@@ -1,19 +1,39 @@
 <section class="page">
-  <header class="toolbar">
-    <h2>Ficha Técnica</h2>
-    <div class="toolbar-actions">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por produto, referência ou versão..."
-        (search)="load()"
-        (cleared)="load()"
-      />
-      <button class="btn" type="button" (click)="search=''; load()">Limpar</button>
-      <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">Nova</button>
+  <section class="header-card">
+    <app-page-header
+      title="Ficha Técnica"
+      subtitle="Gerencie composições, insumos, facção e custos previstos"
+      [showPrimaryAction]="false"
+    />
+    <div class="header-actions">
+      <button class="btn" type="button">Ajuda</button>
       <a class="btn" routerLink="/home">Home</a>
+      <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">+ Nova Ficha</button>
     </div>
-  </header>
+  </section>
+
+  <section class="summary-grid">
+    <div class="mini-indicator"><strong>{{ fichas.length }}</strong><span>fichas</span></div>
+    <div class="mini-indicator"><strong>{{ fichasAprovadas }}</strong><span>aprovadas</span></div>
+    <div class="mini-indicator"><strong>{{ fichasRascunho }}</strong><span>rascunhos</span></div>
+    <div class="mini-indicator"><strong>{{ fichasInativas }}</strong><span>inativas</span></div>
+    <div class="mini-indicator value"><strong>{{ formatMoney(custoPrevistoListado) }}</strong><span>custo listado</span></div>
+  </section>
+
+  <section class="filters-panel">
+    <app-search-suggest
+      class="search-control"
+      [(value)]="search"
+      [suggestions]="searchSuggestions"
+      [showActions]="false"
+      placeholder="Buscar por produto, referência ou versão..."
+      (search)="load()"
+      (cleared)="load()"
+    />
+    <button class="btn primary" type="button" (click)="load()">Buscar</button>
+    <button class="btn" type="button" (click)="search=''; load()">Limpar</button>
+    <button class="btn" type="button" (click)="load()">Atualizar</button>
+  </section>
 
   <div class="msg success" *ngIf="successMsg">{{ successMsg }}</div>
   <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
@@ -142,7 +162,12 @@
           <td class="num">{{ formatMoney(item.custo_medio_produto) }}</td>
           <td class="num">{{ formatMoney(item.custo_unitario_usado) }}</td>
           <td class="num">{{ formatMoney(item.custo_total_previsto) }}</td>
-          <td class="actions" *ngIf="podeEditarModulo"><button class="btn sm danger" type="button" (click)="removerItem(item)">Remover</button></td>
+          <td class="actions" *ngIf="podeEditarModulo">
+            <app-row-actions-menu
+              [actions]="itemRowActions()"
+              (action)="executarItemAcao($event, item)"
+            />
+          </td>
         </tr>
       </tbody>
     </table>
@@ -168,13 +193,18 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let ficha of fichas" [class.selected]="fichaAtual?.id === ficha.id">
+        <tr *ngFor="let ficha of fichas" [class.selected]="fichaAtual?.id === ficha.id" (click)="selectFicha(ficha)">
           <td>{{ ficha.produto_descricao }}</td>
           <td>{{ ficha.produto_referencia }}</td>
           <td>{{ ficha.versao }}</td>
           <td><span class="badge">{{ ficha.status }}</span></td>
           <td>{{ formatMoney(ficha.custo_previsto) }}</td>
-          <td class="actions"><button class="btn sm" type="button" (click)="selectFicha(ficha)">{{ podeEditarModulo ? 'Editar' : 'Consultar' }}</button></td>
+          <td class="actions" (click)="$event.stopPropagation()">
+            <app-row-actions-menu
+              [actions]="rowActions(ficha)"
+              (action)="executarAcao($event, ficha)"
+            />
+          </td>
         </tr>
       </tbody>
     </table>

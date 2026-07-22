@@ -12,11 +12,13 @@ import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-ficha-tecnica',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
   templateUrl: './ficha-tecnica.component.html',
   styleUrls: ['./ficha-tecnica.component.css'],
 })
@@ -64,6 +66,22 @@ export class FichaTecnicaComponent implements OnInit {
       ])
     ].filter((v): v is string => !!v);
     return Array.from(new Set(valores));
+  }
+
+  get fichasAprovadas(): number {
+    return this.fichas.filter(f => f.status === 'APROVADA').length;
+  }
+
+  get fichasRascunho(): number {
+    return this.fichas.filter(f => f.status === 'RASCUNHO').length;
+  }
+
+  get fichasInativas(): number {
+    return this.fichas.filter(f => f.status === 'INATIVA').length;
+  }
+
+  get custoPrevistoListado(): number {
+    return this.fichas.reduce((total, f) => total + Number(f.custo_previsto || 0), 0);
   }
 
   ngOnInit(): void {
@@ -127,6 +145,37 @@ export class FichaTecnicaComponent implements OnInit {
     this.form = { ...ficha };
     this.itemForm = this.blankItem();
     if (clear) this.clearMsgs();
+  }
+
+  rowActions(ficha: FichaTecnica): RowAction[] {
+    const aprovada = ficha.status === 'APROVADA';
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'aprovar', label: 'Aprovar', icon: '✓', visible: this.podeEditarModulo, disabled: aprovada },
+    ];
+  }
+
+  itemRowActions(): RowAction[] {
+    return [
+      { key: 'remover', label: 'Remover', icon: '×', danger: true, visible: this.podeEditarModulo },
+    ];
+  }
+
+  executarAcao(action: string | Event, ficha: FichaTecnica): void {
+    if (typeof action !== 'string') return;
+    if (action === 'consultar' || action === 'editar') {
+      this.selectFicha(ficha);
+      return;
+    }
+    if (action === 'aprovar') {
+      this.selectFicha(ficha, false);
+      this.aprovar();
+    }
+  }
+
+  executarItemAcao(action: string | Event, item: FichaTecnicaItem): void {
+    if (action === 'remover') this.removerItem(item);
   }
 
   salvarFicha(): void {

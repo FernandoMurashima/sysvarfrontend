@@ -1,23 +1,77 @@
-<div class="grupos-page">
-  <!-- TOOLBAR -->
-  <header class="toolbar">
-    <h2>Grades</h2>
-    <div class="toolbar-actions">
+<div class="grades-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Grades"
+      subtitle="Gerencie grades e tamanhos dos produtos"
+      primaryActionLabel="Nova Grade"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novoGrade()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" (click)="goHome()">Home</button>
+    </div>
+  </div>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Filtrar por descrição/status..."
+        placeholder="Buscar por descrição, status ou tamanho..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novoGrade()">Nova Grade</button>
-      <button class="btn primary" (click)="goHome()">Home</button>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="ATIVA">Ativas</option>
+          <option value="INATIVA">Inativas</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use a busca principal para localizar por descrição, status ou tamanho.</span>
+    </div>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
@@ -34,23 +88,14 @@
   </div>
 
   <div class="content">
-    <!-- FORM GRADE -->
-    <section class="card form" *ngIf="formModeGrade !== null || submitted">
+    <section class="card form form-panel" *ngIf="formModeGrade !== null || submitted">
       <h3>{{ consultandoGrade ? 'Consultar Grade' : (formModeGrade === 'edit' ? 'Editar Grade' : 'Nova Grade') }}</h3>
 
       <form [formGroup]="formGrade" (ngSubmit)="salvarGrade()">
-        <div class="grid-10">
+        <div class="grade-form-grid">
           <label id="descricao-box">
             Descrição*
-            <input
-              type="text"
-              formControlName="Descricao"
-              maxlength="100"
-              [attr.aria-invalid]="fieldInvalidGrade('Descricao')"
-            />
-            <span class="field-error" *ngIf="fieldInvalidGrade('Descricao')">
-              Informe a Descrição (máx. 100).
-            </span>
+            <input type="text" formControlName="Descricao" maxlength="100" [attr.aria-invalid]="fieldInvalidGrade('Descricao')" />
           </label>
 
           <label id="status-box">
@@ -73,33 +118,39 @@
       </form>
     </section>
 
-    <!-- LISTA DE GRADES -->
     <section class="card list">
-      <div class="empty-hint" *ngIf="!loading && grades.length === 0">Nenhuma grade encontrada.</div>
+      <div class="list-header">
+        <h3>Grades cadastradas <span>{{ gradesFiltradas.length }} registro(s) encontrado(s)</span></h3>
+      </div>
 
-      <table class="table" *ngIf="grades.length > 0">
+      <div class="empty-hint" *ngIf="!loading && gradesFiltradas.length === 0">Nenhuma grade encontrada.</div>
+
+      <table class="table" *ngIf="gradesFiltradas.length > 0">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Descrição</th>
-            <th>Status</th>
-            <th style="width:330px;">Ações</th>
+            <th *ngIf="visibleColumn('id')">ID</th>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th *ngIf="visibleColumn('tamanhos')">Tamanhos</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let g of grades">
-            <td>{{ g.Idgrade }}</td>
-            <td>{{ g.Descricao }}</td>
-            <td>
-              <span class="badge" [ngClass]="(g.Status || '').toLowerCase()==='ativa' ? 'badge-ok' : 'badge-off'">
-                {{ g.Status || '—' }}
+          <tr *ngFor="let g of gradesFiltradas" (click)="consultarGrade(g)">
+            <td *ngIf="visibleColumn('id')">{{ g.Idgrade }}</td>
+            <td *ngIf="visibleColumn('descricao')">{{ g.Descricao }}</td>
+            <td *ngIf="visibleColumn('status')">
+              <span class="badge" [ngClass]="isAtiva(g.Status) ? 'badge-ok' : 'badge-off'">
+                {{ statusLabel(g.Status) }}
               </span>
             </td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarGrade(g)">Consultar</button>
-              <button class="btn sm" (click)="selecionarGrade(g.Idgrade!)">Tamanhos</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarGrade(g)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirGrade(g)">Excluir</button>
+            <td *ngIf="visibleColumn('tamanhos')">{{ tamanhoCount(g) }}</td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActionsGrade()"
+                ariaLabel="Ações da grade"
+                (action)="executarAcaoGrade($event, g)"
+              />
             </td>
           </tr>
         </tbody>
@@ -108,40 +159,26 @@
       <div class="loading" *ngIf="loading">Carregando...</div>
     </section>
 
-    <!-- SUB: TAMANHOS -->
     <section class="card subgrupos" *ngIf="selectedGradeId !== null">
+      <div class="list-header">
+        <h3>Tamanhos <span>{{ tamanhos.length }} registro(s) encontrado(s)</span></h3>
+      </div>
+
       <form [formGroup]="formTamanho" (ngSubmit)="salvarTamanho()">
-        <div class="grid-10">
+        <div class="tamanho-form-grid">
           <label id="grp-box">
             Grade*
-            <input type="number" formControlName="Idgrade" [readonly]="true" />
-            <span class="field-error" *ngIf="fieldInvalidTamanho('Idgrade')">Selecione a Grade.</span>
+            <input type="number" formControlName="Idgrade" readonly />
           </label>
 
           <label id="tamanho-box">
             Tamanho*
-            <input
-              type="text"
-              formControlName="Tamanho"
-              maxlength="10"
-              [attr.aria-invalid]="fieldInvalidTamanho('Tamanho')"
-            />
-            <span class="field-error" *ngIf="fieldInvalidTamanho('Tamanho')">
-              Informe o código do Tamanho (máx. 10).
-            </span>
+            <input type="text" formControlName="Tamanho" maxlength="10" [attr.aria-invalid]="fieldInvalidTamanho('Tamanho')" />
           </label>
 
           <label id="desc-box">
             Descrição*
-            <input
-              type="text"
-              formControlName="Descricao"
-              maxlength="100"
-              [attr.aria-invalid]="fieldInvalidTamanho('Descricao')"
-            />
-            <span class="field-error" *ngIf="fieldInvalidTamanho('Descricao')">
-              Informe a Descrição (máx. 100).
-            </span>
+            <input type="text" formControlName="Descricao" maxlength="100" [attr.aria-invalid]="fieldInvalidTamanho('Descricao')" />
           </label>
 
           <label id="status-tam-box">
@@ -172,22 +209,24 @@
             <th>Tamanho</th>
             <th>Descrição</th>
             <th>Status</th>
-            <th style="width:240px;">Ações</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let t of tamanhos">
+          <tr *ngFor="let t of tamanhos" (click)="consultarTamanho(t)">
             <td>{{ t.Tamanho }}</td>
             <td>{{ t.Descricao }}</td>
             <td>
-              <span class="badge" [ngClass]="(t.Status || '').toLowerCase()==='ativa' ? 'badge-ok' : 'badge-off'">
-                {{ t.Status || '—' }}
+              <span class="badge" [ngClass]="isAtiva(t.Status) ? 'badge-ok' : 'badge-off'">
+                {{ statusLabel(t.Status) }}
               </span>
             </td>
-            <td class="actions">
-              <button class="btn sm" (click)="consultarTamanho(t)">Consultar</button>
-              <button class="btn sm" *ngIf="podeEditarModulo" (click)="editarTamanho(t)">Editar</button>
-              <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluirTamanho(t)">Excluir</button>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActionsTamanho()"
+                ariaLabel="Ações do tamanho"
+                (action)="executarAcaoTamanho($event, t)"
+              />
             </td>
           </tr>
         </tbody>

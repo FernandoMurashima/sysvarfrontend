@@ -1,63 +1,129 @@
-<div class="clientes-page">
-  <header class="toolbar">
-    <h2>CFOPs</h2>
-    <div class="toolbar-actions">
-      <app-search-suggest
-        class="toolbar-search"
-        [(value)]="search"
-        [suggestions]="searchSuggestions()"
-        [showActions]="false"
-        placeholder="Buscar por CFOP/descrição..."
-        (search)="doSearch()"
-        (cleared)="clearSearch()"
-      />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" type="button" [routerLink]="['/home']">Home</button>
+<div class="cfops-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="CFOP"
+      subtitle="Gerencie os códigos fiscais de operação"
+      primaryActionLabel="Novo CFOP"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
     </div>
-  </header>
+  </div>
 
   <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
 
-  <div class="overlay" *ngIf="excluirModal as cfop">
-    <div class="overlay-card">
-      <h4>Excluir CFOP</h4>
-      <p>Confirma a exclusão do CFOP <strong>{{ cfop.codigo }}</strong>?</p>
-      <div class="overlay-actions">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
+  <section class="panel filters-panel">
+    <div class="quick-filters">
+      <app-search-suggest
+        class="main-search"
+        [(value)]="search"
+        [suggestions]="searchSuggestions()"
+        [showActions]="false"
+        placeholder="Buscar por CFOP, descrição, tipo ou destino..."
+        (search)="doSearch()"
+        (cleared)="clearSearch()"
+      />
+
+      <label>
+        Tipo
+        <select [(ngModel)]="filterTipo" (ngModelChange)="doFilter()">
+          <option value="">Todos</option>
+          <option value="VENDA">Venda</option>
+          <option value="COMPRA">Compra</option>
+          <option value="DEVOLUCAO">Devolução</option>
+          <option value="TRANSFERENCIA">Transferência</option>
+          <option value="OUTROS">Outros</option>
+        </select>
+      </label>
+
+      <label>
+        Destino
+        <select [(ngModel)]="filterDestino" (ngModelChange)="doFilter()">
+          <option value="">Todos</option>
+          <option value="DENTRO_UF">Dentro UF</option>
+          <option value="FORA_UF">Fora UF</option>
+          <option value="AMBOS">Ambos</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doFilter()">
+          <option value="">Todos</option>
+          <option value="ativo">Ativos</option>
+          <option value="inativo">Inativos</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading()" (click)="clearFilters()">Limpar</button>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="overlay" *ngIf="errorOverlayOpen()">
-    <div class="overlay-card">
-      <h4>Ops! Revise as informações</h4>
-      <p>Encontramos {{ getFormErrors().length || 1 }} pendência(s):</p>
-      <ul>
-        <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
-        <li *ngIf="!getFormErrors().length">Não foi possível carregar ou salvar o cadastro.</li>
-      </ul>
-      <div class="overlay-actions">
-        <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <span>Use a busca principal e os filtros de tipo, destino e status para refinar a lista de CFOPs.</span>
+    </div>
+  </section>
+
+  <section class="panel form-panel" *ngIf="showForm">
+    <div class="form-title">
+      <div>
+        <h2>{{ consultando ? 'Consultar CFOP' : (editingId ? 'Editar CFOP' : 'Novo CFOP') }}</h2>
+        <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha a operação fiscal e seus efeitos.' }}</p>
+      </div>
+      <div class="form-title-actions">
+        <button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+          {{ saving ? 'Salvando...' : (editingId ? 'Salvar alterações' : 'Salvar') }}
+        </button>
       </div>
     </div>
-  </div>
 
-  <section class="card form" *ngIf="showForm">
-    <h3>{{ consultando ? 'Consultar CFOP' : (editingId ? 'Editar CFOP' : 'Novo CFOP') }}</h3>
     <form [formGroup]="form" (ngSubmit)="salvar()">
-      <div class="grid-12">
-        <label id="codigo-box" class="input-item" [class.invalid]="form.get('codigo')?.invalid && (form.get('codigo')?.touched || submitted)">
+      <div class="form-grid">
+        <label class="col-code" [class.invalid]="form.get('codigo')?.invalid && (form.get('codigo')?.touched || submitted)">
           CFOP*
           <input type="text" formControlName="codigo" placeholder="5102" maxlength="4" />
         </label>
-        <label id="descricao-box" class="input-item" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
+
+        <label class="col-description" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
           Descrição*
           <input type="text" formControlName="descricao" />
         </label>
-        <label id="tipo-box" class="input-item">
+
+        <label>
           Tipo*
           <select formControlName="tipo_operacao">
             <option value="VENDA">Venda</option>
@@ -67,7 +133,8 @@
             <option value="OUTROS">Outros</option>
           </select>
         </label>
-        <label id="destino-box" class="input-item">
+
+        <label>
           Destino*
           <select formControlName="destino">
             <option value="DENTRO_UF">Dentro do estado</option>
@@ -75,10 +142,12 @@
             <option value="AMBOS">Ambos</option>
           </select>
         </label>
-        <label id="obs-box" class="input-item">
+
+        <label class="col-observacoes">
           Observações
           <input type="text" formControlName="observacoes" maxlength="255" />
         </label>
+
         <div class="check-row">
           <label><input type="checkbox" formControlName="movimenta_estoque" /> Movimenta estoque</label>
           <label><input type="checkbox" formControlName="gera_financeiro" /> Gera financeiro</label>
@@ -88,19 +157,16 @@
 
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>
-        <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
-      </div>
-
-      <div class="actions-form">
-        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
-        <button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <ul>
+          <li *ngFor="let m of getFormErrors()">{{ m }}</li>
+        </ul>
       </div>
     </form>
   </section>
 
-  <section class="card list">
+  <section class="panel table-panel">
     <div class="list-header">
-      <div class="list-inline"><strong>Total:</strong> {{ total() }}</div>
+      <h3>CFOPs cadastrados <span>{{ total() }} registro(s) encontrado(s)</span></h3>
       <div class="list-inline">
         <label for="pageSize">Itens por página</label>
         <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
@@ -113,29 +179,33 @@
       <table class="table" *ngIf="paged().length > 0; else emptyTpl">
         <thead>
           <tr>
-            <th>CFOP</th>
-            <th>Descrição</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Estoque</th>
-            <th>Financeiro</th>
-            <th>Status</th>
-            <th>Ações</th>
+            <th *ngIf="visibleColumn('codigo')">CFOP</th>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('tipo')">Tipo</th>
+            <th *ngIf="visibleColumn('destino')">Destino</th>
+            <th *ngIf="visibleColumn('estoque')">Estoque</th>
+            <th *ngIf="visibleColumn('financeiro')">Financeiro</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let r of paged()">
-            <td>{{ r.codigo }}</td>
-            <td>{{ r.descricao }}</td>
-            <td>{{ tipoLabel(r.tipo_operacao) }}</td>
-            <td>{{ destinoLabel(r.destino) }}</td>
-            <td>{{ r.movimenta_estoque ? 'Sim' : 'Não' }}</td>
-            <td>{{ r.gera_financeiro ? 'Sim' : 'Não' }}</td>
-            <td><span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-            <td class="actions">
-              <button class="btn sm" type="button" (click)="consultar(r)">Consultar</button>
-              <button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
-              <button class="btn sm danger" type="button" *ngIf="podeExcluirModulo" (click)="excluir(r)">Excluir</button>
+          <tr *ngFor="let r of paged()" (click)="consultar(r)">
+            <td *ngIf="visibleColumn('codigo')">{{ r.codigo }}</td>
+            <td *ngIf="visibleColumn('descricao')">{{ r.descricao }}</td>
+            <td *ngIf="visibleColumn('tipo')">{{ tipoLabel(r.tipo_operacao) }}</td>
+            <td *ngIf="visibleColumn('destino')">{{ destinoLabel(r.destino) }}</td>
+            <td *ngIf="visibleColumn('estoque')">{{ r.movimenta_estoque ? 'Sim' : 'Não' }}</td>
+            <td *ngIf="visibleColumn('financeiro')">{{ r.gera_financeiro ? 'Sim' : 'Não' }}</td>
+            <td *ngIf="visibleColumn('status')">
+              <span class="status" [class.inactive]="!r.ativo">{{ r.ativo ? 'Ativo' : 'Inativo' }}</span>
+            </td>
+            <td class="actions-col" (click)="$event.stopPropagation()">
+              <app-row-actions-menu
+                [actions]="rowActions()"
+                [ariaLabel]="'Ações do CFOP ' + r.codigo"
+                (action)="executarAcao($event, r)"
+              />
             </td>
           </tr>
         </tbody>
@@ -161,4 +231,29 @@
       </div>
     </div>
   </section>
+</div>
+
+<div class="overlay" *ngIf="excluirModal as cfop">
+  <div class="overlay-card">
+    <h4>Excluir CFOP</h4>
+    <p>Confirma a exclusão do CFOP <strong>{{ cfop.codigo }}</strong>?</p>
+    <div class="overlay-actions">
+      <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
+      <button class="btn danger" type="button" *ngIf="podeExcluirModulo" (click)="confirmarExclusao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" *ngIf="errorOverlayOpen()">
+  <div class="overlay-card">
+    <h4>Ops! Revise as informações</h4>
+    <p>Encontramos {{ getFormErrors().length || 1 }} pendência(s):</p>
+    <ul>
+      <li *ngFor="let msg of getFormErrors()">{{ msg }}</li>
+      <li *ngIf="!getFormErrors().length">Não foi possível carregar ou salvar o cadastro.</li>
+    </ul>
+    <div class="overlay-actions">
+      <button class="btn primary" type="button" (click)="closeErrorOverlay()">OK, vou corrigir</button>
+    </div>
+  </div>
 </div>

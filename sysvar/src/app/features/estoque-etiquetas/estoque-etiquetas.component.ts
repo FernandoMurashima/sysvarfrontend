@@ -143,12 +143,12 @@ export class EstoqueEtiquetasComponent implements OnInit {
 
   imprimirLinha(row: LabelRow): void {
     this.destaque = row;
-    const original = this.etiquetas;
-    this.etiquetas = [row];
-    setTimeout(() => {
-      window.print();
-      this.etiquetas = original;
-    });
+    const labels: PrintLabel[] = [];
+    const label = this.toPrintLabel(row);
+    for (let i = 0; i < Math.max(1, Number(row.quantidade || 1)); i++) {
+      labels.push(label);
+    }
+    this.printLabels(labels);
   }
 
   imprimir(): void {
@@ -156,7 +156,7 @@ export class EstoqueEtiquetasComponent implements OnInit {
       this.errorMsg = 'Adicione ao menos uma etiqueta.';
       return;
     }
-    window.print();
+    this.printLabels(this.etiquetasImpressao);
   }
 
   get etiquetasImpressao(): PrintLabel[] {
@@ -273,6 +273,145 @@ export class EstoqueEtiquetasComponent implements OnInit {
       i = j;
     }
     return bars;
+  }
+
+  private printLabels(labels: PrintLabel[]): void {
+    const paginas = this.chunkLabels(labels);
+    const printWindow = window.open('', '_blank', 'width=980,height=720');
+    if (!printWindow) {
+      this.errorMsg = 'Não foi possível abrir a janela de impressão.';
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Etiquetas Sysvar</title>
+          <style>
+            * { box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; background: #fff; font-family: Arial, sans-serif; }
+            .sheet {
+              width: ${this.larguraPapelMm}mm;
+              min-height: ${this.alturaPapelMm}mm;
+              padding: ${this.margemMm}mm;
+              display: grid;
+              grid-template-columns: repeat(${this.etiquetasPorLinha}, ${this.larguraEtiquetaMm}mm);
+              grid-auto-rows: ${this.alturaEtiquetaMm}mm;
+              gap: ${this.espacoVerticalMm}mm ${this.espacoHorizontalMm}mm;
+              align-content: start;
+              page-break-after: always;
+              break-after: page;
+            }
+            .sheet:last-child { page-break-after: auto; break-after: auto; }
+            .label {
+              width: ${this.larguraEtiquetaMm}mm;
+              height: ${this.alturaEtiquetaMm}mm;
+              padding: 2mm 3mm;
+              overflow: hidden;
+              display: grid;
+              grid-template-rows: 15mm auto auto auto;
+              text-align: center;
+              background: #fff;
+              color: #000;
+            }
+            .barcode {
+              height: 15mm;
+              display: flex;
+              align-items: flex-end;
+              justify-content: center;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .barcode span {
+              height: 13mm;
+              display: block;
+              background: transparent;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .barcode span.black {
+              background: #000 !important;
+              box-shadow: inset 0 0 0 999px #000;
+            }
+            .barcode span.guard { height: 15mm; }
+            .ean {
+              font-size: 7pt;
+              font-weight: 700;
+              letter-spacing: 1px;
+              line-height: 1;
+              margin: .8mm 0 .6mm;
+            }
+            .name {
+              font-size: 8.5pt;
+              font-weight: 800;
+              line-height: 1.08;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .ref {
+              font-size: 6.5pt;
+              font-weight: 700;
+              line-height: 1.1;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            @page { size: ${this.papel === 'A4' ? 'A4' : `${this.larguraPapelMm}mm ${this.alturaPapelMm}mm`}; margin: 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          ${paginas.map(pagina => `
+            <section class="sheet">
+              ${pagina.map(label => this.labelPrintHtml(label)).join('')}
+            </section>
+          `).join('')}
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  private chunkLabels(labels: PrintLabel[]): PrintLabel[][] {
+    if (this.papel === 'ROLO') return labels.length ? [labels] : [];
+    const paginas: PrintLabel[][] = [];
+    for (let i = 0; i < labels.length; i += this.etiquetasPorFolha) {
+      paginas.push(labels.slice(i, i + this.etiquetasPorFolha));
+    }
+    return paginas;
+  }
+
+  private labelPrintHtml(label: PrintLabel): string {
+    return `
+      <article class="label">
+        <div class="barcode">${label.bars.map(bar => (
+          `<span class="${bar.black ? 'black' : ''} ${bar.guard ? 'guard' : ''}" style="width:${bar.width * 2}px"></span>`
+        )).join('')}</div>
+        <div class="ean">${this.escapeHtml(label.ean)}</div>
+        <div class="name">${this.escapeHtml(label.nome)}</div>
+        <div class="ref">REF: ${this.escapeHtml(label.referencia)}</div>
+      </article>
+    `;
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private unwrap<T>(res: T[] | { results?: T[] } | any): T[] {

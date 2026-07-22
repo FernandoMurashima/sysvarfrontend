@@ -15,11 +15,13 @@ import { GradeModel } from '../../core/models/grade';
 import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-packs',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
   templateUrl: './packs.component.html',
   styleUrls: ['./packs.component.css'],
 })
@@ -47,6 +49,18 @@ export class PacksComponent implements OnInit {
   tamanhosDaGrade: TamanhoModel[] = [];
 
   search = '';
+  filterGrade = '';
+  filterStatus = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  private readonly columnsStorageKey = 'sysvar.list.packs.columns';
+  columns = [
+    { key: 'id', label: 'ID', visible: true, required: false },
+    { key: 'nome', label: 'Nome', visible: true, required: true },
+    { key: 'grade', label: 'Grade', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
   selectedPackId: number | null = null;
 
   get podeEditarModulo(): boolean {
@@ -92,6 +106,7 @@ export class PacksComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
     this.loadGrades();
     this.loadPacks();
   }
@@ -126,7 +141,12 @@ export class PacksComponent implements OnInit {
       next: (data) => {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
-        this.packs = Array.isArray(rows) ? rows : [];
+        const grade = this.filterGrade ? Number(this.filterGrade) : null;
+        this.packs = (Array.isArray(rows) ? rows : []).filter((p: PackModel) => {
+          const matchesGrade = !grade || p.grade === grade;
+          const matchesStatus = !this.filterStatus || String(!!p.ativo) === this.filterStatus;
+          return matchesGrade && matchesStatus;
+        });
       },
       error: () => (this.errorMsg = 'Falha ao carregar packs.'),
       complete: () => (this.loading = false),
@@ -135,7 +155,7 @@ export class PacksComponent implements OnInit {
 
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadPacks(); }
   doSearch() { this.loadPacks(); }
-  clearSearch() { this.search = ''; this.loadPacks(); }
+  clearSearch() { this.search = ''; this.filterGrade = ''; this.filterStatus = ''; this.loadPacks(); }
 
   novoPack() {
     this.editingPackId = null;
@@ -373,5 +393,80 @@ export class PacksComponent implements OnInit {
     if (this.fieldInvalidItem('tamanho')) msgs.push('Selecione o Tamanho.');
     if (this.fieldInvalidItem('qtd')) msgs.push('Informe a Quantidade (>= 1).');
     return msgs;
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnsPreference();
+  }
+
+  packActions(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'itens', label: 'Itens', icon: '☷' },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  itemActions(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcaoPack(action: string | Event, p: PackModel): void {
+    if (typeof action !== 'string') return;
+    if (action === 'consultar') this.consultarPack(p);
+    if (action === 'editar') this.editarPack(p);
+    if (action === 'itens') this.selecionarPack(p.id!, p.grade);
+    if (action === 'excluir') this.excluirPack(p);
+  }
+
+  executarAcaoItem(action: string | Event, item: PackItemModel): void {
+    if (typeof action !== 'string') return;
+    if (action === 'consultar') this.consultarItem(item);
+    if (action === 'editar') this.editarItem(item);
+    if (action === 'excluir') this.excluirItem(item);
+  }
+
+  exportarCsv(): void {
+    const headers = ['ID', 'Nome', 'Grade', 'Status'];
+    const rows = this.packs.map(p => [
+      String(p.id ?? ''),
+      p.nome ?? '',
+      this.getGradeDesc(p.grade),
+      p.ativo ? 'Ativo' : 'Inativo'
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'packs.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private loadColumnsPreference(): void {
+    try {
+      const raw = localStorage.getItem(this.columnsStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(col => col.required ? col : { ...col, visible: saved[col.key] ?? col.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

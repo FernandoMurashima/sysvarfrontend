@@ -1,23 +1,114 @@
 <div class="clientes-page">
-  <!-- TOOLBAR -->
-  <header class="toolbar">
-    <h2>Fornecedores</h2>
-    <div class="toolbar-actions">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Cadastro de Fornecedores"
+      subtitle="Gerencie fornecedores, facções e parceiros comerciais"
+      primaryActionLabel="Novo Fornecedor"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+    <div class="header-extra-actions">
+      <button class="btn" type="button" [routerLink]="['/ajuda/fornecedores']">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="summary-grid" aria-label="Resumo dos fornecedores">
+    <app-summary-card label="Total de Fornecedores" [value]="indicadores.total" icon="▣" [percentage]="percentual(indicadores.total)" />
+    <app-summary-card label="Fornecedores Ativos" [value]="indicadores.ativos" icon="▤" variant="green" [percentage]="percentual(indicadores.ativos)" />
+    <app-summary-card label="Facções" [value]="indicadores.faccoes" icon="⌂" variant="orange" [percentage]="percentual(indicadores.faccoes)" />
+    <app-summary-card label="Bloqueados" [value]="indicadores.bloqueados" icon="!" variant="purple" [percentage]="percentual(indicadores.bloqueados)" />
+    <app-summary-card label="Com cidade" [value]="indicadores.comCidade" icon="▧" variant="cyan" [percentage]="percentual(indicadores.comCidade)" />
+  </section>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
-        class="toolbar-search"
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
-        placeholder="Buscar por nome, apelido ou CNPJ..."
+        placeholder="Buscar por nome, apelido, CNPJ, cidade, e-mail ou telefone..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" type="button" (click)="doSearch()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+
+      <label>
+        Categoria
+        <select [(ngModel)]="filterCategoria" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let opt of categoriaOptions" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </label>
+
+      <label>
+        Cidade
+        <select [(ngModel)]="filterCidade" (ngModelChange)="doSearch()">
+          <option value="">Todas</option>
+          <option *ngFor="let cidade of cidadesOptions" [value]="cidade">{{ cidade }}</option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
+          <option value="">Todos</option>
+          <option value="ATIVO">Ativos</option>
+          <option value="INATIVO">Inativos</option>
+          <option value="BLOQUEADO">Bloqueados</option>
+        </select>
+      </label>
+
+      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+
+    <div class="filter-actions">
+      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns">
+            <input
+              type="checkbox"
+              [checked]="col.visible"
+              [disabled]="col.required"
+              (change)="toggleColumn(col.key, $any($event.target).checked)"
+            />
+            {{ col.label }}
+          </label>
+        </div>
+      </div>
+
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
+        <div class="floating-menu export-menu" *ngIf="exportOpen">
+          <button type="button" (click)="exportarCsv()">CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">
+      <label>
+        Estado
+        <input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" />
+      </label>
+      <label>
+        CNPJ
+        <input type="text" [(ngModel)]="filterCnpj" (keyup.enter)="doSearch()" />
+      </label>
+      <label>
+        E-mail
+        <input type="text" [(ngModel)]="filterEmail" (keyup.enter)="doSearch()" />
+      </label>
+      <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
+    </div>
+  </section>
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
@@ -34,8 +125,19 @@
 
   <div class="content">
     <!-- FORM -->
-    <section class="card form" *ngIf="showForm">
-      <h3>{{ consultando ? 'Consultar Fornecedor' : (editingId ? 'Editar Fornecedor' : 'Novo Fornecedor') }}</h3>
+    <section class="card form form-panel" *ngIf="showForm">
+      <div class="form-title">
+        <div>
+          <h3>{{ consultando ? 'Consultar Fornecedor' : (editingId ? 'Editar Fornecedor' : 'Novo Fornecedor') }}</h3>
+          <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações do fornecedor.' }}</p>
+        </div>
+        <div class="form-title-actions">
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+          <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+          </button>
+        </div>
+      </div>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <!-- Linha 1 -->
@@ -195,7 +297,7 @@
           </ul>
         </div>
 
-        <div class="actions-form">
+        <div class="actions-form bottom-actions">
           <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
             {{ editingId ? 'Salvar alterações' : 'Salvar' }}
           </button>
@@ -223,30 +325,34 @@
           <thead>
             <tr>
               <th>Nome</th>
-              <th>Apelido</th>
-              <th>Categoria</th>
-              <th>CNPJ</th>
-              <th>Cidade</th>
-              <th>UF</th>
-              <th>Email</th>
-              <th>Telefone</th>
-              <th style="width:200px;">Ações</th>
+              <th *ngIf="visibleColumn('apelido')">Apelido</th>
+              <th *ngIf="visibleColumn('categoria')">Categoria</th>
+              <th *ngIf="visibleColumn('cnpj')">CNPJ</th>
+              <th *ngIf="visibleColumn('cidade')">Cidade / UF</th>
+              <th *ngIf="visibleColumn('email')">E-mail</th>
+              <th *ngIf="visibleColumn('telefone')">Telefone</th>
+              <th *ngIf="visibleColumn('status')">Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let f of fornecedores">
+            <tr *ngFor="let f of fornecedores; trackBy: trackFornecedor" (click)="consultar(f)" tabindex="0" (keyup.enter)="consultar(f)">
               <td>{{ f.nome_fornecedor }}</td>
-              <td>{{ f.apelido }}</td>
-              <td>{{ categoriaLabel(f.categoria) || '—' }}</td>
-              <td>{{ f.cnpj }}</td>
-              <td>{{ f.cidade }}</td>
-              <td>{{ f.estado }}</td>
-              <td class="email">{{ f.email }}</td>
-              <td>{{ f.telefone1 }}</td>
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(f)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(f)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeExcluirModulo" (click)="excluir(f)">Excluir</button>
+              <td *ngIf="visibleColumn('apelido')">{{ f.apelido || '-' }}</td>
+              <td *ngIf="visibleColumn('categoria')">{{ categoriaLabel(f.categoria) || '-' }}</td>
+              <td *ngIf="visibleColumn('cnpj')">{{ formatCnpj(f.cnpj) }}</td>
+              <td *ngIf="visibleColumn('cidade')">{{ cidadeUf(f) }}</td>
+              <td *ngIf="visibleColumn('email')" class="email">{{ f.email || '-' }}</td>
+              <td *ngIf="visibleColumn('telefone')">{{ formatPhone(f.telefone1 || '') || '-' }}</td>
+              <td *ngIf="visibleColumn('status')">
+                <span class="status-pill" [class.inactive]="f.ativo === false">• {{ f.ativo === false ? 'Inativo' : 'Ativo' }}</span>
+              </td>
+              <td class="actions actions-col" (click)="$event.stopPropagation()">
+                <app-row-actions-menu
+                  [actions]="rowActions(f)"
+                  [ariaLabel]="'Abrir ações do fornecedor ' + f.nome_fornecedor"
+                  (action)="executarAcao($event, f)"
+                />
               </td>
             </tr>
           </tbody>
