@@ -245,11 +245,14 @@
     <button type="button" class="sync-button" (click)="atualizarCatalogoOffline()" [disabled]="atualizandoCatalogo">
       {{ atualizandoCatalogo ? 'Atualizando catálogo' : 'Atualizar catálogo' }}
     </button>
-    <button type="button" class="sync-button" (click)="caixaLocalAberto ? fecharCaixaLocal() : abrirCaixaLocal()">
+    <button type="button" class="sync-button" (click)="caixaLocalAberto ? fecharCaixaAtalho() : abrirCaixaLocal()">
       {{ caixaLocalAberto ? 'Caixa local aberto' : 'Abrir caixa local' }}
     </button>
+    <button type="button" class="sync-button" (click)="abrirAtalho($event, 'pendentes')" [disabled]="!pendentesOffline">
+      Pendentes {{ pendentesOffline }}
+    </button>
     <button type="button" class="sync-button" (click)="sincronizarPendentes($event)" [disabled]="!pendentesOffline || finalizando">
-      Sincronizar {{ pendentesOffline }} pendente(s)
+      Sincronizar
     </button>
     <b [class.offline]="status?.online === false">{{ status?.online === false ? 'OFFLINE' : 'ONLINE' }}</b>
     <span>{{ sincronizacaoOffline || 'NFC-e em contingência' }}</span>
@@ -272,6 +275,8 @@
           <strong *ngIf="modalAtalho === 'pagamentos'">Resumo do Dia por Pagamento</strong>
           <strong *ngIf="modalAtalho === 'preco'">Consulta de Preço</strong>
           <strong *ngIf="modalAtalho === 'despesa'">Despesa da Loja</strong>
+          <strong *ngIf="modalAtalho === 'pendentes'">Pendentes Offline</strong>
+          <strong *ngIf="modalAtalho === 'fechamento'">Fechamento do Caixa</strong>
           <strong *ngIf="modalAtalho === 'cancelar-venda'">Cancelar Venda</strong>
           <span>{{ data }} · {{ caixa }}</span>
         </div>
@@ -331,6 +336,26 @@
           <span>Total recebido hoje</span>
           <strong>{{ formatar(totalResumoPagamentos()) }}</strong>
         </div>
+        <div class="modal-payment-total pending" *ngIf="totalVendasOfflinePendentes()">
+          <span>Vendas offline pendentes</span>
+          <strong>{{ formatar(totalVendasOfflinePendentes()) }}</strong>
+        </div>
+        <div class="modal-payment-total expense" *ngIf="totalDespesasOfflinePendentes()">
+          <span>Despesas offline pendentes</span>
+          <strong>- {{ formatar(totalDespesasOfflinePendentes()) }}</strong>
+        </div>
+        <div class="modal-payment-total expense" *ngIf="totalDespesasCaixaDia()">
+          <span>Despesas lançadas no caixa</span>
+          <strong>- {{ formatar(totalDespesasCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-total expense" *ngIf="totalSangriasCaixaDia()">
+          <span>Sangrias lançadas no caixa</span>
+          <strong>- {{ formatar(totalSangriasCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-total pending" *ngIf="totalSuprimentosCaixaDia()">
+          <span>Suprimentos lançados no caixa</span>
+          <strong>{{ formatar(totalSuprimentosCaixaDia()) }}</strong>
+        </div>
         <div class="modal-payment-row">
           <span>Forma</span>
           <span>Vendas</span>
@@ -341,8 +366,95 @@
           <span>{{ p.vendas }}</span>
           <span>{{ formatarRelatorio(p.total) }}</span>
         </div>
+        <h4 *ngIf="resumoVendasOfflinePorPagamento().length">Vendas offline pendentes</h4>
+        <div class="modal-payment-row" *ngFor="let p of resumoVendasOfflinePorPagamento()">
+          <strong>{{ p.descricao }}</strong>
+          <span>{{ p.vendas }}</span>
+          <span>{{ formatar(p.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoDespesasOfflinePorTipo().length">Despesas offline pendentes</h4>
+        <div class="modal-payment-row expense-row" *ngFor="let d of resumoDespesasOfflinePorTipo()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>- {{ formatar(d.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoDespesasCaixaDia().length">Despesas lançadas no caixa</h4>
+        <div class="modal-payment-row expense-row" *ngFor="let d of resumoDespesasCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>- {{ formatar(d.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoSangriasCaixaDia().length">Sangrias lançadas no caixa</h4>
+        <div class="modal-payment-row expense-row" *ngFor="let d of resumoSangriasCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>- {{ formatar(d.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoSuprimentosCaixaDia().length">Suprimentos lançados no caixa</h4>
+        <div class="modal-payment-row" *ngFor="let d of resumoSuprimentosCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>{{ formatar(d.total) }}</span>
+        </div>
         <p *ngIf="resumoPagamentosCarregando">Carregando pagamentos...</p>
-        <p *ngIf="!resumoPagamentosCarregando && !resumoPagamentos.length">Nenhuma venda encontrada hoje para esta loja.</p>
+        <p *ngIf="!resumoPagamentosCarregando && !resumoPagamentos.length && !resumoVendasOfflinePorPagamento().length">
+          Nenhuma venda encontrada hoje para esta loja.
+        </p>
+      </div>
+
+      <div class="modal-table payment-summary" *ngIf="modalAtalho === 'fechamento'">
+        <div class="modal-payment-total">
+          <span>Total recebido hoje</span>
+          <strong>{{ formatar(totalResumoPagamentos()) }}</strong>
+        </div>
+        <div class="modal-payment-total expense" *ngIf="totalDespesasCaixaDia()">
+          <span>Despesas lançadas no caixa</span>
+          <strong>- {{ formatar(totalDespesasCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-total expense" *ngIf="totalSangriasCaixaDia()">
+          <span>Sangrias lançadas no caixa</span>
+          <strong>- {{ formatar(totalSangriasCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-total pending" *ngIf="totalSuprimentosCaixaDia()">
+          <span>Suprimentos lançados no caixa</span>
+          <strong>{{ formatar(totalSuprimentosCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-row">
+          <span>Forma</span>
+          <span>Vendas</span>
+          <span>Total</span>
+        </div>
+        <div class="modal-payment-row" *ngFor="let p of resumoPagamentos">
+          <strong>{{ p.descricao || p.forma }}</strong>
+          <span>{{ p.vendas }}</span>
+          <span>{{ formatarRelatorio(p.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoDespesasCaixaDia().length">Despesas lançadas no caixa</h4>
+        <div class="modal-payment-row expense-row" *ngFor="let d of resumoDespesasCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>- {{ formatar(d.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoSangriasCaixaDia().length">Sangrias lançadas no caixa</h4>
+        <div class="modal-payment-row expense-row" *ngFor="let d of resumoSangriasCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>- {{ formatar(d.total) }}</span>
+        </div>
+        <h4 *ngIf="resumoSuprimentosCaixaDia().length">Suprimentos lançados no caixa</h4>
+        <div class="modal-payment-row" *ngFor="let d of resumoSuprimentosCaixaDia()">
+          <strong>{{ d.descricao }}</strong>
+          <span>{{ d.qtd }}</span>
+          <span>{{ formatar(d.total) }}</span>
+        </div>
+        <p *ngIf="resumoPagamentosCarregando">Carregando fechamento...</p>
+        <p *ngIf="!resumoPagamentosCarregando && !resumoPagamentos.length && !resumoDespesasCaixaDia().length && !resumoSangriasCaixaDia().length && !resumoSuprimentosCaixaDia().length">
+          Nenhuma movimentação encontrada hoje para esta loja.
+        </p>
+        <div class="modal-actions modal-close-actions">
+          <button type="button" (click)="fecharAtalho()">Voltar</button>
+          <button type="button" class="danger" (click)="confirmarFechamentoCaixa()">Confirmar fechamento</button>
+        </div>
       </div>
 
       <div class="modal-table" *ngIf="modalAtalho === 'preco'">
@@ -365,8 +477,16 @@
 
       <div class="modal-expense" *ngIf="modalAtalho === 'despesa'">
         <label>
+          Operação
+          <select [(ngModel)]="despesaForm.operacao">
+            <option value="DESPESA">Despesa</option>
+            <option value="SANGRIA">Sangria</option>
+            <option value="SUPRIMENTO">Suprimento</option>
+          </select>
+        </label>
+        <label>
           Tipo de despesa
-          <select [(ngModel)]="despesaForm.tipoDespesa">
+          <select [(ngModel)]="despesaForm.tipoDespesa" [disabled]="despesaForm.operacao !== 'DESPESA'">
             <option [ngValue]="null">Selecione</option>
             <option *ngFor="let t of tiposDespesaPdv" [ngValue]="t.Idtipodespesapdv">{{ t.descricao }}</option>
           </select>
@@ -381,12 +501,58 @@
         </label>
         <label class="wide">
           Histórico
-          <input [(ngModel)]="despesaForm.historico" placeholder="Ex.: material de limpeza, motoboy..." />
+          <input [(ngModel)]="despesaForm.historico" placeholder="Ex.: material de limpeza, motoboy, retirada..." />
         </label>
         <div class="modal-actions">
           <button type="button" (click)="fecharAtalho()">Voltar</button>
-          <button type="button" class="danger" (click)="lancarDespesaLoja()">Lançar despesa</button>
+          <button type="button" class="danger" (click)="lancarDespesaLoja()">{{ labelDespesaAcao() }}</button>
         </div>
+      </div>
+
+      <div class="modal-table" *ngIf="modalAtalho === 'pendentes'">
+        <div class="modal-pending-actions">
+          <strong>{{ pendentesOffline }} pendente(s)</strong>
+          <button type="button" class="sync-button" (click)="sincronizarPendentes($event)" [disabled]="!pendentesOffline || finalizando">
+            {{ finalizando ? 'Sincronizando...' : 'Sincronizar agora' }}
+          </button>
+        </div>
+        <h4>Vendas</h4>
+        <div class="modal-pending-row head">
+          <span>Documento</span>
+          <span>Data</span>
+          <span>Total</span>
+          <span>Erro</span>
+          <span>Ações</span>
+        </div>
+        <div class="modal-pending-row" *ngFor="let v of vendasOfflinePendentes()">
+          <strong>{{ v.documento }}</strong>
+          <span>{{ v.criadaEm | date:'dd/MM/yyyy HH:mm' }}</span>
+          <span>{{ formatar(v.payload?.valor_recebido || 0) }}</span>
+          <span>{{ v.erro || '-' }}</span>
+          <span class="pending-actions">
+            <button type="button" class="sync-button small" (click)="sincronizarVendaPendente(v, $event)" [disabled]="finalizando">Reenviar</button>
+          </span>
+        </div>
+        <p *ngIf="!vendasOfflinePendentes().length">Nenhuma venda pendente.</p>
+
+        <h4>Despesas</h4>
+        <div class="modal-pending-row head">
+          <span>Documento</span>
+          <span>Tipo</span>
+          <span>Valor</span>
+          <span>Erro</span>
+          <span>Ações</span>
+        </div>
+        <div class="modal-pending-row" *ngFor="let d of despesasOfflinePendentes()">
+          <strong>{{ d.payload?.documento }}</strong>
+          <span>{{ d.tipo_despesa_descricao || '-' }}</span>
+          <span>{{ formatar(d.payload?.valor || 0) }}</span>
+          <span>{{ d.erro || '-' }}</span>
+          <span class="pending-actions">
+            <button type="button" class="sync-button small" (click)="sincronizarDespesaPendente(d, $event)" [disabled]="finalizando">Reenviar</button>
+          </span>
+        </div>
+        <p *ngIf="!despesasOfflinePendentes().length">Nenhuma despesa pendente.</p>
       </div>
 
       <div class="modal-confirm" *ngIf="modalAtalho === 'cancelar-venda'">

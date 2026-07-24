@@ -70,6 +70,26 @@ export class PdvOfflineQueueService {
     return { enviados, pendentes: restantes.length, erros, vendas, erro: restantes[0]?.erro };
   }
 
+  async sincronizarUma(localUuid: string): Promise<{ enviada?: VendaPdv; pendentes: number; erro?: string }> {
+    const fila = this.listar();
+    const venda = fila.find(item => item.localUuid === localUuid);
+    if (!venda) return { pendentes: fila.length, erro: 'Venda pendente não encontrada.' };
+
+    try {
+      const enviada = await firstValueFrom(this.vendasApi.finalizar(venda.payload));
+      this.salvar(fila.filter(item => item.localUuid !== localUuid));
+      return { enviada, pendentes: this.quantidade() };
+    } catch (error: any) {
+      const erro = error?.error?.detail || error?.message || 'Falha ao sincronizar venda.';
+      this.salvar(fila.map(item => item.localUuid === localUuid ? {
+        ...item,
+        tentativas: item.tentativas + 1,
+        erro
+      } : item));
+      return { pendentes: this.quantidade(), erro };
+    }
+  }
+
   private salvar(vendas: PdvVendaPendente[]): void {
     localStorage.setItem(this.key, JSON.stringify(vendas));
   }

@@ -18,9 +18,14 @@ export class SyncQueueService {
 
     for (const venda of pendentes) {
       try {
-        await this.client.enviarVenda(JSON.parse(venda.payload_json), venda.local_uuid);
+        const enviada = await this.client.enviarVenda(JSON.parse(venda.payload_json), venda.local_uuid);
+        await this.vendas.marcarSincronizada(venda.local_uuid, enviada?.id);
         enviados += 1;
-      } catch {
+      } catch (error) {
+        await this.vendas.registrarErroSincronizacao(
+          venda.local_uuid,
+          error instanceof Error ? error.message : 'Falha ao sincronizar venda.'
+        );
         erros += 1;
       }
     }
@@ -28,4 +33,3 @@ export class SyncQueueService {
     return { enviados, erros, pendentes: Math.max(pendentes.length - enviados, 0) };
   }
 }
-

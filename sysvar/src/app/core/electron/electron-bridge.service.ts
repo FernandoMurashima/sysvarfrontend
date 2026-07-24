@@ -2,8 +2,13 @@ import { Injectable } from '@angular/core';
 
 import {
   PdvDesktopStatus,
+  PdvCatalogoResultado,
   PdvProdutoLocal,
+  PdvSyncContexto,
   PdvSyncResumo,
+  PdvTerminalConfig,
+  PdvTerminalConfigInput,
+  PdvVendaEmAndamento,
   PdvVendaLocalResultado,
   SysvarPdvApi
 } from './sysvar-pdv-api';
@@ -35,16 +40,27 @@ export class ElectronBridgeService {
     return this.api?.produtos.pesquisar(termo) ?? Promise.resolve([]);
   }
 
+  atualizarCatalogo(produtos: PdvProdutoLocal[]): Promise<PdvCatalogoResultado | null> {
+    return this.api?.produtos.atualizarCatalogo(produtos) ?? Promise.resolve(null);
+  }
+
+  configurarTerminal(config: PdvTerminalConfigInput): Promise<PdvTerminalConfig | null> {
+    return this.api?.terminal.configurar(config) ?? Promise.resolve(null);
+  }
+
   finalizarVenda(payload: FinalizarVendaPdvPayload): Promise<PdvVendaLocalResultado | null> {
     return this.api?.vendas.finalizar(payload) ?? Promise.resolve(null);
+  }
+
+  vendasEmAndamento(): Promise<PdvVendaEmAndamento[]> {
+    return this.api?.vendas.emAndamento() ?? Promise.resolve([]);
   }
 
   statusSincronizacao(): Promise<PdvSyncResumo> {
     return this.api?.sincronizacao.status() ?? Promise.resolve({ status: 'idle', pendentes: 0, enviados: 0, erros: 0 });
   }
 
-  sincronizar(): Promise<PdvSyncResumo> {
-    return this.api?.sincronizacao.executar() ?? this.statusSincronizacao();
+  sincronizar(contexto: PdvSyncContexto): Promise<PdvSyncResumo> {
+    return this.api?.sincronizacao.executar(contexto) ?? this.statusSincronizacao();
   }
 }
-
