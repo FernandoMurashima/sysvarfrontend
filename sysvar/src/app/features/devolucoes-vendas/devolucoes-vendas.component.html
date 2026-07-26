@@ -5,6 +5,9 @@
       <span>Localize a venda, selecione os itens e gere o crédito do cliente.</span>
     </div>
     <div class="head-actions">
+      <button class="btn" type="button" (click)="sincronizarPendentes()" [disabled]="!pendentesOffline || saving">
+        Pendentes {{ pendentesOffline }}
+      </button>
       <button class="btn" type="button" (click)="irHome()">Home</button>
       <button class="btn" type="button" (click)="limpar()">Nova devolução</button>
     </div>

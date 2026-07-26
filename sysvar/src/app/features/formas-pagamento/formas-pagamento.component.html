@@ -123,6 +123,36 @@
             Taxa fixa
             <input type="number" min="0" step="0.01" formControlName="taxa_fixa" />
           </label>
+
+          <label class="input-item">
+            TEF
+            <select formControlName="tef_habilitado">
+              <option [ngValue]="false">Não</option>
+              <option [ngValue]="true">Sim</option>
+            </select>
+          </label>
+
+          <label class="input-item" *ngIf="form.get('tef_habilitado')?.value"
+                 [class.invalid]="form.get('tef_habilitado')?.value && !form.get('tef_modalidade')?.value && submitted">
+            Modalidade TEF
+            <select formControlName="tef_modalidade">
+              <option value="">Selecione</option>
+              <option value="CREDITO">Crédito</option>
+              <option value="DEBITO">Débito</option>
+              <option value="PIX">Pix</option>
+              <option value="VOUCHER">Voucher</option>
+            </select>
+          </label>
+
+          <label class="input-item" *ngIf="form.get('tef_habilitado')?.value">
+            Código adquirente
+            <input type="text" formControlName="tef_adquirente_codigo" />
+          </label>
+
+          <label class="input-item" *ngIf="form.get('tef_habilitado')?.value">
+            Terminal lógico
+            <input type="text" formControlName="tef_terminal_logico" />
+          </label>
         </div>
 
         <h4>Parcelas</h4>

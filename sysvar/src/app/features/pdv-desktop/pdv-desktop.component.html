@@ -35,7 +35,7 @@
         <strong>{{ hora }}</strong>
         <small>{{ data }}</small>
       </div>
-      <button type="button" (click)="imprimirCupom()">☰</button>
+      <button type="button" (click)="abrirReimpressao()">☰</button>
     </div>
   </header>
 
@@ -217,6 +217,12 @@
           <option value="DEBITO">Débito</option>
         </select>
         <input *ngIf="formaPagamento === 'CARTAO'" [(ngModel)]="autorizacaoCartao" placeholder="Autorização" />
+        <select *ngIf="formaPagamento === 'TROCA'" [(ngModel)]="valeTrocaDocumento">
+          <option value="">Vale-troca</option>
+          <option *ngFor="let vale of valesTrocaValidos()" [value]="vale.documento">
+            {{ vale.documento }} - {{ formatar(+vale.saldo) }}
+          </option>
+        </select>
         <button type="button" (click)="adicionarPagamento()">Adicionar pagamento</button>
       </div>
 
@@ -233,6 +239,7 @@
         <button class="cash" [class.selected]="formaPagamento === 'DINHEIRO'" (click)="pagarCom('DINHEIRO')"><span>▣</span>DINHEIRO</button>
         <button class="card" [class.selected]="formaPagamento === 'CARTAO'" (click)="pagarCom('CARTAO')"><span>▭</span>CARTÃO</button>
         <button class="pix" [class.selected]="formaPagamento === 'PIX'" (click)="pagarCom('PIX')"><span>▦</span>PIX</button>
+        <button class="exchange" [class.selected]="formaPagamento === 'TROCA'" (click)="pagarCom('TROCA')"><span>↻</span>TROCA</button>
         <button class="finish" (click)="finalizar()" [disabled]="finalizando"><span>✓</span>{{ finalizando ? 'ENVIANDO' : 'FINALIZAR' }}</button>
       </div>
       <small class="message">{{ mensagem }}</small>
@@ -277,6 +284,7 @@
           <strong *ngIf="modalAtalho === 'despesa'">Despesa da Loja</strong>
           <strong *ngIf="modalAtalho === 'pendentes'">Pendentes Offline</strong>
           <strong *ngIf="modalAtalho === 'fechamento'">Fechamento do Caixa</strong>
+          <strong *ngIf="modalAtalho === 'reimpressao'">Reimpressão de Cupom</strong>
           <strong *ngIf="modalAtalho === 'cancelar-venda'">Cancelar Venda</strong>
           <span>{{ data }} · {{ caixa }}</span>
         </div>
@@ -403,6 +411,28 @@
       </div>
 
       <div class="modal-table payment-summary" *ngIf="modalAtalho === 'fechamento'">
+        <div class="closing-meta">
+          <div>
+            <span>Fechamento</span>
+            <strong>{{ numeroFechamentoFiscal() }}</strong>
+          </div>
+          <div>
+            <span>Loja</span>
+            <strong>{{ lojaSelecionadaNome() }}</strong>
+          </div>
+          <div>
+            <span>Caixa</span>
+            <strong>{{ caixaSelecionadoNome() }}</strong>
+          </div>
+          <div>
+            <span>Operador</span>
+            <strong>{{ caixaLocalAtual()?.usuario || vendedor }}</strong>
+          </div>
+          <div>
+            <span>Abertura</span>
+            <strong>{{ caixaLocalAtual()?.abertoEm | date:'dd/MM/yyyy HH:mm' }}</strong>
+          </div>
+        </div>
         <div class="modal-payment-total">
           <span>Total recebido hoje</span>
           <strong>{{ formatar(totalResumoPagamentos()) }}</strong>
@@ -418,6 +448,14 @@
         <div class="modal-payment-total pending" *ngIf="totalSuprimentosCaixaDia()">
           <span>Suprimentos lançados no caixa</span>
           <strong>{{ formatar(totalSuprimentosCaixaDia()) }}</strong>
+        </div>
+        <div class="modal-payment-total closing-result">
+          <span>Saldo esperado para fechamento</span>
+          <strong>{{ formatar(totalResultadoFechamento()) }}</strong>
+        </div>
+        <div class="modal-payment-total pending" *ngIf="pendentesOffline">
+          <span>Pendências offline</span>
+          <strong>{{ pendentesOffline }}</strong>
         </div>
         <div class="modal-payment-row">
           <span>Forma</span>
@@ -453,7 +491,7 @@
         </p>
         <div class="modal-actions modal-close-actions">
           <button type="button" (click)="fecharAtalho()">Voltar</button>
-          <button type="button" class="danger" (click)="confirmarFechamentoCaixa()">Confirmar fechamento</button>
+          <button type="button" class="danger" [disabled]="pendentesOffline > 0 || resumoPagamentosCarregando" (click)="confirmarFechamentoCaixa()">Confirmar fechamento</button>
         </div>
       </div>
 
@@ -553,6 +591,36 @@
           </span>
         </div>
         <p *ngIf="!despesasOfflinePendentes().length">Nenhuma despesa pendente.</p>
+      </div>
+
+      <div class="modal-table" *ngIf="modalAtalho === 'reimpressao'">
+        <div class="modal-total-line">
+          <strong>{{ cuponsLocais.length }} cupom(ns)</strong>
+          <span>Últimos cupons emitidos neste terminal.</span>
+        </div>
+        <table *ngIf="cuponsLocais.length">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Documento</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Total</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cupom of cuponsLocais">
+              <td>{{ cupom.dataHora | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ cupom.documento }}</td>
+              <td>{{ cupom.cliente }}</td>
+              <td>{{ cupom.itens.length }}</td>
+              <td>{{ formatar(cupom.total) }}</td>
+              <td><button type="button" (click)="imprimirCupom(cupom)">Imprimir</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p *ngIf="!cuponsLocais.length">Nenhum cupom emitido neste terminal.</p>
       </div>
 
       <div class="modal-confirm" *ngIf="modalAtalho === 'cancelar-venda'">

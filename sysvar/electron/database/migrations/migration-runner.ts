@@ -2,8 +2,9 @@ import { LocalDatabase } from '../connection';
 import { migration001 } from './001_initial';
 import { migration002 } from './002_sales_core';
 import { migration003 } from './003_local_sequences';
+import { migration004 } from './004_caixa_local';
 
-const migrations = [migration001, migration002, migration003];
+const migrations = [migration001, migration002, migration003, migration004];
 
 export async function runMigrations(db: LocalDatabase): Promise<void> {
   await db.execute(migration001.statements[0]);

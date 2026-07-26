@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import {
   PdvDesktopStatus,
   PdvCatalogoResultado,
+  PdvCaixaLocalDesktop,
   PdvProdutoLocal,
   PdvSyncContexto,
   PdvSyncResumo,
@@ -54,6 +55,18 @@ export class ElectronBridgeService {
 
   vendasEmAndamento(): Promise<PdvVendaEmAndamento[]> {
     return this.api?.vendas.emAndamento() ?? Promise.resolve([]);
+  }
+
+  obterCaixaLocal(lojaId: number, caixaId: number): Promise<PdvCaixaLocalDesktop | null> {
+    return this.api?.caixaLocal.obter(lojaId, caixaId) ?? Promise.resolve(null);
+  }
+
+  abrirCaixaLocal(lojaId: number, caixaId: number, operador?: string): Promise<PdvCaixaLocalDesktop | null> {
+    return this.api?.caixaLocal.abrir({ lojaId, caixaId, operador }) ?? Promise.resolve(null);
+  }
+
+  fecharCaixaLocal(lojaId: number, caixaId: number, resumo?: unknown): Promise<PdvCaixaLocalDesktop | null> {
+    return this.api?.caixaLocal.fechar({ lojaId, caixaId, resumo }) ?? Promise.resolve(null);
   }
 
   statusSincronizacao(): Promise<PdvSyncResumo> {

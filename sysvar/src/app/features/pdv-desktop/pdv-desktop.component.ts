@@ -17,7 +17,7 @@ import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-d
 import { ProdutosService } from '../../core/services/produtos.service';
 import { PdvOfflineCatalogService } from '../../core/services/pdv-offline-catalog.service';
 import { PdvOfflineQueueService } from '../../core/services/pdv-offline-queue.service';
-import { PdvLocalCaixaService } from '../../core/services/pdv-local-caixa.service';
+import { PdvCaixaLocal, PdvLocalCaixaService, PdvResumoFechamentoLocal } from '../../core/services/pdv-local-caixa.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 import { RelatorioPagamentoVenda, RelatorioVendedor } from '../../core/models/venda-pdv';
 import { ElectronBridgeService } from '../../core/electron/electron-bridge.service';
@@ -27,6 +27,11 @@ import { TipoDespesaPdv } from '../../core/models/tipo-despesa-pdv';
 import { TipoDespesaPdvService } from '../../core/services/tipo-despesa-pdv.service';
 import { MovimentacaoFinanceira } from '../../core/models/movimentacao-financeira';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
+import { PdvLocalAuditoriaService } from '../../core/services/pdv-local-auditoria.service';
+import { ValeTroca } from '../../core/models/vale-troca';
+import { ValeTrocaService } from '../../core/services/vale-troca.service';
+
+type PdvFormaPagamento = 'DINHEIRO' | 'CARTAO' | 'PIX' | 'TROCA';
 
 interface PdvProdutoLinha {
   item: number;
@@ -57,10 +62,24 @@ interface PdvCarrinhoItem {
 }
 
 interface PdvPagamentoLinha {
-  forma: 'DINHEIRO' | 'CARTAO' | 'PIX';
+  forma: PdvFormaPagamento;
   descricao: string;
   valor: number;
   autorizacao?: string;
+}
+
+interface PdvCupomLocal {
+  documento: string;
+  dataHora: string;
+  loja: string;
+  caixa: string;
+  vendedor: string;
+  cliente: string;
+  itens: PdvCarrinhoItem[];
+  pagamentos: PdvPagamentoLinha[];
+  subtotal: number;
+  descontos: number;
+  total: number;
 }
 
 @Component({
@@ -86,6 +105,8 @@ export class PdvDesktopComponent implements OnInit {
   private connectivity = inject(PdvConnectivityService);
   private tiposDespesaApi = inject(TipoDespesaPdvService);
   private movimentacoesApi = inject(MovimentacoesFinanceirasService);
+  private auditoria = inject(PdvLocalAuditoriaService);
+  private valesTrocaApi = inject(ValeTrocaService);
 
   busca = '';
   cliente = 'F2 - CONSUMIDOR FINAL';
@@ -106,9 +127,11 @@ export class PdvDesktopComponent implements OnInit {
   mensagem = '';
   mensagemAlerta = '';
   finalizando = false;
-  formaPagamento: 'DINHEIRO' | 'CARTAO' | 'PIX' = 'DINHEIRO';
+  formaPagamento: PdvFormaPagamento = 'DINHEIRO';
   tipoCartao: 'CREDITO' | 'DEBITO' = 'CREDITO';
   autorizacaoCartao = '';
+  valeTrocaDocumento = '';
+  valesTroca: ValeTroca[] = [];
   valorPagamento = 0;
   pagamentosVenda: PdvPagamentoLinha[] = [];
   numeroVendaAtual = 'Venda em aberto';
@@ -127,17 +150,20 @@ export class PdvDesktopComponent implements OnInit {
   atualizandoCatalogo = false;
   caixaLocalAberto = false;
   private buscaTimer: ReturnType<typeof setTimeout> | null = null;
-  modalAtalho: '' | 'cliente' | 'vendedor' | 'resumo' | 'pagamentos' | 'preco' | 'cancelar-venda' | 'despesa' | 'pendentes' | 'fechamento' = '';
+  modalAtalho: '' | 'cliente' | 'vendedor' | 'resumo' | 'pagamentos' | 'preco' | 'cancelar-venda' | 'despesa' | 'pendentes' | 'fechamento' | 'reimpressao' = '';
   buscaModal = '';
   resumoVendedores: RelatorioVendedor[] = [];
   resumoPagamentos: RelatorioPagamentoVenda[] = [];
   despesasCaixaDia: MovimentacaoFinanceira[] = [];
+  cuponsLocais: PdvCupomLocal[] = [];
   resumoCarregando = false;
   resumoPagamentosCarregando = false;
   produtosPreco: PdvProdutoLinha[] = [];
   tiposDespesaPdv: TipoDespesaPdv[] = [];
   private readonly vendaRascunhoKey = 'sysvar-pdv-venda-em-andamento';
   private readonly despesasOfflineKey = 'sysvar-pdv-despesas-offline';
+  private readonly cuponsLocaisKey = 'sysvar-pdv-cupons';
+  private readonly valesTrocaCacheKey = 'sysvar-pdv-vales-troca';
   despesaForm = {
     operacao: 'DESPESA' as 'DESPESA' | 'SANGRIA' | 'SUPRIMENTO',
     tipoDespesa: null as number | null,
@@ -198,6 +224,7 @@ export class PdvDesktopComponent implements OnInit {
     this.carregarContexto();
     this.atualizarPendentesOffline();
     this.carregarTiposDespesa();
+    this.carregarCuponsLocais();
     this.buscarProdutos();
   }
 
@@ -231,6 +258,7 @@ export class PdvDesktopComponent implements OnInit {
 
         this.cliente = this.clientes.find(c => c.id === this.clienteId)?.nome_cliente || this.cliente;
         this.buscaCliente = this.cliente;
+        this.carregarValesTrocaCliente();
         this.vendedor = this.vendedores.find(v => v.id === this.vendedorId)?.nomefuncionario || this.vendedor;
         this.caixa = this.caixas.find(c => c.Idcaixa === this.caixaId)?.codigo || this.caixa;
         this.atualizarCaixaLocal();
@@ -257,6 +285,7 @@ export class PdvDesktopComponent implements OnInit {
     this.cliente = this.clientes.find(c => Number(c.id) === Number(this.clienteId))?.nome_cliente || 'Consumidor Final';
     this.buscaCliente = this.cliente;
     this.mostrarSugestoesCliente = false;
+    this.carregarValesTrocaCliente();
   }
 
   clientesFiltrados(): Cliente[] {
@@ -492,6 +521,7 @@ export class PdvDesktopComponent implements OnInit {
     };
     this.carrinho.push(novoItem);
     this.itemSelecionado = novoItem;
+    this.registrarAuditoria('ITEM_INCLUIDO', linha.codigo, linha.descricao, linha.valorUnitario);
     this.mensagem = '';
     this.busca = '';
     this.produtos = [];
@@ -594,6 +624,7 @@ export class PdvDesktopComponent implements OnInit {
   remover(item: PdvCarrinhoItem): void {
     this.carrinho = this.carrinho.filter(i => i !== item);
     if (this.itemSelecionado === item) this.itemSelecionado = this.carrinho[0] || null;
+    this.registrarAuditoria('ITEM_REMOVIDO', item.codigo, item.descricao, item.total);
     this.atualizarValorPagamento();
     this.salvarRascunhoLocal();
   }
@@ -616,6 +647,7 @@ export class PdvDesktopComponent implements OnInit {
     this.totalRecebido = 0;
     this.valorPagamento = 0;
     this.autorizacaoCartao = '';
+    this.valeTrocaDocumento = '';
     this.pagamentosVenda = [];
     this.numeroVendaAtual = 'Venda em aberto';
     this.removerRascunhoLocal();
@@ -666,24 +698,47 @@ export class PdvDesktopComponent implements OnInit {
       this.mensagem = 'Informe o valor do pagamento.';
       return;
     }
+    const pendente = this.pendente();
+    if (valor > pendente) {
+      this.mensagem = `Valor maior que o pendente: ${this.formatar(pendente)}.`;
+      return;
+    }
     if (this.formaPagamento === 'CARTAO' && !this.autorizacaoCartao.trim()) {
       this.mensagem = 'Informe a autorização do cartão.';
       return;
+    }
+    let autorizacao: string | undefined = this.formaPagamento === 'CARTAO' ? this.autorizacaoCartao.trim() : undefined;
+    if (this.formaPagamento === 'TROCA') {
+      const vale = this.valesTrocaValidos().find(v => v.documento === this.valeTrocaDocumento);
+      if (!vale) {
+        this.mensagem = 'Selecione um vale-troca válido.';
+        return;
+      }
+      const saldo = this.numero(vale.saldo);
+      if (valor > saldo) {
+        this.mensagem = `Valor maior que o saldo do vale: ${this.formatar(saldo)}.`;
+        return;
+      }
+      autorizacao = vale.documento;
     }
     this.pagamentosVenda.push({
       forma: this.formaPagamento,
       descricao: this.descricaoFormaPagamento(),
       valor,
-      autorizacao: this.formaPagamento === 'CARTAO' ? this.autorizacaoCartao.trim() : undefined
+      autorizacao
     });
+    this.registrarAuditoria('PAGAMENTO_ADICIONADO', this.formaPagamento, this.descricaoFormaPagamento(), valor);
     this.autorizacaoCartao = '';
+    this.valeTrocaDocumento = '';
     this.mensagem = '';
     this.atualizarValorPagamento();
     this.salvarRascunhoLocal();
   }
 
   removerPagamento(index: number): void {
+    const pagamento = this.pagamentosVenda[index];
     this.pagamentosVenda.splice(index, 1);
+    if (pagamento) this.registrarAuditoria('PAGAMENTO_REMOVIDO', pagamento.forma, pagamento.descricao, pagamento.valor);
     this.atualizarValorPagamento();
     this.salvarRascunhoLocal();
   }
@@ -745,9 +800,11 @@ export class PdvDesktopComponent implements OnInit {
       if (!this.bridge.isDesktop) {
         const vendaLocal = this.offlineQueue.adicionar(payload);
         this.offlineCatalog.baixarEstoque(this.carrinho.map(item => ({ codigo: item.codigo, qtd: item.qtd })));
+        this.aplicarUsoValesTrocaLocal();
         this.finalizando = false;
         this.finalizarLeitura(`Venda offline gravada: ${vendaLocal.documento}`);
         this.numeroVendaAtual = vendaLocal.documento;
+        this.registrarAuditoria('VENDA_FINALIZADA_OFFLINE', vendaLocal.documento, undefined, this.total());
         this.imprimirCupom();
         this.limpar();
         this.numeroVendaAtual = vendaLocal.documento;
@@ -763,6 +820,8 @@ export class PdvDesktopComponent implements OnInit {
         }
         this.finalizarLeitura(`Venda offline gravada: ${resultado.documento}`);
         this.numeroVendaAtual = resultado.documento;
+        this.registrarAuditoria('VENDA_FINALIZADA_OFFLINE', resultado.documento, undefined, this.total());
+        this.aplicarUsoValesTrocaLocal();
         this.imprimirCupom();
         this.limpar();
         this.numeroVendaAtual = resultado.documento;
@@ -776,6 +835,8 @@ export class PdvDesktopComponent implements OnInit {
         this.finalizando = false;
         this.finalizarLeitura(`Venda finalizada: ${venda.documento}`);
         this.numeroVendaAtual = venda.documento;
+        this.registrarAuditoria('VENDA_FINALIZADA_ONLINE', venda.documento, undefined, this.total());
+        this.aplicarUsoValesTrocaLocal();
         this.imprimirCupom();
         this.limpar();
         this.numeroVendaAtual = venda.documento;
@@ -984,12 +1045,23 @@ export class PdvDesktopComponent implements OnInit {
       return;
     }
     const user = this.auth.getCurrentUser();
+    if (this.bridge.isDesktop) {
+      this.bridge.abrirCaixaLocal(this.lojaId, this.caixaId, user?.username || this.vendedor).then(() => {
+        this.caixaLocal.abrir(this.lojaId!, this.caixaId!, user?.username || this.vendedor);
+        this.registrarAuditoria('CAIXA_ABERTO', this.caixa, undefined, 0);
+        this.atualizarCaixaLocal();
+        this.sincronizacaoOffline = 'Caixa local aberto.';
+      }).catch(() => this.finalizarLeitura('Falha ao abrir caixa local.'));
+      return;
+    }
     this.caixaLocal.abrir(this.lojaId, this.caixaId, user?.username || this.vendedor);
+    this.registrarAuditoria('CAIXA_ABERTO', this.caixa, undefined, 0);
     this.atualizarCaixaLocal();
     this.sincronizacaoOffline = 'Caixa local aberto.';
   }
 
   fecharCaixaLocal(): void {
+    this.registrarAuditoria('CAIXA_FECHADO', this.caixa, undefined, 0);
     this.caixaLocal.fechar();
     this.atualizarCaixaLocal();
     this.sincronizacaoOffline = 'Caixa local fechado.';
@@ -1014,9 +1086,17 @@ export class PdvDesktopComponent implements OnInit {
   }
 
   confirmarFechamentoCaixa(): void {
-    this.fecharCaixaLocal();
+    this.registrarAuditoria('CAIXA_FECHADO', this.caixa, 'Fechamento com resumo', this.totalResultadoFechamento());
+    const resumo = this.montarResumoFechamentoLocal();
+    if (this.bridge.isDesktop && this.lojaId && this.caixaId) {
+      this.bridge.fecharCaixaLocal(this.lojaId, this.caixaId, resumo).catch(() => undefined);
+    }
+    const fechado = this.caixaLocal.fechar(resumo);
+    this.atualizarCaixaLocal();
+    this.sincronizacaoOffline = 'Caixa local fechado.';
     this.fecharAtalho();
-    this.finalizarLeitura('Caixa local fechado.');
+    this.imprimirFechamentoCaixa(resumo, fechado?.fechadoEm);
+    this.finalizarLeitura('Caixa local fechado. Fechamento impresso.');
   }
 
   carregarTiposDespesa(): void {
@@ -1062,6 +1142,7 @@ export class PdvDesktopComponent implements OnInit {
     };
     if (this.status?.online === false) {
       const documento = this.registrarDespesaOffline(payload);
+      this.registrarAuditoria('DESPESA_OFFLINE', documento, this.despesaForm.historico, valor);
       this.resetarDespesaForm();
       this.fecharAtalho();
       this.finalizarLeitura(`Despesa offline registrada: ${documento}`);
@@ -1076,11 +1157,13 @@ export class PdvDesktopComponent implements OnInit {
         }
         this.resetarDespesaForm();
         this.fecharAtalho();
+        this.registrarAuditoria('DESPESA_ONLINE', String(res?.movimentacao?.documento || 'DESPESA'), this.despesaForm.historico, valor);
         this.finalizarLeitura('Despesa lançada no caixa.');
       },
       error: err => {
         if (err?.status === 0 || !navigator.onLine) {
           const documento = this.registrarDespesaOffline(payload);
+          this.registrarAuditoria('DESPESA_OFFLINE', documento, this.despesaForm.historico, valor);
           this.resetarDespesaForm();
           this.fecharAtalho();
           this.finalizarLeitura(`Despesa offline registrada: ${documento}`);
@@ -1119,6 +1202,7 @@ export class PdvDesktopComponent implements OnInit {
       observacao: this.despesaForm.historico || (sangria ? 'Sangria PDV' : 'Suprimento PDV')
     }).subscribe({
       next: () => {
+        this.registrarAuditoria(sangria ? 'SANGRIA' : 'SUPRIMENTO', documento, this.despesaForm.historico, valor);
         this.resetarDespesaForm();
         this.fecharAtalho();
         this.carregarContexto();
@@ -1153,6 +1237,7 @@ export class PdvDesktopComponent implements OnInit {
   }
 
   confirmarCancelarVenda(): void {
+    this.registrarAuditoria('VENDA_CANCELADA', this.numeroVendaAtual, `${this.carrinho.length} item(ns)`, this.total());
     this.limpar();
     this.fecharAtalho();
     this.finalizarLeitura('Venda cancelada.');
@@ -1324,6 +1409,58 @@ export class PdvDesktopComponent implements OnInit {
     return this.resumoSuprimentosCaixaDia().reduce((total, d) => total + d.total, 0);
   }
 
+  caixaLocalAtual(): PdvCaixaLocal | null {
+    return this.caixaLocal.obter();
+  }
+
+  lojaSelecionadaNome(): string {
+    return this.lojas.find(l => Number(this.lojaIdValor(l)) === Number(this.lojaId))?.nome_loja || 'Loja';
+  }
+
+  caixaSelecionadoNome(): string {
+    const caixa = this.caixas.find(c => Number(c.Idcaixa) === Number(this.caixaId));
+    return caixa ? `${caixa.codigo} - ${caixa.descricao}` : this.caixa;
+  }
+
+  totalResultadoFechamento(): number {
+    return this.totalResumoPagamentos()
+      + this.totalSuprimentosCaixaDia()
+      - this.totalDespesasCaixaDia()
+      - this.totalSangriasCaixaDia();
+  }
+
+  numeroFechamentoFiscal(): string {
+    const data = this.dataLocalIso().replace(/-/g, '');
+    return `FCX-${data}-${this.caixa || this.caixaId || 'CX'}`;
+  }
+
+  private montarResumoFechamentoLocal(): PdvResumoFechamentoLocal {
+    const user = this.auth.getCurrentUser();
+    const caixaAtual = this.caixaLocalAtual();
+    return {
+      numero: this.numeroFechamentoFiscal(),
+      loja: this.lojaSelecionadaNome(),
+      caixa: this.caixaSelecionadoNome(),
+      abertura: caixaAtual?.abertoEm,
+      vendas: this.totalResumoPagamentos(),
+      despesas: this.totalDespesasCaixaDia(),
+      sangrias: this.totalSangriasCaixaDia(),
+      suprimentos: this.totalSuprimentosCaixaDia(),
+      resultado: this.totalResultadoFechamento(),
+      pendentes: this.pendentesOffline,
+      fechadoPor: user?.username || this.vendedor,
+      geradoEm: new Date().toISOString(),
+      pagamentos: this.resumoPagamentos.map(p => ({
+        descricao: p.descricao || p.forma,
+        vendas: p.vendas,
+        total: this.numero(p.total)
+      })),
+      despesasDetalhe: this.resumoDespesasCaixaDia(),
+      sangriasDetalhe: this.resumoSangriasCaixaDia(),
+      suprimentosDetalhe: this.resumoSuprimentosCaixaDia()
+    };
+  }
+
   private resumoTransferenciasCaixaDia(tipo: 'ENTRADA' | 'SAIDA', fallback: string): { descricao: string; qtd: number; total: number }[] {
     const mapa = new Map<string, { descricao: string; qtd: number; total: number }>();
     this.despesasCaixaDia.forEach(mov => {
@@ -1351,24 +1488,27 @@ export class PdvDesktopComponent implements OnInit {
     return `${ano}-${mes}-${dia}`;
   }
 
-  pagarCom(forma: 'DINHEIRO' | 'CARTAO' | 'PIX'): void {
+  pagarCom(forma: PdvFormaPagamento): void {
     this.formaPagamento = forma;
     this.atualizarValorPagamento();
   }
 
-  imprimirCupom(): void {
-    if (!this.carrinho.length) {
+  abrirReimpressao(): void {
+    this.carregarCuponsLocais();
+    this.modalAtalho = 'reimpressao';
+  }
+
+  imprimirCupom(cupom?: PdvCupomLocal): void {
+    if (!cupom && !this.carrinho.length) {
       this.mensagem = 'Inclua itens para imprimir o cupom.';
       return;
     }
-    const documento = this.numeroVendaAtual && this.numeroVendaAtual !== 'Venda em aberto'
+    const documento = cupom?.documento || (this.numeroVendaAtual && this.numeroVendaAtual !== 'Venda em aberto'
       ? this.numeroVendaAtual
-      : `PRE-${new Date().getTime()}`;
-    const cliente = this.clientes.find(c => Number(c.id) === Number(this.clienteId));
-    const loja = this.lojas.find(l => Number(l.Idloja) === Number(this.lojaId));
-    const vendedor = this.vendedores.find(v => Number(v.id) === Number(this.vendedorId));
-    const descontosCupom = this.carrinho.reduce((total, item) => total + this.numero(item.desconto), 0) + this.numero(this.desconto);
-    const itens = this.carrinho.map(item => `
+      : `PRE-${new Date().getTime()}`);
+    const cupomAtual = cupom || this.registrarCupomLocal(documento);
+    const descontosCupom = cupomAtual.descontos;
+    const itens = cupomAtual.itens.map(item => `
       <tr>
         <td>${this.escapeHtml(item.descricao)}<br><small>${this.escapeHtml(item.codigo)} ${this.escapeHtml(item.cor)} ${this.escapeHtml(item.tamanho)}</small></td>
         <td>${item.qtd}</td>
@@ -1377,7 +1517,7 @@ export class PdvDesktopComponent implements OnInit {
         <td>${this.formatar(item.total)}</td>
       </tr>
     `).join('');
-    const pagamentos = this.pagamentosVenda.map(p => `
+    const pagamentos = cupomAtual.pagamentos.map(p => `
       <tr>
         <td>${this.escapeHtml(p.descricao)}</td>
         <td colspan="3">${this.escapeHtml(p.autorizacao || '')}</td>
@@ -1410,18 +1550,18 @@ export class PdvDesktopComponent implements OnInit {
             <p class="center">CUPOM NAO FISCAL EM CONTINGENCIA</p>
             <p class="center">Documento: <strong>${this.escapeHtml(documento)}</strong></p>
             <div class="sep"></div>
-            <p>Loja: ${this.escapeHtml(loja?.nome_loja || '-')}</p>
-            <p>Caixa: ${this.escapeHtml(this.caixa)}</p>
-            <p>Vendedor: ${this.escapeHtml(vendedor?.nomefuncionario || this.vendedor || '-')}</p>
-            <p>Cliente: ${this.escapeHtml(cliente?.nome_cliente || this.cliente || '-')}</p>
-            <p>Data: ${new Date().toLocaleString('pt-BR')}</p>
+            <p>Loja: ${this.escapeHtml(cupomAtual.loja)}</p>
+            <p>Caixa: ${this.escapeHtml(cupomAtual.caixa)}</p>
+            <p>Vendedor: ${this.escapeHtml(cupomAtual.vendedor)}</p>
+            <p>Cliente: ${this.escapeHtml(cupomAtual.cliente)}</p>
+            <p>Data: ${this.escapeHtml(new Date(cupomAtual.dataHora).toLocaleString('pt-BR'))}</p>
             <table>
               <thead><tr><th>Item</th><th>Qtd</th><th>Unit.</th><th>Desc.</th><th>Total</th></tr></thead>
               <tbody>${itens}</tbody>
             </table>
-            <div class="line"><span>Subtotal</span><strong>${this.formatar(this.subtotal())}</strong></div>
+            <div class="line"><span>Subtotal</span><strong>${this.formatar(cupomAtual.subtotal)}</strong></div>
             <div class="line"><span>Descontos</span><strong>${this.formatar(descontosCupom)}</strong></div>
-            <div class="total">TOTAL ${this.formatar(this.total())}</div>
+            <div class="total">TOTAL ${this.formatar(cupomAtual.total)}</div>
             <table>
               <thead><tr><th>Pagamento</th><th colspan="3">Aut.</th><th>Valor</th></tr></thead>
               <tbody>${pagamentos}</tbody>
@@ -1439,6 +1579,111 @@ export class PdvDesktopComponent implements OnInit {
     }
     win.document.write(html);
     win.document.close();
+  }
+
+  imprimirFechamentoCaixa(resumo: PdvResumoFechamentoLocal, fechadoEm?: string): void {
+    const linhas = (rows: { descricao: string; qtd?: number; vendas?: number; total: number }[] | undefined, sinal = '') => (rows || []).map(row => `
+      <tr>
+        <td>${this.escapeHtml(row.descricao)}</td>
+        <td>${row.vendas ?? row.qtd ?? 0}</td>
+        <td>${sinal}${this.formatar(row.total)}</td>
+      </tr>
+    `).join('');
+    const html = `
+      <html>
+        <head>
+          <title>Fechamento ${this.escapeHtml(resumo.numero)}</title>
+          <style>
+            body{font-family:Arial,sans-serif;margin:0;padding:10px;color:#000}
+            .cupom{width:302px}
+            h1{font-size:15px;text-align:center;margin:0 0 8px}
+            p{font-size:11px;margin:2px 0}
+            h2{font-size:12px;margin:10px 0 4px;border-top:1px dashed #999;padding-top:6px}
+            table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+            th,td{border-top:1px dashed #999;padding:4px 0;text-align:left}
+            th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:right}
+            .center{text-align:center}
+            .line{display:flex;justify-content:space-between;font-size:11px;margin:3px 0}
+            .total{font-size:16px;font-weight:700;text-align:right;border-top:1px solid #000;margin-top:8px;padding-top:8px}
+            @media print{body{padding:0}.cupom{width:72mm}}
+          </style>
+        </head>
+        <body>
+          <div class="cupom">
+            <h1>FECHAMENTO DE CAIXA</h1>
+            <p class="center"><strong>${this.escapeHtml(resumo.numero)}</strong></p>
+            <p>Loja: ${this.escapeHtml(resumo.loja)}</p>
+            <p>Caixa: ${this.escapeHtml(resumo.caixa)}</p>
+            <p>Operador: ${this.escapeHtml(resumo.fechadoPor)}</p>
+            <p>Abertura: ${this.escapeHtml(resumo.abertura ? new Date(resumo.abertura).toLocaleString('pt-BR') : '-')}</p>
+            <p>Fechamento: ${this.escapeHtml(new Date(fechadoEm || resumo.geradoEm).toLocaleString('pt-BR'))}</p>
+            <h2>Pagamentos</h2>
+            <table><thead><tr><th>Forma</th><th>Qtd</th><th>Total</th></tr></thead><tbody>${linhas(resumo.pagamentos)}</tbody></table>
+            <h2>Movimentos</h2>
+            <div class="line"><span>Despesas</span><strong>- ${this.formatar(resumo.despesas)}</strong></div>
+            <div class="line"><span>Sangrias</span><strong>- ${this.formatar(resumo.sangrias)}</strong></div>
+            <div class="line"><span>Suprimentos</span><strong>${this.formatar(resumo.suprimentos)}</strong></div>
+            <div class="line"><span>Pendentes offline</span><strong>${resumo.pendentes}</strong></div>
+            ${resumo.despesasDetalhe?.length ? `<h2>Despesas</h2><table><tbody>${linhas(resumo.despesasDetalhe, '- ')}</tbody></table>` : ''}
+            ${resumo.sangriasDetalhe?.length ? `<h2>Sangrias</h2><table><tbody>${linhas(resumo.sangriasDetalhe, '- ')}</tbody></table>` : ''}
+            ${resumo.suprimentosDetalhe?.length ? `<h2>Suprimentos</h2><table><tbody>${linhas(resumo.suprimentosDetalhe)}</tbody></table>` : ''}
+            <div class="total">SALDO ${this.formatar(resumo.resultado)}</div>
+          </div>
+          <script>window.print(); setTimeout(() => window.close(), 300);</script>
+        </body>
+      </html>
+    `;
+    const win = window.open('', '_blank', 'width=340,height=640');
+    if (!win) {
+      this.mensagem = 'Não foi possível abrir a impressão do fechamento.';
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+  }
+
+  private registrarCupomLocal(documento: string): PdvCupomLocal {
+    const cliente = this.clientes.find(c => Number(c.id) === Number(this.clienteId));
+    const loja = this.lojas.find(l => Number(l.Idloja) === Number(this.lojaId));
+    const vendedor = this.vendedores.find(v => Number(v.id) === Number(this.vendedorId));
+    const cupom: PdvCupomLocal = {
+      documento,
+      dataHora: new Date().toISOString(),
+      loja: loja?.nome_loja || '-',
+      caixa: this.caixa,
+      vendedor: vendedor?.nomefuncionario || this.vendedor || '-',
+      cliente: cliente?.nome_cliente || this.cliente || '-',
+      itens: this.carrinho.map(item => ({ ...item })),
+      pagamentos: this.pagamentosVenda.map(pagamento => ({ ...pagamento })),
+      subtotal: this.subtotal(),
+      descontos: this.carrinho.reduce((total, item) => total + this.numero(item.desconto), 0) + this.numero(this.desconto),
+      total: this.total()
+    };
+    this.cuponsLocais = [cupom, ...this.cuponsLocais.filter(c => c.documento !== documento)].slice(0, 50);
+    localStorage.setItem(this.cuponsLocaisKey, JSON.stringify(this.cuponsLocais));
+    return cupom;
+  }
+
+  private carregarCuponsLocais(): void {
+    try {
+      const data = JSON.parse(localStorage.getItem(this.cuponsLocaisKey) || '[]');
+      this.cuponsLocais = Array.isArray(data) ? data : [];
+    } catch {
+      this.cuponsLocais = [];
+    }
+  }
+
+  private registrarAuditoria(acao: string, documento?: string, detalhe?: string, valor?: number): void {
+    const user = this.auth.getCurrentUser();
+    this.auditoria.registrar({
+      acao,
+      usuario: user?.username || this.vendedor,
+      loja: this.lojaId,
+      caixa: this.caixaId,
+      documento,
+      detalhe,
+      valor
+    });
   }
 
   private escapeHtml(value: unknown): string {
@@ -1515,7 +1760,71 @@ export class PdvDesktopComponent implements OnInit {
   private descricaoFormaPagamento(): string {
     if (this.formaPagamento === 'CARTAO') return this.tipoCartao === 'DEBITO' ? 'Cartão débito' : 'Cartão crédito';
     if (this.formaPagamento === 'PIX') return 'Pix';
+    if (this.formaPagamento === 'TROCA') {
+      return this.valeTrocaDocumento ? `Vale-troca ${this.valeTrocaDocumento}` : 'Vale-troca';
+    }
     return 'Dinheiro';
+  }
+
+  valesTrocaValidos(): ValeTroca[] {
+    return this.valesTroca.filter(vale => {
+      const statusVale = String(vale.status || '').toUpperCase();
+      return this.numero(vale.saldo) > 0 && (!statusVale || statusVale === 'ABERTO' || statusVale === 'PARCIAL');
+    });
+  }
+
+  private carregarValesTrocaCliente(): void {
+    const clienteId = Number(this.clienteId || 0);
+    this.valeTrocaDocumento = '';
+    if (!clienteId) {
+      this.valesTroca = [];
+      return;
+    }
+    this.valesTroca = this.lerValesTrocaCache(clienteId);
+    if (this.status?.online === false) return;
+    this.valesTrocaApi.disponiveis(clienteId).subscribe({
+      next: vales => {
+        this.valesTroca = vales || [];
+        this.salvarValesTrocaCache(clienteId, this.valesTroca);
+      },
+      error: () => undefined
+    });
+  }
+
+  private lerValesTrocaCache(clienteId: number): ValeTroca[] {
+    try {
+      const data = JSON.parse(localStorage.getItem(this.valesTrocaCacheKey) || '{}');
+      const lista = data?.[String(clienteId)];
+      return Array.isArray(lista) ? lista : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private salvarValesTrocaCache(clienteId: number, vales: ValeTroca[]): void {
+    try {
+      const data = JSON.parse(localStorage.getItem(this.valesTrocaCacheKey) || '{}');
+      data[String(clienteId)] = vales;
+      localStorage.setItem(this.valesTrocaCacheKey, JSON.stringify(data));
+    } catch {
+      undefined;
+    }
+  }
+
+  private aplicarUsoValesTrocaLocal(): void {
+    const clienteId = Number(this.clienteId || 0);
+    if (!clienteId) return;
+    const usos = this.pagamentosVenda.filter(p => p.forma === 'TROCA' && p.autorizacao);
+    if (!usos.length) return;
+    this.valesTroca = this.valesTroca.map(vale => {
+      const uso = usos
+        .filter(p => p.autorizacao === vale.documento)
+        .reduce((total, p) => total + this.numero(p.valor), 0);
+      if (!uso) return vale;
+      const saldo = Math.max(this.numero(vale.saldo) - uso, 0);
+      return { ...vale, saldo: saldo.toFixed(2), status: saldo > 0 ? 'PARCIAL' : 'USADO' };
+    });
+    this.salvarValesTrocaCache(clienteId, this.valesTroca);
   }
 
   private atualizarPendentesOffline(): void {
@@ -1616,6 +1925,11 @@ export class PdvDesktopComponent implements OnInit {
 
   private atualizarCaixaLocal(): void {
     this.caixaLocalAberto = this.caixaLocal.aberto(this.lojaId, this.caixaId);
+    if (this.bridge.isDesktop && this.lojaId && this.caixaId) {
+      this.bridge.obterCaixaLocal(this.lojaId, this.caixaId).then(caixa => {
+        this.caixaLocalAberto = !!caixa && caixa.status === 'ABERTO';
+      }).catch(() => undefined);
+    }
   }
 
   private salvarRascunhoLocal(): void {

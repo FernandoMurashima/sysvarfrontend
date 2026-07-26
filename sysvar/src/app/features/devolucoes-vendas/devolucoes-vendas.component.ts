@@ -13,6 +13,8 @@ import { LojasService } from '../../core/services/lojas.service';
 import { ValeTrocaService } from '../../core/services/vale-troca.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PdvConnectivityService } from '../../core/connectivity/pdv-connectivity.service';
+import { PdvOfflineDevolucaoQueueService } from '../../core/services/pdv-offline-devolucao-queue.service';
 
 @Component({
   selector: 'app-devolucoes-vendas',
@@ -26,6 +28,8 @@ export class DevolucoesVendasComponent implements OnInit {
   private lojasApi = inject(LojasService);
   private clientesApi = inject(ClientesService);
   private valeTrocaApi = inject(ValeTrocaService);
+  private connectivity = inject(PdvConnectivityService);
+  private devolucoesOffline = inject(PdvOfflineDevolucaoQueueService);
   private router = inject(Router);
 
   documento = '';
@@ -48,6 +52,7 @@ export class DevolucoesVendasComponent implements OnInit {
   saving = false;
   errorMsg = '';
   successMsg = '';
+  pendentesOffline = 0;
 
   get documentoSuggestions(): string[] {
     const valores = this.vendas.flatMap(venda => [
@@ -75,6 +80,7 @@ export class DevolucoesVendasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.atualizarPendentesOffline();
     this.carregarBase();
   }
 
@@ -251,25 +257,60 @@ export class DevolucoesVendasComponent implements OnInit {
       return;
     }
 
-    this.saving = true;
-    this.errorMsg = '';
-    this.successMsg = '';
-    this.vendasApi.finalizarDevolucao({
+    const payload = {
       venda: this.venda.id,
       motivo: this.motivo,
       itens
-    }).subscribe({
+    };
+
+    this.saving = true;
+    this.errorMsg = '';
+    this.successMsg = '';
+    if (this.connectivity.snapshot().online === false) {
+      const pendente = this.devolucoesOffline.adicionar(payload);
+      this.saving = false;
+      this.successMsg = `Devolução offline gravada: ${pendente.documento}`;
+      this.devolucao = null;
+      this.venda = null;
+      this.quantidades = {};
+      this.atualizarPendentesOffline();
+      return;
+    }
+
+    this.vendasApi.finalizarDevolucao(payload).subscribe({
       next: devolucao => {
         this.devolucao = devolucao;
         this.prepararVenda(devolucao.venda_origem ?? this.venda);
         this.filtrarVendas();
         this.saving = false;
         this.successMsg = `Devolução ${devolucao.documento} finalizada.`;
+        this.atualizarPendentesOffline();
       },
       error: err => {
         this.saving = false;
         this.errorMsg = err?.error?.detail || 'Falha ao finalizar devolução.';
       }
+    });
+  }
+
+  sincronizarPendentes(): void {
+    if (!this.pendentesOffline || this.saving) return;
+    this.saving = true;
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.devolucoesOffline.sincronizar().then(resumo => {
+      this.saving = false;
+      this.atualizarPendentesOffline();
+      if (resumo.erros) {
+        this.errorMsg = resumo.erro || 'Falha ao sincronizar devoluções.';
+        return;
+      }
+      this.successMsg = `${resumo.enviados} devolução(ões) sincronizada(s).`;
+      this.filtrarVendas();
+    }).catch(error => {
+      this.saving = false;
+      this.atualizarPendentesOffline();
+      this.errorMsg = error?.message || 'Falha ao sincronizar devoluções.';
     });
   }
 
@@ -332,5 +373,9 @@ export class DevolucoesVendasComponent implements OnInit {
 
   private unwrap<T>(resp: T[] | { results: T[] }): T[] {
     return Array.isArray(resp) ? resp : resp.results || [];
+  }
+
+  private atualizarPendentesOffline(): void {
+    this.pendentesOffline = this.devolucoesOffline.quantidade();
   }
 }

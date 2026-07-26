@@ -90,6 +90,16 @@ export interface PdvTerminalConfig {
   updatedAt: string;
 }
 
+export interface PdvCaixaLocalDesktop {
+  local_uuid: string;
+  loja_id: number;
+  caixa_id: number;
+  operador?: string;
+  status: 'ABERTO' | 'FECHADO';
+  aberto_em: string;
+  fechado_em?: string;
+}
+
 export interface SysvarPdvApi {
   status(): Promise<PdvDesktopStatus>;
   ping(): Promise<boolean>;
@@ -103,6 +113,11 @@ export interface SysvarPdvApi {
   vendas: {
     finalizar(payload: FinalizarVendaPdvPayload): Promise<PdvVendaLocalResultado>;
     emAndamento(): Promise<PdvVendaEmAndamento[]>;
+  };
+  caixaLocal: {
+    obter(lojaId: number, caixaId: number): Promise<PdvCaixaLocalDesktop | null>;
+    abrir(payload: { lojaId: number; caixaId: number; operador?: string }): Promise<PdvCaixaLocalDesktop>;
+    fechar(payload: { lojaId: number; caixaId: number; resumo?: unknown }): Promise<PdvCaixaLocalDesktop | null>;
   };
   sincronizacao: {
     status(): Promise<PdvSyncResumo>;

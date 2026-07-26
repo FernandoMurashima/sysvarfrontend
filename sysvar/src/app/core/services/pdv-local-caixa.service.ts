@@ -1,5 +1,24 @@
 import { Injectable } from '@angular/core';
 
+export interface PdvResumoFechamentoLocal {
+  numero?: string;
+  loja?: string;
+  caixa?: string;
+  abertura?: string;
+  vendas: number;
+  despesas: number;
+  sangrias: number;
+  suprimentos: number;
+  resultado: number;
+  pendentes: number;
+  fechadoPor?: string;
+  geradoEm: string;
+  pagamentos?: { descricao: string; vendas: number; total: number }[];
+  despesasDetalhe?: { descricao: string; qtd: number; total: number }[];
+  sangriasDetalhe?: { descricao: string; qtd: number; total: number }[];
+  suprimentosDetalhe?: { descricao: string; qtd: number; total: number }[];
+}
+
 export interface PdvCaixaLocal {
   id: string;
   loja: number;
@@ -8,6 +27,7 @@ export interface PdvCaixaLocal {
   abertoEm: string;
   fechadoEm?: string;
   status: 'ABERTO' | 'FECHADO';
+  resumo?: PdvResumoFechamentoLocal;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -43,10 +63,10 @@ export class PdvLocalCaixaService {
     return atual;
   }
 
-  fechar(): PdvCaixaLocal | null {
+  fechar(resumo?: PdvResumoFechamentoLocal): PdvCaixaLocal | null {
     const atual = this.obter();
     if (!atual) return null;
-    const fechado: PdvCaixaLocal = { ...atual, id: atual.id || this.uuid(), status: 'FECHADO', fechadoEm: new Date().toISOString() };
+    const fechado: PdvCaixaLocal = { ...atual, id: atual.id || this.uuid(), status: 'FECHADO', fechadoEm: new Date().toISOString(), resumo };
     localStorage.setItem(this.key, JSON.stringify(fechado));
     this.registrarHistorico(fechado);
     return fechado;

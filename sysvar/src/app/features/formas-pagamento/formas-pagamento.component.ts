@@ -66,6 +66,10 @@ export class FormasPagamentoComponent implements OnInit {
     prazo_credito_dias: [0, [Validators.min(0)]],
     taxa_percentual: [0, [Validators.min(0)]],
     taxa_fixa: [0, [Validators.min(0)]],
+    tef_habilitado: [false],
+    tef_modalidade: [''],
+    tef_adquirente_codigo: ['', Validators.maxLength(40)],
+    tef_terminal_logico: ['', Validators.maxLength(40)],
     parcelas: this.fb.array([])
   });
 
@@ -234,7 +238,11 @@ export class FormasPagamentoComponent implements OnInit {
       conta_liquidacao: null,
       prazo_credito_dias: 0,
       taxa_percentual: 0,
-      taxa_fixa: 0
+      taxa_fixa: 0,
+      tef_habilitado: false,
+      tef_modalidade: '',
+      tef_adquirente_codigo: '',
+      tef_terminal_logico: ''
     });
     this.clearParcelas();
     this.addParcela();
@@ -265,7 +273,11 @@ export class FormasPagamentoComponent implements OnInit {
           conta_liquidacao: det.conta_liquidacao ?? null,
           prazo_credito_dias: Number(det.prazo_credito_dias || 0),
           taxa_percentual: Number(det.taxa_percentual || 0),
-          taxa_fixa: Number(det.taxa_fixa || 0)
+          taxa_fixa: Number(det.taxa_fixa || 0),
+          tef_habilitado: !!det.tef_habilitado,
+          tef_modalidade: det.tef_modalidade ?? '',
+          tef_adquirente_codigo: det.tef_adquirente_codigo ?? '',
+          tef_terminal_logico: det.tef_terminal_logico ?? ''
         });
 
         this.clearParcelas();
@@ -355,6 +367,10 @@ export class FormasPagamentoComponent implements OnInit {
       prazo_credito_dias: Number(f.prazo_credito_dias || 0),
       taxa_percentual: this.blankToNull(f.taxa_percentual) ?? '0',
       taxa_fixa: this.blankToNull(f.taxa_fixa) ?? '0',
+      tef_habilitado: !!f.tef_habilitado,
+      tef_modalidade: f.tef_habilitado ? (f.tef_modalidade || '').toString().trim() : '',
+      tef_adquirente_codigo: f.tef_habilitado ? (f.tef_adquirente_codigo || '').toString().trim() : '',
+      tef_terminal_logico: f.tef_habilitado ? (f.tef_terminal_logico || '').toString().trim() : '',
       num_parcelas: numParcelas
     };
 
@@ -499,6 +515,8 @@ export class FormasPagamentoComponent implements OnInit {
     push(f.get('descricao')?.hasError('required') || false, 'descricao: Este campo é obrigatório.');
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
     push(!!f.get('gera_recebivel_bancario')?.value && !f.get('conta_liquidacao')?.value, 'conta_liquidacao: Informe a conta de liquidação.');
+    push(!!f.get('tef_habilitado')?.value && !f.get('adquirente')?.value, 'adquirente: Informe a adquirente do TEF.');
+    push(!!f.get('tef_habilitado')?.value && !f.get('tef_modalidade')?.value, 'tef_modalidade: Informe a modalidade do TEF.');
 
     const fields = ['codigo', 'descricao'];
     const seen = new Set<string>();

@@ -33,10 +33,17 @@ export class PdvOfflineQueueService {
   }
 
   adicionar(payload: FinalizarVendaPdvPayload): PdvVendaPendente {
+    const localUuid = this.uuid();
+    const documento = this.documentoLocal();
+    const payloadControle: FinalizarVendaPdvPayload = {
+      ...payload,
+      documento,
+      local_uuid: localUuid
+    };
     const venda: PdvVendaPendente = {
-      localUuid: this.uuid(),
-      documento: this.documentoLocal(),
-      payload,
+      localUuid,
+      documento,
+      payload: payloadControle,
       criadaEm: new Date().toISOString(),
       tentativas: 0
     };

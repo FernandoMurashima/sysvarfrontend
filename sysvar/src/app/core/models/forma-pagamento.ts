@@ -23,6 +23,10 @@ export interface FormaPagamento {
   prazo_credito_dias?: number;
   taxa_percentual?: string | number;
   taxa_fixa?: string | number;
+  tef_habilitado?: boolean;
+  tef_modalidade?: string;
+  tef_adquirente_codigo?: string;
+  tef_terminal_logico?: string;
   data_cadastro?: string;
   parcelas?: FormaPagamentoParcela[];
 }

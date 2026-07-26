@@ -6,6 +6,7 @@ import { LocalDatabaseConnection } from '../database/connection';
 import { runMigrations } from '../database/migrations/migration-runner';
 import { ProdutoCacheRepository } from '../repositories/produto-cache.repository';
 import { PdvStatusLocalRepository } from '../repositories/pdv-status-local.repository';
+import { CaixaLocalRepository } from '../repositories/caixa-local.repository';
 import { TerminalConfigInput, TerminalConfigRepository, TerminalConfigRow } from '../repositories/terminal-config.repository';
 import { VendaLocalRepository } from '../repositories/venda-local.repository';
 import { DocumentoLocalService } from '../services/documento-local.service';
@@ -19,6 +20,7 @@ const distPath = path.join(__dirname, '../../dist/sysvar/browser');
 let produtosRepository: ProdutoCacheRepository | null = null;
 let vendasRepository: VendaLocalRepository | null = null;
 let statusRepository: PdvStatusLocalRepository | null = null;
+let caixaLocalRepository: CaixaLocalRepository | null = null;
 let terminalRepository: TerminalConfigRepository | null = null;
 let documentoLocal: DocumentoLocalService | null = null;
 let databaseError: string | null = null;
@@ -39,6 +41,7 @@ async function ensureLocalRuntime(): Promise<void> {
     produtosRepository = new ProdutoCacheRepository(db);
     vendasRepository = new VendaLocalRepository(db);
     statusRepository = new PdvStatusLocalRepository(db);
+    caixaLocalRepository = new CaixaLocalRepository(db);
     terminalRepository = new TerminalConfigRepository(db);
     documentoLocal = new DocumentoLocalService(db);
   } catch (error) {
@@ -136,6 +139,18 @@ ipcMain.handle('sysvar:vendas:em-andamento', async () => {
     numeroDocumento: venda.numero_documento,
     updatedAt: venda.updated_at
   }));
+});
+ipcMain.handle('sysvar:caixa-local:obter', async (_event, lojaId: number, caixaId: number) => {
+  await ensureLocalRuntime();
+  return caixaLocalRepository!.obter(Number(lojaId), Number(caixaId));
+});
+ipcMain.handle('sysvar:caixa-local:abrir', async (_event, payload) => {
+  await ensureLocalRuntime();
+  return caixaLocalRepository!.abrir(Number(payload?.lojaId), Number(payload?.caixaId), String(payload?.operador || ''));
+});
+ipcMain.handle('sysvar:caixa-local:fechar', async (_event, payload) => {
+  await ensureLocalRuntime();
+  return caixaLocalRepository!.fechar(Number(payload?.lojaId), Number(payload?.caixaId), payload?.resumo);
 });
 ipcMain.handle('sysvar:sync:status', async () => ({
   status: 'idle',

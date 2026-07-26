@@ -7,6 +7,7 @@ import {
   CupomPdv,
   FinalizarDevolucaoVendaPayload,
   FinalizarVendaPdvPayload,
+  NFCeResumo,
   RelatorioMargem,
   RelatorioVendas,
   VendaDevolucao,
@@ -25,6 +26,14 @@ export class VendaPdvService {
 
   cupom(nfceId: number): Observable<CupomPdv> {
     return this.http.get<CupomPdv>(`${this.base}/nfce/${nfceId}/cupom/`);
+  }
+
+  nfceContingenciaPendente(params?: Record<string, string | number | null | undefined>): Observable<NFCeResumo[]> {
+    const query: Record<string, string> = {};
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') query[key] = String(value);
+    });
+    return this.http.get<NFCeResumo[]>(`${this.base}/nfce/contingencia-pendente/`, { params: query });
   }
 
   relatorioVendas(params?: Record<string, string | number | null | undefined>): Observable<RelatorioVendas> {

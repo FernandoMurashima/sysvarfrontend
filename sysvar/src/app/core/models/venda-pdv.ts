@@ -16,6 +16,8 @@ export interface VendaPdvPagamentoPayload {
 }
 
 export interface FinalizarVendaPdvPayload {
+  documento?: string;
+  local_uuid?: string;
   loja: number;
   caixa: number;
   cliente: number;
@@ -122,6 +124,8 @@ export interface VendaDevolucaoConsulta {
 }
 
 export interface FinalizarDevolucaoVendaPayload {
+  documento?: string;
+  local_uuid?: string;
   venda: number;
   motivo: string;
   itens: Array<{
