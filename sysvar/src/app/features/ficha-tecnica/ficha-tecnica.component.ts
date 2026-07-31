@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FichaTecnica, FichaTecnicaItem, FichaTecnicaItemTipo } from '../../core/models/ficha-tecnica';
@@ -32,8 +32,22 @@ export class FichaTecnicaComponent implements OnInit {
   loading = false;
   saving = false;
   search = '';
+  filterStatus = '';
   successMsg = '';
   errorMsg = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  columnsOpen = false;
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.ficha-tecnica';
+  private readonly columnsStorageKey = 'sysvar.list.ficha-tecnica.columns';
+  columns = [
+    { key: 'produto', label: 'Produto', visible: true, required: true },
+    { key: 'referencia', label: 'Referência', visible: true, required: false },
+    { key: 'versao', label: 'Versão', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'custo', label: 'Custo previsto', visible: true, required: false },
+    { key: 'acoes', label: 'Ações', visible: true, required: false },
+  ];
 
   fichas: FichaTecnica[] = [];
   produtosProprios: Produto[] = [];
@@ -43,6 +57,7 @@ export class FichaTecnicaComponent implements OnInit {
   private unidadeMap = new Map<number, Unidade>();
 
   fichaAtual: FichaTecnica | null = null;
+  showFichaModal = false;
   form: Partial<FichaTecnica> = this.blankFicha();
   itemForm: Partial<FichaTecnicaItem> = this.blankItem();
 
@@ -85,6 +100,8 @@ export class FichaTecnicaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadOptions();
     this.load();
   }
@@ -133,10 +150,17 @@ export class FichaTecnicaComponent implements OnInit {
     });
   }
 
+  clearSearch(): void {
+    this.search = '';
+    this.filterStatus = '';
+    this.load();
+  }
+
   nova(): void {
     this.fichaAtual = null;
     this.form = this.blankFicha();
     this.itemForm = this.blankItem();
+    this.showFichaModal = true;
     this.clearMsgs();
   }
 
@@ -144,7 +168,12 @@ export class FichaTecnicaComponent implements OnInit {
     this.fichaAtual = ficha;
     this.form = { ...ficha };
     this.itemForm = this.blankItem();
+    this.showFichaModal = true;
     if (clear) this.clearMsgs();
+  }
+
+  fecharFichaModal(): void {
+    this.showFichaModal = false;
   }
 
   rowActions(ficha: FichaTecnica): RowAction[] {
@@ -317,6 +346,19 @@ export class FichaTecnicaComponent implements OnInit {
     });
   }
 
+  get fichasFiltradas(): FichaTecnica[] {
+    return this.fichas.filter(f => !this.filterStatus || f.status === this.filterStatus);
+  }
+
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); this.indicatorsVisible = true; this.filtersVisible = true; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.saveViewPreference(); }
+  @HostListener('window:sysvar-ficha-tecnica-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-ficha-tecnica-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-ficha-tecnica-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   private blankFicha(): Partial<FichaTecnica> {
     return { produto_final: undefined as any, versao: '1', rendimento: 1, status: 'RASCUNHO', ativa: true };
   }
@@ -327,6 +369,33 @@ export class FichaTecnicaComponent implements OnInit {
 
   private unwrap<T>(res: any): T[] {
     return Array.isArray(res) ? res : (res?.results || []);
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible]))));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 
   private unidadeDoProduto(produtoId?: number | null): Unidade | null {

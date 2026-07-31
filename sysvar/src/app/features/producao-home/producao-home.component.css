@@ -1,130 +1,11 @@
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 8px;
-}
+@import '../cores/cores.component.css';
 
-.toolbar,
-.panel,
-.kpi {
-  background: #fff;
-  border: 1px solid #d7e0eb;
-  border-radius: 6px;
+.production-actions {
+  grid-template-columns: auto auto minmax(150px, 1fr) minmax(150px, 1fr) minmax(170px, 1fr);
 }
-
-.toolbar {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-}
-
-.toolbar h2,
-.panel h3 {
-  margin: 0;
-}
-
-.toolbar h2 {
-  font-size: 18px;
-}
-
-.panel {
-  padding: 10px;
-}
-
-.panel h3 {
-  font-size: 16px;
-}
-
-.quick-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.actions-panel {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.faccao-kpis {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cost-kpis {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.kpi {
-  min-height: 54px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.kpi span {
-  color: #334155;
-  font-size: 12px;
-}
-
-.kpi strong {
-  font-size: 18px;
-  color: #081225;
-}
-
-.kpi strong.negative {
-  color: #dc2626;
-}
-
-.kpi strong.positive {
-  color: #047857;
-}
-
-.panel-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-title span {
-  color: #334155;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  min-width: 72px;
-  border: 1px solid #cbd6e2;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  padding: 0 10px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.btn.primary {
-  background: #081225;
-  border-color: #081225;
-  color: #fff;
-}
-
 .btn-count {
   min-width: 22px;
   height: 18px;
-  margin-left: 8px;
   padding: 0 6px;
   border-radius: 999px;
   background: #e8f3ff;
@@ -132,113 +13,20 @@
   font-size: 11px;
   line-height: 18px;
 }
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 8px;
-  font-size: 13px;
-}
-
-.table th,
-.table td {
-  border-bottom: 1px solid #dbe4ef;
-  padding: 7px 8px;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.table th {
-  background: #f6f9fc;
-  color: #183153;
-  font-size: 12px;
-}
-
-.num {
-  text-align: right;
-}
-
-.danger-text {
-  color: #dc2626;
-  font-weight: 700;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 84px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #16a34a;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.badge.warning {
-  background: #64748b;
-}
-
-.empty {
-  padding: 18px;
-  text-align: center;
-  color: #54637a;
-}
-
-.msg {
-  border-radius: 5px;
-  padding: 8px 10px;
-}
-
-.msg.error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, .45);
-}
-
-.modal-card {
-  width: min(1100px, calc(100vw - 48px));
-  max-height: calc(100vh - 64px);
-  overflow: auto;
-  background: #fff;
-  border: 1px solid #cbd6e2;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, .22);
-}
-
-.modal-title {
+.metric-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #334155;
 }
-
-.modal-title h3 {
-  margin: 0;
-}
-
-@media (max-width: 900px) {
-  .toolbar,
-  .quick-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .kpis,
-  .faccao-kpis,
-  .cost-kpis {
-    grid-template-columns: 1fr;
-  }
-}
+.metric-line strong { color: #071225; }
+.metric-line strong.negative, .danger-text { color: #dc2626; font-weight: 700; }
+.metric-line strong.positive { color: #047857; }
+.num { text-align: right; }
+.large-modal { width: min(1100px, calc(100vw - 48px)); }
+@media (max-width: 900px) { .production-actions { grid-template-columns: 1fr; } }

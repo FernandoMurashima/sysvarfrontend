@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FichaTecnica } from '../../core/models/ficha-tecnica';
@@ -45,6 +45,20 @@ export class OrdemProducaoComponent implements OnInit {
   saving = false;
   search = '';
   statusFiltro = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  columnsOpen = false;
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.ordem-producao';
+  private readonly columnsStorageKey = 'sysvar.list.ordem-producao.columns';
+  columns = [
+    { key: 'numero', label: 'Número', visible: true, required: true },
+    { key: 'produto', label: 'Produto', visible: true, required: true },
+    { key: 'grade', label: 'Grade', visible: true, required: false },
+    { key: 'quantidade', label: 'Qtd', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'previsto', label: 'Previsto', visible: true, required: false },
+    { key: 'real', label: 'Real', visible: true, required: false },
+  ];
   sugestoesOps: OrdemProducao[] = [];
   showSugestoes = false;
   loadingSugestoes = false;
@@ -62,6 +76,7 @@ export class OrdemProducaoComponent implements OnInit {
   form: Partial<OrdemProducao> = this.blankForm();
   distribuicao = { loja_destino: null as number | null, documento: '' };
   distribuindo = false;
+  showOrdemModal = false;
   showDistribuicaoModal = false;
   estoqueValidacao: { ok: boolean; loja: string; faltas: any[] } | null = null;
   verificandoEstoque = false;
@@ -86,8 +101,19 @@ export class OrdemProducaoComponent implements OnInit {
     ].filter((v): v is string => !!v);
     return Array.from(new Set(valores));
   }
+  get indicadores() {
+    return {
+      total: this.ordens.length,
+      abertas: this.ordens.filter(o => o.status === 'ABERTA').length,
+      aprovadas: this.ordens.filter(o => o.status === 'APROVADA').length,
+      producao: this.ordens.filter(o => o.status === 'EM_PRODUCAO').length,
+      finalizadas: this.ordens.filter(o => o.status === 'FINALIZADA').length,
+    };
+  }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadOptions();
     this.load();
   }
@@ -112,12 +138,18 @@ export class OrdemProducaoComponent implements OnInit {
         this.ordens = this.unwrap<OrdemProducao>(res);
         if (this.ordemAtual?.id) {
           const atualizada = this.ordens.find(o => o.id === this.ordemAtual?.id);
-          if (atualizada) this.selectOrdem(atualizada, false);
+          if (atualizada) this.selectOrdem(atualizada, false, this.showOrdemModal);
         }
       },
       error: () => this.showError('Falha ao carregar ordens de produção.'),
       complete: () => this.loading = false,
     });
+  }
+
+  clearSearch(): void {
+    this.search = '';
+    this.statusFiltro = '';
+    this.load();
   }
 
   onSearchInput(): void {
@@ -163,16 +195,23 @@ export class OrdemProducaoComponent implements OnInit {
     this.ordemAtual = null;
     this.form = this.blankForm();
     this.estoqueValidacao = null;
+    this.showOrdemModal = true;
     this.clearMsgs();
   }
 
-  selectOrdem(ordem: OrdemProducao, clear = true): void {
+  selectOrdem(ordem: OrdemProducao, clear = true, openModal = true): void {
     this.ordemAtual = ordem;
     this.form = { ...ordem };
     this.estoqueValidacao = null;
     this.montarDistribuicao(ordem);
     this.loadSkusDaFicha(Number(ordem.ficha_tecnica), false);
+    if (openModal) this.showOrdemModal = true;
     if (clear) this.clearMsgs();
+  }
+
+  fecharOrdemModal(): void {
+    if (this.saving || this.distribuindo) return;
+    this.showOrdemModal = false;
   }
 
   onFichaChange(): void {
@@ -450,6 +489,15 @@ export class OrdemProducaoComponent implements OnInit {
     return `${exibidas.join(' | ')}${restante}`;
   }
 
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); this.indicatorsVisible = true; this.filtersVisible = true; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.saveViewPreference(); }
+  @HostListener('window:sysvar-ordem-producao-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-ordem-producao-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-ordem-producao-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   formatMoney(value: any): string {
     return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
@@ -459,6 +507,14 @@ export class OrdemProducaoComponent implements OnInit {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
+  }
+
+  custoUnitarioPrevistoOrdem(): string {
+    return this.formatMoney(Number(this.ordemAtual?.custo_previsto || 0) / Math.max(Number(this.ordemAtual?.quantidade || 0), 1));
+  }
+
+  custoUnitarioRealOrdem(): string {
+    return this.formatMoney(Number(this.ordemAtual?.custo_real || 0) / Math.max(Number(this.ordemAtual?.quantidade || 0), 1));
   }
 
   private blankForm(): Partial<OrdemProducao> {
@@ -500,7 +556,7 @@ export class OrdemProducaoComponent implements OnInit {
         skuId,
         quantidade: quantidadesAtuais.get(skuId) || 0,
       };
-    }).filter(row => !!row.skuId);
+    }).filter(row => !!row.skuId && (clearOnEmpty || Number(row.quantidade || 0) > 0));
     this.recalcularTotalGrade();
   }
 
@@ -535,6 +591,33 @@ export class OrdemProducaoComponent implements OnInit {
 
   private unwrap<T>(res: any): T[] {
     return Array.isArray(res) ? res : (res?.results || []);
+  }
+
+  private loadColumnsPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible]))));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 
   private clearMsgs(): void {

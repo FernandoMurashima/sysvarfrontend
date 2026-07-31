@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -35,6 +35,10 @@ export class NcmsComponent {
   filterCategoria = '';
   filterStatus = '';
   private readonly columnsStorageKey = 'sysvar.list.ncms.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.ncms';
+  selectedItem = signal<Ncm | null>(null);
+  indicatorsVisible = true;
+  filtersVisible = true;
   columns = [
     { key: 'ncm', label: 'NCM', visible: true, required: true },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
@@ -60,6 +64,18 @@ export class NcmsComponent {
   });
 
   total = computed(() => this.filteredItems().length);
+  indicadores = computed(() => {
+    const rows = this.items();
+    const total = rows.length;
+    const ativos = rows.filter(i => i.ativo !== false).length;
+    return {
+      total,
+      ativos,
+      inativos: total - ativos,
+      categorias: new Set(rows.map(i => i.categoria).filter(Boolean)).size,
+      aliquotas: rows.filter(i => i.aliquota !== null && i.aliquota !== undefined).length,
+    };
+  });
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
@@ -101,7 +117,12 @@ export class NcmsComponent {
 
   constructor() {
     effect(() => { const tp = this.totalPages(); if (this.page() > tp) this.page.set(tp); });
+    effect(() => {
+      const selected = this.selectedItem();
+      if (selected && !this.filteredItems().some(item => item.id === selected.id)) this.selectedItem.set(null);
+    });
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -118,11 +139,31 @@ export class NcmsComponent {
   clearSearch() { this.search = ''; this.load(); }
   doFilter() { this.page.set(1); }
   clearFilters() { this.search = ''; this.filterCategoria = ''; this.filterStatus = ''; this.load(); }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.ncms.pageSize', String(+v)); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
   lastPage() { this.page.set(this.totalPages()); }
+
+  selecionarItem(row: Ncm): void { this.selectedItem.set(this.isSelected(row) ? null : row); }
+  isSelected(row: Ncm): boolean { return !!this.selectedItem() && this.selectedItem()?.id === row.id; }
+  consultarSelecionado(): void { const row = this.selectedItem(); if (row) this.consultar(row); }
+  editarSelecionado(): void { const row = this.selectedItem(); if (row && this.podeEditarModulo) this.editar(row); }
+  excluirSelecionado(): void { const row = this.selectedItem(); if (row && this.podeExcluirModulo) this.excluir(row); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.ncms.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize.set(20);
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-ncms-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-ncms-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-ncms-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novo() {
     this.showForm = true; this.editingId = null; this.submitted = false;
@@ -246,6 +287,8 @@ export class NcmsComponent {
   }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.ncms.pageSize'));
+    if ([10, 20, 50].includes(size)) this.pageSize.set(size);
     const raw = localStorage.getItem(this.columnsStorageKey);
     if (!raw) return;
     try {
@@ -260,6 +303,20 @@ export class NcmsComponent {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 
   getFormErrors(): string[] {

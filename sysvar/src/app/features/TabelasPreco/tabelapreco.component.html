@@ -1,19 +1,45 @@
-<div class="clientes-page">
-  <header class="toolbar">
-    <h2>Tabelas de Preço</h2>
-    <div class="toolbar-actions">
+<div class="tabelas-preco-page">
+  <div class="header-with-actions">
+    <app-page-header
+      title="Tabela de Preço"
+      subtitle="Gerencie as tabelas comerciais e períodos de vigência"
+      primaryActionLabel="Nova Tabela"
+      primaryActionIcon="+"
+      [showPrimaryAction]="podeEditarModulo"
+      [disabled]="saving"
+      (primaryAction)="novo()"
+    />
+
+    <div class="header-extra-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+    </div>
+  </div>
+
+  <section class="summary-grid" aria-label="Resumo das tabelas de preço">
+    <app-summary-card label="Total de Tabelas" [value]="total()" icon="▣" [helperText]="loading() ? 'Carregando...' : 'cadastradas'" />
+    <app-summary-card label="Vigentes" [value]="vigentes()" icon="▤" variant="green" helperText="dentro do período" />
+    <app-summary-card label="Promoções" [value]="promocionais()" icon="!" variant="orange" helperText="com preço promocional" />
+    <app-summary-card label="Tabelas padrão" [value]="tabelasPadrao()" icon="⌂" variant="cyan" helperText="sem promoção" />
+  </section>
+
+  <section class="panel filters-panel">
+    <div class="quick-filters">
       <app-search-suggest
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions()"
-        placeholder="Buscar por nome..."
+        [showActions]="false"
+        placeholder="Buscar por nome, período ou tipo..."
         (search)="doSearch()"
         (cleared)="clearSearch()"
       />
-      <button class="btn primary" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
-      <button class="btn primary" [routerLink]="['/home']">Home</button>
+
+      <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">
+        {{ loading() ? 'Buscando...' : 'Pesquisar' }}
+      </button>
+      <button class="btn" type="button" [disabled]="loading()" (click)="clearSearch()">Limpar</button>
     </div>
-  </header>
+  </section>
 
   <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
 
@@ -29,14 +55,20 @@
   </div>
 
   <div class="content">
-    <section class="card form-placeholder" *ngIf="!showForm">
-      <div class="placeholder-inner">
-        <p>Para cadastrar uma tabela de preço, clique em <strong>Novo</strong>.</p>
+    <section class="card form form-panel" *ngIf="showForm">
+      <div class="form-title">
+        <div>
+          <h3>{{ consultando ? 'Consultar Tabela' : (editingId ? 'Editar Tabela' : 'Nova Tabela') }}</h3>
+          <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações da tabela de preço.' }}</p>
+        </div>
+        <div class="form-title-actions">
+          <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+          <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
+            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+          </button>
+        </div>
       </div>
-    </section>
 
-    <section class="card form" *ngIf="showForm">
-      <h3>{{ consultando ? 'Consultar Tabela' : (editingId ? 'Editar Tabela' : 'Nova Tabela') }}</h3>
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="grid-10">
           <label id="nome-box" class="input-item" [class.invalid]="form.get('NomeTabela')?.invalid && (form.get('NomeTabela')?.touched || submitted)">
@@ -64,12 +96,13 @@
             <span class="field-error" *ngIf="form.get('DataFim')?.errors?.['server']">{{ form.get('DataFim')?.errors?.['server'] }}</span>
           </label>
 
-          <label id="promo-box" class="input-item">
-            Promoção?
+          <label id="promo-box" class="input-item checkbox-line">
             <input type="checkbox" formControlName="Promocao" />
+            Promoção
             <span class="field-error" *ngIf="form.get('Promocao')?.errors?.['server']">{{ form.get('Promocao')?.errors?.['server'] }}</span>
           </label>
         </div>
+
         <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
           <strong>Pendências</strong>
           <ul>
@@ -77,8 +110,10 @@
           </ul>
         </div>
 
-        <div class="actions-form">
-          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button>
+        <div class="actions-form bottom-actions">
+          <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
+            {{ editingId ? 'Salvar alterações' : 'Salvar' }}
+          </button>
           <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
         </div>
       </form>
@@ -86,8 +121,10 @@
 
     <section class="card list">
       <div class="list-header">
-        <div class="list-inline"><strong>Total:</strong> {{ total() }}</div>
-        <div class="list-inline">
+        <div class="list-info">
+          <span>Total: {{ total() }}</span>
+        </div>
+        <div class="list-controls">
           <label for="pageSize">Itens por página</label>
           <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
             <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
@@ -100,30 +137,31 @@
           <thead>
             <tr>
               <th>Nome</th>
-              <th style="width:140px;">Início</th>
-              <th style="width:140px;">Fim</th>
-              <th style="width:120px;">Promoção</th>
-              <th style="width:200px;">Ações</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Promoção</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of paged()">
+            <tr *ngFor="let r of paged()" (click)="consultar(r)" tabindex="0" (keyup.enter)="consultar(r)">
               <td>{{ r.NomeTabela }}</td>
-              <td>{{ r.DataInicio | date:'yyyy-MM-dd' }}</td>
-              <td>{{ r.DataFim ? (r.DataFim | date:'yyyy-MM-dd') : '' }}</td>
+              <td>{{ r.DataInicio | date:'dd/MM/yyyy' }}</td>
+              <td>{{ r.DataFim ? (r.DataFim | date:'dd/MM/yyyy') : '-' }}</td>
               <td>
-                <span class="badge" [ngClass]="r.Promocao ? 'badge-ok' : 'badge-off'">
-                  {{ r.Promocao ? 'Sim' : 'Não' }}
+                <span class="status-pill" [class.inactive]="!r.Promocao">
+                  • {{ r.Promocao ? 'Sim' : 'Não' }}
                 </span>
               </td>
-              <td class="actions">
-                <button class="btn sm" (click)="consultar(r)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button>
+              <td class="actions actions-col" (click)="$event.stopPropagation()">
+                <button class="btn sm" type="button" (click)="consultar(r)">Consultar</button>
+                <button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="editar(r)">Editar</button>
+                <button class="btn sm danger" type="button" *ngIf="podeEditarModulo" (click)="excluir(r)">Excluir</button>
               </td>
             </tr>
           </tbody>
         </table>
+
         <ng-template #emptyTpl>
           <div class="empty-hint" *ngIf="!loading()">Nenhuma tabela encontrada.</div>
           <div class="loading" *ngIf="loading()">Carregando...</div>
@@ -133,7 +171,6 @@
       <div class="pager" *ngIf="total() > 0">
         <div class="left">
           <button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
-
           <button class="btn" (click)="prevPage()"  [disabled]="page() === 1">‹ Anterior</button>
         </div>
         <div class="center">
@@ -147,5 +184,4 @@
       </div>
     </section>
   </div>
-
 </div>

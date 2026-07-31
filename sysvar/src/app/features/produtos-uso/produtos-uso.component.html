@@ -1,346 +1,117 @@
-<div class="pc-page">
-  <div class="header-with-actions">
-    <app-page-header
-      title="Produtos Uso/Consumo"
-      subtitle="Gerencie produtos de consumo e insumos de produção"
-      primaryActionLabel="Novo Produto"
-      primaryActionIcon="+"
-      [showPrimaryAction]="podeEditarModulo"
-      [disabled]="saving"
-      (primaryAction)="novo()"
-    />
-    <div class="header-extra-actions">
+<div class="produtos-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Produtos Uso/Consumo</h1>
+      <button class="info-button" type="button" title="Gerencie produtos de consumo e insumos de produção.">i</button>
+    </div>
+    <div class="title-actions">
       <button class="btn" type="button" [routerLink]="['/ajuda/produtos-uso']">Ajuda</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
-    </div>
-  </div>
-
-  <section class="alert success" *ngIf="successMsg()">{{ successMsg() }}</section>
-  <section class="alert error" *ngIf="errorMsg()">{{ errorMsg() }}</section>
-
-  <section class="summary-grid" aria-label="Resumo dos produtos de uso e consumo">
-    <app-summary-card label="Total de Produtos" [value]="indicadores().total" icon="▣" [percentage]="percentual(indicadores().total)" />
-    <app-summary-card label="Produtos Ativos" [value]="indicadores().ativos" icon="▤" variant="green" [percentage]="percentual(indicadores().ativos)" />
-    <app-summary-card label="Uso/Consumo" [value]="indicadores().usoConsumo" icon="▧" variant="orange" [percentage]="percentual(indicadores().usoConsumo)" />
-    <app-summary-card label="Insumos" [value]="indicadores().insumos" icon="⌂" variant="purple" [percentage]="percentual(indicadores().insumos)" />
-    <app-summary-card label="Bloqueados" [value]="indicadores().bloqueados" icon="!" variant="cyan" [percentage]="percentual(indicadores().bloqueados)" />
-  </section>
-
-  <section class="panel filters-panel">
-    <div class="quick-filters">
-      <app-search-suggest
-        class="main-search"
-        [(value)]="search"
-        [suggestions]="searchSuggestions()"
-        [showActions]="false"
-        placeholder="Buscar por descrição, referência, código, NCM ou unidade..."
-        (search)="doSearch()"
-        (cleared)="clearSearch()"
-      />
-
-      <label>
-        Tipo
-        <select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()">
-          <option value="">Todos</option>
-          <option value="2">Uso/Consumo</option>
-          <option value="4">Insumo de Produção</option>
-        </select>
-      </label>
-
-      <label>
-        Unidade
-        <select [(ngModel)]="filterUnidade" (ngModelChange)="doSearch()">
-          <option value="">Todas</option>
-          <option *ngFor="let u of unidades" [value]="u.label">{{ u.label }}</option>
-        </select>
-      </label>
-
-      <label>
-        Status
-        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
-          <option value="">Todos</option>
-          <option value="ATIVO">Ativos</option>
-          <option value="INATIVO">Inativos</option>
-          <option value="BLOQUEADO">Bloqueados</option>
-        </select>
-      </label>
-
-      <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
       <button class="btn" type="button" [disabled]="loading()" (click)="clearSearch()">Limpar</button>
-    </div>
-
-    <div class="filter-actions">
-      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
-
       <div class="menu-holder">
-        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
-        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
-          <label class="column-option" *ngFor="let col of columns">
-            <input
-              type="checkbox"
-              [checked]="col.visible"
-              [disabled]="col.required"
-              (change)="toggleColumn(col.key, $any($event.target).checked)"
-            />
-            {{ col.label }}
-          </label>
-        </div>
-      </div>
-
-      <div class="menu-holder">
-        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
-        <div class="floating-menu export-menu" *ngIf="exportOpen">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu" *ngIf="exportOpen">
           <button type="button" (click)="exportarCsv()">CSV</button>
           <button type="button" disabled>Excel</button>
           <button type="button" disabled>PDF</button>
         </div>
       </div>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="saving" (click)="novo()">+ Novo Produto</button>
     </div>
+  </section>
 
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores().total }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ indicadores().ativos }}</strong><small>Ativos</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">▧</span><div><strong>{{ indicadores().usoConsumo }}</strong><small>Uso/Consumo</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">⌂</span><div><strong>{{ indicadores().insumos }}</strong><small>Insumos</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">!</span><div><strong>{{ indicadores().bloqueados }}</strong><small>Bloqueados</small></div></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions()" [showActions]="false" placeholder="Buscar por descrição, referência, código, NCM ou unidade..." (search)="doSearch()" (cleared)="clearSearch()" />
+    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="2">Uso/Consumo</option><option value="4">Insumo de Produção</option></select></label>
+    <label class="inline-filter"><span>Unidade</span><select [(ngModel)]="filterUnidade" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let u of unidades" [value]="u.label">{{ u.label }}</option></select></label>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="BLOQUEADO">Bloqueados</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
+    <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" /><span>{{ col.label }}</span></label>
+      </div>
+    </div>
     <div class="advanced-filters" *ngIf="advancedOpen">
-      <label>
-        Referência
-        <input type="text" [(ngModel)]="filterReferencia" (keyup.enter)="doSearch()" />
-      </label>
-      <label>
-        Código reduzido
-        <input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="doSearch()" />
-      </label>
-      <label>
-        NCM
-        <input type="text" [(ngModel)]="filterNcm" (keyup.enter)="doSearch()" />
-      </label>
+      <label><span>Referência</span><input type="text" [(ngModel)]="filterReferencia" (keyup.enter)="doSearch()" /></label>
+      <label><span>Código reduzido</span><input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="doSearch()" /></label>
+      <label><span>NCM</span><input type="text" [(ngModel)]="filterNcm" (keyup.enter)="doSearch()" /></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
     </div>
   </section>
 
-  <div class="modal-backdrop" *ngIf="excluirModal as produto">
-    <div class="modal confirm-modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <h4>Excluir produto</h4>
-      </div>
-      <div class="modal-body">
-        <p>Confirma a exclusão do produto <strong>{{ produto.descricao }}</strong>?</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
-      </div>
-    </div>
-  </div>
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selectedProduto()" (click)="consultarSelecionado()">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="editarSelecionado()">✎ Editar</button>
+    <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="alternarAtivoSelecionado()">{{ selectedProduto()?.ativo ? '⊘ Inativar' : '↻ Ativar' }}</button>
+    <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="alternarBloqueioSelecionado()">{{ selectedProduto()?.bloqueado_venda ? '▣ Desbloquear' : '▣ Bloquear' }}</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selectedProduto() || !podeExcluirModulo" (click)="excluirSelecionado()">⌫ Excluir</button>
+  </section>
 
-  <div class="modal-backdrop" *ngIf="segurancaModal as modal">
-    <div class="modal confirm-modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <h4>{{ modal.title }}</h4>
-      </div>
-      <div class="modal-body security-grid">
-        <p>{{ modal.produto.descricao }}</p>
-        <label>
-          Motivo
-          <input type="text" [(ngModel)]="modal.motivo" />
-        </label>
-        <label>
-          Senha
-          <input type="password" [(ngModel)]="modal.senha" />
-        </label>
-      </div>
-      <div class="modal-footer">
-        <button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button>
-        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarSeguranca()">Confirmar</button>
-      </div>
-    </div>
-  </div>
+  <section class="alert success" *ngIf="successMsg()">{{ successMsg() }}</section>
+  <section class="alert error" *ngIf="errorMsg()">{{ errorMsg() }}</section>
 
-  <!-- LISTA -->
-  <section class="card list" *ngIf="view() === 'list'">
-    <div class="list-bar">
-      <div class="left"><strong>Produtos cadastrados</strong> <span>{{ total() }} registro(s) encontrado(s)</span></div>
-      <div class="right">
-        <label for="pageSize">Itens por página</label>
-        <select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
-          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-        </select>
-      </div>
+  <section class="results-area" *ngIf="view() === 'list'">
+    <div class="results-header">
+      <div><strong>Produtos cadastrados</strong><span>{{ total() }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label for="pageSize">Itens por página:</label><select id="pageSize" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
     </div>
-
     <div class="table-wrapper">
       <table class="table" *ngIf="paged().length > 0; else emptyTpl">
-        <thead>
-          <tr>
-            <th class="col-descricao">Descrição</th>
-            <th *ngIf="visibleColumn('reduzido')" class="col-reduzida">Código reduzido</th>
-            <th *ngIf="visibleColumn('referencia')" class="col-referencia">Referência</th>
-            <th *ngIf="visibleColumn('tipo')">Tipo</th>
-            <th *ngIf="visibleColumn('unidade')" class="col-unidade">Unidade</th>
-            <th *ngIf="visibleColumn('ncm')" class="col-ncm">NCM</th>
-            <th *ngIf="visibleColumn('status')" class="col-status">Status</th>
-            <th class="actions">Ações</th>
-          </tr>
-        </thead>
+        <thead><tr><th class="select-col"></th><th class="col-descricao">Descrição</th><th *ngIf="visibleColumn('reduzido')">Código reduzido</th><th *ngIf="visibleColumn('referencia')">Referência</th><th *ngIf="visibleColumn('tipo')">Tipo</th><th *ngIf="visibleColumn('unidade')">Unidade</th><th *ngIf="visibleColumn('ncm')">NCM</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
         <tbody>
-          <tr *ngFor="let p of paged()" (click)="consultar(p)" tabindex="0" (keyup.enter)="consultar(p)">
+          <tr *ngFor="let p of paged()" [class.selected]="isSelected(p)" (click)="selecionarProduto(p)" tabindex="0" (keyup.enter)="selecionarProduto(p)">
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(p)" (click)="$event.stopPropagation(); selecionarProduto(p)" /></td>
             <td>{{ p.descricao }}</td>
             <td *ngIf="visibleColumn('reduzido')">{{ p.descricao_reduzida || '—' }}</td>
             <td *ngIf="visibleColumn('referencia')">{{ p.referencia || '—' }}</td>
-            <td *ngIf="visibleColumn('tipo')"><span class="badge badge-info">{{ tipoProdutoLabel(p.tipo_produto) }}</span></td>
+            <td *ngIf="visibleColumn('tipo')"><span class="type-pill">{{ tipoProdutoLabel(p.tipo_produto) }}</span></td>
             <td *ngIf="visibleColumn('unidade')">{{ unidadeLabel(p.unidade ?? null) }}</td>
             <td *ngIf="visibleColumn('ncm')">{{ p.ncm || '—' }}</td>
-            <td *ngIf="visibleColumn('status')">
-              <span class="badge" [ngClass]="p.ativo ? 'badge-ok' : 'badge-off'">
-                {{ statusLabel(p) }}
-              </span>
-            </td>
-            <td class="actions actions-col" (click)="$event.stopPropagation()">
-              <app-row-actions-menu
-                [actions]="rowActions(p)"
-                [ariaLabel]="'Abrir ações do produto ' + p.descricao"
-                (action)="executarAcao($event, p)"
-              />
-            </td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="p.ativo === false" [class.blocked]="p.bloqueado_venda">{{ statusLabel(p) }}</span></td>
           </tr>
         </tbody>
       </table>
-      <ng-template #emptyTpl>
-        <div class="empty-hint" *ngIf="!loading()">Nenhum produto de uso/consumo encontrado.</div>
-        <div class="loading" *ngIf="loading()">Carregando...</div>
-      </ng-template>
+      <ng-template #emptyTpl><div class="empty-hint" *ngIf="!loading()">Nenhum produto de uso/consumo encontrado.</div><div class="loading" *ngIf="loading()">Carregando...</div></ng-template>
     </div>
-
     <div class="pager" *ngIf="total() > 0">
-      <div class="left">
-        <button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button>
-        <button class="btn" (click)="prevPage()"  [disabled]="page() === 1">‹ Anterior</button>
-      </div>
-      <div class="center">
-        Página {{ page() }} de {{ totalPages() }}
-        <span class="range">— Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</span>
-      </div>
-      <div class="right">
-        <button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button>
-        <button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button>
-      </div>
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page() === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page() === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page() }} de {{ totalPages() }}<span class="range">— Mostrando {{ pageStart() }} – {{ pageEnd() }} de {{ total() }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page() >= totalPages()">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page() >= totalPages()">Última »</button></div>
     </div>
   </section>
 
-  <!-- FORM -->
-  <section class="card form" *ngIf="view() === 'form'">
-    <h3>{{ consultando ? 'Consultar Produto de Uso/Consumo' : (editingId ? 'Editar Produto de Uso/Consumo' : 'Novo Produto de Uso/Consumo') }}</h3>
+  <section class="card form-panel" *ngIf="view() === 'form'">
+    <div class="form-title">
+      <div><h3>{{ consultando ? 'Consultar Produto de Uso/Consumo' : (editingId ? 'Editar Produto de Uso/Consumo' : 'Novo Produto de Uso/Consumo') }}</h3><p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações do produto.' }}</p></div>
+      <div class="form-title-actions"><button class="btn ghost" type="button" (click)="setViewList()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button><button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">{{ editingId ? 'Salvar alterações' : 'Salvar' }}</button></div>
+    </div>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
-        <!-- Linha 1 -->
-        <label class="input-item col-span-2">
-          Tipo
-          <select formControlName="tipo_produto">
-            <option value="2">Uso/Consumo</option>
-            <option value="4">Insumo de Produção</option>
-          </select>
-        </label>
-
-        <label class="input-item col-span-2">
-          Código
-          <input type="text" formControlName="referencia" placeholder="Gerado ao salvar" />
-        </label>
-
-        <label class="input-item col-span-4"
-               [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">
-          Descrição*
-          <input type="text" formControlName="descricao" />
-          <span class="field-error" *ngIf="form.get('descricao')?.touched || submitted">
-            <ng-container *ngIf="form.get('descricao')?.errors?.['required']">Obrigatória.</ng-container>
-            <ng-container *ngIf="form.get('descricao')?.errors?.['maxlength']">Máx. 120.</ng-container>
-            <ng-container *ngIf="form.get('descricao')?.errors?.['server']">
-              {{ form.get('descricao')?.errors?.['server'] }}
-            </ng-container>
-          </span>
-        </label>
-
-        <label class="input-item col-span-2"
-               [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">
-          Descrição reduzida
-          <input type="text" formControlName="descricao_reduzida" />
-          <span class="field-error" *ngIf="form.get('descricao_reduzida')?.touched || submitted">
-            <ng-container *ngIf="form.get('descricao_reduzida')?.errors?.['maxlength']">Máx. 60.</ng-container>
-            <ng-container *ngIf="form.get('descricao_reduzida')?.errors?.['server']">
-              {{ form.get('descricao_reduzida')?.errors?.['server'] }}
-            </ng-container>
-          </span>
-        </label>
-
-        <label class="input-item col-span-2"
-               [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">
-          Unidade*
-          <select formControlName="unidade">
-            <option [ngValue]="null">— selecione —</option>
-            <option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option>
-          </select>
-          <span class="field-error" *ngIf="form.get('unidade')?.touched || submitted">
-            <ng-container *ngIf="form.get('unidade')?.errors?.['required']">Obrigatória.</ng-container>
-          </span>
-        </label>
-
-        <!-- Linha 2 -->
-        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">
-          Grupo
-          <select formControlName="grupo">
-            <option [ngValue]="null">— selecione —</option>
-            <option *ngFor="let g of grupos" [ngValue]="g.id">{{ g.label }}</option>
-          </select>
-        </label>
-
-        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">
-          Subgrupo
-          <select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value">
-            <option [ngValue]="null">— selecione —</option>
-            <option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option>
-          </select>
-        </label>
-
-        <label class="input-item col-span-3">
-          Material
-          <select formControlName="material">
-            <option [ngValue]="null">— selecione —</option>
-            <option *ngFor="let m of materiais" [ngValue]="m.id">{{ m.label }}</option>
-          </select>
-        </label>
-
-        <label id="ncm-box-uso" class="input-item col-span-3"
-               [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">
-          NCM (opcional)
-          <select formControlName="ncm" class="ncm-select">
-            <option [ngValue]="null">— selecione —</option>
-            <ng-container *ngFor="let n of (ncms$ | async) ?? []">
-              <option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">
-                {{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}
-              </option>
-            </ng-container>
-          </select>
-          <span class="field-error" *ngIf="form.get('ncm')?.touched || submitted">
-            <ng-container *ngIf="form.get('ncm')?.errors?.['pattern']">Use ####.##.##.</ng-container>
-            <ng-container *ngIf="form.get('ncm')?.errors?.['server']">
-              {{ form.get('ncm')?.errors?.['server'] }}
-            </ng-container>
-          </span>
-        </label>
-
-        <label class="input-item col-span-6">
-          Observações
-          <input type="text" formControlName="observacoes" />
-        </label>
+        <label class="input-item col-span-2">Tipo<select formControlName="tipo_produto"><option value="2">Uso/Consumo</option><option value="4">Insumo de Produção</option></select></label>
+        <label class="input-item col-span-2">Código<input type="text" formControlName="referencia" placeholder="Gerado ao salvar" /></label>
+        <label class="input-item col-span-4" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
+        <label class="input-item col-span-2" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida<input type="text" formControlName="descricao_reduzida" /></label>
+        <label class="input-item col-span-2" [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">Unidade*<select formControlName="unidade"><option [ngValue]="null">— selecione —</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
+        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">Grupo<select formControlName="grupo"><option [ngValue]="null">— selecione —</option><option *ngFor="let g of grupos" [ngValue]="g.id">{{ g.label }}</option></select></label>
+        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">Subgrupo<select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value"><option [ngValue]="null">— selecione —</option><option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option></select></label>
+        <label class="input-item col-span-3">Material<select formControlName="material"><option [ngValue]="null">— selecione —</option><option *ngFor="let m of materiais" [ngValue]="m.id">{{ m.label }}</option></select></label>
+        <label class="input-item col-span-3" [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">NCM<select formControlName="ncm"><option [ngValue]="null">— selecione —</option><ng-container *ngFor="let n of (ncms$ | async) ?? []"><option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">{{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}</option></ng-container></select></label>
+        <label class="input-item col-span-6">Observações<input type="text" formControlName="observacoes" /></label>
       </div>
-        <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
-          <strong>Pendências</strong>
-          <ul>
-            <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-          </ul>
-        </div>
-
-      <div class="actions-form">
-        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
-          {{ editingId ? 'Salvar alterações' : 'Salvar' }}
-        </button>
-        <button class="btn ghost" type="button" (click)="setViewList()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
-      </div>
+      <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length"><strong>Pendências</strong><ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul></div>
     </form>
   </section>
+
+  <div class="modal-backdrop" *ngIf="excluirModal as produto"><div class="modal confirm-modal"><div class="modal-header"><h4>Excluir produto</h4></div><div class="modal-body"><p>Confirma a exclusão do produto <strong>{{ produto.descricao }}</strong>?</p></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div></div></div>
+  <div class="modal-backdrop" *ngIf="segurancaModal as modal"><div class="modal confirm-modal"><div class="modal-header"><h4>{{ modal.title }}</h4></div><div class="modal-body security-grid"><p>{{ modal.produto.descricao }}</p><label>Motivo<input type="text" [(ngModel)]="modal.motivo" /></label><label>Senha<input type="password" [(ngModel)]="modal.senha" /></label></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarSeguranca()">Confirmar</button></div></div></div>
 </div>

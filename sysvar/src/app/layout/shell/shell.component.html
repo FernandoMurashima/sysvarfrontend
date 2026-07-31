@@ -48,6 +48,15 @@
         {{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}
       </button>
 
+      <div class="topbar-bars" *ngIf="showPageBarControls">
+        <button class="topbar-bars-button" type="button" (click)="toggleBarControls()">Barras</button>
+        <div class="topbar-bars-menu" *ngIf="barControlsOpen">
+          <button type="button" (click)="executarControleBarra('indicadores')">Indicadores</button>
+          <button type="button" (click)="executarControleBarra('filtros')">Filtros</button>
+          <button type="button" (click)="executarControleBarra('restaurar')">Restaurar padrão</button>
+        </div>
+      </div>
+
       <button class="topbar-logout" type="button" (click)="sair()">Sair</button>
     </header>
 

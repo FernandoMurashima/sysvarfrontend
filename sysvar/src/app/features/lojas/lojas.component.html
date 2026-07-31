@@ -1,481 +1,167 @@
 <div class="lojas-page">
-  <div class="header-with-actions">
-    <app-page-header
-      title="Cadastro de Lojas"
-      subtitle="Gerencie todas as lojas da empresa"
-      primaryActionLabel="Nova Loja"
-      primaryActionIcon="+"
-      [showPrimaryAction]="podeEditarModulo"
-      [disabled]="saving"
-      (primaryAction)="novo()"
-    />
-    <div class="header-extra-actions">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Cadastro de Lojas</h1>
+      <button class="info-button" type="button" title="Gerencie todas as lojas da empresa.">i</button>
+    </div>
+    <div class="title-actions">
       <button class="btn" type="button" [routerLink]="['/ajuda/lojas']">Ajuda</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
-    </div>
-  </div>
-
-  <div class="messages">
-    <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
-    <div *ngIf="errorMsg" class="alert error">
-      {{ errorMsg }}
-      <button type="button" (click)="load()" *ngIf="!showForm">Tentar novamente</button>
-    </div>
-  </div>
-
-  <section class="summary-grid" aria-label="Resumo das lojas">
-    <app-summary-card label="Total de Lojas" [value]="indicadores.total" icon="▣" [percentage]="percentual(indicadores.total)" />
-    <app-summary-card label="Lojas Ativas" [value]="indicadores.ativas" icon="▤" variant="green" [percentage]="percentual(indicadores.ativas)" />
-    <app-summary-card label="Fábricas" [value]="indicadores.fabricas" icon="⌂" variant="orange" [percentage]="percentual(indicadores.fabricas)" />
-    <app-summary-card label="Matriz / Central" [value]="indicadores.matrizes" icon="▥" variant="purple" [percentage]="percentual(indicadores.matrizes)" />
-    <app-summary-card label="Filiais / Lojas" [value]="indicadores.filiais" icon="▧" variant="cyan" [percentage]="percentual(indicadores.filiais)" />
-  </section>
-
-  <section class="panel filters-panel">
-    <div class="quick-filters">
-      <app-search-suggest
-        class="main-search"
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        [showActions]="false"
-        placeholder="Buscar por nome, apelido, CNPJ, cidade, e-mail ou telefone..."
-        (search)="doSearch()"
-        (cleared)="clearSearch()"
-      />
-
-      <label>
-        Empresa
-        <select [(ngModel)]="filterEmpresa" [disabled]="empresaBloqueada" (ngModelChange)="doSearch()">
-          <option value="">Todas</option>
-          <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">
-            {{ empresa.nome_fantasia || empresa.nome }}
-          </option>
-        </select>
-      </label>
-
-      <label>
-        Tipo
-        <select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()">
-          <option value="">Todos</option>
-          <option value="MATRIZ">Matriz/Central</option>
-          <option value="LOJA">Loja/Filial</option>
-          <option value="FABRICA">Fábrica</option>
-        </select>
-      </label>
-
-      <label>
-        Cidade
-        <select [(ngModel)]="filterCidade" (ngModelChange)="doSearch()">
-          <option value="">Todas</option>
-          <option *ngFor="let cidade of cidadesOptions" [value]="cidade">{{ cidade }}</option>
-        </select>
-      </label>
-
-      <label>
-        Status
-        <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
-          <option value="">Todos</option>
-          <option value="ATIVA">Ativas</option>
-          <option value="INATIVA">Inativas</option>
-        </select>
-      </label>
-
-      <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
       <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
-    </div>
-
-    <div class="filter-actions">
-      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
-
       <div class="menu-holder">
-        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
-        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
-          <label class="column-option" *ngFor="let col of columns">
-            <input
-              type="checkbox"
-              [checked]="col.visible"
-              [disabled]="col.required"
-              (change)="toggleColumn(col.key, $any($event.target).checked)"
-            />
-            {{ col.label }}
-          </label>
-        </div>
-      </div>
-
-      <div class="menu-holder">
-        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
-        <div class="floating-menu export-menu" *ngIf="exportOpen">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu" *ngIf="exportOpen">
           <button type="button" (click)="exportarCsv()">CSV</button>
           <button type="button" disabled>Excel</button>
           <button type="button" disabled>PDF</button>
         </div>
       </div>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="saving" (click)="novo()">+ Nova Loja</button>
     </div>
+  </section>
 
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores.total }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ indicadores.ativas }}</strong><small>Ativas</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">⌂</span><div><strong>{{ indicadores.fabricas }}</strong><small>Fábricas</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">▥</span><div><strong>{{ indicadores.matrizes }}</strong><small>Matriz</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">▧</span><div><strong>{{ indicadores.filiais }}</strong><small>Filiais</small></div></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <app-search-suggest
+      class="main-search"
+      [(value)]="search"
+      [suggestions]="searchSuggestions"
+      [showActions]="false"
+      placeholder="Buscar por nome, apelido, CNPJ, cidade, e-mail ou telefone..."
+      (search)="doSearch()"
+      (cleared)="clearSearch()"
+    />
+    <label class="inline-filter"><span>Empresa</span><select [(ngModel)]="filterEmpresa" [disabled]="empresaBloqueada" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.nome_fantasia || empresa.nome }}</option></select></label>
+    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="MATRIZ">Matriz</option><option value="LOJA">Loja</option><option value="FABRICA">Fábrica</option></select></label>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVA">Ativas</option><option value="INATIVA">Inativas</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+    <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns">
+          <input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />
+          <span>{{ col.label }}</span>
+        </label>
+      </div>
+    </div>
     <div class="advanced-filters" *ngIf="advancedOpen">
-      <label>
-        Estado
-        <input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" />
-      </label>
-      <label>
-        CNPJ
-        <input type="text" [(ngModel)]="filterCnpj" (keyup.enter)="doSearch()" />
-      </label>
+      <label><span>Cidade</span><select [(ngModel)]="filterCidade" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let cidade of cidadesOptions" [value]="cidade">{{ cidade }}</option></select></label>
+      <label><span>Estado</span><input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" /></label>
+      <label><span>CNPJ</span><input type="text" [(ngModel)]="filterCnpj" (keyup.enter)="doSearch()" /></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
     </div>
   </section>
 
-  <section class="panel form-panel" *ngIf="showForm">
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selectedLoja" (click)="consultarSelecionado()">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="editarSelecionado()">✎ Editar</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="duplicarSelecionado()">⧉ Duplicar</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="alternarAtivoSelecionado()">{{ selectedLoja && isAtiva(selectedLoja) ? '⊘ Inativar' : '↻ Reativar' }}</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja" (click)="historicoSelecionado()">↺ Histórico</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selectedLoja || !podeExcluirModulo" (click)="excluirSelecionado()">⌫ Excluir</button>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }} <button type="button" (click)="load()" *ngIf="!showForm">Tentar novamente</button></div>
+
+  <section class="card form-panel" *ngIf="showForm">
     <div class="form-title">
       <div>
-        <h2>{{ consultando ? 'Consultar Loja' : (editingId ? 'Editar Loja' : 'Nova Loja') }}</h2>
+        <h3>{{ consultando ? 'Consultar Loja' : (editingId ? 'Editar Loja' : 'Nova Loja') }}</h3>
         <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações da unidade.' }}</p>
       </div>
       <div class="form-title-actions">
-        <button class="btn" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
-        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">
-          {{ saving ? 'Salvando...' : (editingId ? 'Salvar alterações' : 'Salvar') }}
-        </button>
+        <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">{{ saving ? 'Salvando...' : (editingId ? 'Salvar alterações' : 'Salvar') }}</button>
       </div>
     </div>
-
     <form [formGroup]="form" (ngSubmit)="salvar()">
-      <div class="form-section">
-        <h3>Identificação</h3>
-        <div class="form-grid">
-          <label class="span-2" [class.invalid]="form.get('empresa')?.invalid && (form.get('empresa')?.touched || submitted)">
-            Empresa*
-            <select formControlName="empresa">
-              <option [ngValue]="null">Selecione</option>
-              <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.nome_fantasia || empresa.nome }}</option>
-            </select>
-          </label>
-          <label class="span-4" [class.invalid]="form.get('nome_loja')?.invalid && (form.get('nome_loja')?.touched || submitted)">
-            Nome da Loja*
-            <input type="text" formControlName="nome_loja" />
-          </label>
-          <label class="span-2" [class.invalid]="form.get('apelido_loja')?.invalid && (form.get('apelido_loja')?.touched || submitted)">
-            Apelido*
-            <input type="text" formControlName="apelido_loja" />
-          </label>
-          <label class="span-2">
-            Tipo da unidade
-            <select formControlName="tipo_unidade">
-              <option value="LOJA">Loja / filial</option>
-              <option value="MATRIZ">Matriz / central</option>
-              <option value="FABRICA">Fábrica / produção</option>
-            </select>
-          </label>
-        </div>
+      <div class="grid-10">
+        <label id="empresa-box" class="input-item" [class.invalid]="form.get('empresa')?.invalid && (form.get('empresa')?.touched || submitted)">Empresa*<select formControlName="empresa"><option [ngValue]="null">Selecione</option><option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.nome_fantasia || empresa.nome }}</option></select></label>
+        <label id="nome-box" class="input-item" [class.invalid]="form.get('nome_loja')?.invalid && (form.get('nome_loja')?.touched || submitted)">Nome da Loja*<input type="text" formControlName="nome_loja" /></label>
+        <label id="apelido-box" class="input-item" [class.invalid]="form.get('apelido_loja')?.invalid && (form.get('apelido_loja')?.touched || submitted)">Apelido*<input type="text" formControlName="apelido_loja" /></label>
+        <label id="unidade-box" class="input-item">Tipo da unidade<select formControlName="tipo_unidade"><option value="LOJA">Loja / filial</option><option value="MATRIZ">Matriz / central</option><option value="FABRICA">Fábrica / produção</option></select></label>
+        <label id="logradouro-box" class="input-item">Logradouro<select formControlName="logradouro"><option *ngFor="let op of logradouroOptions" [value]="op">{{ op }}</option></select></label>
+        <label id="endereco-box" class="input-item">Endereço<input type="text" formControlName="endereco" /></label>
+        <label id="numero-box" class="input-item">Número<input type="text" formControlName="numero" /></label>
+        <label id="complemento-box" class="input-item">Complemento<input type="text" formControlName="complemento" /></label>
+        <label id="cep-box" class="input-item">CEP<input type="text" formControlName="cep" /></label>
+        <label id="bairro-box" class="input-item">Bairro<input type="text" formControlName="bairro" /></label>
+        <label id="email-box" class="input-item">E-mail<input type="email" formControlName="email" /></label>
+        <label id="cidade-box" class="input-item">Cidade<input type="text" formControlName="cidade" /></label>
+        <label id="estado-box" class="input-item">UF<input type="text" maxlength="2" formControlName="estado" /></label>
+        <label id="telefone1-box" class="input-item">Telefone 1<input type="text" formControlName="telefone1" (input)="onPhoneInput('telefone1')" /></label>
+        <label id="telefone2-box" class="input-item">Telefone 2<input type="text" formControlName="telefone2" (input)="onPhoneInput('telefone2')" /></label>
+        <label id="cnpj-box" class="input-item" [class.invalid]="form.get('cnpj')?.invalid && (form.get('cnpj')?.touched || submitted)">CNPJ*<input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" /></label>
+        <label id="regime-box" class="input-item">Regime tributário<select formControlName="regime_tributario"><option value="SIMPLES">Simples Nacional</option><option value="LUCRO_PRESUMIDO">Lucro Presumido</option><option value="LUCRO_REAL">Lucro Real</option></select></label>
+        <label id="ambiente-box" class="input-item">Ambiente fiscal<select formControlName="ambiente_fiscal"><option value="HOMOLOGACAO">Homologação</option><option value="PRODUCAO">Produção</option></select></label>
+        <label id="ie-box" class="input-item">Inscrição estadual<input type="text" formControlName="inscricao_estadual" /></label>
+        <label id="nfce-box" class="input-item checkbox-line"><input type="checkbox" formControlName="emite_nfce" />Emite NFC-e</label>
+        <label id="serie-nfce-box" class="input-item">Série NFC-e<input type="number" min="1" formControlName="serie_nfce" /></label>
+        <label id="prox-nfce-box" class="input-item">Próx. NFC-e<input type="number" min="1" formControlName="proximo_numero_nfce" /></label>
+        <label id="nfe-box" class="input-item checkbox-line"><input type="checkbox" formControlName="emite_nfe" />Emite NF-e</label>
+        <label id="serie-nfe-box" class="input-item">Série NF-e<input type="number" min="1" formControlName="serie_nfe" /></label>
+        <label id="prox-nfe-box" class="input-item">Próx. NF-e<input type="number" min="1" formControlName="proximo_numero_nfe" /></label>
+        <label id="estoque-box" class="input-item">Estoque Negativo<select formControlName="EstoqueNegativo"><option value="NAO">Não</option><option value="SIM">Sim</option></select></label>
+        <label id="rede-box" class="input-item">Rede<select formControlName="Rede"><option value="NAO">Não</option><option value="SIM">Sim</option></select></label>
+        <label id="matriz-box" class="input-item">Matriz<select formControlName="Matriz"><option value="NAO">Não</option><option value="SIM">Sim</option></select></label>
+        <label id="abertura-box" class="input-item">Data de Abertura<input type="date" formControlName="DataAbertura" /></label>
+        <label id="encerramento-box" class="input-item">Data de Encerramento<input type="date" formControlName="DataEnceramento" /></label>
       </div>
-
-      <div class="form-section">
-        <h3>Endereço e contato</h3>
-        <div class="form-grid">
-          <label class="span-2">
-            Logradouro
-            <select formControlName="logradouro">
-              <option *ngFor="let op of logradouroOptions" [value]="op">{{ op }}</option>
-            </select>
-          </label>
-          <label class="span-6">
-            Endereço
-            <input type="text" formControlName="endereco" />
-          </label>
-          <label class="span-1">
-            Número
-            <input type="text" formControlName="numero" />
-          </label>
-          <label class="span-3">
-            Complemento
-            <input type="text" formControlName="complemento" />
-          </label>
-          <label class="span-2">
-            CEP
-            <input type="text" formControlName="cep" />
-          </label>
-          <label class="span-3">
-            Bairro
-            <input type="text" formControlName="bairro" />
-          </label>
-          <label class="span-2">
-            E-mail
-            <input type="email" formControlName="email" />
-          </label>
-          <label class="span-3">
-            Cidade
-            <input type="text" formControlName="cidade" />
-          </label>
-          <label class="span-1">
-            UF
-            <input type="text" maxlength="2" formControlName="estado" />
-          </label>
-          <label class="span-3">
-            Telefone 1
-            <input type="text" formControlName="telefone1" (input)="onPhoneInput('telefone1')" />
-          </label>
-          <label class="span-3">
-            Telefone 2
-            <input type="text" formControlName="telefone2" (input)="onPhoneInput('telefone2')" />
-          </label>
-        </div>
-      </div>
-
-      <div class="form-section">
-        <h3>Dados fiscais e configurações</h3>
-        <div class="form-grid">
-          <label class="span-3" [class.invalid]="form.get('cnpj')?.invalid && (form.get('cnpj')?.touched || submitted)">
-            CNPJ*
-            <input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" />
-          </label>
-          <label class="span-2">
-            Regime tributário
-            <select formControlName="regime_tributario">
-              <option value="SIMPLES">Simples Nacional</option>
-              <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
-              <option value="LUCRO_REAL">Lucro Real</option>
-            </select>
-          </label>
-          <label class="span-2">
-            Ambiente fiscal
-            <select formControlName="ambiente_fiscal">
-              <option value="HOMOLOGACAO">Homologação</option>
-              <option value="PRODUCAO">Produção</option>
-            </select>
-          </label>
-          <label class="span-2">
-            Inscrição estadual
-            <input type="text" formControlName="inscricao_estadual" />
-          </label>
-          <label class="check-item span-2">
-            <input type="checkbox" formControlName="emite_nfce" />
-            Emite NFC-e
-          </label>
-          <label class="span-1">
-            Série NFC-e
-            <input type="number" min="1" formControlName="serie_nfce" />
-          </label>
-          <label class="span-2">
-            Próx. NFC-e
-            <input type="number" min="1" formControlName="proximo_numero_nfce" />
-          </label>
-          <label class="check-item span-2">
-            <input type="checkbox" formControlName="emite_nfe" />
-            Emite NF-e
-          </label>
-          <label class="span-1">
-            Série NF-e
-            <input type="number" min="1" formControlName="serie_nfe" />
-          </label>
-          <label class="span-2">
-            Próx. NF-e
-            <input type="number" min="1" formControlName="proximo_numero_nfe" />
-          </label>
-
-          <label class="span-2">
-            Estoque Negativo
-            <select formControlName="EstoqueNegativo">
-              <option value="NAO">Não</option>
-              <option value="SIM">Sim</option>
-            </select>
-          </label>
-          <label class="span-2">
-            Rede
-            <select formControlName="Rede">
-              <option value="NAO">Não</option>
-              <option value="SIM">Sim</option>
-            </select>
-          </label>
-          <label class="span-2">
-            Matriz
-            <select formControlName="Matriz">
-              <option value="NAO">Não</option>
-              <option value="SIM">Sim</option>
-            </select>
-          </label>
-          <label class="span-2">
-            Data de Abertura
-            <input type="date" formControlName="DataAbertura" />
-          </label>
-          <label class="span-2">
-            Data de Encerramento
-            <input type="date" formControlName="DataEnceramento" />
-          </label>
-        </div>
-      </div>
-
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>
-        <ul>
-          <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-        </ul>
+        <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
       </div>
     </form>
   </section>
 
-  <section class="panel table-panel">
-    <div class="table-header">
-      <div>
-        <h2>Lojas cadastradas <span>{{ total }} registro(s) encontrado(s)</span></h2>
-      </div>
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Lojas cadastradas</strong><span>{{ total }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label for="pageSize">Itens por página:</label><select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
     </div>
-
-    <div class="table-wrapper" [class.loading]="loading">
-      <table class="modern-table" *ngIf="lojas.length > 0; else emptyTpl">
-        <thead>
-          <tr>
-            <th class="favorite-col"></th>
-            <th class="sortable" (click)="sortBy('nome')">Loja <span>{{ sortIcon('nome') }}</span></th>
-            <th *ngIf="visibleColumn('empresa')" class="sortable" (click)="sortBy('empresa')">Empresa <span>{{ sortIcon('empresa') }}</span></th>
-            <th *ngIf="visibleColumn('tipo')" class="sortable" (click)="sortBy('tipo')">Tipo <span>{{ sortIcon('tipo') }}</span></th>
-            <th *ngIf="visibleColumn('apelido')">Apelido</th>
-            <th *ngIf="visibleColumn('cnpj')">CNPJ</th>
-            <th *ngIf="visibleColumn('cidade')" class="sortable" (click)="sortBy('cidade')">Cidade / UF <span>{{ sortIcon('cidade') }}</span></th>
-            <th *ngIf="visibleColumn('email')">E-mail</th>
-            <th *ngIf="visibleColumn('telefone')">Telefone</th>
-            <th *ngIf="visibleColumn('status')" class="sortable" (click)="sortBy('status')">Status <span>{{ sortIcon('status') }}</span></th>
-            <th *ngIf="visibleColumn('data')" class="sortable" (click)="sortBy('data')">Cadastro <span>{{ sortIcon('data') }}</span></th>
-            <th class="actions-col">Ações</th>
-          </tr>
-        </thead>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="lojas.length > 0; else emptyTpl">
+        <thead><tr><th class="select-col"></th><th>Loja</th><th *ngIf="visibleColumn('empresa')">Empresa</th><th *ngIf="visibleColumn('tipo')">Tipo</th><th *ngIf="visibleColumn('apelido')">Apelido</th><th *ngIf="visibleColumn('cnpj')">CNPJ</th><th *ngIf="visibleColumn('cidade')">Cidade / UF</th><th *ngIf="visibleColumn('email')">E-mail</th><th *ngIf="visibleColumn('telefone')">Telefone</th><th *ngIf="visibleColumn('status')">Status</th><th *ngIf="visibleColumn('data')">Cadastro</th></tr></thead>
         <tbody>
-          <tr *ngFor="let l of lojas; trackBy: trackLoja" (click)="consultar(l)" tabindex="0" (keyup.enter)="consultar(l)">
-            <td class="favorite-col">☆</td>
-            <td>
-              <div class="store-cell">
-                <span class="store-icon" [class.factory]="l.tipo_unidade === 'FABRICA'" [class.matrix]="l.tipo_unidade === 'MATRIZ'">▣</span>
-                <div>
-                  <strong>{{ l.nome_loja }}</strong>
-                  <small>Apelido: {{ l.apelido_loja || '-' }}</small>
-                </div>
-              </div>
-            </td>
+          <tr *ngFor="let l of lojas; trackBy: trackLoja" [class.selected]="isSelected(l)" (click)="selecionarLoja(l)" tabindex="0" (keyup.enter)="selecionarLoja(l)">
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(l)" (click)="$event.stopPropagation(); selecionarLoja(l)" /></td>
+            <td><strong>{{ l.nome_loja }}</strong></td>
             <td *ngIf="visibleColumn('empresa')" class="wrap">{{ empresaLabel(l) }}</td>
-            <td *ngIf="visibleColumn('tipo')">
-              <app-status-badge [label]="tipoUnidadeLabel(l.tipo_unidade).toUpperCase()" [variant]="tipoVariant(l.tipo_unidade)" />
-            </td>
+            <td *ngIf="visibleColumn('tipo')">{{ tipoUnidadeLabel(l.tipo_unidade) }}</td>
             <td *ngIf="visibleColumn('apelido')">{{ l.apelido_loja || '-' }}</td>
             <td *ngIf="visibleColumn('cnpj')">{{ formatCnpj(l.cnpj) }}</td>
             <td *ngIf="visibleColumn('cidade')">{{ cidadeUf(l) }}</td>
             <td *ngIf="visibleColumn('email')" class="email" [title]="l.email || ''">{{ l.email || '-' }}</td>
             <td *ngIf="visibleColumn('telefone')">{{ formatPhone(l.telefone1) || '-' }}</td>
-            <td *ngIf="visibleColumn('status')">
-              <app-status-badge [label]="isAtiva(l) ? 'Ativa' : 'Inativa'" [icon]="isAtiva(l) ? '•' : ''" [variant]="statusVariant(l)" />
-            </td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="!isAtiva(l)">• {{ isAtiva(l) ? 'Ativa' : 'Inativa' }}</span></td>
             <td *ngIf="visibleColumn('data')">{{ formatDate(l.data_cadastro) }}</td>
-            <td class="actions-col" (click)="$event.stopPropagation()">
-              <app-row-actions-menu
-                [actions]="rowActions(l)"
-                [ariaLabel]="'Abrir ações da loja ' + l.nome_loja"
-                (action)="executarAcao($event, l)"
-              />
-            </td>
           </tr>
         </tbody>
       </table>
-
-      <ng-template #emptyTpl>
-        <app-empty-state
-          *ngIf="!loading"
-          [title]="lojasAll.length ? 'Nenhuma loja encontrada com os filtros informados.' : 'Nenhuma loja cadastrada.'"
-          [message]="lojasAll.length ? 'Ajuste a pesquisa ou limpe os filtros para ver novamente todas as lojas.' : 'Cadastre a primeira loja para iniciar a operação.'"
-          [actionLabel]="lojasAll.length ? 'Limpar filtros' : 'Cadastrar primeira loja'"
-          [showAction]="lojasAll.length > 0 || podeEditarModulo"
-          (action)="lojasAll.length ? clearSearch() : novo()"
-        />
-        <div class="loading-state" *ngIf="loading">Carregando lojas...</div>
-      </ng-template>
+      <ng-template #emptyTpl><div class="empty-hint" *ngIf="!loading">Nenhuma loja encontrada.</div><div class="loading" *ngIf="loading">Carregando lojas...</div></ng-template>
     </div>
-
-    <app-list-pagination
-      [currentPage]="page"
-      [pageSize]="pageSize"
-      [totalItems]="total"
-      [pageSizeOptions]="pageSizeOptions"
-      [disabled]="loading"
-      (pageChange)="onPageChange($event)"
-      (pageSizeChange)="onPageSizeChange($event)"
-    />
+    <div class="pager" *ngIf="total > 0">
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
   </section>
-</div>
-
-<div class="overlay" *ngIf="consultaModal as loja">
-  <div class="overlay-card consulta-card">
-    <div class="consulta-header">
-      <div class="store-cell">
-        <span class="store-icon" [class.factory]="loja.tipo_unidade === 'FABRICA'" [class.matrix]="loja.tipo_unidade === 'MATRIZ'">▣</span>
-        <div>
-          <h4>{{ loja.nome_loja }}</h4>
-          <p>{{ empresaLabel(loja) }}</p>
-        </div>
-      </div>
-      <app-status-badge [label]="isAtiva(loja) ? 'Ativa' : 'Inativa'" [icon]="isAtiva(loja) ? '•' : ''" [variant]="statusVariant(loja)" />
-    </div>
-
-    <div class="consulta-grid">
-      <div>
-        <span>Tipo</span>
-        <strong>{{ tipoUnidadeLabel(loja.tipo_unidade) }}</strong>
-      </div>
-      <div>
-        <span>Apelido</span>
-        <strong>{{ loja.apelido_loja || '-' }}</strong>
-      </div>
-      <div>
-        <span>CNPJ</span>
-        <strong>{{ formatCnpj(loja.cnpj) }}</strong>
-      </div>
-      <div>
-        <span>Cidade / UF</span>
-        <strong>{{ cidadeUf(loja) }}</strong>
-      </div>
-      <div>
-        <span>E-mail</span>
-        <strong>{{ loja.email || '-' }}</strong>
-      </div>
-      <div>
-        <span>Telefone</span>
-        <strong>{{ formatPhone(loja.telefone1) || '-' }}</strong>
-      </div>
-      <div class="span-full">
-        <span>Endereço</span>
-        <strong>
-          {{ loja.logradouro || '' }} {{ loja.endereco || '-' }}{{ loja.numero ? ', ' + loja.numero : '' }}{{ loja.bairro ? ' - ' + loja.bairro : '' }}
-        </strong>
-      </div>
-      <div>
-        <span>Regime</span>
-        <strong>{{ loja.regime_tributario || '-' }}</strong>
-      </div>
-      <div>
-        <span>Ambiente fiscal</span>
-        <strong>{{ loja.ambiente_fiscal || '-' }}</strong>
-      </div>
-      <div>
-        <span>Série NFC-e</span>
-        <strong>{{ loja.serie_nfce || '-' }}</strong>
-      </div>
-      <div>
-        <span>Próx. NFC-e</span>
-        <strong>{{ loja.proximo_numero_nfce || '-' }}</strong>
-      </div>
-    </div>
-
-    <div class="overlay-actions">
-      <button class="btn" type="button" (click)="consultaModal = null; consultando = false">Fechar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="consultaModal = null; editar(loja)">Editar</button>
-    </div>
-  </div>
 </div>
 
 <div class="overlay" *ngIf="excluirModal as loja">
   <div class="overlay-card">
     <h4>Excluir loja</h4>
     <p>Confirma a exclusão da loja <strong>{{ loja.nome_loja }}</strong>?</p>
-    <div class="overlay-actions">
-      <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-      <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
-    </div>
+    <div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div>
   </div>
 </div>
 
@@ -483,10 +169,7 @@
   <div class="overlay-card">
     <h4>Inativar loja</h4>
     <p>Confirma a inativação da loja <strong>{{ loja.nome_loja }}</strong>?</p>
-    <div class="overlay-actions">
-      <button class="btn" type="button" (click)="inativarModal = null">Voltar</button>
-      <button class="btn primary" type="button" (click)="confirmarInativar()">Inativar</button>
-    </div>
+    <div class="overlay-actions"><button class="btn" type="button" (click)="inativarModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarInativar()">Inativar</button></div>
   </div>
 </div>
 
@@ -494,10 +177,7 @@
   <div class="overlay-card">
     <h4>Reativar loja</h4>
     <p>Confirma a reativação da loja <strong>{{ loja.nome_loja }}</strong>?</p>
-    <div class="overlay-actions">
-      <button class="btn" type="button" (click)="reativarModal = null">Voltar</button>
-      <button class="btn primary" type="button" (click)="confirmarReativar()">Reativar</button>
-    </div>
+    <div class="overlay-actions"><button class="btn" type="button" (click)="reativarModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarReativar()">Reativar</button></div>
   </div>
 </div>
 
@@ -506,8 +186,6 @@
     <h4>Histórico da loja</h4>
     <p><strong>{{ loja.nome_loja }}</strong></p>
     <p class="muted">A auditoria detalhada depende da conexão desta tela com o histórico de alterações do backend.</p>
-    <div class="overlay-actions">
-      <button class="btn primary" type="button" (click)="historicoModal = null">Fechar</button>
-    </div>
+    <div class="overlay-actions"><button class="btn primary" type="button" (click)="historicoModal = null">Fechar</button></div>
   </div>
 </div>

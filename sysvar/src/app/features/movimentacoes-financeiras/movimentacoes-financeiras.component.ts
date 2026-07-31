@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -41,10 +41,34 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   showForm = false;
   editingId: number | null = null;
   search = '';
+  filterLoja = '';
+  filterTipo = '';
+  filterStatus = '';
+  filterOrigem = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  columnsOpen = false;
+  exportOpen = false;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50, 100];
+  selectedMov: MovimentacaoFinanceira | null = null;
+  columns = [
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'documento', label: 'Documento', visible: true, required: false },
+    { key: 'destino', label: 'Destino', visible: true, required: false },
+    { key: 'origem', label: 'Origem', visible: true, required: false },
+    { key: 'forma', label: 'Forma', visible: true, required: false },
+    { key: 'valor', label: 'Valor', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false }
+  ];
+  private readonly columnsStorageKey = 'sysvar.list.movimentacoes-financeiras.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.movimentacoes-financeiras';
   errorMsg = '';
   successMsg = '';
 
   movimentacoes: MovimentacaoFinanceira[] = [];
+  movimentacoesTodas: MovimentacaoFinanceira[] = [];
   lojas: Loja[] = [];
   caixas: Caixa[] = [];
   contas: ContaBancaria[] = [];
@@ -72,6 +96,42 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get movimentacoesFiltradas(): MovimentacaoFinanceira[] {
+    return this.filter(this.movimentacoesTodas);
+  }
+
+  get movimentacoesPaginadas(): MovimentacaoFinanceira[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.movimentacoesFiltradas.slice(start, start + this.pageSize);
+  }
+
+  get totalFiltrado(): number {
+    return this.movimentacoesFiltradas.length;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalFiltrado / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return this.totalFiltrado ? (this.page - 1) * this.pageSize + 1 : 0;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.page * this.pageSize, this.totalFiltrado);
+  }
+
+  get indicadores() {
+    const movs = this.movimentacoesTodas;
+    return {
+      total: movs.length,
+      entradas: movs.filter(m => m.tipo === 'ENTRADA').length,
+      saidas: movs.filter(m => m.tipo === 'SAIDA').length,
+      efetivas: movs.filter(m => m.status === 'EFETIVA').length,
+      previstas: movs.filter(m => m.status === 'PREVISTA').length
+    };
+  }
+
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],
     data_movimento: [this.today(), Validators.required],
@@ -88,6 +148,8 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadViewPreference();
+    this.loadColumnPreference();
     this.loadAll();
   }
 
@@ -107,7 +169,10 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
         this.contas = this.unwrap<ContaBancaria>(res.contas);
         this.naturezas = this.unwrap<NatLancamento>(res.naturezas).filter(n => n.ativo !== false);
         this.formas = this.unwrap<FormaPagamento>(res.formas);
-        this.movimentacoes = this.filter(this.unwrap<MovimentacaoFinanceira>(res.movimentacoes));
+        this.movimentacoesTodas = this.unwrap<MovimentacaoFinanceira>(res.movimentacoes);
+        this.movimentacoes = this.movimentacoesFiltradas;
+        this.page = 1;
+        this.selectedMov = null;
         this.loading = false;
       },
       error: () => {
@@ -257,6 +322,65 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
     this.editingId = null;
   }
 
+  doSearch(): void {
+    this.page = 1;
+    this.movimentacoes = this.movimentacoesFiltradas;
+  }
+
+  clearSearch(): void {
+    this.search = '';
+    this.filterLoja = '';
+    this.filterTipo = '';
+    this.filterStatus = '';
+    this.filterOrigem = '';
+    this.doSearch();
+  }
+
+  selecionarMov(item: MovimentacaoFinanceira): void {
+    this.selectedMov = this.isSelected(item) ? null : item;
+  }
+
+  isSelected(item: MovimentacaoFinanceira): boolean {
+    return !!item.Idmovimentacao && this.selectedMov?.Idmovimentacao === item.Idmovimentacao;
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedMov) this.editar(this.selectedMov);
+  }
+
+  cancelarSelecionado(): void {
+    if (this.selectedMov) this.cancelarMov(this.selectedMov);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedMov) this.excluir(this.selectedMov);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnPreference();
+  }
+
+  onPageSizeChange(value: number | string): void {
+    this.pageSize = Number(value) || 20;
+    this.page = 1;
+  }
+
+  firstPage(): void { this.page = 1; }
+  prevPage(): void { this.page = Math.max(1, this.page - 1); }
+  nextPage(): void { this.page = Math.min(this.totalPages, this.page + 1); }
+  lastPage(): void { this.page = this.totalPages; }
+
+  @HostListener('window:sysvar-movimentacoes-financeiras-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-movimentacoes-financeiras-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-movimentacoes-financeiras-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   lojaNome(id: number): string {
     return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`;
   }
@@ -290,12 +414,17 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
 
   private filter(items: MovimentacaoFinanceira[]): MovimentacaoFinanceira[] {
     const q = this.search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(m =>
-      m.historico.toLowerCase().includes(q) ||
-      (m.documento || '').toLowerCase().includes(q) ||
-      this.destinoNome(m).toLowerCase().includes(q)
-    );
+    return items.filter(m => {
+      const lojaOk = !this.filterLoja || String(m.idloja) === this.filterLoja;
+      const tipoOk = !this.filterTipo || m.tipo === this.filterTipo;
+      const statusOk = !this.filterStatus || m.status === this.filterStatus;
+      const origemOk = !this.filterOrigem || m.origem === this.filterOrigem;
+      const buscaOk = !q ||
+        m.historico.toLowerCase().includes(q) ||
+        (m.documento || '').toLowerCase().includes(q) ||
+        this.destinoNome(m).toLowerCase().includes(q);
+      return lojaOk && tipoOk && statusOk && origemOk && buscaOk;
+    });
   }
 
   private unwrap<T>(res: any): T[] {
@@ -304,5 +433,56 @@ export class MovimentacoesFinanceirasComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  private toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  private restoreViewPreference(): void {
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns.forEach(col => col.visible = true);
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem(this.columnsStorageKey);
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const prefs = JSON.parse(raw);
+      this.indicatorsVisible = prefs.indicatorsVisible !== false;
+      this.filtersVisible = prefs.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible
+    }));
+  }
+
+  private loadColumnPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const state = JSON.parse(raw) as Record<string, boolean>;
+      this.columns.forEach(col => {
+        if (!col.required && state[col.key] !== undefined) col.visible = state[col.key];
+      });
+    } catch {}
+  }
+
+  private saveColumnPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

@@ -31,6 +31,7 @@ import { TributosComponent } from './features/tributos/tributos.component';
 import { RegrasTributariasComponent } from './features/regras-tributarias/regras-tributarias.component';
 import { MateriaisComponent } from './features/material/materiais.component';
 import { FormasPagamentoComponent } from './features/formas-pagamento/formas-pagamento.component';
+import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pagamento.component';
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
 import { PedidosRevendaComponent } from './features/pedidos-revenda/pedidos-revenda.component';
 import { PedidosUsoConsumoComponent } from './features/pedidos-uso-consumo/pedidos-uso-consumo.component';
@@ -48,6 +49,10 @@ import { EstoqueConsultaComponent } from './features/estoque-consulta/estoque-co
 import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/estoque-movimentacoes.component';
 import { EstoqueInventarioComponent } from './features/estoque-inventario/estoque-inventario.component';
 import { EstoqueEtiquetasComponent } from './features/estoque-etiquetas/estoque-etiquetas.component';
+import { DistribuicaoComponent } from './features/distribuicao/distribuicao.component';
+import { PedidosVendaDistribuicaoComponent } from './features/pedidos-venda-distribuicao/pedidos-venda-distribuicao.component';
+import { FaturamentoComponent } from './features/faturamento/faturamento.component';
+import { LojaRecebimentoComponent } from './features/loja-recebimento/loja-recebimento.component';
 import { PdvComponent } from './features/pdv/pdv.component';
 import { PdvDesktopComponent } from './features/pdv-desktop/pdv-desktop.component';
 import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatorios-vendas.component';
@@ -59,6 +64,11 @@ import { ValesTrocaComponent } from './features/vales-troca/vales-troca.componen
 import { ProducaoHomeComponent } from './features/producao-home/producao-home.component';
 import { FichaTecnicaComponent } from './features/ficha-tecnica/ficha-tecnica.component';
 import { OrdemProducaoComponent } from './features/ordem-producao/ordem-producao.component';
+import { DashboardExecutivoComponent } from './features/dashboard-executivo/dashboard-executivo.component';
+import { DashboardProdutosComponent } from './features/dashboard-produtos/dashboard-produtos.component';
+import { DashboardVendasComponent } from './features/dashboard-vendas/dashboard-vendas.component';
+import { DashboardEstoqueComponent } from './features/dashboard-estoque/dashboard-estoque.component';
+import { DashboardFinanceiroComponent } from './features/dashboard-financeiro/dashboard-financeiro.component';
 
 
 
@@ -92,18 +102,24 @@ export const routes: Routes = [
       { path: 'produtos', component: ProdutosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
-      { path: 'vendas/pdv-desktop', component: PdvDesktopComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
+      { path: 'vendas/pdv-desktop', redirectTo: 'loja/pdv-offline', pathMatch: 'full' },
       { path: 'vendas/relatorios', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/cashback', component: CashbackComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/promocoes', component: PromocoesComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
-      { path: 'vendas/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'vendas' } },
+      { path: 'vendas/devolucoes', redirectTo: 'loja/devolucoes', pathMatch: 'full' },
       { path: 'relatorios/vendas', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
+      { path: 'dashboard/executivo', component: DashboardExecutivoComponent, data: { roles: ['Admin', 'Diretor'], moduloEmpresa: 'relatorios' } },
+      { path: 'dashboard/produtos', component: DashboardProdutosComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
+      { path: 'dashboard/vendas', component: DashboardVendasComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
+      { path: 'dashboard/estoque', component: DashboardEstoqueComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
+      { path: 'dashboard/financeiro', component: DashboardFinanceiroComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
       { path: 'relatorios/margem-cmv', component: RelatorioMargemComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'relatorios' } },
       { path: 'vendas/tabelas', component: TabelaprecoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'fiscal/ncm', component: NcmsComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
       { path: 'fiscal/cfop', component: CfopsComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
       { path: 'fiscal/tributos', component: TributosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
       { path: 'fiscal/regras-tributarias', component: RegrasTributariasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
+      { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'fiscal' } },
       { path: 'compras/pedidos-revenda', component: PedidosRevendaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos-uso-consumo', component: PedidosUsoConsumoComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
@@ -118,6 +134,7 @@ export const routes: Routes = [
       { path: 'financeiro/antecipacoes', component: AntecipacaoRecebiveisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/configuracao', component: ConfigFinanceiraComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
+      { path: 'financeiro/prazos-pagamento', component: PrazosPagamentoComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
       { path: 'financeiro/consulta-naturezas', component: ConsultaFinanceiraNaturezaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/lancamentos-contabeis', component: LancamentosContabeisComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
       { path: 'financeiro/dre', component: DreGerencialComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal' } },
@@ -127,7 +144,12 @@ export const routes: Routes = [
       { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/movimentacoes', component: EstoqueMovimentacoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/inventario', component: EstoqueInventarioComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
+      { path: 'distribuicao', component: DistribuicaoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
+      { path: 'distribuicao/pedidos-venda', component: PedidosVendaDistribuicaoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/etiquetas', component: EstoqueEtiquetasComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
+      { path: 'loja/recebimento', component: LojaRecebimentoComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'estoque' } },
+      { path: 'loja/pdv-offline', component: PdvDesktopComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'estoque' } },
+      { path: 'loja/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'estoque' } },
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
 

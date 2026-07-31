@@ -1,0 +1,195 @@
+<section class="dash-page">
+  <header class="dash-hero">
+    <div>
+      <h1>Dashboard Financeiro</h1>
+      <p>Visão geral da saúde financeira da empresa</p>
+    </div>
+    <div class="hero-actions">
+      <label>De<input type="date" [(ngModel)]="filtros.inicio"></label>
+      <label>Até<input type="date" [(ngModel)]="filtros.fim"></label>
+      <label>Comparar
+        <select [(ngModel)]="filtros.comparacao">
+          <option value="periodo_anterior">Período anterior</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ano_anterior">Ano anterior</option>
+          <option value="">Sem comparação</option>
+        </select>
+      </label>
+      <button class="primary" (click)="carregar()">Atualizar</button>
+      <button (click)="alternarTelaCheia()">{{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}</button>
+      <button (click)="exportar()">Exportar</button>
+      <button (click)="home()">Home</button>
+    </div>
+  </header>
+
+  <section class="filters">
+    <input [(ngModel)]="filtros.q" placeholder="Buscar por documento, histórico ou natureza...">
+    <select [(ngModel)]="filtros.loja">
+      <option value="">Todas as lojas</option>
+      <option *ngFor="let loja of dados?.filtros?.lojas" [value]="loja.id">{{ loja.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.conta">
+      <option value="">Todas as contas</option>
+      <option *ngFor="let conta of dados?.filtros?.contas" [value]="conta.id">{{ conta.tipo }} - {{ conta.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.natureza">
+      <option value="">Todas as naturezas</option>
+      <option *ngFor="let nat of dados?.filtros?.naturezas" [value]="nat.id">{{ nat.codigo }} - {{ nat.descricao }}</option>
+    </select>
+    <select [(ngModel)]="filtros.status">
+      <option value="">Todos os status</option>
+      <option *ngFor="let status of dados?.filtros?.status" [value]="status">{{ status }}</option>
+    </select>
+    <button class="primary" (click)="carregar()">Pesquisar</button>
+    <button (click)="limpar()">Limpar</button>
+    <span *ngIf="dados">Atualizado em {{ dados.atualizado_em | date:'dd/MM/yyyy HH:mm' }}</span>
+  </section>
+
+  <div class="message error" *ngIf="erro">{{ erro }}</div>
+
+  <ng-container *ngIf="dados as d">
+    <section class="cards">
+      <article class="metric-card" *ngFor="let card of d.indicadores.cards">
+        <div class="metric-top">
+          <span class="icon"><i class="bi" [ngClass]="cardIcons[card.key] || 'bi-cash-stack'"></i></span>
+          <span class="trend" [class.good]="card.positive" [class.bad]="!card.positive">{{ card.variation >= 0 ? '▲' : '▼' }} {{ percentual(card.variation < 0 ? -card.variation : card.variation) }}</span>
+        </div>
+        <strong>{{ card.label }}</strong>
+        <h2>{{ formatar(card) }}</h2>
+        <small>Comparativo: {{ card.kind === 'money' ? moeda(card.previous) : card.kind === 'percent' ? percentual(card.previous) : numero(card.previous) }}</small>
+        <svg viewBox="0 0 100 42" preserveAspectRatio="none">
+          <polyline [attr.points]="sparkline()" fill="none" stroke="currentColor" stroke-width="2"></polyline>
+        </svg>
+      </article>
+    </section>
+
+    <section class="grid-main">
+      <article class="panel span2">
+        <div class="panel-head"><h3>Fluxo de caixa</h3><span>Realizado no período</span></div>
+        <div class="cash-chart">
+          <div class="chart-legend">
+            <span><i class="dot in"></i>Entradas {{ moeda(fluxoTotal('entradas')) }}</span>
+            <span><i class="dot out"></i>Saídas {{ moeda(fluxoTotal('saidas')) }}</span>
+            <span><i class="line-dot"></i>Saldo</span>
+          </div>
+          <svg viewBox="0 0 100 92" preserveAspectRatio="none" *ngIf="d.graficos.fluxo_caixa.length; else semFluxo">
+            <line x1="4" y1="82" x2="98" y2="82" class="axis"></line>
+            <ng-container *ngFor="let row of d.graficos.fluxo_caixa; let i = index">
+              <rect class="entry" [attr.x]="fluxoX(i) - 1.9" [attr.y]="fluxoBarY(row.entradas)" width="1.7" [attr.height]="fluxoBarHeight(row.entradas)" rx=".5"></rect>
+              <rect class="exit" [attr.x]="fluxoX(i) + .2" [attr.y]="fluxoBarY(row.saidas)" width="1.7" [attr.height]="fluxoBarHeight(row.saidas)" rx=".5"></rect>
+            </ng-container>
+            <polyline class="saldo-line" [attr.points]="fluxoSaldoPoints()"></polyline>
+          </svg>
+          <ng-template #semFluxo><div class="empty">Nenhum movimento no período.</div></ng-template>
+          <div class="cash-axis" *ngIf="d.graficos.fluxo_caixa.length">
+            <span>{{ d.graficos.fluxo_caixa[0].data | date:'dd/MM' }}</span>
+            <span>{{ d.graficos.fluxo_caixa[d.graficos.fluxo_caixa.length - 1].data | date:'dd/MM' }}</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Saldo por contas</h3></div>
+        <div class="bars">
+          <div class="bar-row" *ngFor="let row of d.graficos.saldo_contas">
+            <span>{{ row.nome }}</span>
+            <div><i [style.width]="barWidth(row.valor, max(d.graficos.saldo_contas, 'valor'))"></i></div>
+            <strong>{{ moeda(row.valor) }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Composição dos recebíveis</h3></div>
+        <div class="bars color">
+          <div class="bar-row" *ngFor="let row of d.graficos.recebiveis">
+            <span>{{ row.faixa }}</span>
+            <div><i [style.width]="barWidth(row.valor, max(d.graficos.recebiveis, 'valor'))"></i></div>
+            <strong>{{ moeda(row.valor) }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-secondary">
+      <article class="panel">
+        <div class="panel-head"><h3>Contas a pagar - resumo</h3></div>
+        <table>
+          <thead><tr><th>Faixa</th><th>Qtd</th><th>Valor</th><th>%</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.pagar_resumo">
+              <td>{{ row.faixa }}</td><td>{{ numero(row.quantidade) }}</td><td>{{ moeda(row.valor) }}</td><td>{{ percentual(row.percentual) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Contas a receber - resumo</h3></div>
+        <table>
+          <thead><tr><th>Faixa</th><th>Qtd</th><th>Valor</th><th>%</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.receber_resumo">
+              <td>{{ row.faixa }}</td><td>{{ numero(row.quantidade) }}</td><td>{{ moeda(row.valor) }}</td><td>{{ percentual(row.percentual) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Evolução do saldo</h3></div>
+        <svg class="line-chart" viewBox="0 0 100 44" preserveAspectRatio="none">
+          <polyline [attr.points]="sparkline('saldo')" fill="none" stroke="#0d6efd" stroke-width="2"></polyline>
+        </svg>
+      </article>
+    </section>
+
+    <section class="grid-bottom">
+      <article class="panel">
+        <div class="panel-head"><h3>Top 5 maiores pagamentos</h3></div>
+        <table>
+          <thead><tr><th>Fornecedor</th><th>Natureza</th><th>Data</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.maiores_pagamentos">
+              <td>{{ row.fornecedor }}</td><td>{{ row.natureza }}</td><td>{{ row.data | date:'dd/MM/yyyy' }}</td><td>{{ moeda(row.valor) }}</td><td><span class="pill">{{ row.status }}</span></td>
+            </tr>
+            <tr *ngIf="!d.tabelas.maiores_pagamentos.length"><td colspan="5" class="empty">Nenhum pagamento no período.</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Top 5 maiores recebimentos</h3></div>
+        <table>
+          <thead><tr><th>Cliente</th><th>Data</th><th>Forma</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.maiores_recebimentos">
+              <td>{{ row.cliente }}</td><td>{{ row.data | date:'dd/MM/yyyy' }}</td><td>{{ row.forma }}</td><td>{{ moeda(row.valor) }}</td><td><span class="pill">{{ row.status }}</span></td>
+            </tr>
+            <tr *ngIf="!d.tabelas.maiores_recebimentos.length"><td colspan="5" class="empty">Nenhum recebimento no período.</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Indicadores financeiros</h3></div>
+        <div class="indicator-list">
+          <div *ngFor="let row of d.tabelas.indicadores">
+            <span>{{ row.indicador }}</span>
+            <strong>{{ numero(row.valor) }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Alertas financeiros</h3></div>
+        <div class="alerts">
+          <div *ngFor="let alerta of d.alertas" [ngClass]="alertClass(alerta.tipo)">
+            <strong>{{ alerta.titulo }}</strong>
+            <span>{{ alerta.descricao }}</span>
+          </div>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</section>

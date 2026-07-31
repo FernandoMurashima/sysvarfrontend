@@ -12,6 +12,8 @@ export interface PedidoCompra {
   emissao: string;
   previsao_entrega?: string | null;
   forma_pagamento?: string | null;
+  prazo_pagamento?: number | null;
+  prazo_pagamento_descricao?: string | null;
   observacoes?: string | null;
   status: 'AB' | 'AP' | 'AT' | 'CA';
   total_itens: string;
@@ -73,9 +75,10 @@ export class PedidosCompraService {
     return this.http.delete<void>(`${this.base}${id}/`);
   }
 
-  setFormaPagamento(id: number, codigo_forma: string) {
+  setFormaPagamento(id: number, codigo_forma: string, id_prazo?: number | null) {
     return this.http.post<PedidoCompra>(`${this.base}${id}/set-forma-pagamento/`, {
       codigo_forma: codigo_forma?.trim(),
+      id_prazo: id_prazo || null,
     });
   }
 

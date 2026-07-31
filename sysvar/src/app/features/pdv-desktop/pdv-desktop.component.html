@@ -23,6 +23,7 @@
 
     <div class="top-actions">
       <span>NFC-e</span>
+      <button class="home-button" type="button" (click)="voltarHome()">Voltar</button>
       <span>TEF</span>
       <div class="operator">
         <div class="avatar">◯</div>
@@ -217,12 +218,8 @@
           <option value="DEBITO">Débito</option>
         </select>
         <input *ngIf="formaPagamento === 'CARTAO'" [(ngModel)]="autorizacaoCartao" placeholder="Autorização" />
-        <select *ngIf="formaPagamento === 'TROCA'" [(ngModel)]="valeTrocaDocumento">
-          <option value="">Vale-troca</option>
-          <option *ngFor="let vale of valesTrocaValidos()" [value]="vale.documento">
-            {{ vale.documento }} - {{ formatar(+vale.saldo) }}
-          </option>
-        </select>
+        <input *ngIf="formaPagamento === 'TROCA'" [value]="valeTrocaResumo()" readonly placeholder="Vale-troca" />
+        <button *ngIf="formaPagamento === 'TROCA'" class="vale-picker-button" type="button" (click)="abrirValesTroca()">Vales</button>
         <button type="button" (click)="adicionarPagamento()">Adicionar pagamento</button>
       </div>
 
@@ -285,6 +282,7 @@
           <strong *ngIf="modalAtalho === 'pendentes'">Pendentes Offline</strong>
           <strong *ngIf="modalAtalho === 'fechamento'">Fechamento do Caixa</strong>
           <strong *ngIf="modalAtalho === 'reimpressao'">Reimpressão de Cupom</strong>
+          <strong *ngIf="modalAtalho === 'vale-troca'">Vales-troca disponíveis</strong>
           <strong *ngIf="modalAtalho === 'cancelar-venda'">Cancelar Venda</strong>
           <span>{{ data }} · {{ caixa }}</span>
         </div>
@@ -621,6 +619,29 @@
           </tbody>
         </table>
         <p *ngIf="!cuponsLocais.length">Nenhum cupom emitido neste terminal.</p>
+      </div>
+
+      <div class="modal-table vale-list" *ngIf="modalAtalho === 'vale-troca'">
+        <div class="modal-total-line">
+          <strong>{{ cliente }}</strong>
+          <span>Pendente da venda: {{ formatar(pendente()) }}</span>
+        </div>
+        <div class="vale-row head">
+          <span>Vale</span>
+          <span>Origem</span>
+          <span>Saldo</span>
+          <span>Ação</span>
+        </div>
+        <div class="vale-row" *ngFor="let vale of valesTrocaValidos()">
+          <div>
+            <strong>{{ documentoValeCurto(vale.documento) }}</strong>
+            <small>{{ vale.documento }}</small>
+          </div>
+          <span>{{ vale.devolucao_documento || vale.venda_origem_documento || '-' }}</span>
+          <strong>{{ formatar(+vale.saldo) }}</strong>
+          <button type="button" (click)="selecionarValeTroca(vale)">Usar</button>
+        </div>
+        <p *ngIf="!valesTrocaValidos().length">Nenhum vale-troca disponível para este cliente.</p>
       </div>
 
       <div class="modal-confirm" *ngIf="modalAtalho === 'cancelar-venda'">

@@ -1,0 +1,213 @@
+Initial chunk files | Names         | Raw size
+main.js             | main          |  3.80 MB | 
+polyfills.js        | polyfills     | 88.09 kB | 
+styles.css          | styles        |  5.50 kB | 
+
+                    | Initial total |  3.89 MB
+
+Application bundle generation complete. [11.066 seconds]
+
+Watch mode enabled. Watching for file changes...
+  ➜  Local:   http://127.0.0.1:4200/
+  ➜  press h + enter to show help
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.80 MB | 
+
+Application bundle generation complete. [9.548 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.77 MB | 
+
+Application bundle generation complete. [0.285 seconds]
+
+Page reload sent to client(s).
+16:23:00 [vite] ✨ new dependencies optimized: tslib
+16:23:00 [vite] ✨ optimized dependencies changed. reloading
+
+No output file changes.
+
+Application bundle generation complete. [0.266 seconds]
+
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.81 MB | 
+
+Application bundle generation complete. [0.545 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.81 MB | 
+
+Application bundle generation complete. [1.707 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.72 MB | 
+
+Application bundle generation complete. [1.045 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [2.372 seconds]
+
+Page reload sent to client(s).
+Application bundle generation failed. [1.010 seconds]
+
+Initial chunk files | Names         | Raw size
+main.js             | main          |  3.82 MB | 
+polyfills.js        | polyfills     | 88.09 kB | 
+styles.css          | styles        |  5.50 kB | 
+
+                    | Initial total |  3.91 MB
+
+Application bundle generation complete. [0.980 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [1.737 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [0.320 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [0.262 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.261 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [0.727 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.82 MB | 
+
+Application bundle generation complete. [1.348 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.821 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.74 MB | 
+
+Application bundle generation complete. [0.267 seconds]
+
+Page reload sent to client(s).
+
+No output file changes.
+
+Application bundle generation complete. [0.375 seconds]
+
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [1.066 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.993 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.957 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.376 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [1.702 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.84 MB | 
+
+Application bundle generation complete. [0.884 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.84 MB | 
+
+Application bundle generation complete. [1.095 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.76 MB | 
+
+Application bundle generation complete. [0.354 seconds]
+
+Page reload sent to client(s).
+
+No output file changes.
+
+Application bundle generation complete. [0.363 seconds]
+
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.83 MB | 
+
+Application bundle generation complete. [0.584 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.74 MB | 
+
+Application bundle generation complete. [0.546 seconds]
+
+Page reload sent to client(s).
+
+No output file changes.
+
+Application bundle generation complete. [0.362 seconds]
+
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.81 MB | 
+
+Application bundle generation complete. [0.608 seconds]
+
+Page reload sent to client(s).
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.73 MB | 
+
+Application bundle generation complete. [0.632 seconds]
+
+Page reload sent to client(s).
+
+No output file changes.
+
+Application bundle generation complete. [0.396 seconds]
+
+Initial chunk files | Names | Raw size
+main.js             | main  |  3.81 MB | 
+
+Application bundle generation complete. [0.741 seconds]
+
+Page reload sent to client(s).

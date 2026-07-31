@@ -1,0 +1,88 @@
+@import '../cores/cores.component.css';
+
+.loja-recebimento-page {
+  gap: 8px;
+}
+
+.recebimento-filter {
+  grid-template-columns: minmax(360px, 1fr) minmax(210px, .35fr) auto;
+}
+
+.action-bar::after {
+  display: none;
+}
+
+.table th:nth-child(n+6),
+.table td:nth-child(n+6) {
+  text-align: right;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  text-align: center;
+}
+
+.detail-area {
+  margin-top: 0;
+}
+
+.nota-summary {
+  display: grid;
+  grid-template-columns: minmax(90px, .55fr) minmax(220px, 1.2fr) minmax(220px, 1.2fr) minmax(100px, .55fr) minmax(120px, .65fr);
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #dbe3ef;
+}
+
+.nota-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nota-summary small {
+  color: #475569;
+  font-size: 11px;
+}
+
+.nota-summary strong {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-table {
+  min-width: 1120px;
+}
+
+.num-input {
+  width: 86px;
+  min-height: 30px;
+  text-align: center;
+}
+
+.status-pill.st-trans,
+.status-pill.st-ag_exp {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.st-recb {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pill.st-div {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 1200px) {
+  .recebimento-filter,
+  .nota-summary {
+    grid-template-columns: 1fr;
+  }
+}

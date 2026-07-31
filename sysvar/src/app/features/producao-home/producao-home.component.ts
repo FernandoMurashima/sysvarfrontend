@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { OrdemProducaoService } from '../../core/services/ordem-producao.service';
 
@@ -17,8 +17,12 @@ export class ProducaoHomeComponent implements OnInit {
   errorMsg = '';
   painel: any = null;
   modal: 'insumos' | 'faccao' | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.producao';
 
   ngOnInit(): void {
+    this.loadViewPreference();
     this.load();
   }
 
@@ -60,5 +64,26 @@ export class ProducaoHomeComponent implements OnInit {
 
   fecharModal(): void {
     this.modal = null;
+  }
+
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); this.indicatorsVisible = true; this.filtersVisible = true; this.saveViewPreference(); }
+  @HostListener('window:sysvar-producao-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-producao-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-producao-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

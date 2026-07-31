@@ -1,0 +1,191 @@
+CONTEXTO DO PADRAO VISUAL SYSVAR - PILOTO CADASTRO DE CLIENTES
+
+Este documento registra o padrao aprovado para iniciar a migracao visual das telas do Sysvar. A tela piloto e o Cadastro de Clientes. As proximas telas devem seguir este contexto uma a uma, sem aplicar mudancas em massa e sem remover funcionalidades existentes.
+
+OBJETIVO
+
+Padronizar as telas de listagem, consulta e operacao do Sysvar usando barras compactas e modulares, aumentando a area util da tabela, mantendo o visual limpo e preservando as regras de negocio atuais.
+
+TELA PILOTO
+
+Tela: Cadastro de Clientes
+Arquivos principais:
+- Frontend/sysvar/src/app/features/clientes/clientes.component.html
+- Frontend/sysvar/src/app/features/clientes/clientes.component.css
+- Frontend/sysvar/src/app/features/clientes/clientes.component.ts
+- Frontend/sysvar/src/app/layout/shell/shell.component.html
+- Frontend/sysvar/src/app/layout/shell/shell.component.css
+- Frontend/sysvar/src/app/layout/shell/shell.component.ts
+
+PADRAO APROVADO
+
+1. Barra Principal Global
+
+A barra global e a topbar do shell. Ela continua contendo:
+- Menu
+- Nome/contexto da tela atual
+- Logo e nome do sistema centralizados
+- Usuario autenticado
+- Botao Tela cheia
+- Controle de barras
+- Botao Sair
+
+Na tela piloto, o controle de barras foi colocado na topbar global, entre o botao Tela cheia e o botao Sair. Por enquanto, ele aparece somente na rota /clientes.
+
+Controle de barras:
+- Indicadores
+- Filtros
+- Restaurar padrao
+
+Os eventos sao disparados pelo shell e tratados pela tela de clientes via HostListener.
+
+2. Barra de Titulo
+
+Deve ser uma barra fina, compacta e em uma linha quando houver espaco.
+
+Conteudo:
+- Titulo da tela
+- Icone de informacao ao lado do titulo, com tooltip curto
+- Botoes Ajuda e Home
+- Botoes auxiliares que nao pertencem a busca, como Limpar e Exportar
+- Acao principal destacada, como Novo Cliente
+
+Na tela de clientes:
+- O botao Limpar saiu da barra de busca e foi para a barra de titulo.
+- O botao Exportar saiu da barra de busca e foi para a barra de titulo.
+- Novo Cliente permanece como acao principal.
+
+3. Barra de Indicadores
+
+Deve ser fina e compacta.
+
+Formato aprovado:
+- Icone pequeno
+- Numero
+- Descricao curta
+- Tudo em baixa altura
+
+Na tela de clientes:
+- Total
+- Ativos
+- Bloqueados
+- Mala direta
+- Com cidade
+
+A barra pode ser ocultada pelo controle de barras na topbar.
+
+4. Barra de Filtros e Pesquisa
+
+Deve conter apenas controles diretamente ligados a pesquisa/filtro.
+
+Na tela de clientes, deve caber em uma linha no desktop:
+- Campo de busca
+- Tipo
+- Cidade
+- Status
+- Pesquisar
+- Filtros avancados
+- Colunas
+
+Importante:
+- O botao Limpar nao deve ficar nesta barra.
+- O botao Exportar nao deve ficar nesta barra.
+- Os labels Tipo, Cidade e Status ficam ao lado dos selects, nao em cima.
+- Em desktop, tudo deve tentar caber em uma linha.
+- Em telas menores, pode quebrar de forma organizada.
+
+5. Barra de Acoes
+
+Deve conter as acoes do registro selecionado, substituindo a coluna de acoes por linha quando possivel.
+
+Na tela de clientes:
+- Consultar
+- Editar
+- Excluir
+
+Comportamento:
+- Sem registro selecionado, os botoes ficam desabilitados.
+- Ao selecionar uma linha, as acoes permitidas ficam habilitadas.
+- Excluir mantem destaque visual de risco e confirmacao.
+- A coluna Acoes foi removida da tabela.
+
+6. Area de Resultados
+
+Deve conter:
+- Titulo da listagem
+- Total encontrado
+- Itens por pagina
+- Tabela
+- Selecao de linha
+- Paginacao completa
+- Mensagens de carregamento/vazio
+
+Na tela de clientes:
+- A selecao e feita por checkbox e clique na linha.
+- A linha selecionada fica destacada.
+- A coluna Acoes foi removida.
+- Paginacao segue o padrao: Primeira, Anterior, Proxima, Ultima, Pagina X de Y e Mostrando X-Y de Z.
+
+PREFERENCIAS DE INTERFACE
+
+Na tela piloto, as preferencias sao salvas no localStorage.
+
+Chaves usadas:
+- sysvar.ui.preferences.clientes
+- sysvar.list.clientes.pageSize
+- sysvar.list.clientes.columns
+
+Preferencias atuais:
+- Indicadores visiveis/ocultos
+- Filtros visiveis/ocultos
+- Quantidade por pagina
+- Colunas visiveis
+
+O comando Restaurar padrao remove/restaura as preferencias da tela.
+
+DIRETRIZES PARA PROXIMAS TELAS
+
+Migrar uma tela por vez.
+
+Antes de alterar uma tela, fazer inventario:
+- Quais barras a tela precisa
+- Indicadores existentes
+- Filtros existentes
+- Acoes padrao
+- Acoes especificas
+- Permissoes
+- Regras por status
+- Selecao simples ou multipla
+- Colunas
+- Paginacao
+- Funcoes que nao podem ser perdidas
+
+Nao remover regras de negocio.
+Nao alterar endpoints.
+Nao eliminar filtros funcionais.
+Nao simplificar fluxos sem autorizacao.
+Nao aplicar automaticamente em todas as telas.
+
+PADRAO VISUAL
+
+Usar barras finas.
+Evitar alturas grandes.
+Evitar textos explicativos permanentes.
+Usar tooltip curto no icone de informacao.
+Priorizar uma linha em desktop.
+Manter bordas leves.
+Raio padrao: 8px nas barras e 6px nos botoes/campos.
+Espacamentos principais: 6px, 8px, 10px, 12px e 14px.
+Tabela deve ocupar a maior area util possivel.
+
+VALIDACAO OBRIGATORIA APOS CADA TELA
+
+Executar:
+- tsc -p tsconfig.app.json --noEmit
+- ng build --configuration development
+
+So considerar concluido quando ambos passarem sem erro.
+
+OBSERVACAO IMPORTANTE
+
+O padrao aprovado neste documento reflete a decisao tomada apos ajuste da tela de Cadastro de Clientes. Ele substitui a ideia inicial de aplicar tudo diretamente em Produtos Revenda. A migracao seguira usando Clientes como referencia inicial.

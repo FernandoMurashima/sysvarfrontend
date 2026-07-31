@@ -1,0 +1,200 @@
+<section class="dash-page">
+  <header class="dash-hero">
+    <div>
+      <h1>Dashboard de Estoque</h1>
+      <p>Visão geral e análise completa do seu estoque</p>
+    </div>
+    <div class="hero-actions">
+      <label>De<input type="date" [(ngModel)]="filtros.inicio"></label>
+      <label>Até<input type="date" [(ngModel)]="filtros.fim"></label>
+      <label>Comparar
+        <select [(ngModel)]="filtros.comparacao">
+          <option value="periodo_anterior">Período anterior</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ano_anterior">Ano anterior</option>
+          <option value="">Sem comparação</option>
+        </select>
+      </label>
+      <button class="primary" (click)="carregar()">Atualizar</button>
+      <button (click)="alternarTelaCheia()">{{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}</button>
+      <button (click)="exportar()">Exportar</button>
+      <button (click)="home()">Home</button>
+    </div>
+  </header>
+
+  <section class="filters">
+    <input [(ngModel)]="filtros.q" placeholder="Buscar por produto, referência, EAN, coleção, cor ou tamanho...">
+    <select [(ngModel)]="filtros.loja">
+      <option value="">Todas as lojas</option>
+      <option *ngFor="let loja of dados?.filtros?.lojas" [value]="loja.id">{{ loja.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.grupo">
+      <option value="">Todos os grupos</option>
+      <option *ngFor="let grupo of dados?.filtros?.grupos" [value]="grupo.id">{{ grupo.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.colecao">
+      <option value="">Todas as coleções</option>
+      <option *ngFor="let colecao of dados?.filtros?.colecoes" [value]="colecao.id">{{ colecao.nome }}</option>
+    </select>
+    <input [(ngModel)]="filtros.estacao" placeholder="Estação">
+    <select [(ngModel)]="filtros.status">
+      <option value="">Todos os saldos</option>
+      <option value="positivo">Saldo positivo</option>
+      <option value="zerado">Saldo zerado</option>
+      <option value="negativo">Saldo negativo</option>
+    </select>
+    <button class="primary" (click)="carregar()">Pesquisar</button>
+    <button (click)="limpar()">Limpar</button>
+    <span *ngIf="dados">Atualizado em {{ dados.atualizado_em | date:'dd/MM/yyyy HH:mm' }}</span>
+  </section>
+
+  <div class="message error" *ngIf="erro">{{ erro }}</div>
+
+  <ng-container *ngIf="dados as d">
+    <section class="cards">
+      <article class="metric-card" *ngFor="let card of d.indicadores.cards">
+        <div class="metric-top">
+          <span class="icon"><i class="bi" [ngClass]="cardIcons[card.key] || 'bi-archive'"></i></span>
+          <span class="trend" [class.good]="card.positive" [class.bad]="!card.positive">{{ card.variation >= 0 ? '▲' : '▼' }} {{ percentual(card.variation < 0 ? -card.variation : card.variation) }}</span>
+        </div>
+        <strong>{{ card.label }}</strong>
+        <h2>{{ formatar(card) }}</h2>
+        <small>Comparativo: {{ card.kind === 'money' ? moeda(card.previous) : card.kind === 'percent' ? percentual(card.previous) : numero(card.previous) }}</small>
+        <svg viewBox="0 0 100 42" preserveAspectRatio="none">
+          <polyline [attr.points]="sparkline()" fill="none" stroke="currentColor" stroke-width="2"></polyline>
+        </svg>
+      </article>
+    </section>
+
+    <section class="grid-main">
+      <article class="panel">
+        <div class="panel-head"><h3>Evolução do valor do estoque</h3><span>{{ d.periodo.inicio | date:'dd/MM/yyyy' }} a {{ d.periodo.fim | date:'dd/MM/yyyy' }}</span></div>
+        <svg class="line-chart" viewBox="0 0 100 44" preserveAspectRatio="none">
+          <polyline [attr.points]="sparkline()" fill="none" stroke="#0d6efd" stroke-width="2"></polyline>
+        </svg>
+        <div class="totals">
+          <strong>Valor atual {{ moeda(d.indicadores.base['valor_estoque']) }}</strong>
+          <span>Itens {{ numero(d.indicadores.base['quantidade_itens']) }}</span>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Estoque por categoria</h3></div>
+        <div class="bars">
+          <div class="bar-row" *ngFor="let row of d.graficos.categorias | slice:0:7">
+            <span>{{ row.nome }}</span>
+            <div><i [style.width]="barWidth(row.valor, max(d.graficos.categorias, 'valor'))"></i></div>
+            <strong>{{ moeda(row.valor) }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Distribuição do estoque</h3></div>
+        <div class="bars color">
+          <div class="bar-row" *ngFor="let row of d.graficos.distribuicao">
+            <span>{{ row.nome }}</span>
+            <div><i [style.width]="barWidth(row.valor, max(d.graficos.distribuicao, 'valor'))"></i></div>
+            <strong>{{ moeda(row.valor) }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-secondary">
+      <article class="panel">
+        <div class="panel-head"><h3>Análise ABC</h3></div>
+        <table>
+          <thead><tr><th>Classe</th><th>Itens</th><th>Valor</th><th>% Valor</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.abc">
+              <td><strong>{{ row.classe }}</strong></td>
+              <td>{{ numero(row.itens) }}</td>
+              <td>{{ moeda(row.valor) }}</td>
+              <td>{{ percentual(row.percentual) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Produtos com maior cobertura</h3></div>
+        <table>
+          <thead><tr><th>#</th><th>Produto</th><th>Estoque</th><th>Cobertura</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of d.tabelas.maior_cobertura | slice:0:5; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><strong>{{ p.produto }}</strong><small>{{ p.referencia }}</small></td>
+              <td>{{ numero(p.saldo) }}</td>
+              <td>{{ numero(p.cobertura) }} dia(s)</td>
+              <td>{{ moeda(p.valor) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Produtos sem venda</h3></div>
+        <table>
+          <thead><tr><th>#</th><th>Produto</th><th>Dias</th><th>Estoque</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of d.tabelas.sem_venda | slice:0:5; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><strong>{{ p.produto }}</strong><small>{{ p.referencia }}</small></td>
+              <td>{{ p.dias_sem_venda ?? '-' }}</td>
+              <td>{{ numero(p.saldo) }}</td>
+              <td>{{ moeda(p.valor) }}</td>
+            </tr>
+            <tr *ngIf="!d.tabelas.sem_venda.length"><td colspan="5" class="empty">Nenhum produto sem venda no período.</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="grid-bottom">
+      <article class="panel">
+        <div class="panel-head"><h3>Giro de estoque por mês</h3></div>
+        <div class="bars">
+          <div class="bar-row" *ngFor="let row of d.graficos.giro_mensal">
+            <span>{{ row.mes }}</span>
+            <div><i [style.width]="barWidth(row.giro, max(d.graficos.giro_mensal, 'giro'))"></i></div>
+            <strong>{{ numero(row.giro) }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Top 5 itens com maior giro</h3></div>
+        <table>
+          <thead><tr><th>#</th><th>Produto</th><th>Categoria</th><th>Giro</th><th>Cobertura</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of d.tabelas.maior_giro | slice:0:5; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ p.produto }}</td>
+              <td>{{ p.categoria }}</td>
+              <td>{{ numero(p.giro) }}</td>
+              <td>{{ numero(p.cobertura) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Alertas de estoque</h3></div>
+        <div class="alerts">
+          <div *ngFor="let alerta of d.alertas" [ngClass]="alertClass(alerta.tipo)">
+            <strong>{{ alerta.titulo }}</strong>
+            <span>{{ alerta.descricao }}</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="insights" *ngIf="d.insights.length">
+      <article *ngFor="let insight of d.insights" [ngClass]="alertClass(insight.tipo)">
+        <strong>{{ insight.titulo }}</strong>
+        <span>{{ insight.descricao }}</span>
+      </article>
+    </section>
+  </ng-container>
+</section>

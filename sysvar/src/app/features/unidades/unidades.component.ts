@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -50,9 +50,14 @@ export class UnidadesComponent implements OnInit {
   excluirModal: Unidade | null = null;
   errorOverlayOpen = false;
   columnsOpen = false;
+  exportOpen = false;
+  selectedUnidade: Unidade | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   sortKey: 'descricao' | 'codigo' | 'decimal' = 'descricao';
   sortDir: 'asc' | 'desc' = 'asc';
   private readonly columnsStorageKey = 'sysvar.list.unidades.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.unidades';
   columns = [
     { key: 'codigo', label: 'Codigo', visible: true, required: false },
     { key: 'decimal', label: 'Decimal', visible: true, required: false },
@@ -93,6 +98,7 @@ export class UnidadesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -125,6 +131,7 @@ export class UnidadesComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.unidades = filtered.slice(start, end);
+    if (this.selectedUnidade && !filtered.some(u => this.unidadeId(u) === this.unidadeId(this.selectedUnidade))) this.selectedUnidade = null;
   }
 
   onPageSizeChange(sizeStr: string | number): void {
@@ -146,6 +153,36 @@ export class UnidadesComponent implements OnInit {
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
   doSearch(): void { this.page = 1; this.applyPage(); }
   clearSearch(): void { this.search = ''; this.page = 1; this.applyPage(); }
+
+  unidadeId(u: Unidade | null): number | null {
+    return u ? ((u as any).Idunidade ?? null) : null;
+  }
+
+  selecionarUnidade(u: Unidade): void { this.selectedUnidade = this.isSelected(u) ? null : u; }
+  isSelected(u: Unidade): boolean { return !!this.selectedUnidade && this.unidadeId(this.selectedUnidade) === this.unidadeId(u); }
+  consultarSelecionado(): void { if (this.selectedUnidade) this.consultar(this.selectedUnidade); }
+  editarSelecionado(): void { if (this.selectedUnidade && this.podeEditarModulo) this.editar(this.selectedUnidade); }
+  excluirSelecionado(): void { if (this.selectedUnidade && this.podeExcluirModulo) this.excluir(this.selectedUnidade); }
+
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.unidades.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-unidades-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-unidades-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-unidades-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   // --------- CRUD ---------
   novo(): void {
@@ -360,6 +397,20 @@ export class UnidadesComponent implements OnInit {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 
   // --------- Overlay de erros ---------

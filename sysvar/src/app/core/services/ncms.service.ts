@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Observable, expand, map, reduce } from 'rxjs';
+import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
 import { Ncm } from '../models/ncm';
 
 type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+type ListResponse<T> = Page<T> | T[];
 
 @Injectable({ providedIn: 'root' })
 export class NcmsService {
@@ -13,10 +14,13 @@ export class NcmsService {
   constructor(private http: HttpClient) {}
 
   list(search: string = ''): Observable<Ncm[]> {
-    const first$ = this.http.get<Page<Ncm>>(`${this.baseUrl}?ordering=ncm&page_size=100`);
+    const first$ = this.http.get<ListResponse<Ncm>>(`${this.baseUrl}?ordering=ncm&page_size=100`);
     return first$.pipe(
-      expand(p => (p.next ? this.http.get<Page<Ncm>>(p.next) : [])),
-      map(p => p.results),
+      expand(p => {
+        const next = Array.isArray(p) ? null : p.next;
+        return next ? this.http.get<ListResponse<Ncm>>(next) : EMPTY;
+      }),
+      map(p => Array.isArray(p) ? p : (p.results ?? [])),
       reduce((acc, cur) => acc.concat(cur), [] as Ncm[]),
       map(rows => {
         const q = (search || '').trim().toLowerCase();

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 
 import { LojasService } from '../../core/services/lojas.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
+import { PrazoPagamento } from '../../core/models/forma-pagamento';
 import { PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -15,12 +16,11 @@ import { UnidadesService } from '../../core/services/unidades.service';
 import { Unidade } from '../../core/models/unidade';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
-import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
+import { RowAction } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 type Option = { id: number; label: string };
 type FormaOption = { codigo: string; label: string };
+type PrazoOption = { id: number; label: string };
 
 interface PedidoUsoItemUI {
   id: number | null;
@@ -37,7 +37,7 @@ interface PedidoUsoItemUI {
 @Component({
   selector: 'app-pedidos-uso-consumo',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './pedidos-uso-consumo.component.html',
   styleUrls: ['./pedidos-uso-consumo.component.css'],
 })
@@ -61,6 +61,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
   setViewList() {
     this.view.set('list');
     this.pedidoAtualId.set(null);
+    this.selectedPedido = null;
     this.consultando = false;
     this.headerForm.enable({ emitEvent: false });
     this.itemForm.enable({ emitEvent: false });
@@ -77,6 +78,21 @@ export class PedidosUsoConsumoComponent implements OnInit {
   loadingPedidos = false;
   successMsg = '';
   errorMsg = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  columnsOpen = false;
+  filterStatus = '';
+  private readonly columnsStorageKey = 'sysvar.list.pedidos-uso-consumo.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.pedidos-uso-consumo';
+  columns = [
+    { key: 'numero', label: 'Nº Pedido', visible: true, required: true },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'fornecedor', label: 'Fornecedor', visible: true, required: false },
+    { key: 'emissao', label: 'Emissão', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'natureza', label: 'Natureza', visible: true, required: false },
+    { key: 'total', label: 'Total', visible: true, required: false },
+  ];
   confirmModal: {
     action: 'removerItem' | 'excluirPedido' | 'cancelarPedido';
     title: string;
@@ -91,6 +107,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
   lojas: Option[] = [];
   fornecedores: Option[] = [];
   formas: FormaOption[] = [];
+  prazos: PrazoOption[] = [];
   naturezasCompra: NatLancamento[] = [];
   unidades: Unidade[] = [];
 
@@ -108,6 +125,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     emissao: [this.hojeISO(), Validators.required],
     previsao_entrega: [null],
     forma_pagamento_codigo: [null, Validators.required],
+    prazo_pagamento: [null, Validators.required],
     observacoes: [''],
   });
 
@@ -142,6 +160,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
   pedidosAll: any[] = [];
   pedidosFiltered: any[] = [];
   pedidos: any[] = [];
+  selectedPedido: any | null = null;
 
   page = 1;
   pageSize = 20;
@@ -194,6 +213,8 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadLookups();
     this.loadNaturezasCompra();
     this.loadPedidos();
@@ -300,6 +321,18 @@ export class PedidosUsoConsumoComponent implements OnInit {
       },
     });
 
+    this.formasApi.listPrazos({ ativo: true }).subscribe({
+      next: (resp: any) => {
+        const arr = this.arrayOrResults<PrazoPagamento>(resp);
+        this.prazos = arr
+          .map(p => ({ id: Number(p.Idprazo ?? p.id ?? 0), label: `${p.codigo} - ${p.descricao}` }))
+          .filter(p => !!p.id);
+      },
+      error: () => {
+        this.prazos = [];
+      },
+    });
+
     this.unidadesApi.list({ ordering: 'Descricao', page_size: 1000 }).subscribe({
       next: (resp: any) => {
         this.unidades = this.arrayOrResults<Unidade>(resp);
@@ -396,9 +429,13 @@ export class PedidosUsoConsumoComponent implements OnInit {
         return alvo.includes(term);
       });
     }
+    if (this.filterStatus) {
+      base = base.filter(p => (p.status || '').toUpperCase() === this.filterStatus);
+    }
 
     this.pedidosFiltered = base;
     this.page = 1;
+    this.selectedPedido = null;
     this.applyPage();
   }
 
@@ -406,6 +443,9 @@ export class PedidosUsoConsumoComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.pedidos = this.pedidosFiltered.slice(start, end);
+    if (this.selectedPedido && !this.pedidosFiltered.some(p => p.id === this.selectedPedido?.id)) {
+      this.selectedPedido = null;
+    }
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -447,8 +487,26 @@ export class PedidosUsoConsumoComponent implements OnInit {
   }
   clearSearch(): void {
     this.search = '';
+    this.filterStatus = '';
     this.applyFilter();
   }
+
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  selecionarPedido(p: any): void { this.selectedPedido = p; }
+  pedidoSelecionado(p: any): boolean { return !!this.selectedPedido && this.selectedPedido.id === p.id; }
+  executarAcaoSelecionada(action: string): void { if (this.selectedPedido) this.executarAcao(action, this.selectedPedido); }
+  acaoSelecionadaDesabilitada(action: string): boolean {
+    if (!this.selectedPedido) return true;
+    const config = this.rowActions(this.selectedPedido).find(a => a.key === action);
+    return !config || config.visible === false || !!config.disabled;
+  }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.pedidos-uso-consumo.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.saveViewPreference(); this.applyPage(); }
+  @HostListener('window:sysvar-pedidos-uso-consumo-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-pedidos-uso-consumo-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-pedidos-uso-consumo-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   // ===== helpers de label =====
   labelLoja(id: number | null | undefined): string {
@@ -475,6 +533,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     if (f['fornecedor']?.invalid) msgs.push('Fornecedor: obrigatório.');
     if (f['emissao']?.invalid) msgs.push('Emissão: obrigatória.');
     if (f['forma_pagamento_codigo']?.invalid) msgs.push('Forma de pagamento: obrigatória.');
+    if (f['prazo_pagamento']?.invalid) msgs.push('Prazo: obrigatório.');
 
     return msgs;
   }
@@ -489,6 +548,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
       emissao: this.hojeISO(),
       previsao_entrega: null,
       forma_pagamento_codigo: null,
+      prazo_pagamento: null,
       observacoes: '',
     });
     this.itens = [];
@@ -596,6 +656,10 @@ export class PedidosUsoConsumoComponent implements OnInit {
       this.produtoConsultaSearch = (this.itemForm.get('produto_input')?.value || '').toString();
       this.buscarConsultaProdutos();
     }
+  }
+
+  fecharConsultaProdutos(): void {
+    this.produtoConsultaAberta = false;
   }
 
   buscarConsultaProdutos(): void {
@@ -822,7 +886,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
 
         const codigoForma = v.forma_pagamento_codigo;
         if (codigoForma) {
-          this.pedidosApi.setFormaPagamento(idPedido, codigoForma).subscribe({
+          this.pedidosApi.setFormaPagamento(idPedido, codigoForma, v.prazo_pagamento).subscribe({
             next: () => this.salvarItemNoBackend(idPedido),
             error: () => {
               this.savingItem = false;
@@ -960,6 +1024,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
       emissao: p.emissao ?? this.hojeISO(),
       previsao_entrega: p.previsao_entrega ?? null,
       forma_pagamento_codigo: p.forma_pagamento ?? null,
+      prazo_pagamento: p.prazo_pagamento ?? null,
       observacoes: p.observacoes ?? '',
     });
 
@@ -1136,8 +1201,8 @@ export class PedidosUsoConsumoComponent implements OnInit {
       return;
     }
     const v = this.headerForm.value;
-    if (!v.forma_pagamento_codigo) {
-      this.showError('Informe a forma de pagamento.');
+    if (!v.forma_pagamento_codigo || !v.prazo_pagamento) {
+      this.showError('Informe a forma de pagamento e o prazo.');
       return;
     }
     if (!this.itens.length) {
@@ -1152,7 +1217,7 @@ export class PedidosUsoConsumoComponent implements OnInit {
     }
 
     this.saving = true;
-    this.pedidosApi.setFormaPagamento(pedidoId, v.forma_pagamento_codigo).subscribe({
+    this.pedidosApi.setFormaPagamento(pedidoId, v.forma_pagamento_codigo, v.prazo_pagamento).subscribe({
       next: () => {
         this.saving = false;
         this.showSuccess('Pedido gravado com sucesso.');
@@ -1183,5 +1248,34 @@ export class PedidosUsoConsumoComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.pedidos-uso-consumo.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible]))));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

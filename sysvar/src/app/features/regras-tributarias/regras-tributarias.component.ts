@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -44,6 +44,10 @@ export class RegrasTributariasComponent {
   filterRegime = '';
   filterStatus = '';
   private readonly columnsStorageKey = 'sysvar.list.regras-tributarias.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.regras-tributarias';
+  selectedItem = signal<RegraTributaria | null>(null);
+  indicatorsVisible = true;
+  filtersVisible = true;
   columns = [
     { key: 'nome', label: 'Regra', visible: true, required: true },
     { key: 'tributo', label: 'Tributo', visible: true, required: true },
@@ -71,6 +75,18 @@ export class RegrasTributariasComponent {
     });
   });
   total = computed(() => this.filteredItems().length);
+  indicadores = computed(() => {
+    const rows = this.items();
+    const total = rows.length;
+    const ativas = rows.filter(i => i.ativo !== false).length;
+    return {
+      total,
+      ativas,
+      inativas: total - ativas,
+      venda: rows.filter(i => i.tipo_operacao === 'VENDA').length,
+      credito: rows.filter(i => i.permite_credito).length,
+    };
+  });
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
@@ -134,7 +150,12 @@ export class RegrasTributariasComponent {
 
   constructor() {
     effect(() => { if (this.page() > this.totalPages()) this.page.set(this.totalPages()); });
+    effect(() => {
+      const selected = this.selectedItem();
+      if (selected && !this.filteredItems().some(item => item.id === selected.id)) this.selectedItem.set(null);
+    });
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadLookups();
     this.load();
   }
@@ -158,11 +179,31 @@ export class RegrasTributariasComponent {
   clearSearch() { this.search = ''; this.load(); }
   doFilter() { this.page.set(1); }
   clearFilters() { this.search = ''; this.filterOperacao = ''; this.filterRegime = ''; this.filterStatus = ''; this.load(); }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.regras-tributarias.pageSize', String(+v)); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
   lastPage() { this.page.set(this.totalPages()); }
+
+  selecionarItem(row: RegraTributaria): void { this.selectedItem.set(this.isSelected(row) ? null : row); }
+  isSelected(row: RegraTributaria): boolean { return !!this.selectedItem() && this.selectedItem()?.id === row.id; }
+  consultarSelecionado(): void { const row = this.selectedItem(); if (row) this.consultar(row); }
+  editarSelecionado(): void { const row = this.selectedItem(); if (row && this.podeEditarModulo) this.editar(row); }
+  excluirSelecionado(): void { const row = this.selectedItem(); if (row && this.podeExcluirModulo) this.excluir(row); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.regras-tributarias.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize.set(20);
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-regras-tributarias-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-regras-tributarias-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-regras-tributarias-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novo() {
     if (!this.podeEditarModulo) return;
@@ -334,6 +375,8 @@ export class RegrasTributariasComponent {
   }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.regras-tributarias.pageSize'));
+    if ([10, 20, 50].includes(size)) this.pageSize.set(size);
     const raw = localStorage.getItem(this.columnsStorageKey);
     if (!raw) return;
     try {
@@ -348,5 +391,19 @@ export class RegrasTributariasComponent {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

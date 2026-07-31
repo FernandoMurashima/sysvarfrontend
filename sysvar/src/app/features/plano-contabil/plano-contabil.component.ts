@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -42,6 +42,10 @@ export class PlanoContabilComponent implements OnInit {
   filterNatureza = '';
   filterStatus = '';
   private readonly columnsStorageKey = 'sysvar.list.plano-contabil.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.plano-contabil';
+  selectedConta: PlanoContabil | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   columns = [
     { key: 'codigo', label: 'Código', visible: true, required: true },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
@@ -107,6 +111,7 @@ export class PlanoContabilComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadEmpresas();
     this.load();
   }
@@ -263,8 +268,9 @@ export class PlanoContabilComponent implements OnInit {
     if (this.page > this.totalPages) this.page = this.totalPages;
     const a = (this.page - 1) * this.pageSize;
     this.contas = filtered.slice(a, a + this.pageSize);
+    if (this.selectedConta && !filtered.some(c => c.id === this.selectedConta?.id)) this.selectedConta = null;
   }
-  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 20; this.page = 1; this.applyPage(); }
+  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 20; localStorage.setItem('sysvar.list.plano-contabil.pageSize', String(this.pageSize)); this.page = 1; this.applyPage(); }
   firstPage(): void { this.page = 1; this.applyPage(); }
   prevPage(): void { if (this.page > 1) { this.page--; this.applyPage(); } }
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
@@ -274,6 +280,39 @@ export class PlanoContabilComponent implements OnInit {
   doFilter(): void { this.page = 1; this.applyPage(); }
   clearFilters(): void { this.search = ''; this.filterClasse = ''; this.filterNatureza = ''; this.filterStatus = ''; this.load(); }
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
+
+  get indicadores() {
+    const total = this.contasAll.length;
+    const ativas = this.contasAll.filter(c => c.ativa !== false).length;
+    return {
+      total,
+      ativas,
+      inativas: total - ativas,
+      analiticas: this.contasAll.filter(c => c.analitica).length,
+      sinteticas: this.contasAll.filter(c => !c.analitica).length,
+    };
+  }
+
+  selecionarConta(row: PlanoContabil): void { this.selectedConta = this.isSelected(row) ? null : row; }
+  isSelected(row: PlanoContabil): boolean { return !!this.selectedConta && this.selectedConta.id === row.id; }
+  consultarSelecionado(): void { if (this.selectedConta) this.consultar(this.selectedConta); }
+  editarSelecionado(): void { if (this.selectedConta && this.podeEditarModulo) this.editar(this.selectedConta); }
+  excluirSelecionado(): void { if (this.selectedConta && this.podeExcluirModulo) this.excluir(this.selectedConta); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.plano-contabil.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+  @HostListener('window:sysvar-plano-contabil-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-plano-contabil-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-plano-contabil-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   rowActions(): RowAction[] {
     return [
@@ -363,6 +402,8 @@ export class PlanoContabilComponent implements OnInit {
   }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.plano-contabil.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
     const raw = localStorage.getItem(this.columnsStorageKey);
     if (!raw) return;
     try {
@@ -377,6 +418,20 @@ export class PlanoContabilComponent implements OnInit {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 
   private extractError(err: any): string {

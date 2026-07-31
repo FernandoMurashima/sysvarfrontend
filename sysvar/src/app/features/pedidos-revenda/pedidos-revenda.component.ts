@@ -1,5 +1,5 @@
 // src/app/features/pedidos-revenda/pedidos-revenda.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { LojasService } from '../../core/services/lojas.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
+import { PrazoPagamento } from '../../core/models/forma-pagamento';
 import { PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -24,8 +25,10 @@ import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type Option = { id: number; label: string };
-type FormaOption = { codigo: string; label: string };
+type FormaOption = { codigo: string; label: string; prazo?: number | null };
+type PrazoOption = { id: number; label: string };
 type CorOption = { id: number; label: string };
+type PackOption = { id: number; label: string; grade: number };
 
 interface PedidoCompraItemUI {
   id: number | null;
@@ -90,6 +93,22 @@ export class PedidosRevendaComponent implements OnInit {
   loadingPedidos = false;
   successMsg = '';
   errorMsg = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  columnsOpen = false;
+  filterStatus = '';
+  private readonly columnsStorageKey = 'sysvar.list.pedidos-revenda.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.pedidos-revenda';
+  columns = [
+    { key: 'numero', label: 'Nº Pedido', visible: true, required: true },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'fornecedor', label: 'Fornecedor', visible: true, required: false },
+    { key: 'emissao', label: 'Emissão', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'natureza', label: 'Natureza', visible: true, required: false },
+    { key: 'total', label: 'Total', visible: true, required: false },
+  ];
+  selectedPedido: any | null = null;
   confirmModal: {
     action: 'removerItem' | 'excluirPedido' | 'cancelarPedido';
     title: string;
@@ -104,6 +123,7 @@ export class PedidosRevendaComponent implements OnInit {
   lojas: Option[] = [];
   fornecedores: Option[] = [];
   formas: FormaOption[] = [];
+  prazos: PrazoOption[] = [];
   naturezasCompra: NatLancamento[] = [];
 
   private lojaMap = new Map<number, string>();
@@ -119,6 +139,7 @@ export class PedidosRevendaComponent implements OnInit {
     emissao: [this.hojeISO(), Validators.required],
     previsao_entrega: [null],
     forma_pagamento_codigo: [null, Validators.required],
+    prazo_pagamento: [null, Validators.required],
     observacoes: [''],
   });
 
@@ -143,8 +164,13 @@ export class PedidosRevendaComponent implements OnInit {
 
   // produto / cor / pack auxiliares
   produtoDescricaoAtual = '';
+  produtoGradeAtual: number | null = null;
   coresAll: CorOption[] = [];
   coresProduto: CorOption[] = [];
+  packsProduto: PackOption[] = [];
+  produtosSugestoes: any[] = [];
+  produtoSugestoesAbertas = false;
+  carregandoProdutosSugestoes = false;
   consultaProdutoAberta = false;
   produtoConsultaBusca = '';
   produtosConsulta: any[] = [];
@@ -199,7 +225,8 @@ export class PedidosRevendaComponent implements OnInit {
     return this.pedidosFiltered.reduce((acc, p) => acc + Number(p.total_pedido || 0), 0);
   }
   get produtoConsultaSuggestions(): string[] {
-    const valores = this.produtosConsulta.flatMap(p => [
+    const base = [...this.produtosConsulta, ...this.produtosSugestoes];
+    const valores = base.flatMap(p => [
       p.descricao,
       p.descricao_reduzida,
       p.referencia,
@@ -209,6 +236,8 @@ export class PedidosRevendaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadLookups();
     this.loadNaturezasCompra();
     this.loadAllCores();
@@ -307,12 +336,25 @@ export class PedidosRevendaComponent implements OnInit {
             return {
               codigo,
               label: desc ? `${codigo} — ${desc}` : codigo,
+              prazo: Number(f.prazo_pagamento ?? 0) || null,
             } as FormaOption;
           })
           .filter(o => !!o.codigo);
       },
       error: () => {
         this.formas = [];
+      },
+    });
+
+    this.formasApi.listPrazos({ ativo: true }).subscribe({
+      next: (resp: any) => {
+        const arr = this.arrayOrResults<PrazoPagamento>(resp);
+        this.prazos = arr
+          .map(p => ({ id: Number(p.Idprazo ?? p.id ?? 0), label: `${p.codigo} - ${p.descricao}` }))
+          .filter(p => !!p.id);
+      },
+      error: () => {
+        this.prazos = [];
       },
     });
   }
@@ -383,9 +425,13 @@ export class PedidosRevendaComponent implements OnInit {
         return alvo.includes(term);
       });
     }
+    if (this.filterStatus) {
+      base = base.filter(p => (p.status || '').toUpperCase() === this.filterStatus);
+    }
 
     this.pedidosFiltered = base;
     this.page = 1;
+    this.selectedPedido = null;
     this.applyPage();
   }
 
@@ -393,6 +439,9 @@ export class PedidosRevendaComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.pedidos = this.pedidosFiltered.slice(start, end);
+    if (this.selectedPedido && !this.pedidosFiltered.some(p => p.id === this.selectedPedido?.id)) {
+      this.selectedPedido = null;
+    }
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -434,8 +483,26 @@ export class PedidosRevendaComponent implements OnInit {
   }
   clearSearch(): void {
     this.search = '';
+    this.filterStatus = '';
     this.applyFilter();
   }
+
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  selecionarPedido(p: any): void { this.selectedPedido = p; }
+  pedidoSelecionado(p: any): boolean { return !!this.selectedPedido && this.selectedPedido.id === p.id; }
+  executarAcaoSelecionada(action: string): void { if (this.selectedPedido) this.executarAcao(action, this.selectedPedido); }
+  acaoSelecionadaDesabilitada(action: string): boolean {
+    if (!this.selectedPedido) return true;
+    const config = this.rowActions(this.selectedPedido).find(a => a.key === action);
+    return !config || config.visible === false || !!config.disabled;
+  }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.pedidos-revenda.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.saveViewPreference(); this.applyPage(); }
+  @HostListener('window:sysvar-pedidos-revenda-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-pedidos-revenda-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-pedidos-revenda-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   // ===== helpers de label =====
   labelLoja(id: number | null | undefined): string {
@@ -462,6 +529,7 @@ export class PedidosRevendaComponent implements OnInit {
     if (f['fornecedor']?.invalid) msgs.push('Fornecedor: obrigatório.');
     if (f['emissao']?.invalid) msgs.push('Emissão: obrigatória.');
     if (f['forma_pagamento_codigo']?.invalid) msgs.push('Forma de pagamento: obrigatória.');
+    if (f['prazo_pagamento']?.invalid) msgs.push('Prazo: obrigatório.');
 
     return msgs;
   }
@@ -476,6 +544,7 @@ export class PedidosRevendaComponent implements OnInit {
       emissao: this.hojeISO(),
       previsao_entrega: null,
       forma_pagamento_codigo: null,
+      prazo_pagamento: null,
       observacoes: '',
     });
     this.itens = [];
@@ -537,6 +606,14 @@ export class PedidosRevendaComponent implements OnInit {
     });
   }
 
+  onFormaPagamentoChange(): void {
+    const codigo = this.headerForm.get('forma_pagamento_codigo')?.value;
+    const forma = this.formas.find(f => f.codigo === codigo);
+    if (forma?.prazo) {
+      this.headerForm.patchValue({ prazo_pagamento: forma.prazo }, { emitEvent: false });
+    }
+  }
+
   private loadNaturezasCompra(): void {
     this.naturezasApi.list({
       page_size: 500,
@@ -588,6 +665,17 @@ export class PedidosRevendaComponent implements OnInit {
     });
   }
 
+  abrirConsultaProdutos(): void {
+    this.consultaProdutoAberta = true;
+    if (!this.produtosConsulta.length) {
+      this.buscarProdutosConsulta();
+    }
+  }
+
+  fecharConsultaProdutos(): void {
+    this.consultaProdutoAberta = false;
+  }
+
   usarProdutoConsulta(): void {
     const prod = this.produtosConsulta.find(p => (p.Idproduto ?? p.id) === this.produtoConsultaId);
     if (!prod) {
@@ -595,6 +683,53 @@ export class PedidosRevendaComponent implements OnInit {
       return;
     }
     this.setProdutoFromApi(prod);
+    this.fecharConsultaProdutos();
+  }
+
+  buscarSugestoesProduto(): void {
+    const search = (this.itemForm.get('produto_input')?.value || '').toString().trim();
+    const produtoAtual = this.itemForm.get('produto')?.value;
+    if (search.length < 2) {
+      this.produtosSugestoes = [];
+      this.produtoSugestoesAbertas = false;
+      if (!search) {
+        this.itemForm.patchValue({ produto: null }, { emitEvent: false });
+        this.produtoDescricaoAtual = '';
+        this.coresProduto = this.coresAll.slice();
+      }
+      return;
+    }
+
+    if (produtoAtual && search === this.produtoDescricaoAtual) {
+      this.produtoSugestoesAbertas = false;
+      return;
+    }
+
+    this.carregandoProdutosSugestoes = true;
+    this.produtosApi.list({ search, page_size: 8, ativo: 'true', tipo_produto: '1' }).subscribe({
+      next: (resp: any) => {
+        this.produtosSugestoes = this.arrayOrResults<any>(resp).filter(p => p.tipo_produto === '1');
+        this.produtoSugestoesAbertas = this.produtosSugestoes.length > 0;
+        this.carregandoProdutosSugestoes = false;
+      },
+      error: () => {
+        this.produtosSugestoes = [];
+        this.produtoSugestoesAbertas = false;
+        this.carregandoProdutosSugestoes = false;
+      },
+    });
+  }
+
+  selecionarProdutoSugestao(prod: any): void {
+    this.setProdutoFromApi(prod);
+    this.produtosSugestoes = [];
+    this.produtoSugestoesAbertas = false;
+  }
+
+  fecharSugestoesProdutoComAtraso(): void {
+    window.setTimeout(() => {
+      this.produtoSugestoesAbertas = false;
+    }, 150);
   }
 
   private setProdutoFromApi(prod: any) {
@@ -609,6 +744,7 @@ export class PedidosRevendaComponent implements OnInit {
     const id = (prod.Idproduto ?? prod.id) as number;
     const referencia = (prod.referencia ?? '').toString();
     const descricao = (prod.descricao ?? '').toString();
+    const grade = Number(prod.grade ?? 0) || null;
 
     this.itemForm.patchValue(
       {
@@ -619,7 +755,12 @@ export class PedidosRevendaComponent implements OnInit {
     );
 
     this.produtoDescricaoAtual = descricao;
+    this.produtoGradeAtual = grade;
+    this.produtoConsultaId = id;
+    this.produtosSugestoes = [];
+    this.produtoSugestoesAbertas = false;
     this.carregarCoresDoProduto(id);
+    this.carregarPacksDoProduto(grade);
   }
 
   // ===== CORES DO PRODUTO (filtradas via produto_produtodetalhe) =====
@@ -663,10 +804,55 @@ export class PedidosRevendaComponent implements OnInit {
   }
 
   // ===== PACK → quantidade correta (1 pack) =====
+  private carregarPacksDoProduto(gradeId: number | null): void {
+    const packAtual = Number(this.itemForm.get('pack')?.value || 0);
+    this.packsProduto = [];
+    this.packQtdUnit = 0;
+
+    if (!gradeId) {
+      this.itemForm.patchValue({ pack: null }, { emitEvent: false });
+      this.recalcularQuantidadeETotal();
+      return;
+    }
+
+    this.packsApi.list({ grade: gradeId, ativo: true, ordering: 'nome', page_size: 500 }).subscribe({
+      next: (resp: any) => {
+        this.packsProduto = this.arrayOrResults<any>(resp)
+          .map((p: any) => ({
+            id: Number(p.id ?? p.Idpack ?? 0),
+            label: `${p.nome || `Pack ${p.id ?? p.Idpack}`}`,
+            grade: Number(p.grade ?? 0),
+          } as PackOption))
+          .filter(p => !!p.id && p.grade === gradeId);
+
+        if (packAtual && this.packsProduto.some(p => p.id === packAtual)) {
+          this.onPackBlur();
+          return;
+        }
+
+        this.itemForm.patchValue({ pack: null }, { emitEvent: false });
+        this.recalcularQuantidadeETotal();
+      },
+      error: () => {
+        this.packsProduto = [];
+        this.itemForm.patchValue({ pack: null }, { emitEvent: false });
+        this.recalcularQuantidadeETotal();
+      },
+    });
+  }
+
   onPackBlur() {
     const raw = this.itemForm.get('pack')?.value;
     const packId = Number(raw);
     if (!packId) {
+      this.packQtdUnit = 0;
+      this.recalcularQuantidadeETotal();
+      return;
+    }
+
+    if (this.produtoGradeAtual && this.packsProduto.length && !this.packsProduto.some(p => p.id === packId)) {
+      this.showError('Pack incompatível com a grade do produto selecionado.');
+      this.itemForm.patchValue({ pack: null }, { emitEvent: false });
       this.packQtdUnit = 0;
       this.recalcularQuantidadeETotal();
       return;
@@ -735,6 +921,8 @@ export class PedidosRevendaComponent implements OnInit {
       observacoes: '',
     });
     this.produtoDescricaoAtual = '';
+    this.produtoGradeAtual = null;
+    this.packsProduto = [];
     this.packQtdUnit = 0;
     this.produtoConsultaId = null;
   }
@@ -757,6 +945,16 @@ export class PedidosRevendaComponent implements OnInit {
     this.packQtdUnit = it.n_packs ? it.quantidade / it.n_packs : 0;
     if (it.produto) {
       this.carregarCoresDoProduto(it.produto);
+      this.produtosApi.get(it.produto).subscribe({
+        next: (prod: any) => {
+          this.produtoGradeAtual = Number(prod.grade ?? 0) || null;
+          this.carregarPacksDoProduto(this.produtoGradeAtual);
+        },
+        error: () => {
+          this.produtoGradeAtual = null;
+          this.packsProduto = [];
+        },
+      });
     }
   }
 
@@ -846,7 +1044,7 @@ export class PedidosRevendaComponent implements OnInit {
 
         const codigoForma = v.forma_pagamento_codigo;
         if (codigoForma) {
-          this.pedidosApi.setFormaPagamento(idPedido, codigoForma).subscribe({
+          this.pedidosApi.setFormaPagamento(idPedido, codigoForma, v.prazo_pagamento).subscribe({
             next: () => this.salvarItemNoBackend(idPedido),
             error: () => {
               this.savingItem = false;
@@ -975,6 +1173,7 @@ export class PedidosRevendaComponent implements OnInit {
       emissao: p.emissao ?? this.hojeISO(),
       previsao_entrega: p.previsao_entrega ?? null,
       forma_pagamento_codigo: p.forma_pagamento ?? null,
+      prazo_pagamento: p.prazo_pagamento ?? null,
       observacoes: p.observacoes ?? '',
     });
 
@@ -1151,6 +1350,35 @@ export class PedidosRevendaComponent implements OnInit {
       .trim();
   }
 
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.pedidos-revenda.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible]))));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
+  }
+
   // ===== Salvar pedido (finalizar) =====
   salvarPedido() {
     this.submitted = true;
@@ -1160,8 +1388,8 @@ export class PedidosRevendaComponent implements OnInit {
       return;
     }
     const v = this.headerForm.value;
-    if (!v.forma_pagamento_codigo) {
-      this.showError('Informe a forma de pagamento.');
+    if (!v.forma_pagamento_codigo || !v.prazo_pagamento) {
+      this.showError('Informe a forma de pagamento e o prazo.');
       return;
     }
     if (!this.itens.length) {
@@ -1176,7 +1404,7 @@ export class PedidosRevendaComponent implements OnInit {
     }
 
     this.saving = true;
-    this.pedidosApi.setFormaPagamento(pedidoId, v.forma_pagamento_codigo).subscribe({
+    this.pedidosApi.setFormaPagamento(pedidoId, v.forma_pagamento_codigo, v.prazo_pagamento).subscribe({
       next: () => {
         this.saving = false;
         this.showSuccess('Pedido gravado com sucesso.');

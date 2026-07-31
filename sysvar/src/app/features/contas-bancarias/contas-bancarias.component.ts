@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -9,11 +9,13 @@ import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { FormaPagamento } from '../../core/models/forma-pagamento';
 import { Loja } from '../../core/models/loja';
 import { MovimentacaoFinanceira } from '../../core/models/movimentacao-financeira';
+import { PlanoContabil } from '../../core/models/plano-contabil';
 import { CaixasService } from '../../core/services/caixas.service';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { MovimentacoesFinanceirasService } from '../../core/services/movimentacoes-financeiras.service';
+import { PlanoContabilService } from '../../core/services/plano-contabil.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
@@ -34,6 +36,7 @@ export class ContasBancariasComponent implements OnInit {
   private formasApi = inject(FormasPagamentoService);
   private lojasApi = inject(LojasService);
   private movsApi = inject(MovimentacoesFinanceirasService);
+  private planoApi = inject(PlanoContabilService);
   private auth = inject(AuthService);
 
   loading = false;
@@ -43,6 +46,25 @@ export class ContasBancariasComponent implements OnInit {
   painelAberto: PainelOperacional | null = null;
   editingId: number | null = null;
   search = '';
+  filterTipo = '';
+  filterStatus = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50, 100];
+  columnsOpen = false;
+  exportOpen = false;
+  columns = [
+    { key: 'banco', label: 'Banco', visible: true, required: false },
+    { key: 'agencia', label: 'Agência', visible: true, required: false },
+    { key: 'conta', label: 'Conta', visible: true, required: false },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'saldo', label: 'Saldo atual', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false }
+  ];
+  private readonly columnsStorageKey = 'sysvar.list.contas-bancarias.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.contas-bancarias';
   lojasFiltro: number[] = [];
   errorMsg = '';
   successMsg = '';
@@ -51,6 +73,7 @@ export class ContasBancariasComponent implements OnInit {
   contasTodas: ContaBancaria[] = [];
   caixas: Caixa[] = [];
   formasPagamento: FormaPagamento[] = [];
+  planoContabil: PlanoContabil[] = [];
   lojas: Loja[] = [];
   movimentacoes: MovimentacaoFinanceira[] = [];
   selectedContaId: number | null = null;
@@ -97,6 +120,37 @@ export class ContasBancariasComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get contasPaginadas(): ContaBancaria[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.contas.slice(start, start + this.pageSize);
+  }
+
+  get totalFiltrado(): number {
+    return this.contas.length;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalFiltrado / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return this.totalFiltrado ? (this.page - 1) * this.pageSize + 1 : 0;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.page * this.pageSize, this.totalFiltrado);
+  }
+
+  get indicadores() {
+    return {
+      total: this.contasTodas.length,
+      ativas: this.contasTodas.filter(c => c.ativo).length,
+      correntes: this.contasTodas.filter(c => c.tipo_conta === 'CORRENTE').length,
+      pagamento: this.contasTodas.filter(c => c.tipo_conta === 'PAGAMENTO').length,
+      saldo: this.contasTodas.reduce((acc, c) => acc + Number(c.saldo_atual || 0), 0)
+    };
+  }
+
   form = this.fb.group({
     idloja: [null as number | null, Validators.required],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
@@ -123,6 +177,8 @@ export class ContasBancariasComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadViewPreference();
+    this.loadColumnPreference();
     this.loadAll();
   }
 
@@ -132,13 +188,17 @@ export class ContasBancariasComponent implements OnInit {
       lojas: this.lojasApi.list(),
       caixas: this.caixasApi.list({ ativo: true }),
       contas: this.api.list(),
-      formas: this.formasApi.list({ ativo: true })
+      formas: this.formasApi.list({ ativo: true }),
+      plano: this.planoApi.list({ ativa: true, analitica: true, page_size: 500 })
     }).subscribe({
       next: res => {
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.caixas = this.unwrap<Caixa>(res.caixas);
         this.contasTodas = this.unwrap<ContaBancaria>(res.contas);
         this.formasPagamento = this.unwrap<FormaPagamento>(res.formas);
+        this.planoContabil = this.unwrap<PlanoContabil>(res.plano)
+          .filter(conta => conta.ativa !== false && conta.analitica !== false)
+          .sort((a, b) => `${a.codigo || ''}`.localeCompare(`${b.codigo || ''}`));
         this.filtrarContas();
         if (!this.selectedContaId || !this.contas.some(c => c.Idconta === this.selectedContaId)) {
           this.selectedContaId = this.contas[0]?.Idconta ?? null;
@@ -175,6 +235,10 @@ export class ContasBancariasComponent implements OnInit {
     this.sincronizarTransferencia();
     this.loadMovimentacoes();
     this.limparConciliacaoPendentes();
+  }
+
+  isSelected(conta: ContaBancaria): boolean {
+    return !!conta.Idconta && conta.Idconta === this.selectedContaId;
   }
 
   novo(): void {
@@ -550,6 +614,10 @@ export class ContasBancariasComponent implements OnInit {
     return `${conta.descricao} - ${conta.banco} Ag ${conta.agencia} Cc ${conta.conta}`;
   }
 
+  contaContabilLabel(conta: PlanoContabil): string {
+    return `${conta.codigo} - ${conta.descricao}`;
+  }
+
   lojaNome(id: number): string {
     return this.lojas.find(l => l.id === id)?.nome_loja || `Loja #${id}`;
   }
@@ -583,6 +651,7 @@ export class ContasBancariasComponent implements OnInit {
 
   filtrarContas(): void {
     this.contas = this.filter(this.contasTodas);
+    this.page = 1;
     if (!this.contas.some(c => c.Idconta === this.selectedContaId)) {
       this.selectedContaId = this.contas[0]?.Idconta ?? null;
       this.loadMovimentacoes();
@@ -594,8 +663,45 @@ export class ContasBancariasComponent implements OnInit {
   limparFiltros(): void {
     this.search = '';
     this.lojasFiltro = [];
+    this.filterTipo = '';
+    this.filterStatus = '';
     this.filtrarContas();
   }
+
+  editarSelecionado(): void {
+    const conta = this.contaSelecionada();
+    if (conta) this.editar(conta);
+  }
+
+  excluirSelecionado(): void {
+    const conta = this.contaSelecionada();
+    if (conta) this.excluir(conta);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnPreference();
+  }
+
+  onPageSizeChange(value: number | string): void {
+    this.pageSize = Number(value) || 20;
+    this.page = 1;
+  }
+
+  firstPage(): void { this.page = 1; }
+  prevPage(): void { this.page = Math.max(1, this.page - 1); }
+  nextPage(): void { this.page = Math.min(this.totalPages, this.page + 1); }
+  lastPage(): void { this.page = this.totalPages; }
+
+  @HostListener('window:sysvar-contas-bancarias-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-contas-bancarias-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-contas-bancarias-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   sincronizarTransferencia(): void {
     const raw = this.transferenciaForm.value;
@@ -611,13 +717,15 @@ export class ContasBancariasComponent implements OnInit {
     const q = this.search.trim().toLowerCase();
     return items.filter(c => {
       const lojaOk = !this.lojasFiltro.length || this.lojasFiltro.includes(c.idloja);
+      const tipoOk = !this.filterTipo || c.tipo_conta === this.filterTipo;
+      const statusOk = !this.filterStatus || (this.filterStatus === 'ATIVO' ? c.ativo : !c.ativo);
       const buscaOk = !q ||
         c.descricao.toLowerCase().includes(q) ||
         c.banco.toLowerCase().includes(q) ||
         c.agencia.toLowerCase().includes(q) ||
         c.conta.toLowerCase().includes(q) ||
         this.lojaNome(c.idloja).toLowerCase().includes(q);
-      return lojaOk && buscaOk;
+      return lojaOk && tipoOk && statusOk && buscaOk;
     });
   }
 
@@ -639,5 +747,53 @@ export class ContasBancariasComponent implements OnInit {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  private toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  private restoreViewPreference(): void {
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns.forEach(col => col.visible = true);
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem(this.columnsStorageKey);
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const prefs = JSON.parse(raw);
+      this.indicatorsVisible = prefs.indicatorsVisible !== false;
+      this.filtersVisible = prefs.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
+  }
+
+  private loadColumnPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const state = JSON.parse(raw) as Record<string, boolean>;
+      this.columns.forEach(col => {
+        if (!col.required && state[col.key] !== undefined) col.visible = state[col.key];
+      });
+    } catch {}
+  }
+
+  private saveColumnPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }

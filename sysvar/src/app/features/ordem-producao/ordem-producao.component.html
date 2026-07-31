@@ -1,35 +1,68 @@
-<section class="page">
-  <header class="toolbar">
-    <h2>Ordens de Produção</h2>
-    <div class="toolbar-actions">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por número, produto ou referência..."
-        (search)="load()"
-        (cleared)="search=''; load()"
-      />
-      <select [(ngModel)]="statusFiltro" (change)="load()">
-        <option value="">Todos</option>
-        <option value="ABERTA">Aberta</option>
-        <option value="APROVADA">Aprovada</option>
-        <option value="EM_PRODUCAO">Em produção</option>
-        <option value="FINALIZADA">Finalizada</option>
-        <option value="CANCELADA">Cancelada</option>
-      </select>
-      <button class="btn" type="button" (click)="search=''; statusFiltro=''; load()">Limpar</button>
-      <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">Nova</button>
-      <a class="btn" routerLink="/home">Home</a>
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Ordens de Produção</h1><button class="info-button" type="button" title="Gerencie OPs, grade, estoque, facção e distribuição.">i</button></div>
+    <div class="title-actions"><button class="btn" type="button">Ajuda</button><button class="btn" type="button" routerLink="/home">Home</button><button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button><div class="menu-holder"><button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button><div class="floating-menu" *ngIf="columnsOpen"><label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" /><span>{{ col.label }}</span></label></div></div><button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">+ Nova OP</button></div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible"><div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores.total }}</strong><small>Total</small></div></div><div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ indicadores.abertas }}</strong><small>Abertas</small></div></div><div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ indicadores.aprovadas }}</strong><small>Aprovadas</small></div></div><div class="indicator"><span class="indicator-icon cyan">▶</span><div><strong>{{ indicadores.producao }}</strong><small>Em produção</small></div></div><div class="indicator"><span class="indicator-icon purple">◆</span><div><strong>{{ indicadores.finalizadas }}</strong><small>Finalizadas</small></div></div></section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions" [showActions]="false" placeholder="Buscar por número, produto ou referência..." (search)="load()" (cleared)="clearSearch()" />
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="statusFiltro" (change)="load()"><option value="">Todos</option><option value="ABERTA">Aberta</option><option value="APROVADA">Aprovada</option><option value="EM_PRODUCAO">Em produção</option><option value="FINALIZADA">Finalizada</option><option value="CANCELADA">Cancelada</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="load()">Pesquisar</button>
+  </section>
+
+  <div class="alert success" *ngIf="successMsg">{{ successMsg }}</div>
+  <div class="alert error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <section class="results-area">
+    <div class="results-header"><div><strong>Ordens cadastradas</strong><span>{{ ordens.length }} registro(s)</span></div></div>
+    <div class="table-wrapper">
+      <table class="table ordens-table" *ngIf="ordens.length > 0; else emptyOrdens">
+        <colgroup>
+          <col class="ordens-col-numero" />
+          <col class="ordens-col-produto" />
+          <col class="ordens-col-grade" />
+          <col class="ordens-col-qtd" />
+          <col class="ordens-col-status" />
+          <col class="ordens-col-money" />
+          <col class="ordens-col-money" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th *ngIf="visibleColumn('numero')">Número</th>
+            <th *ngIf="visibleColumn('produto')">Produto</th>
+            <th *ngIf="visibleColumn('grade')">Grade</th>
+            <th *ngIf="visibleColumn('quantidade')" class="num">Qtd</th>
+            <th *ngIf="visibleColumn('status')" class="center">Status</th>
+            <th *ngIf="visibleColumn('previsto')" class="num">Previsto</th>
+            <th *ngIf="visibleColumn('real')" class="num">Real</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ordem of ordens" [class.selected]="ordemAtual?.id === ordem.id" (click)="selectOrdem(ordem)">
+            <td *ngIf="visibleColumn('numero')">{{ ordem.numero }}</td>
+            <td *ngIf="visibleColumn('produto')">{{ ordem.produto_referencia }} - {{ ordem.produto_descricao }}</td>
+            <td *ngIf="visibleColumn('grade')">{{ gradeResumo(ordem) }}</td>
+            <td *ngIf="visibleColumn('quantidade')" class="num">{{ formatQtd(ordem.quantidade) }}</td>
+            <td *ngIf="visibleColumn('status')" class="center"><span class="status-pill" [class.inactive]="ordem.status === 'CANCELADA'">{{ statusLabel(ordem.status) }}</span></td>
+            <td *ngIf="visibleColumn('previsto')" class="num">{{ formatMoney(ordem.custo_previsto) }}</td>
+            <td *ngIf="visibleColumn('real')" class="num">{{ formatMoney(ordem.custo_real) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyOrdens><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma OP cadastrada.' }}</div></ng-template>
     </div>
-  </header>
+  </section>
 
-  <div class="msg success" *ngIf="successMsg">{{ successMsg }}</div>
-  <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
-
-  <section class="panel form-panel">
-    <div class="panel-title">
-      <h3>{{ ordemAtual?.id ? 'Editar Ordem de Produção' : 'Nova Ordem de Produção' }}</h3>
-      <span class="badge" *ngIf="ordemAtual?.status">{{ statusLabel(ordemAtual?.status) }}</span>
+  <div class="modal-backdrop" *ngIf="showOrdemModal">
+  <section class="panel form-panel ordem-modal">
+    <div class="panel-title modal-title">
+      <div>
+        <h3>{{ ordemAtual?.id ? 'Editar Ordem de Produção' : 'Nova Ordem de Produção' }}</h3>
+        <span class="badge" *ngIf="ordemAtual?.status">{{ statusLabel(ordemAtual?.status) }}</span>
+      </div>
+      <button class="btn" type="button" (click)="fecharOrdemModal()">Fechar</button>
     </div>
 
     <div class="form-grid">
@@ -64,20 +97,26 @@
       </div>
       <div class="grade-scroll" *ngIf="gradeRows.length; else emptyGrade">
         <table class="table grade-table">
+          <colgroup>
+            <col class="grade-col-cor" />
+            <col class="grade-col-tamanho" />
+            <col class="grade-col-ean" />
+            <col class="grade-col-qtd" />
+          </colgroup>
           <thead>
             <tr>
               <th>Cor</th>
-              <th>Tamanho</th>
+              <th class="center">Tamanho</th>
               <th>Código de barras</th>
-              <th class="num">Quantidade</th>
+              <th class="center">Quantidade</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let row of gradeRows">
               <td>{{ row.sku.cor_descricao || '-' }}</td>
-              <td>{{ row.sku.tamanho_descricao || '-' }}</td>
+              <td class="center">{{ row.sku.tamanho_descricao || '-' }}</td>
               <td>{{ row.sku.ean13 || '-' }}</td>
-              <td class="num">
+              <td class="center">
                 <input
                   class="grade-qty"
                   type="number"
@@ -99,9 +138,9 @@
 
     <div class="actions-row">
       <button class="btn primary" type="button" (click)="salvar()" [disabled]="saving || !canEdit()" *ngIf="podeEditarModulo">{{ ordemAtual?.id ? 'Salvar alterações' : 'Criar OP' }}</button>
-      <button class="btn" type="button" (click)="nova()">Cancelar</button>
-      <span class="total-cost" *ngIf="ordemAtual?.id">Custo previsto: <strong>{{ formatMoney(ordemAtual?.custo_previsto) }}</strong></span>
-      <span class="total-cost" *ngIf="ordemAtual?.id">Custo real: <strong>{{ formatMoney(ordemAtual?.custo_real) }}</strong></span>
+      <button class="btn" type="button" (click)="fecharOrdemModal()">Cancelar</button>
+      <span class="total-cost" *ngIf="ordemAtual?.id">Custo un. previsto: <strong>{{ custoUnitarioPrevistoOrdem() }}</strong></span>
+      <span class="total-cost" *ngIf="ordemAtual?.id">Custo un. real: <strong>{{ custoUnitarioRealOrdem() }}</strong></span>
     </div>
 
     <div class="actions-row flow-actions" *ngIf="ordemAtual?.id && podeEditarModulo">
@@ -158,6 +197,18 @@
         <span>{{ itensFaccao().length }} serviço(s)</span>
       </div>
       <table class="table faccao-table">
+        <colgroup>
+          <col class="faccao-col-fornecedor" />
+          <col class="faccao-col-servico" />
+          <col class="faccao-col-qtd" />
+          <col class="faccao-col-data" />
+          <col class="faccao-col-doc" />
+          <col class="faccao-col-qtd" />
+          <col class="faccao-col-data" />
+          <col class="faccao-col-custo" />
+          <col class="faccao-col-status" />
+          <col class="faccao-col-acoes" />
+        </colgroup>
         <thead>
           <tr>
             <th>Facção</th>
@@ -204,20 +255,27 @@
       </table>
     </section>
 
-    <table class="table" *ngIf="(ordemAtual?.itens?.length || 0) > 0; else emptyItens">
+    <table class="table op-items-table" *ngIf="(ordemAtual?.itens?.length || 0) > 0; else emptyItens">
+      <colgroup>
+        <col class="op-col-tipo" />
+        <col class="op-col-produto" />
+        <col class="op-col-un" />
+        <col class="op-col-num" />
+        <col class="op-col-num" />
+        <col class="op-col-num" />
+        <col class="op-col-money" />
+        <col class="op-col-money" />
+      </colgroup>
       <thead>
         <tr>
           <th>Tipo</th>
           <th>Produto / Serviço</th>
           <th>Un.</th>
-          <th>Qtd base</th>
-          <th>Perda</th>
-          <th>Qtd necessária</th>
-          <th>Custo previsto</th>
-          <th>Custo real</th>
-          <th>Total previsto</th>
-          <th>Total real</th>
-          <th>Variação</th>
+          <th class="num">Qtd base</th>
+          <th class="num">Perda</th>
+          <th class="num">Qtd necessária</th>
+          <th class="num">Custo un. previsto</th>
+          <th class="num">Custo un. real</th>
         </tr>
       </thead>
       <tbody>
@@ -230,11 +288,6 @@
           <td class="num">{{ formatQtd(item.quantidade_necessaria) }}</td>
           <td class="num">{{ formatMoney(item.custo_unitario_previsto) }}</td>
           <td class="num">{{ formatMoney(item.custo_unitario_real) }}</td>
-          <td class="num">{{ formatMoney(item.custo_total_previsto) }}</td>
-          <td class="num">{{ formatMoney(item.custo_total_real) }}</td>
-          <td class="num" [class.cost-alert]="(item.custo_total_real || 0) > (item.custo_total_previsto || 0)">
-            {{ formatMoney((item.custo_total_real || 0) - (item.custo_total_previsto || 0)) }}
-          </td>
         </tr>
       </tbody>
     </table>
@@ -242,6 +295,7 @@
       <div class="empty">{{ ordemAtual?.id ? 'Nenhum item calculado para esta OP.' : 'Crie a OP para calcular os itens da ficha técnica.' }}</div>
     </ng-template>
   </section>
+  </div>
 
   <div class="modal-backdrop" *ngIf="showDistribuicaoModal && podeEditarModulo">
     <section class="distribution-modal">
@@ -301,4 +355,4 @@
     </section>
   </div>
 
-</section>
+</div>

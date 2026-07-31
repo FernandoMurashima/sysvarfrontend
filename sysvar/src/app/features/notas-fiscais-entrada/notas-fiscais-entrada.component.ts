@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -46,6 +46,11 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   submitted = false;
   mensagem = '';
   erro = '';
+  indicatorsVisible = true;
+  filtersVisible = true;
+  advancedFiltersOpen = false;
+  selectedNota: NotaFiscalEntrada | null = null;
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.notas-entrada';
   confirmModal: {
     action: 'removerItem' | 'fecharNota' | 'cancelarNota';
     title: string;
@@ -97,6 +102,13 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.total / this.pageSize));
   }
+  get pageStart(): number {
+    if (this.total === 0) return 0;
+    return (this.page - 1) * this.pageSize + 1;
+  }
+  get pageEnd(): number {
+    return Math.min(this.page * this.pageSize, this.total);
+  }
   get searchSuggestions(): string[] {
     return this.notas.flatMap(n => [
       String(n.pedido_compra ?? ''),
@@ -120,6 +132,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadViewPreference();
     this.loadLookups();
     this.loadPedidosAprovados();
     this.loadNotas();
@@ -243,12 +256,16 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
     this.notasFiltradas = base;
     this.page = 1;
+    this.selectedNota = null;
     this.applyPage();
   }
 
   private applyPage(): void {
     const start = (this.page - 1) * this.pageSize;
     this.notasPagina = this.notasFiltradas.slice(start, start + this.pageSize);
+    if (this.selectedNota && !this.notasFiltradas.some(n => n.id === this.selectedNota?.id)) {
+      this.selectedNota = null;
+    }
   }
 
   onSearchKeyup(ev: KeyboardEvent): void {
@@ -270,7 +287,15 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   onPageSizeChange(sizeStr: string): void {
     this.pageSize = Number(sizeStr) || 20;
     this.page = 1;
+    localStorage.setItem('sysvar.list.notas-entrada.pageSize', String(this.pageSize));
     this.applyPage();
+  }
+
+  firstPage(): void {
+    if (this.page !== 1) {
+      this.page = 1;
+      this.applyPage();
+    }
   }
 
   prevPage(): void {
@@ -279,6 +304,61 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       this.applyPage();
     }
   }
+
+  lastPage(): void {
+    if (this.page !== this.totalPages) {
+      this.page = this.totalPages;
+      this.applyPage();
+    }
+  }
+
+  selecionarNota(nota: NotaFiscalEntrada): void {
+    this.selectedNota = nota;
+  }
+
+  notaSelecionada(nota: NotaFiscalEntrada): boolean {
+    return !!this.selectedNota && this.selectedNota.id === nota.id;
+  }
+
+  executarAcaoSelecionada(action: string): void {
+    if (this.selectedNota) this.executarAcao(action, this.selectedNota);
+  }
+
+  acaoSelecionadaDesabilitada(action: string): boolean {
+    if (!this.selectedNota) return true;
+    const config = this.rowActions(this.selectedNota).find(a => a.key === action);
+    return !config || config.visible === false || !!config.disabled;
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  toggleAdvancedFilters(): void {
+    this.advancedFiltersOpen = !this.advancedFiltersOpen;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.notas-entrada.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.advancedFiltersOpen = false;
+    this.pageSize = 20;
+    this.saveViewPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-notas-entrada-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-notas-entrada-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-notas-entrada-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   nextPage(): void {
     if (this.page < this.totalPages) {
@@ -650,5 +730,31 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (raw) {
+      try {
+        const prefs = JSON.parse(raw);
+        this.indicatorsVisible = prefs.indicatorsVisible !== false;
+        this.filtersVisible = prefs.filtersVisible !== false;
+        this.advancedFiltersOpen = prefs.advancedFiltersOpen === true;
+      } catch {
+        this.indicatorsVisible = true;
+        this.filtersVisible = true;
+        this.advancedFiltersOpen = false;
+      }
+    }
+    const size = Number(localStorage.getItem('sysvar.list.notas-entrada.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+      advancedFiltersOpen: this.advancedFiltersOpen,
+    }));
   }
 }

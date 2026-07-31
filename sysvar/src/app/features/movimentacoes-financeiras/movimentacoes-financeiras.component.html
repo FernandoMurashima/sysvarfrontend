@@ -1,51 +1,73 @@
-<div class="financeiro-page">
-  <header class="toolbar">
-    <h2>Movimentações Financeiras</h2>
-    <div class="toolbar-actions">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por documento, histórico ou destino..."
-        [showActions]="false"
-        (search)="loadAll()"
-        (cleared)="loadAll()"
-      />
-      <button class="btn primary" type="button" (click)="loadAll()">Buscar</button>
-      <button class="btn" type="button" (click)="search = ''; loadAll()">Limpar</button>
-      <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="novo()">Nova</button>
-      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Movimentações Financeiras</h1>
+      <button class="info-button" type="button" aria-label="Informações da tela" title="Controle de movimentações financeiras">i</button>
     </div>
-  </header>
+    <div class="title-actions">
+      <button class="btn icon-btn" type="button" [routerLink]="['/ajuda/financeiro']"><span>?</span>Ajuda</button>
+      <button class="btn icon-btn" type="button" [routerLink]="['/home']"><span>⌂</span>Home</button>
+      <button class="btn icon-btn" type="button" [disabled]="loading" (click)="clearSearch()"><span>×</span>Limpar</button>
+      <button class="btn icon-btn" type="button" (click)="exportOpen = !exportOpen"><span>⇩</span>Exportar</button>
+      <button class="btn primary icon-btn" *ngIf="podeEditarModulo" type="button" (click)="novo()"><span>+</span>Nova</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><strong>{{ indicadores.total }}</strong><small>Total</small></div>
+    <div class="indicator"><span class="indicator-icon green">↙</span><strong>{{ indicadores.entradas }}</strong><small>Entradas</small></div>
+    <div class="indicator"><span class="indicator-icon orange">↗</span><strong>{{ indicadores.saidas }}</strong><small>Saídas</small></div>
+    <div class="indicator"><span class="indicator-icon cyan">✓</span><strong>{{ indicadores.efetivas }}</strong><small>Efetivas</small></div>
+    <div class="indicator"><span class="indicator-icon purple">!</span><strong>{{ indicadores.previstas }}</strong><small>Previstas</small></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions" [showActions]="false" placeholder="Buscar por documento, histórico ou destino..." (search)="doSearch()" (cleared)="clearSearch()" />
+    <label class="inline-filter"><span>Loja</span><select [(ngModel)]="filterLoja" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let loja of lojas" [value]="loja.id">{{ loja.nome_loja }}</option></select></label>
+    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option><option value="TRANSFERENCIA">Transferência</option></select></label>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="EFETIVA">Efetiva</option><option value="PREVISTA">Prevista</option><option value="CANCELADA">Cancelada</option><option value="ANTECIPADA">Antecipada</option></select></label>
+    <label class="inline-filter"><span>Origem</span><select [(ngModel)]="filterOrigem" (ngModelChange)="doSearch()"><option value="">Todas</option><option value="MANUAL">Manual</option><option value="PAGAR">Pagar</option><option value="RECEBER">Receber</option><option value="TRANSFERENCIA">Transferência</option><option value="CARTAO">Cartão</option><option value="ANTECIPACAO">Antecipação</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+    <div class="menu-holder">
+      <button class="btn icon-btn" type="button" (click)="columnsOpen = !columnsOpen"><span>▦</span>Colunas</button>
+      <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />{{ col.label }}</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn icon-btn" type="button" [disabled]="!selectedMov || !podeEditarModulo" (click)="editarSelecionado()"><span>✎</span>Editar</button>
+    <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedMov || !podeEditarModulo || selectedMov.status === 'CANCELADA'" (click)="cancelarSelecionado()"><span>×</span>Cancelar</button>
+    <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedMov || !podeEditarModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir</button>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
-  <div class="modal-backdrop" *ngIf="cancelarModal as mov">
-    <section class="modal-card">
-      <h3>Cancelar movimentação</h3>
-      <p class="modal-doc">{{ mov.documento || 'Sem documento' }}</p>
-      <p class="modal-text">{{ mov.historico }}</p>
-      <div class="modal-actions">
-        <button class="btn" type="button" (click)="fecharCancelamento()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarCancelamento()">Cancelar movimentação</button>
-      </div>
+  <div class="overlay" *ngIf="cancelarModal as mov">
+    <section class="overlay-card">
+      <h4>Cancelar movimentação</h4>
+      <p><strong>{{ mov.documento || 'Sem documento' }}</strong></p>
+      <p>{{ mov.historico }}</p>
+      <div class="overlay-actions"><button class="btn" type="button" (click)="fecharCancelamento()">Voltar</button><button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarCancelamento()">Cancelar</button></div>
     </section>
   </div>
 
-  <div class="modal-backdrop" *ngIf="excluirModal as mov">
-    <section class="modal-card">
-      <h3>Excluir movimentação</h3>
-      <p class="modal-doc">{{ mov.documento || 'Sem documento' }}</p>
-      <p class="modal-text">{{ mov.historico }}</p>
-      <div class="modal-actions">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
-      </div>
+  <div class="overlay" *ngIf="excluirModal as mov">
+    <section class="overlay-card">
+      <h4>Excluir movimentação</h4>
+      <p><strong>{{ mov.documento || 'Sem documento' }}</strong></p>
+      <p>{{ mov.historico }}</p>
+      <div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div>
     </section>
   </div>
 
-  <section class="panel" *ngIf="showForm">
-    <h3>{{ editingId ? 'Editar movimentação' : 'Nova movimentação' }}</h3>
+  <section class="card form form-panel" *ngIf="showForm">
+    <div class="form-title">
+      <div><h3>{{ editingId ? 'Editar movimentação' : 'Nova movimentação' }}</h3><p>Preencha os dados financeiros.</p></div>
+      <div class="form-title-actions"><button class="btn ghost" type="button" (click)="cancelar()">Cancelar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="salvar()">Salvar</button></div>
+    </div>
     <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
       <label>Loja*<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
       <label>Data*<input type="date" formControlName="data_movimento" /></label>
@@ -59,31 +81,39 @@
       <label>Destino*<select formControlName="destino_tipo"><option value="CAIXA">Caixa</option><option value="CONTA">Conta bancária</option></select></label>
       <label *ngIf="form.value.destino_tipo === 'CAIXA'">Caixa*<select formControlName="caixa"><option [ngValue]="null">Selecione</option><option *ngFor="let caixa of caixas" [ngValue]="caixa.Idcaixa">{{ caixa.descricao }}</option></select></label>
       <label *ngIf="form.value.destino_tipo === 'CONTA'">Conta bancária*<select formControlName="conta_bancaria"><option [ngValue]="null">Selecione</option><option *ngFor="let conta of contas" [ngValue]="conta.Idconta">{{ conta.descricao }}</option></select></label>
-      <div class="form-actions span-2">
-        <button class="btn primary" *ngIf="podeEditarModulo" type="submit" [disabled]="saving">Salvar</button>
-        <button class="btn" type="button" (click)="cancelar()">Cancelar</button>
-      </div>
     </form>
   </section>
 
-  <section class="panel">
-    <div class="list-header"><strong>Total: {{ movimentacoes.length }}</strong><span *ngIf="loading">Carregando...</span></div>
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Movimentações cadastradas</strong><span>{{ totalFiltrado }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label for="pageSize">Itens por página:</label><select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
     <div class="table-wrapper">
-      <table class="table" *ngIf="movimentacoes.length; else vazioTpl">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Histórico</th><th>Destino</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+      <table class="table" *ngIf="movimentacoesPaginadas.length; else vazioTpl">
+        <thead><tr><th class="select-col"><input type="checkbox" disabled /></th><th>Data</th><th>Tipo</th><th>Histórico</th><th *ngIf="visibleColumn('loja')">Loja</th><th *ngIf="visibleColumn('documento')">Documento</th><th *ngIf="visibleColumn('destino')">Destino</th><th *ngIf="visibleColumn('origem')">Origem</th><th *ngIf="visibleColumn('forma')">Forma</th><th *ngIf="visibleColumn('valor')">Valor</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
         <tbody>
-          <tr *ngFor="let mov of movimentacoes">
+          <tr *ngFor="let mov of movimentacoesPaginadas" [class.selected]="isSelected(mov)" (click)="selecionarMov(mov)">
+            <td class="select-col" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="isSelected(mov)" (change)="selecionarMov(mov)" /></td>
             <td>{{ mov.data_movimento | date:'dd/MM/yyyy' }}</td>
             <td>{{ mov.tipo }}</td>
-            <td><strong>{{ mov.historico }}</strong><small>{{ mov.documento || 'Sem documento' }}</small></td>
-            <td>{{ destinoNome(mov) }}</td>
-            <td>{{ mov.valor | currency:'BRL' }}</td>
-            <td><span class="badge" [ngClass]="statusClass(mov.status)">{{ mov.status }}</span></td>
-            <td class="actions"><button class="btn sm" *ngIf="podeEditarModulo" (click)="editar(mov)">Editar</button><button class="btn sm danger" (click)="cancelarMov(mov)" *ngIf="podeEditarModulo && mov.status !== 'CANCELADA'">Cancelar</button><button class="btn sm danger" *ngIf="podeEditarModulo" (click)="excluir(mov)">Excluir</button></td>
+            <td>{{ mov.historico }}</td>
+            <td *ngIf="visibleColumn('loja')">{{ lojaNome(mov.idloja) }}</td>
+            <td *ngIf="visibleColumn('documento')" class="doc">{{ mov.documento || '-' }}</td>
+            <td *ngIf="visibleColumn('destino')">{{ destinoNome(mov) }}</td>
+            <td *ngIf="visibleColumn('origem')">{{ mov.origem }}</td>
+            <td *ngIf="visibleColumn('forma')">{{ mov.FormaPagamento || '-' }}</td>
+            <td *ngIf="visibleColumn('valor')" class="money">{{ mov.valor | currency:'BRL' }}</td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [ngClass]="statusClass(mov.status)">• {{ mov.status }}</span></td>
           </tr>
         </tbody>
       </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada.</div></ng-template>
+      <ng-template #vazioTpl><div class="empty-hint" *ngIf="!loading">Nenhuma movimentação encontrada.</div><div class="loading" *ngIf="loading">Carregando...</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="totalFiltrado > 0">
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ totalFiltrado }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
     </div>
   </section>
 </div>

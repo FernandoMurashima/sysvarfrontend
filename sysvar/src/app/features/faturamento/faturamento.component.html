@@ -1,0 +1,94 @@
+<div class="cadastro-page faturamento-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Faturamento</h1>
+      <button class="info-button" type="button" title="NF-e modelo 55 geradas pelos pedidos de venda da distribuição.">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ totalNotas }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ prontas }}</strong><small>Prontas</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ autorizadas }}</strong><small>Autorizadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ money(valorTotal) }}</strong><small>Total</small></div></div>
+  </section>
+
+  <section class="filter-bar faturamento-filter">
+    <input class="main-search" [(ngModel)]="search" placeholder="Buscar por número, chave, origem ou destinatário..." (keyup.enter)="doSearch()" />
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="status"><option value="">Todos</option><option value="PR">Pronta</option><option value="AU">Autorizada</option><option value="CA">Cancelada</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selecionada">⌕ Consultar</button>
+    <button class="btn primary" type="button" [disabled]="!selecionada || !podeEditarModulo || !['DI','PR'].includes(selecionada.status)" (click)="autorizar()">Enviar / Autorizar</button>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Notas fiscais</strong><span>{{ filtradas.length }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label>Itens por página:</label><select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paginadas.length; else vazioTpl">
+        <thead><tr><th class="select-col"></th><th>NF-e</th><th>Origem</th><th>Destino</th><th>Emissão</th><th>Status</th><th>Pedidos</th><th>Total</th><th>Chave</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let nota of paginadas; trackBy: trackByNota" [class.selected]="isSelected(nota)" (click)="selecionar(nota)">
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(nota)" (click)="$event.stopPropagation(); selecionar(nota)" /></td>
+            <td>{{ nota.serie }}/{{ nota.numero }}</td>
+            <td>{{ nota.loja_origem_nome }}</td>
+            <td>{{ nota.loja_destino_nome || '-' }}</td>
+            <td>{{ nota.dt_emissao | date:'dd/MM/yyyy' }}</td>
+            <td><span class="status-pill" [ngClass]="statusClass(nota.status)">• {{ statusLabel(nota.status) }}</span></td>
+            <td>{{ nota.documento_origem }}</td>
+            <td>{{ money(nota.valor_total) }}</td>
+            <td>{{ nota.chave_acesso || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma NF-e encontrada.' }}</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="filtradas.length > 0">
+      <div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ filtradas.length }}</span></div>
+      <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
+  </section>
+
+  <section class="results-area detail-area" *ngIf="selecionada">
+    <div class="nota-summary">
+      <div><small>NF-e</small><strong>{{ selecionada.serie }}/{{ selecionada.numero }}</strong></div>
+      <div><small>Destino</small><strong>{{ selecionada.loja_destino_nome || '-' }}</strong></div>
+      <div><small>Status</small><strong>{{ statusLabel(selecionada.status) }}</strong></div>
+      <div><small>Total</small><strong>{{ money(selecionada.valor_total) }}</strong></div>
+      <div><small>Protocolo</small><strong>{{ selecionada.protocolo_autorizacao || '-' }}</strong></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table detail-table">
+        <thead><tr><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tam.</th><th>EAN</th><th>Qtd</th><th>Valor un.</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let item of selecionada.itens || []; trackBy: trackByItem">
+            <td>{{ item.referencia }}</td>
+            <td>{{ item.descricao }}</td>
+            <td>{{ item.cor || '-' }}</td>
+            <td>{{ item.tamanho || '-' }}</td>
+            <td>{{ item.ean }}</td>
+            <td>{{ qty(item.quantidade) }}</td>
+            <td>{{ money(item.valor_unitario) }}</td>
+            <td>{{ money(item.valor_total) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <textarea class="xml-box" readonly *ngIf="selecionada.xml">{{ selecionada.xml }}</textarea>
+  </section>
+</div>

@@ -1,0 +1,186 @@
+<section class="dash-page">
+  <header class="dash-hero">
+    <div>
+      <h1>Dashboard de Produtos Mais Vendidos</h1>
+      <p>Análise dos produtos com melhor desempenho de vendas</p>
+    </div>
+    <div class="hero-actions">
+      <label>
+        De
+        <input type="date" [(ngModel)]="filtros.inicio">
+      </label>
+      <label>
+        Até
+        <input type="date" [(ngModel)]="filtros.fim">
+      </label>
+      <label>
+        Comparar
+        <select [(ngModel)]="filtros.comparacao">
+          <option value="periodo_anterior">Período anterior</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ano_anterior">Ano anterior</option>
+        </select>
+      </label>
+      <button class="primary" (click)="carregar()">Atualizar</button>
+      <button (click)="alternarTelaCheia()">{{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}</button>
+      <button (click)="home()">Home</button>
+    </div>
+  </header>
+
+  <section class="filters">
+    <input [(ngModel)]="filtros.q" placeholder="Buscar por produto, referência, EAN, grupo ou coleção...">
+    <select [(ngModel)]="filtros.loja">
+      <option value="">Todas as lojas</option>
+      <option *ngFor="let loja of dados?.filtros?.lojas" [value]="loja.id">{{ loja.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.grupo">
+      <option value="">Todos os grupos</option>
+      <option *ngFor="let grupo of dados?.filtros?.grupos" [value]="grupo.id">{{ grupo.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.colecao">
+      <option value="">Todas as coleções</option>
+      <option *ngFor="let colecao of dados?.filtros?.colecoes" [value]="colecao.id">{{ colecao.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.estacao">
+      <option value="">Todas as estações</option>
+      <option *ngFor="let estacao of dados?.filtros?.estacoes" [value]="estacao">{{ estacao }}</option>
+    </select>
+    <button class="primary" (click)="carregar()">Pesquisar</button>
+    <button (click)="limpar()">Limpar</button>
+  </section>
+
+  <div class="message error" *ngIf="erro">{{ erro }}</div>
+
+  <section class="cards" *ngIf="dados">
+    <article class="metric-card" *ngFor="let card of dados.indicadores.cards">
+      <div class="metric-top">
+        <span class="icon"><i class="bi" [ngClass]="cardIcons[card.key] || 'bi-graph-up'"></i></span>
+        <span class="trend" [class.good]="card.positive" [class.bad]="!card.positive">{{ card.variation >= 0 ? '▲' : '▼' }} {{ percentual(card.variation < 0 ? -card.variation : card.variation) }}</span>
+      </div>
+      <strong>{{ card.label }}</strong>
+      <h2>{{ formatar(card) }}</h2>
+      <small>Comparativo: {{ card.kind === 'money' ? moeda(card.previous) : card.kind === 'percent' ? percentual(card.previous) : numero(card.previous) }}</small>
+      <svg viewBox="0 0 100 42" preserveAspectRatio="none">
+        <polyline [attr.points]="sparkline()" fill="none" stroke="currentColor" stroke-width="2"></polyline>
+      </svg>
+    </article>
+  </section>
+
+  <section class="grid-main" *ngIf="dados">
+    <article class="panel wide">
+      <div class="panel-head">
+        <h3>Ranking de produtos mais vendidos</h3>
+        <span>{{ topRanking().length }} produto(s)</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Produto</th>
+            <th>Referência</th>
+            <th>Categoria</th>
+            <th>Qtd.</th>
+            <th>Faturamento</th>
+            <th>Margem</th>
+            <th>Part.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of topRanking(); let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><strong>{{ p.produto }}</strong><small>{{ p.colecao }} · {{ p.subcategoria }}</small></td>
+            <td>{{ p.referencia }}</td>
+            <td>{{ p.categoria }}</td>
+            <td>{{ numero(p.qtd) }}</td>
+            <td>{{ moeda(p.faturamento) }}</td>
+            <td>{{ percentual(p.margem_bruta) }}</td>
+            <td>{{ percentual(p.participacao) }}</td>
+          </tr>
+          <tr *ngIf="!topRanking().length"><td colspan="8" class="empty">Nenhum produto vendido no período.</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Faturamento por categoria</h3></div>
+      <div class="bars">
+        <div class="bar-row" *ngFor="let row of topCategoria()">
+          <span>{{ row.nome }}</span>
+          <div><i [style.width]="barWidth(row.faturamento, max(topCategoria(), 'faturamento'))"></i></div>
+          <strong>{{ moeda(row.faturamento) }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Quantidade por coleção</h3></div>
+      <div class="bars color">
+        <div class="bar-row" *ngFor="let row of topColecao()">
+          <span>{{ row.nome }}</span>
+          <div><i [style.width]="barWidth(row.qtd, max(topColecao(), 'qtd'))"></i></div>
+          <strong>{{ numero(row.qtd) }}</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid-secondary" *ngIf="dados">
+    <article class="panel">
+      <div class="panel-head"><h3>Produtos com maior lucro bruto</h3></div>
+      <table>
+        <thead><tr><th>Produto</th><th>Qtd.</th><th>Lucro</th><th>Margem</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of dados.tabelas.lucro">
+            <td>{{ p.produto }}</td>
+            <td>{{ numero(p.qtd) }}</td>
+            <td>{{ moeda(p.lucro_bruto) }}</td>
+            <td>{{ percentual(p.margem_bruta) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Produtos mais vendidos por loja</h3></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th *ngFor="let loja of dados.tabelas.por_loja.lojas">{{ loja }}</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of dados.tabelas.por_loja.produtos | slice:0:5">
+            <td>{{ row.produto }}</td>
+            <td *ngFor="let loja of dados.tabelas.por_loja.lojas">{{ numero(row.lojas[loja] || 0) }}</td>
+            <td><strong>{{ numero(row.total) }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Top 5 produtos com queda</h3></div>
+      <table>
+        <thead><tr><th>Produto</th><th>Atual</th><th>Anterior</th><th>Variação</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of dados.tabelas.quedas">
+            <td>{{ p.produto }}</td>
+            <td>{{ numero(p.qtd) }}</td>
+            <td>{{ numero(p.qtd_anterior) }}</td>
+            <td class="negative">{{ percentual(p.variacao || 0) }}</td>
+          </tr>
+          <tr *ngIf="!dados.tabelas.quedas.length"><td colspan="4" class="empty">Nenhuma queda encontrada.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="insights" *ngIf="dados">
+    <article *ngFor="let insight of dados.insights" [ngClass]="insightClass(insight.tipo)">
+      <strong>{{ insight.titulo }}</strong>
+      <span>{{ insight.descricao }}</span>
+    </article>
+  </section>
+</section>

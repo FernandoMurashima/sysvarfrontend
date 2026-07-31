@@ -7,11 +7,13 @@ import { TabelaprecoService } from '../../core/services/tabelapreco.service';
 import { TabelaPreco } from '../../core/models/tabelapreco';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-tabelas-preco',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, SummaryCardComponent],
   templateUrl: './tabelapreco.component.html',
   styleUrls: ['./tabelapreco.component.css'],
 })
@@ -34,6 +36,17 @@ export class TabelaprecoComponent {
   pageSize = signal(20);
 
   total = computed(() => this.items().length);
+  promocionais = computed(() => this.items().filter(item => item.Promocao).length);
+  tabelasPadrao = computed(() => this.items().filter(item => !item.Promocao).length);
+  vigentes = computed(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return this.items().filter(item => {
+      const inicio = item.DataInicio ? new Date(item.DataInicio) : null;
+      const fim = item.DataFim ? new Date(item.DataFim) : null;
+      return (!inicio || inicio <= hoje) && (!fim || fim >= hoje);
+    }).length;
+  });
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));

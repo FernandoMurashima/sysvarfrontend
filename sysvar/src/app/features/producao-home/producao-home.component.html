@@ -1,177 +1,49 @@
-<section class="page">
-  <header class="toolbar">
-    <h2>Produção</h2>
-    <div class="toolbar-actions">
-      <button class="btn primary" type="button" (click)="load()">Atualizar</button>
-      <a class="btn" routerLink="/home">Home</a>
-    </div>
-  </header>
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Painel de Produção</h1><button class="info-button" type="button" title="Acompanhe ordens, custos, insumos e facção.">i</button></div>
+    <div class="title-actions"><button class="btn" type="button">Ajuda</button><button class="btn" type="button" routerLink="/home">Home</button><button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button><a class="btn primary" routerLink="/producao/ficha-tecnica">Ficha Técnica</a><a class="btn primary" routerLink="/producao/ordens">Ordem de Produção</a></div>
+  </section>
 
-  <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
+  <div class="alert error" *ngIf="errorMsg">{{ errorMsg }}</div>
 
-  <section class="panel actions-panel">
-    <div class="quick-actions">
-      <a class="btn primary" routerLink="/producao/ficha-tecnica">Ficha Técnica</a>
-      <a class="btn primary" routerLink="/producao/ordens">Ordem de Produção</a>
-      <button class="btn" type="button" (click)="abrirModal('insumos')">
-        Alertas de insumos
-        <span class="btn-count">{{ painel?.alertas_insumos?.length || 0 }}</span>
-      </button>
-      <button class="btn" type="button" (click)="abrirModal('faccao')">
-        Pendências de facção
-        <span class="btn-count">{{ painel?.pendencias_faccao?.length || 0 }}</span>
-      </button>
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ painel?.totais?.abertas || 0 }}</strong><small>Abertas</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ painel?.totais?.aprovadas || 0 }}</strong><small>Aprovadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">▶</span><div><strong>{{ painel?.totais?.em_producao || 0 }}</strong><small>Em produção</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">◆</span><div><strong>{{ painel?.totais?.finalizadas || 0 }}</strong><small>Finalizadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">R$</span><div><strong>{{ money(painel?.totais?.custo_previsto) }}</strong><small>Custo previsto</small></div></div>
+  </section>
+
+  <section class="filter-bar production-actions" *ngIf="filtersVisible">
+    <button class="btn" type="button" (click)="abrirModal('insumos')">Alertas de insumos <span class="btn-count">{{ painel?.alertas_insumos?.length || 0 }}</span></button>
+    <button class="btn" type="button" (click)="abrirModal('faccao')">Pendências de facção <span class="btn-count">{{ painel?.pendencias_faccao?.length || 0 }}</span></button>
+    <div class="metric-line"><span>Custo real</span><strong>{{ money(painel?.totais?.custo_real) }}</strong></div>
+    <div class="metric-line"><span>Variação</span><strong [class.negative]="(painel?.totais?.variacao_custo || 0) > 0" [class.positive]="(painel?.totais?.variacao_custo || 0) < 0">{{ money(painel?.totais?.variacao_custo) }}</strong></div>
+    <div class="metric-line"><span>Facção</span><strong>{{ painel?.faccao?.pendentes || 0 }} / {{ painel?.faccao?.enviadas || 0 }} / {{ painel?.faccao?.retornadas || 0 }}</strong></div>
+  </section>
+
+  <section class="results-area">
+    <div class="results-header"><div><strong>OPs recentes</strong><span>{{ painel?.recentes?.length || 0 }} registro(s)</span></div></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="painel?.recentes?.length; else emptyOps">
+        <thead><tr><th>Número</th><th>Produto</th><th class="num">Qtd</th><th>Status</th><th class="num">Previsto</th><th class="num">Custo real</th><th class="num">Variação</th></tr></thead>
+        <tbody><tr *ngFor="let op of painel.recentes"><td>{{ op.numero }}</td><td>{{ op.referencia }} - {{ op.produto }}</td><td class="num">{{ qtd(op.quantidade) }}</td><td><span class="status-pill">{{ statusLabel(op.status) }}</span></td><td class="num">{{ money(op.custo_previsto) }}</td><td class="num">{{ money(op.custo_real) }}</td><td class="num" [class.danger-text]="op.variacao_custo > 0">{{ money(op.variacao_custo) }}</td></tr></tbody>
+      </table>
+      <ng-template #emptyOps><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma OP cadastrada.' }}</div></ng-template>
     </div>
   </section>
 
-  <div class="modal-backdrop" *ngIf="modal">
-    <section class="modal-card">
-      <div class="modal-title">
-        <h3>{{ modal === 'insumos' ? 'Alertas de insumos' : 'Pendências de facção' }}</h3>
-        <button class="btn" type="button" (click)="fecharModal()">Fechar</button>
-      </div>
-
+  <div class="overlay" *ngIf="modal">
+    <section class="overlay-card large-modal">
+      <div class="form-title"><div><h3>{{ modal === 'insumos' ? 'Alertas de insumos' : 'Pendências de facção' }}</h3></div><div class="form-title-actions"><button class="btn" type="button" (click)="fecharModal()">Fechar</button></div></div>
       <ng-container *ngIf="modal === 'insumos'">
-        <table class="table" *ngIf="painel?.alertas_insumos?.length; else emptyInsumos">
-          <thead>
-            <tr>
-              <th>Insumo</th>
-              <th>Referência</th>
-              <th>Estoque central</th>
-              <th class="num">Necessário</th>
-              <th class="num">Saldo</th>
-              <th class="num">Falta</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of painel.alertas_insumos">
-              <td>{{ item.produto }}</td>
-              <td>{{ item.referencia || '-' }}</td>
-              <td>{{ item.loja_central }}</td>
-              <td class="num">{{ qtd(item.necessario) }}</td>
-              <td class="num">{{ qtd(item.saldo) }}</td>
-              <td class="num danger-text">{{ qtd(item.falta) }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #emptyInsumos>
-          <div class="empty">Nenhum alerta de insumo para as OPs em aberto.</div>
-        </ng-template>
+        <div class="table-wrapper"><table class="table" *ngIf="painel?.alertas_insumos?.length; else emptyInsumos"><thead><tr><th>Insumo</th><th>Referência</th><th>Estoque central</th><th class="num">Necessário</th><th class="num">Saldo</th><th class="num">Falta</th></tr></thead><tbody><tr *ngFor="let item of painel.alertas_insumos"><td>{{ item.produto }}</td><td>{{ item.referencia || '-' }}</td><td>{{ item.loja_central }}</td><td class="num">{{ qtd(item.necessario) }}</td><td class="num">{{ qtd(item.saldo) }}</td><td class="num danger-text">{{ qtd(item.falta) }}</td></tr></tbody></table></div>
+        <ng-template #emptyInsumos><div class="empty-hint">Nenhum alerta de insumo para as OPs em aberto.</div></ng-template>
       </ng-container>
-
       <ng-container *ngIf="modal === 'faccao'">
-        <table class="table" *ngIf="painel?.pendencias_faccao?.length; else emptyFaccao">
-          <thead>
-            <tr>
-              <th>OP</th>
-              <th>Produto</th>
-              <th>Facção</th>
-              <th>Serviço</th>
-              <th class="num">Qtd</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of painel.pendencias_faccao">
-              <td>{{ item.op }}</td>
-              <td>{{ item.produto }}</td>
-              <td>{{ item.fornecedor || '-' }}</td>
-              <td>{{ item.servico }}</td>
-              <td class="num">{{ qtd(item.quantidade) }}</td>
-              <td><span class="badge warning">{{ statusLabel(item.status) }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <ng-template #emptyFaccao>
-          <div class="empty">Nenhuma pendência de facção.</div>
-        </ng-template>
+        <div class="table-wrapper"><table class="table" *ngIf="painel?.pendencias_faccao?.length; else emptyFaccao"><thead><tr><th>OP</th><th>Produto</th><th>Facção</th><th>Serviço</th><th class="num">Qtd</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of painel.pendencias_faccao"><td>{{ item.op }}</td><td>{{ item.produto }}</td><td>{{ item.fornecedor || '-' }}</td><td>{{ item.servico }}</td><td class="num">{{ qtd(item.quantidade) }}</td><td><span class="status-pill inactive">{{ statusLabel(item.status) }}</span></td></tr></tbody></table></div>
+        <ng-template #emptyFaccao><div class="empty-hint">Nenhuma pendência de facção.</div></ng-template>
       </ng-container>
     </section>
   </div>
-
-  <section class="kpis">
-    <div class="kpi">
-      <span>Abertas</span>
-      <strong>{{ painel?.totais?.abertas || 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Aprovadas</span>
-      <strong>{{ painel?.totais?.aprovadas || 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Em produção</span>
-      <strong>{{ painel?.totais?.em_producao || 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Finalizadas</span>
-      <strong>{{ painel?.totais?.finalizadas || 0 }}</strong>
-    </div>
-  </section>
-
-  <section class="kpis cost-kpis">
-    <div class="kpi">
-      <span>Custo previsto</span>
-      <strong>{{ money(painel?.totais?.custo_previsto) }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Custo real</span>
-      <strong>{{ money(painel?.totais?.custo_real) }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Variação</span>
-      <strong [class.negative]="(painel?.totais?.variacao_custo || 0) > 0" [class.positive]="(painel?.totais?.variacao_custo || 0) < 0">
-        {{ money(painel?.totais?.variacao_custo) }}
-      </strong>
-    </div>
-  </section>
-
-  <section class="kpis faccao-kpis">
-    <div class="kpi">
-      <span>Facção pendente</span>
-      <strong>{{ painel?.faccao?.pendentes || 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Facção enviada</span>
-      <strong>{{ painel?.faccao?.enviadas || 0 }}</strong>
-    </div>
-    <div class="kpi">
-      <span>Facção retornada</span>
-      <strong>{{ painel?.faccao?.retornadas || 0 }}</strong>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="panel-title">
-      <h3>OPs recentes</h3>
-      <span>{{ painel?.recentes?.length || 0 }} registro(s)</span>
-    </div>
-    <table class="table" *ngIf="painel?.recentes?.length; else emptyOps">
-      <thead>
-        <tr>
-          <th>Número</th>
-          <th>Produto</th>
-          <th class="num">Qtd</th>
-          <th>Status</th>
-          <th class="num">Previsto</th>
-          <th class="num">Custo real</th>
-          <th class="num">Variação</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let op of painel.recentes">
-          <td>{{ op.numero }}</td>
-          <td>{{ op.referencia }} - {{ op.produto }}</td>
-          <td class="num">{{ qtd(op.quantidade) }}</td>
-          <td><span class="badge">{{ statusLabel(op.status) }}</span></td>
-          <td class="num">{{ money(op.custo_previsto) }}</td>
-          <td class="num">{{ money(op.custo_real) }}</td>
-          <td class="num" [class.danger-text]="op.variacao_custo > 0">{{ money(op.variacao_custo) }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyOps>
-      <div class="empty">{{ loading ? 'Carregando...' : 'Nenhuma OP cadastrada.' }}</div>
-    </ng-template>
-  </section>
-
-</section>
+</div>

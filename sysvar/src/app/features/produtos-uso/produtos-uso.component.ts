@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -79,7 +79,11 @@ export class ProdutosUsoComponent {
   } | null = null;
   columnsOpen = false;
   exportOpen = false;
+  selectedProduto = signal<Produto | null>(null);
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.produtos-uso.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.produtos-uso';
   columns = [
     { key: 'reduzido', label: 'Código reduzido', visible: true, required: false },
     { key: 'referencia', label: 'Referência', visible: true, required: false },
@@ -200,10 +204,15 @@ export class ProdutosUsoComponent {
     effect(() => {
       const tp = this.totalPages();
       if (this.page() > tp) this.page.set(tp);
+      const selected = this.selectedProduto();
+      if (selected && !this.produtosFiltrados().some(p => p.Idproduto === selected.Idproduto)) {
+        this.selectedProduto.set(null);
+      }
     });
 
     this.loadLookups();
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.wireGrupoToSubgrupo();
     this.wireTipoProduto();
     this.load();
@@ -320,7 +329,7 @@ export class ProdutosUsoComponent {
     this.filterCodigo = '';
     this.page.set(1);
   }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.produtos-uso.pageSize', String(this.pageSize())); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
@@ -385,6 +394,69 @@ export class ProdutosUsoComponent {
     if (action === 'bloquear') this.toggleBloqueio(row);
     if (action === 'excluir') this.excluir(row);
   }
+
+  selecionarProduto(row: Produto): void {
+    this.selectedProduto.set(this.isSelected(row) ? null : row);
+  }
+
+  isSelected(row: Produto): boolean {
+    return !!this.selectedProduto() && this.selectedProduto()?.Idproduto === row.Idproduto;
+  }
+
+  consultarSelecionado(): void {
+    const row = this.selectedProduto();
+    if (row) this.consultar(row);
+  }
+
+  editarSelecionado(): void {
+    const row = this.selectedProduto();
+    if (row && this.podeEditarModulo) this.editar(row);
+  }
+
+  alternarAtivoSelecionado(): void {
+    const row = this.selectedProduto();
+    if (row && this.podeEditarModulo) this.toggleAtivo(row);
+  }
+
+  alternarBloqueioSelecionado(): void {
+    const row = this.selectedProduto();
+    if (row && this.podeEditarModulo) this.toggleBloqueio(row);
+  }
+
+  excluirSelecionado(): void {
+    const row = this.selectedProduto();
+    if (row && this.podeExcluirModulo) this.excluir(row);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.produtos-uso.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize.set(20);
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.page.set(1);
+  }
+
+  @HostListener('window:sysvar-produtos-uso-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+
+  @HostListener('window:sysvar-produtos-uso-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+
+  @HostListener('window:sysvar-produtos-uso-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   exportarCsv(): void {
     const headers = ['Descrição', 'Código reduzido', 'Referência', 'Tipo', 'Unidade', 'NCM', 'Status'];
@@ -669,6 +741,8 @@ export class ProdutosUsoComponent {
   }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.produtos-uso.pageSize'));
+    if ([10, 20, 50].includes(size)) this.pageSize.set(size);
     const raw = localStorage.getItem(this.columnsStorageKey);
     if (!raw) return;
     try {
@@ -682,5 +756,24 @@ export class ProdutosUsoComponent {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 }

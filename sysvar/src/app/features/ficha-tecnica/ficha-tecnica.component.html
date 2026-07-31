@@ -1,216 +1,106 @@
-<section class="page">
-  <section class="header-card">
-    <app-page-header
-      title="Ficha Técnica"
-      subtitle="Gerencie composições, insumos, facção e custos previstos"
-      [showPrimaryAction]="false"
-    />
-    <div class="header-actions">
-      <button class="btn" type="button">Ajuda</button>
-      <a class="btn" routerLink="/home">Home</a>
-      <button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">+ Nova Ficha</button>
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Ficha Técnica</h1><button class="info-button" type="button" title="Gerencie composições, insumos, facção e custos previstos.">i</button></div>
+    <div class="title-actions"><button class="btn" type="button">Ajuda</button><button class="btn" type="button" routerLink="/home">Home</button><button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button><div class="menu-holder"><button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button><div class="floating-menu" *ngIf="columnsOpen"><label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" /><span>{{ col.label }}</span></label></div></div><button class="btn primary" type="button" (click)="nova()" *ngIf="podeEditarModulo">+ Nova Ficha</button></div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ fichas.length }}</strong><small>Fichas</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ fichasAprovadas }}</strong><small>Aprovadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ fichasRascunho }}</strong><small>Rascunhos</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">×</span><div><strong>{{ fichasInativas }}</strong><small>Inativas</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">R$</span><div><strong>{{ formatMoney(custoPrevistoListado) }}</strong><small>Custo listado</small></div></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions" [showActions]="false" placeholder="Buscar por produto, referência ou versão..." (search)="load()" (cleared)="clearSearch()" />
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus"><option value="">Todos</option><option value="RASCUNHO">Rascunho</option><option value="APROVADA">Aprovada</option><option value="INATIVA">Inativa</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="load()">Pesquisar</button>
+  </section>
+
+  <div class="alert success" *ngIf="successMsg">{{ successMsg }}</div><div class="alert error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <div class="overlay" *ngIf="showFichaModal">
+    <section class="overlay-card ficha-modal">
+      <section class="card form-panel">
+        <div class="form-title"><div><h3>{{ fichaAtual?.id ? 'Editar Ficha Técnica' : 'Nova Ficha Técnica' }}</h3><p>Preencha o produto, rendimento, composição e custos.</p></div><div class="form-title-actions"><button class="btn" type="button" (click)="fecharFichaModal()">Fechar</button><button class="btn primary" type="button" [disabled]="saving" (click)="salvarFicha()" *ngIf="podeEditarModulo">Salvar ficha</button><button class="btn" type="button" [disabled]="!fichaAtual?.id || fichaAtual?.status === 'APROVADA'" (click)="aprovar()" *ngIf="podeEditarModulo">Aprovar</button></div></div>
+        <div class="form-grid">
+          <label class="span-5 input-item">Produto próprio*<select [(ngModel)]="form.produto_final"><option [ngValue]="undefined">Selecione</option><option *ngFor="let p of produtosProprios" [ngValue]="p.Idproduto">{{ p.referencia || p.Idproduto }} - {{ p.descricao }}</option></select></label>
+          <label class="span-2 input-item">Versão*<input type="text" [(ngModel)]="form.versao" /></label>
+          <label class="span-2 input-item">Rendimento*<input type="number" min="0.01" step="0.01" [(ngModel)]="form.rendimento" /></label>
+          <label class="span-3 input-item">Status<select [(ngModel)]="form.status"><option value="RASCUNHO">Rascunho</option><option value="APROVADA">Aprovada</option><option value="INATIVA">Inativa</option></select></label>
+          <label class="span-5 input-item">Descrição<input type="text" [(ngModel)]="form.descricao" /></label>
+          <label class="span-7 input-item">Observações<input type="text" [(ngModel)]="form.observacoes" /></label>
+        </div>
+        <div class="total-line" *ngIf="fichaAtual?.id">Custo previsto: <strong>{{ formatMoney(fichaAtual?.custo_previsto) }}</strong></div>
+      </section>
+
+      <section class="action-bar" *ngIf="fichaAtual?.id && podeEditarModulo">
+        <label class="inline-filter item-type"><span>Tipo</span><select [(ngModel)]="itemForm.tipo"><option value="INSUMO">Insumo</option><option value="AVIAMENTO">Aviamento</option><option value="SERVICO">Serviço/Facção</option></select></label>
+        <label class="inline-filter item-product"><span>Produto/Insumo</span><select [(ngModel)]="itemForm.produto" [disabled]="itemForm.tipo === 'SERVICO'"><option [ngValue]="null">Selecione</option><option *ngFor="let p of insumos" [ngValue]="p.Idproduto">{{ p.descricao }}</option></select></label>
+        <label class="inline-filter item-provider"><span>Fornecedor</span><select [(ngModel)]="itemForm.fornecedor"><option [ngValue]="null">Selecione</option><option *ngFor="let f of fornecedoresDoItem()" [ngValue]="f.id">{{ f.apelido || f.nome_fornecedor }}</option></select></label>
+        <label class="inline-filter item-small" [title]="unidadeSelecionadaLabel()"><span>Qtd</span><input type="number" min="0.01" step="0.01" [(ngModel)]="itemForm.quantidade" /></label>
+        <label class="inline-filter item-small"><span>Perda %</span><input type="number" min="0" step="0.01" [(ngModel)]="itemForm.perda_percentual" /></label>
+        <label class="inline-filter item-small"><span>Custo</span><input type="number" min="0" step="0.01" [(ngModel)]="itemForm.custo_unitario_previsto" /></label>
+        <button class="btn primary" type="button" (click)="adicionarItem()">Adicionar</button>
+      </section>
+
+      <section class="results-area" *ngIf="fichaAtual?.id">
+        <div class="results-header"><div><strong>Itens da composição</strong><span>{{ fichaAtual?.itens?.length || 0 }} registro(s)</span></div></div>
+        <div class="table-wrapper">
+          <table class="table composition-table" *ngIf="(fichaAtual?.itens?.length || 0) > 0; else emptyItens">
+            <colgroup>
+              <col class="col-tipo" />
+              <col class="col-produto" />
+              <col class="col-qtd" />
+              <col class="col-unidade" />
+              <col class="col-perda" />
+              <col class="col-qtd-perda" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-money" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Produto / Fornecedor</th>
+                <th class="num">Qtd</th>
+                <th>Unidade</th>
+                <th class="num">Perda</th>
+                <th class="num">Qtd c/perda</th>
+                <th class="num">Custo informado</th>
+                <th class="num">Custo médio</th>
+                <th class="num">Custo usado</th>
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of fichaAtual?.itens">
+                <td class="text-cell">{{ item.tipo }}</td>
+                <td class="text-cell ellipsis">{{ item.produto_descricao || item.fornecedor_nome || item.descricao || '-' }}</td>
+                <td class="num">{{ formatQtd(item.quantidade) }}</td>
+                <td class="text-cell">{{ item.unidade_descricao || '-' }}</td>
+                <td class="num">{{ formatQtd(item.perda_percentual || 0) }}%</td>
+                <td class="num">{{ formatQtd(item.quantidade_com_perda || item.quantidade) }}</td>
+                <td class="num">{{ formatMoney(item.custo_unitario_previsto) }}</td>
+                <td class="num">{{ formatMoney(item.custo_medio_produto) }}</td>
+                <td class="num">{{ formatMoney(item.custo_unitario_usado) }}</td>
+                <td class="num">{{ formatMoney(item.custo_total_previsto) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #emptyItens><div class="empty-hint">Nenhum item incluído nesta ficha.</div></ng-template>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <section class="results-area">
+    <div class="results-header"><div><strong>Fichas cadastradas</strong><span>{{ fichasFiltradas.length }} ficha(s)</span></div></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="fichasFiltradas.length > 0; else emptyFichas"><thead><tr><th *ngIf="visibleColumn('produto')">Produto</th><th *ngIf="visibleColumn('referencia')">Referência</th><th *ngIf="visibleColumn('versao')">Versão</th><th *ngIf="visibleColumn('status')">Status</th><th *ngIf="visibleColumn('custo')" class="num">Custo previsto</th><th *ngIf="visibleColumn('acoes')" class="actions">Ações</th></tr></thead><tbody><tr *ngFor="let ficha of fichasFiltradas" [class.selected]="fichaAtual?.id === ficha.id" (click)="selectFicha(ficha)"><td *ngIf="visibleColumn('produto')">{{ ficha.produto_descricao }}</td><td *ngIf="visibleColumn('referencia')">{{ ficha.produto_referencia }}</td><td *ngIf="visibleColumn('versao')">{{ ficha.versao }}</td><td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="ficha.status !== 'APROVADA'">• {{ ficha.status }}</span></td><td *ngIf="visibleColumn('custo')" class="num">{{ formatMoney(ficha.custo_previsto) }}</td><td *ngIf="visibleColumn('acoes')" class="actions" (click)="$event.stopPropagation()"><app-row-actions-menu [actions]="rowActions(ficha)" (action)="executarAcao($event, ficha)" /></td></tr></tbody></table>
+      <ng-template #emptyFichas><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma ficha técnica cadastrada.' }}</div></ng-template>
     </div>
   </section>
-
-  <section class="summary-grid">
-    <div class="mini-indicator"><strong>{{ fichas.length }}</strong><span>fichas</span></div>
-    <div class="mini-indicator"><strong>{{ fichasAprovadas }}</strong><span>aprovadas</span></div>
-    <div class="mini-indicator"><strong>{{ fichasRascunho }}</strong><span>rascunhos</span></div>
-    <div class="mini-indicator"><strong>{{ fichasInativas }}</strong><span>inativas</span></div>
-    <div class="mini-indicator value"><strong>{{ formatMoney(custoPrevistoListado) }}</strong><span>custo listado</span></div>
-  </section>
-
-  <section class="filters-panel">
-    <app-search-suggest
-      class="search-control"
-      [(value)]="search"
-      [suggestions]="searchSuggestions"
-      [showActions]="false"
-      placeholder="Buscar por produto, referência ou versão..."
-      (search)="load()"
-      (cleared)="load()"
-    />
-    <button class="btn primary" type="button" (click)="load()">Buscar</button>
-    <button class="btn" type="button" (click)="search=''; load()">Limpar</button>
-    <button class="btn" type="button" (click)="load()">Atualizar</button>
-  </section>
-
-  <div class="msg success" *ngIf="successMsg">{{ successMsg }}</div>
-  <div class="msg error" *ngIf="errorMsg">{{ errorMsg }}</div>
-
-  <section class="panel form-panel">
-    <h3>{{ fichaAtual?.id ? 'Editar Ficha Técnica' : 'Nova Ficha Técnica' }}</h3>
-
-    <div class="form-grid">
-      <label class="field product-field">
-        Produto próprio*
-        <select [(ngModel)]="form.produto_final">
-          <option [ngValue]="undefined">Selecione</option>
-          <option *ngFor="let p of produtosProprios" [ngValue]="p.Idproduto">{{ p.referencia || p.Idproduto }} - {{ p.descricao }}</option>
-        </select>
-      </label>
-
-      <label class="field">
-        Versão*
-        <input type="text" [(ngModel)]="form.versao" />
-      </label>
-
-      <label class="field">
-        Rendimento*
-        <input type="number" min="0.01" step="0.01" [(ngModel)]="form.rendimento" />
-      </label>
-
-      <label class="field">
-        Status
-        <select [(ngModel)]="form.status">
-          <option value="RASCUNHO">Rascunho</option>
-          <option value="APROVADA">Aprovada</option>
-          <option value="INATIVA">Inativa</option>
-        </select>
-      </label>
-
-      <label class="field description-field">
-        Descrição
-        <input type="text" [(ngModel)]="form.descricao" />
-      </label>
-
-      <label class="field observation-field">
-        Observações
-        <input type="text" [(ngModel)]="form.observacoes" />
-      </label>
-    </div>
-
-    <div class="actions-row">
-      <button class="btn primary" type="button" [disabled]="saving" (click)="salvarFicha()" *ngIf="podeEditarModulo">Salvar ficha</button>
-      <button class="btn" type="button" [disabled]="!fichaAtual?.id || fichaAtual?.status === 'APROVADA'" (click)="aprovar()" *ngIf="podeEditarModulo">Aprovar</button>
-      <span class="total-cost" *ngIf="fichaAtual?.id">Custo previsto: <strong>{{ formatMoney(fichaAtual?.custo_previsto) }}</strong></span>
-    </div>
-  </section>
-
-  <section class="panel" *ngIf="fichaAtual?.id">
-    <h3>Itens da composição</h3>
-
-    <div class="item-grid" *ngIf="podeEditarModulo">
-      <label class="field item-type">
-        Tipo*
-        <select [(ngModel)]="itemForm.tipo">
-          <option value="INSUMO">Insumo</option>
-          <option value="AVIAMENTO">Aviamento</option>
-          <option value="SERVICO">Serviço/Facção</option>
-        </select>
-      </label>
-
-      <label class="field item-product">
-        Produto/Insumo
-        <select [(ngModel)]="itemForm.produto" [disabled]="itemForm.tipo === 'SERVICO'">
-          <option [ngValue]="null">Selecione</option>
-          <option *ngFor="let p of insumos" [ngValue]="p.Idproduto">{{ p.descricao }}</option>
-        </select>
-      </label>
-
-      <label class="field item-provider">
-        Fornecedor/Facção
-        <select [(ngModel)]="itemForm.fornecedor">
-          <option [ngValue]="null">Selecione</option>
-          <option *ngFor="let f of fornecedoresDoItem()" [ngValue]="f.id">{{ f.apelido || f.nome_fornecedor }}</option>
-        </select>
-      </label>
-
-      <label class="field item-qty" [title]="unidadeSelecionadaLabel()">
-        Qtd*
-        <input type="number" min="0.01" step="0.01" [(ngModel)]="itemForm.quantidade" />
-      </label>
-
-      <label class="field item-loss">
-        Perda/Fração %
-        <input type="number" min="0" step="0.01" [(ngModel)]="itemForm.perda_percentual" />
-      </label>
-
-      <label class="field item-cost">
-        Custo adicional
-        <input type="number" min="0" step="0.01" [(ngModel)]="itemForm.custo_unitario_previsto" />
-      </label>
-
-      <button class="btn primary add-btn" type="button" (click)="adicionarItem()">Adicionar item</button>
-    </div>
-
-    <table class="table" *ngIf="(fichaAtual?.itens?.length || 0) > 0; else emptyItens">
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>Produto / Fornecedor</th>
-          <th>Qtd</th>
-          <th>Unidade</th>
-          <th>Perda</th>
-          <th>Qtd c/perda</th>
-          <th>Custo informado</th>
-          <th>Custo médio</th>
-          <th>Custo usado</th>
-          <th>Total</th>
-          <th *ngIf="podeEditarModulo">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of fichaAtual?.itens">
-          <td>{{ item.tipo }}</td>
-          <td>{{ item.produto_descricao || item.fornecedor_nome || item.descricao || '-' }}</td>
-          <td class="num">{{ formatQtd(item.quantidade) }}</td>
-          <td>{{ item.unidade_descricao || '-' }}</td>
-          <td class="num">{{ formatQtd(item.perda_percentual || 0) }}%</td>
-          <td class="num">{{ formatQtd(item.quantidade_com_perda || item.quantidade) }}</td>
-          <td class="num">{{ formatMoney(item.custo_unitario_previsto) }}</td>
-          <td class="num">{{ formatMoney(item.custo_medio_produto) }}</td>
-          <td class="num">{{ formatMoney(item.custo_unitario_usado) }}</td>
-          <td class="num">{{ formatMoney(item.custo_total_previsto) }}</td>
-          <td class="actions" *ngIf="podeEditarModulo">
-            <app-row-actions-menu
-              [actions]="itemRowActions()"
-              (action)="executarItemAcao($event, item)"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyItens>
-      <div class="empty">Nenhum item incluído nesta ficha.</div>
-    </ng-template>
-  </section>
-
-  <section class="panel">
-    <div class="panel-title">
-      <h3>Fichas cadastradas</h3>
-      <span>{{ fichas.length }} ficha(s)</span>
-    </div>
-    <table class="table" *ngIf="fichas.length > 0; else emptyFichas">
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Referência</th>
-          <th>Versão</th>
-          <th>Status</th>
-          <th>Custo previsto</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let ficha of fichas" [class.selected]="fichaAtual?.id === ficha.id" (click)="selectFicha(ficha)">
-          <td>{{ ficha.produto_descricao }}</td>
-          <td>{{ ficha.produto_referencia }}</td>
-          <td>{{ ficha.versao }}</td>
-          <td><span class="badge">{{ ficha.status }}</span></td>
-          <td>{{ formatMoney(ficha.custo_previsto) }}</td>
-          <td class="actions" (click)="$event.stopPropagation()">
-            <app-row-actions-menu
-              [actions]="rowActions(ficha)"
-              (action)="executarAcao($event, ficha)"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <ng-template #emptyFichas>
-      <div class="empty" *ngIf="!loading">Nenhuma ficha técnica cadastrada.</div>
-      <div class="empty" *ngIf="loading">Carregando...</div>
-    </ng-template>
-  </section>
-</section>
+</div>

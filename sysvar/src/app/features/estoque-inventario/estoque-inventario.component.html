@@ -1,136 +1,159 @@
-<div class="estoque-page">
-  <div class="header-with-actions">
-    <app-page-header
-      title="Inventário de Estoque"
-      subtitle="Controle e ajuste físico dos saldos por loja"
-      [showPrimaryAction]="false"
-    />
-    <div class="header-extra-actions">
-      <button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="novo()">+ Novo Inventário</button>
-      <button class="btn" type="button" (click)="load()">Atualizar</button>
-      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+<div class="cadastro-page estoque-inventario-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Inventário de Estoque</h1>
+      <button class="info-button" type="button" title="Controle e ajuste físico dos saldos por loja.">i</button>
     </div>
-  </div>
+    <div class="title-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <div class="menu-holder">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu" *ngIf="exportOpen">
+          <button type="button" disabled>CSV</button>
+          <button type="button" disabled>Excel</button>
+          <button type="button" disabled>PDF</button>
+        </div>
+      </div>
+      <button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="novo()">+ Novo Inventário</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ totalInventarios }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ abertos }}</strong><small>Abertos</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">✓</span><div><strong>{{ validados }}</strong><small>Validados</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">■</span><div><strong>{{ finalizados }}</strong><small>Finalizados</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">!</span><div><strong>{{ totalFiltrado }}</strong><small>Filtrados</small></div></div>
+  </section>
+
+  <section class="filter-bar inventario-filter" *ngIf="filtersVisible">
+    <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions" [showActions]="false" placeholder="Buscar por descrição, loja, status ou documento..." (search)="doSearch()" (cleared)="clearSearch()" />
+    <label class="inline-filter">
+      <span>Loja</span>
+      <select [(ngModel)]="filterLoja" (ngModelChange)="doFilter()">
+        <option value="">Todas</option>
+        <option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option>
+      </select>
+    </label>
+    <label class="inline-filter">
+      <span>Status</span>
+      <select [(ngModel)]="filterStatus" (ngModelChange)="doFilter()">
+        <option value="">Todos</option>
+        <option value="ABERTO">Aberto</option>
+        <option value="VALIDADO">Validado</option>
+        <option value="FECHADO">Finalizado</option>
+        <option value="CANCELADO">Cancelado</option>
+      </select>
+    </label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+    <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns">
+          <input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />
+          <span>{{ col.label }}</span>
+        </label>
+      </div>
+    </div>
+    <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+    <div class="advanced-filters" *ngIf="advancedOpen">Use a busca principal e os filtros de loja e status para refinar a lista de inventários.</div>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selecionado">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="gerarSelecionado()">☷ Gerar itens</button>
+    <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="validarSelecionado()">✓ Validar</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'VALIDADO'" (click)="finalizarSelecionado()">⏹ Finalizar</button>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
-  <section class="stats-grid">
-    <article class="stat-card blue">
-      <span class="stat-icon">□</span>
-      <div><strong>{{ totalInventarios }}</strong><span>Total de inventários</span><small>100% do total</small></div>
-    </article>
-    <article class="stat-card green">
-      <span class="stat-icon">☷</span>
-      <div><strong>{{ abertos }}</strong><span>Abertos</span><small>{{ percent(abertos) }}</small></div>
-    </article>
-    <article class="stat-card orange">
-      <span class="stat-icon">✓</span>
-      <div><strong>{{ validados }}</strong><span>Validados</span><small>{{ percent(validados) }}</small></div>
-    </article>
-    <article class="stat-card cyan">
-      <span class="stat-icon">■</span>
-      <div><strong>{{ finalizados }}</strong><span>Finalizados</span><small>{{ percent(finalizados) }}</small></div>
-    </article>
-  </section>
-
-  <div class="modal-backdrop" *ngIf="showForm">
-    <section class="form-panel">
-      <div class="modal-head">
-        <h3>Novo inventário</h3>
-        <button class="icon-close" type="button" (click)="showForm=false">×</button>
+  <section class="card form-panel" *ngIf="showForm">
+    <div class="form-title">
+      <div><h3>Novo inventário</h3><p>Preencha os dados para abrir a contagem.</p></div>
+      <div class="form-title-actions">
+        <button class="btn ghost" type="button" (click)="showForm=false">Cancelar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving || form.invalid">Salvar</button>
       </div>
-      <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid">
-        <label class="field col-4">Loja*
+    </div>
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-grid">
+        <label class="span-3 input-item">Loja*
           <select formControlName="Idloja">
             <option [ngValue]="null">Selecione</option>
             <option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.nome_loja }}</option>
           </select>
         </label>
-        <label class="field col-5">Descrição*
-          <input formControlName="descricao" />
-        </label>
-        <label class="field col-3">Data*
-          <input type="date" formControlName="data_abertura" />
-        </label>
-        <label class="field col-12">Observação
-          <input formControlName="observacao" />
-        </label>
-        <div class="form-actions col-12">
-          <button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button>
-          <button class="btn" type="button" (click)="showForm=false">Cancelar</button>
-        </div>
-      </form>
-    </section>
-  </div>
+        <label class="span-6 input-item">Descrição*<input formControlName="descricao" /></label>
+        <label class="span-3 input-item">Data*<input type="date" formControlName="data_abertura" /></label>
+        <label class="span-12 input-item">Observação<input formControlName="observacao" /></label>
+      </div>
+    </form>
+  </section>
 
-  <div class="modal-backdrop" *ngIf="fecharModal as inventario">
-    <div class="confirm-card">
-      <h4>Finalizar inventário</h4>
-      <p>Confirma a finalização do inventário <strong>{{ inventario.descricao }}</strong> e a geração dos ajustes de estoque?</p>
-      <div class="modal-actions">
-        <button class="btn" type="button" (click)="cancelarFechamento()">Voltar</button>
-        <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarFechamento()">Finalizar</button>
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Inventários cadastrados</strong><span>{{ totalFiltrado }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls">
+        <label for="pageSize">Itens por página:</label>
+        <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+        </select>
       </div>
     </div>
-  </div>
-
-  <section class="panel table-panel">
-    <div class="list-header">
-      <h3>Inventários cadastrados <span>{{ inventarios.length }} registro(s) encontrado(s)</span></h3>
-      <span *ngIf="loading" class="loading">Carregando...</span>
-    </div>
     <div class="table-wrapper">
-      <table class="table" *ngIf="inventarios.length; else vazioTpl">
+      <table class="table" *ngIf="inventariosPaginados.length; else vazioTpl">
         <thead>
           <tr>
-            <th>Descrição</th>
-            <th>Loja</th>
-            <th>Data</th>
-            <th>Status</th>
-            <th>Itens</th>
-            <th>Contados</th>
-            <th>Diverg.</th>
-            <th class="actions-col">Ações</th>
+            <th class="select-col"></th>
+            <th *ngIf="visibleColumn('descricao')">Descrição</th>
+            <th *ngIf="visibleColumn('loja')">Loja</th>
+            <th *ngIf="visibleColumn('data')">Data</th>
+            <th *ngIf="visibleColumn('status')">Status</th>
+            <th *ngIf="visibleColumn('itens')">Itens</th>
+            <th *ngIf="visibleColumn('contados')">Contados</th>
+            <th *ngIf="visibleColumn('divergencias')">Diverg.</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let inv of inventarios" [class.selected]="selecionado?.Idinventario === inv.Idinventario" (click)="selecionado = inv">
-            <td>{{ inv.descricao }}</td>
-            <td>{{ lojaNome(inv.Idloja) }}</td>
-            <td>{{ inv.data_abertura | date:'dd/MM/yyyy' }}</td>
-            <td><span class="status" [class.validated]="inv.status === 'VALIDADO'" [class.closed]="inv.status === 'FECHADO'">{{ statusLabel(inv.status) }}</span></td>
-            <td>{{ inv.total_itens ?? inv.itens?.length ?? 0 }}</td>
-            <td>{{ inv.total_contados || 0 }}</td>
-            <td>{{ inv.total_divergencias || 0 }}</td>
-            <td class="actions-col" (click)="$event.stopPropagation()">
-              <app-row-actions-menu
-                [actions]="rowActions(inv)"
-                [ariaLabel]="'Ações do inventário'"
-                (action)="executarAcao($event, inv)"
-              />
-            </td>
+          <tr *ngFor="let inv of inventariosPaginados" [class.selected]="isSelected(inv)" (click)="selecionarInventario(inv)">
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(inv)" (click)="$event.stopPropagation(); selecionarInventario(inv)" /></td>
+            <td *ngIf="visibleColumn('descricao')">{{ inv.descricao }}</td>
+            <td *ngIf="visibleColumn('loja')">{{ lojaNome(inv.Idloja) }}</td>
+            <td *ngIf="visibleColumn('data')">{{ inv.data_abertura | date:'dd/MM/yyyy' }}</td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.validated]="inv.status === 'VALIDADO'" [class.closed]="inv.status === 'FECHADO'" [class.inactive]="inv.status === 'CANCELADO'">• {{ statusLabel(inv.status) }}</span></td>
+            <td *ngIf="visibleColumn('itens')">{{ inv.total_itens ?? inv.itens?.length ?? 0 }}</td>
+            <td *ngIf="visibleColumn('contados')">{{ inv.total_contados || 0 }}</td>
+            <td *ngIf="visibleColumn('divergencias')">{{ inv.total_divergencias || 0 }}</td>
           </tr>
         </tbody>
       </table>
-      <ng-template #vazioTpl><div class="empty" *ngIf="!loading">Nenhum inventário encontrado.</div></ng-template>
+      <ng-template #vazioTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhum inventário encontrado.' }}</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="totalFiltrado > 0">
+      <div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ totalFiltrado }}</span></div>
+      <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
     </div>
   </section>
 
-  <section class="panel table-panel" *ngIf="selecionado">
-    <div class="detail-head">
-      <h3>Itens - {{ selecionado.descricao }}</h3>
-      <div class="summary">
-        <span>Pendentes: <strong>{{ pendentes(selecionado) }}</strong></span>
+  <section class="results-area detail-area" *ngIf="selecionado">
+    <div class="results-header">
+      <div><strong>Itens - {{ selecionado.descricao }}</strong><span>Pendentes: {{ pendentes(selecionado) }}</span></div>
+      <div class="detail-summary">
         <span>Sistema: <strong>{{ moneyLike(selecionado.saldo_sistema_total) }}</strong></span>
         <span>Contado: <strong>{{ moneyLike(selecionado.saldo_contado_total) }}</strong></span>
         <span>Diferença: <strong>{{ moneyLike(selecionado.diferenca_total) }}</strong></span>
       </div>
     </div>
     <div class="table-wrapper">
-      <table class="table">
+      <table class="table detail-table">
         <thead>
-          <tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th><th class="actions-col">Ações</th></tr>
+          <tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th><th class="save-col">Ação</th></tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of selecionado.itens || []">
@@ -139,11 +162,22 @@
             <td class="num">{{ item.saldo_sistema }}</td>
             <td><input class="count-input" type="number" step="0.001" [(ngModel)]="item.saldo_contado" [disabled]="!podeContar(selecionado)" /></td>
             <td class="num" [class.negative]="(item.diferenca || 0) < 0" [class.positive]="(item.diferenca || 0) > 0">{{ item.diferenca }}</td>
-            <td><span class="status" [class.closed]="item.contado">{{ item.contado ? 'Contado' : 'Pendente' }}</span></td>
-            <td class="actions-col"><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
+            <td><span class="status-pill" [class.inactive]="!item.contado">• {{ item.contado ? 'Contado' : 'Pendente' }}</span></td>
+            <td class="save-col"><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
+</div>
+
+<div class="overlay" *ngIf="fecharModal as inventario">
+  <div class="overlay-card">
+    <h4>Finalizar inventário</h4>
+    <p>Confirma a finalização do inventário <strong>{{ inventario.descricao }}</strong> e a geração dos ajustes de estoque?</p>
+    <div class="overlay-actions">
+      <button class="btn" type="button" (click)="cancelarFechamento()">Voltar</button>
+      <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarFechamento()">Finalizar</button>
+    </div>
+  </div>
 </div>

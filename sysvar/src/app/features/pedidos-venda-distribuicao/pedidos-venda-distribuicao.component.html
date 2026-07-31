@@ -1,0 +1,102 @@
+<div class="cadastro-page pedidos-venda-distribuicao-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Pedidos de Venda</h1>
+      <button class="info-button" type="button" title="Pedidos gerados pela distribuição para faturamento.">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ totalPedidos }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ aguardando }}</strong><small>Aguardando</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ faturados }}</strong><small>Faturados</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">Σ</span><div><strong>{{ qty(totalPecas) }}</strong><small>Peças</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ money(totalValor) }}</strong><small>Total</small></div></div>
+  </section>
+
+  <section class="filter-bar pedidos-filter" *ngIf="filtersVisible">
+    <input class="main-search" [(ngModel)]="search" placeholder="Buscar por pedido, distribuição, origem ou destino..." (keyup.enter)="doSearch()" />
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="status"><option value="">Todos</option><option value="AGF">Aguardando</option><option value="FAT">Faturado</option><option value="CANC">Cancelado</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen"><button type="button" disabled>Número</button><button type="button" disabled>Status</button><button type="button" disabled>Total</button></div>
+    </div>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selecionado">⌕ Consultar</button>
+    <button class="btn primary" type="button" [disabled]="!selecionados.size || !podeEditarModulo" (click)="gerarNotas()">Gerar NF-e</button>
+    <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || !['AB','AGF'].includes(selecionado.status)" (click)="faturar()">Faturar direto</button>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Pedidos gerados</strong><span>{{ filtrados.length }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label>Itens por página:</label><select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paginados.length; else vazioTpl">
+        <thead><tr><th class="select-col"></th><th>Pedido</th><th>Distribuição</th><th>Origem</th><th>Destino</th><th>Data</th><th>Status</th><th>Peças</th><th>Total</th><th>NF-e</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let pedido of paginados; trackBy: trackByPedido" [class.selected]="isSelected(pedido)" (click)="selecionar(pedido)">
+            <td class="select-col"><input type="checkbox" [checked]="isMarked(pedido)" [disabled]="!['AB','AGF'].includes(pedido.status) || !!pedido.nfe_numero" (click)="togglePedido(pedido, $event)" /></td>
+            <td>{{ pedido.numero }}</td>
+            <td>{{ pedido.distribuicao_numero }}</td>
+            <td>{{ pedido.unidade_origem_nome }}</td>
+            <td>{{ pedido.loja_destino_nome }}</td>
+            <td>{{ pedido.data_pedido | date:'dd/MM/yyyy' }}</td>
+            <td><span class="status-pill" [ngClass]="statusClass(pedido.status)">• {{ statusLabel(pedido.status) }}</span></td>
+            <td>{{ qty(pedido.quantidade_total) }}</td>
+            <td>{{ money(pedido.valor_total_venda) }}</td>
+            <td>{{ pedido.nfe_numero || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhum pedido encontrado.' }}</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="filtrados.length > 0">
+      <div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ filtrados.length }}</span></div>
+      <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
+  </section>
+
+  <section class="results-area detail-area" *ngIf="selecionado">
+    <div class="pedido-summary">
+      <div><small>Pedido</small><strong>{{ selecionado.numero }}</strong></div>
+      <div><small>Destino</small><strong>{{ selecionado.loja_destino_nome }}</strong></div>
+      <div><small>Status</small><strong>{{ statusLabel(selecionado.status) }}</strong></div>
+      <div><small>Peças</small><strong>{{ qty(selecionado.quantidade_total) }}</strong></div>
+      <div><small>Total</small><strong>{{ money(selecionado.valor_total_venda) }}</strong></div>
+      <div><small>NF-e</small><strong>{{ selecionado.nfe_numero || '-' }}</strong></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table detail-table">
+        <thead><tr><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tam.</th><th>EAN</th><th>Qtd</th><th>Preço</th><th>Total</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let item of selecionado.itens || []; trackBy: trackByItem">
+            <td>{{ item.referencia }}</td>
+            <td>{{ item.descricao }}</td>
+            <td>{{ item.cor_descricao || '-' }}</td>
+            <td>{{ item.tamanho_descricao || '-' }}</td>
+            <td>{{ item.ean13 }}</td>
+            <td><input class="num-input" type="number" min="0" [disabled]="!['AB','AGF'].includes(selecionado.status)" [(ngModel)]="item.quantidade" /></td>
+            <td><input class="num-input" type="number" min="0" [disabled]="!['AB','AGF'].includes(selecionado.status)" [(ngModel)]="item.preco_unitario" /></td>
+            <td>{{ money(item.total_item) }}</td>
+            <td><button class="btn sm" type="button" [disabled]="!['AB','AGF'].includes(selecionado.status)" (click)="atualizarItem(item)">Salvar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

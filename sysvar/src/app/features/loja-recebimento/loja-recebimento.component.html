@@ -1,0 +1,97 @@
+<div class="cadastro-page loja-recebimento-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Recebimento de Mercadorias</h1>
+      <button class="info-button" type="button" title="Confere NF-e enviada pela fábrica e lança entrada no estoque da loja.">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ totalNotas }}</strong><small>Notas</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ pendentes }}</strong><small>Em trânsito</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ recebidas }}</strong><small>Recebidas</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">×</span><div><strong>{{ divergentes }}</strong><small>Divergentes</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">Σ</span><div><strong>{{ qty(totalPecas) }}</strong><small>Peças</small></div></div>
+  </section>
+
+  <section class="filter-bar recebimento-filter" *ngIf="filtersVisible">
+    <input class="main-search" [(ngModel)]="search" placeholder="Buscar por NF-e, loja, referência, descrição ou EAN..." (keyup.enter)="doSearch()" />
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="status"><option value="">Todos</option><option value="TRANS">Em trânsito</option><option value="RECB">Recebida</option><option value="DIV">Divergente</option></select></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selecionada">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !podeEditarModulo" (click)="marcarTudo()">Tudo recebido</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !podeEditarModulo" (click)="zerarConferencia()">Zerar</button>
+    <button class="btn primary" type="button" [disabled]="!selecionada || !podeEditarModulo" (click)="confirmar()">Lançar no estoque</button>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Notas para recebimento</strong><span>{{ filtradas.length }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label>Itens por página:</label><select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="paginadas.length; else vazioTpl">
+        <thead><tr><th>NF-e</th><th>Origem</th><th>Loja</th><th>Envio</th><th>Status</th><th>Itens</th><th>Peças</th><th>Recebido</th><th>Diverg.</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let nota of paginadas; trackBy: trackByNota" [class.selected]="isSelected(nota)" (click)="selecionar(nota)">
+            <td>{{ nota.nfe_numero }}</td>
+            <td>{{ nota.unidade_origem_nome }}</td>
+            <td>{{ nota.loja_destino_nome }}</td>
+            <td>{{ nota.data_envio | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td><span class="status-pill" [ngClass]="statusClass(nota.status)">• {{ statusLabel(nota.status) }}</span></td>
+            <td>{{ nota.itens.length }}</td>
+            <td>{{ qty(nota.pecas) }}</td>
+            <td>{{ qty(nota.recebido) }}</td>
+            <td>{{ qty(nota.divergente) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma mercadoria para recebimento.' }}</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="filtradas.length > 0">
+      <div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ filtradas.length }}</span></div>
+      <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
+  </section>
+
+  <section class="results-area detail-area" *ngIf="selecionada">
+    <div class="nota-summary">
+      <div><small>NF-e</small><strong>{{ selecionada.nfe_numero }}</strong></div>
+      <div><small>Origem</small><strong>{{ selecionada.unidade_origem_nome }}</strong></div>
+      <div><small>Loja</small><strong>{{ selecionada.loja_destino_nome }}</strong></div>
+      <div><small>Peças</small><strong>{{ qty(selecionada.pecas) }}</strong></div>
+      <div><small>Status</small><strong>{{ statusLabel(selecionada.status) }}</strong></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table detail-table">
+        <thead><tr><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tam.</th><th>EAN</th><th>Enviado</th><th>Recebido</th><th>Valor un.</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let item of selecionada.itens; trackBy: trackByItem">
+            <td>{{ item.referencia }}</td>
+            <td>{{ item.descricao }}</td>
+            <td>{{ item.cor_descricao || '-' }}</td>
+            <td>{{ item.tamanho_descricao || '-' }}</td>
+            <td>{{ item.ean13 }}</td>
+            <td>{{ qty(item.quantidade_enviada) }}</td>
+            <td><input class="num-input" type="number" min="0" [max]="num(item.quantidade_enviada)" [(ngModel)]="item.recebido_ui" /></td>
+            <td>{{ money(item.valor_unitario) }}</td>
+            <td>{{ money(itemTotal(item)) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

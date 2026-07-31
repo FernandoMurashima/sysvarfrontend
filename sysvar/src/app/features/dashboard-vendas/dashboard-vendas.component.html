@@ -1,0 +1,185 @@
+<section class="dash-page">
+  <header class="dash-hero">
+    <div>
+      <h1>Dashboard de Vendas</h1>
+      <p>Visão estratégica do desempenho das vendas</p>
+    </div>
+    <div class="hero-actions">
+      <label>De<input type="date" [(ngModel)]="filtros.inicio"></label>
+      <label>Até<input type="date" [(ngModel)]="filtros.fim"></label>
+      <label>Comparar
+        <select [(ngModel)]="filtros.comparacao">
+          <option value="periodo_anterior">Período anterior</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ano_anterior">Ano anterior</option>
+          <option value="">Sem comparação</option>
+        </select>
+      </label>
+      <button class="primary" (click)="carregar()">Atualizar</button>
+      <button (click)="alternarTelaCheia()">{{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}</button>
+      <button (click)="exportar()">Exportar</button>
+      <button (click)="home()">Home</button>
+    </div>
+  </header>
+
+  <section class="filters">
+    <input [(ngModel)]="filtros.q" placeholder="Buscar por venda, produto, referência, EAN ou cliente...">
+    <select [(ngModel)]="filtros.loja">
+      <option value="">Todas as lojas</option>
+      <option *ngFor="let loja of dados?.filtros?.lojas" [value]="loja.id">{{ loja.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.vendedor">
+      <option value="">Todos os vendedores</option>
+      <option *ngFor="let vendedor of dados?.filtros?.vendedores" [value]="vendedor.id">{{ vendedor.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.grupo">
+      <option value="">Todos os grupos</option>
+      <option *ngFor="let grupo of dados?.filtros?.grupos" [value]="grupo.id">{{ grupo.nome }}</option>
+    </select>
+    <select [(ngModel)]="filtros.forma">
+      <option value="">Todas as formas</option>
+      <option *ngFor="let forma of dados?.filtros?.formas" [value]="forma.id">{{ forma.nome }}</option>
+    </select>
+    <button class="primary" (click)="carregar()">Pesquisar</button>
+    <button (click)="limpar()">Limpar</button>
+    <span *ngIf="dados">Atualizado em {{ dados.atualizado_em | date:'dd/MM/yyyy HH:mm' }}</span>
+  </section>
+
+  <div class="message error" *ngIf="erro">{{ erro }}</div>
+
+  <section class="cards" *ngIf="dados">
+    <article class="metric-card" *ngFor="let card of dados.indicadores.cards">
+      <div class="metric-top">
+        <span class="icon"><i class="bi" [ngClass]="cardIcons[card.key] || 'bi-graph-up'"></i></span>
+        <span class="trend" [class.good]="card.positive" [class.bad]="!card.positive">{{ card.variation >= 0 ? '▲' : '▼' }} {{ percentual(card.variation < 0 ? -card.variation : card.variation) }}</span>
+      </div>
+      <strong>{{ card.label }}</strong>
+      <h2>{{ formatar(card) }}</h2>
+      <small>Comparativo: {{ card.kind === 'money' ? moeda(card.previous) : card.kind === 'percent' ? percentual(card.previous) : numero(card.previous) }}</small>
+      <svg viewBox="0 0 100 42" preserveAspectRatio="none">
+        <polyline [attr.points]="sparkline()" fill="none" stroke="currentColor" stroke-width="2"></polyline>
+      </svg>
+    </article>
+  </section>
+
+  <section class="grid-main" *ngIf="dados">
+    <article class="panel">
+      <div class="panel-head"><h3>Evolução do faturamento</h3><span>{{ dados.periodo.inicio | date:'dd/MM/yyyy' }} a {{ dados.periodo.fim | date:'dd/MM/yyyy' }}</span></div>
+      <svg class="line-chart" viewBox="0 0 100 44" preserveAspectRatio="none">
+        <polyline [attr.points]="sparkline()" fill="none" stroke="#0d6efd" stroke-width="2"></polyline>
+      </svg>
+      <div class="totals">
+        <strong>Total atual {{ moeda(dados.indicadores.base['faturamento']) }}</strong>
+        <span>Vendas {{ numero(dados.indicadores.base['quantidade_vendas']) }}</span>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Faturamento por categoria</h3></div>
+      <div class="bars">
+        <div class="bar-row" *ngFor="let row of dados.graficos.categorias | slice:0:6">
+          <span>{{ row.nome }}</span>
+          <div><i [style.width]="barWidth(row.faturamento, max(dados.graficos.categorias, 'faturamento'))"></i></div>
+          <strong>{{ moeda(row.faturamento) }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Vendas por forma de pagamento</h3></div>
+      <div class="bars color">
+        <div class="bar-row" *ngFor="let row of dados.graficos.pagamentos">
+          <span>{{ row.forma }}</span>
+          <div><i [style.width]="barWidth(row.total, max(dados.graficos.pagamentos, 'total'))"></i></div>
+          <strong>{{ moeda(row.total) }}</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid-secondary" *ngIf="dados">
+    <article class="panel">
+      <div class="panel-head"><h3>Produtos mais vendidos</h3></div>
+      <table>
+        <thead><tr><th>#</th><th>Produto</th><th>Qtd.</th><th>Faturamento</th><th>Margem</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of dados.tabelas.produtos | slice:0:5; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><strong>{{ p.produto }}</strong><small>{{ p.referencia }}</small></td>
+            <td>{{ numero(p.qtd) }}</td>
+            <td>{{ moeda(p.faturamento) }}</td>
+            <td>{{ percentual(p.margem_bruta) }}</td>
+          </tr>
+          <tr *ngIf="!dados.tabelas.produtos.length"><td colspan="5" class="empty">Nenhum produto vendido.</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Vendedores em destaque</h3></div>
+      <table>
+        <thead><tr><th>#</th><th>Vendedor</th><th>Vendas</th><th>Faturamento</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of dados.tabelas.vendedores | slice:0:5; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ row.vendedor }}</td>
+            <td>{{ numero(row.vendas) }}</td>
+            <td>{{ moeda(row.total) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Vendas por hora do dia</h3></div>
+      <table class="heat">
+        <thead><tr><th></th><th *ngFor="let h of dados.graficos.horas.horas">{{ h }}h</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of dados.graficos.horas.linhas">
+            <td>{{ row.dia }}</td>
+            <td *ngFor="let cell of row.valores" [style.background]="heatColor(cell.intensidade)" [title]="moeda(cell.valor)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="grid-bottom" *ngIf="dados">
+    <article class="panel">
+      <div class="panel-head"><h3>Resumo de cancelamentos e devoluções</h3></div>
+      <div class="summary-duo">
+        <div>
+          <strong>Cancelamentos</strong>
+          <h2>{{ moeda(dados.tabelas.cancelamentos_devolucoes.cancelamentos.valor) }}</h2>
+          <span>{{ numero(dados.tabelas.cancelamentos_devolucoes.cancelamentos.quantidade) }} venda(s) · {{ percentual(dados.tabelas.cancelamentos_devolucoes.cancelamentos.percentual) }}</span>
+        </div>
+        <div>
+          <strong>Devoluções</strong>
+          <h2>{{ moeda(dados.tabelas.cancelamentos_devolucoes.devolucoes.valor) }}</h2>
+          <span>{{ numero(dados.tabelas.cancelamentos_devolucoes.devolucoes.itens) }} item(ns) · {{ percentual(dados.tabelas.cancelamentos_devolucoes.devolucoes.percentual) }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Vendas por dia da semana</h3></div>
+      <div class="bars">
+        <div class="bar-row" *ngFor="let row of dados.graficos.semana">
+          <span>{{ row.dia }}</span>
+          <div><i [style.width]="barWidth(row.total, max(dados.graficos.semana, 'total'))"></i></div>
+          <strong>{{ moeda(row.total) }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h3>Alertas importantes</h3></div>
+      <div class="alerts">
+        <div *ngFor="let alerta of dados.alertas" [ngClass]="alertClass(alerta.tipo)">
+          <strong>{{ alerta.titulo }}</strong>
+          <span>{{ alerta.descricao }}</span>
+        </div>
+      </div>
+    </article>
+  </section>
+</section>

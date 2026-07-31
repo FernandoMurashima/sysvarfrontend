@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -54,7 +54,11 @@ export class PacksComponent implements OnInit {
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedPack: PackModel | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.packs.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.packs';
   columns = [
     { key: 'id', label: 'ID', visible: true, required: false },
     { key: 'nome', label: 'Nome', visible: true, required: true },
@@ -85,6 +89,13 @@ export class PacksComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get indicadores() {
+    const total = this.packs.length;
+    const ativos = this.packs.filter(p => !!p.ativo).length;
+    const grades = new Set(this.packs.map(p => p.grade).filter(Boolean)).size;
+    return { total, ativos, inativos: total - ativos, grades, itens: this.items.length };
+  }
+
   formModePack: 'new' | 'edit' | null = null;
   editingPackId: number | null = null;
   consultandoPack = false;
@@ -107,6 +118,7 @@ export class PacksComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadGrades();
     this.loadPacks();
   }
@@ -156,6 +168,28 @@ export class PacksComponent implements OnInit {
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadPacks(); }
   doSearch() { this.loadPacks(); }
   clearSearch() { this.search = ''; this.filterGrade = ''; this.filterStatus = ''; this.loadPacks(); }
+
+  selecionarPackLinha(p: PackModel): void { this.selectedPack = this.isSelectedPack(p) ? null : p; }
+  isSelectedPack(p: PackModel): boolean { return !!this.selectedPack && this.selectedPack.id === p.id; }
+  consultarPackSelecionado(): void { if (this.selectedPack) this.consultarPack(this.selectedPack); }
+  editarPackSelecionado(): void { if (this.selectedPack && this.podeEditarModulo) this.editarPack(this.selectedPack); }
+  abrirItensSelecionado(): void { if (this.selectedPack?.id) this.selecionarPack(this.selectedPack.id, this.selectedPack.grade); }
+  excluirPackSelecionado(): void { if (this.selectedPack && this.podeExcluirModulo) this.excluirPack(this.selectedPack); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-packs-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-packs-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-packs-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novoPack() {
     this.editingPackId = null;
@@ -468,5 +502,19 @@ export class PacksComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

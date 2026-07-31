@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -39,7 +39,11 @@ export class CoresComponent implements OnInit {
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedCor: Cor | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.cores.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.cores';
   columns = [
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
     { key: 'codigo', label: 'Código', visible: true, required: false },
@@ -113,6 +117,7 @@ export class CoresComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -141,9 +146,11 @@ export class CoresComponent implements OnInit {
 
   applyPage(): void {
     this.total = this.coresFiltradas.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.cores = this.coresFiltradas.slice(start, end);
+    if (this.selectedCor && !this.coresFiltradas.some(c => this.corId(c) === this.corId(this.selectedCor))) this.selectedCor = null;
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -170,6 +177,48 @@ export class CoresComponent implements OnInit {
     this.page = 1;
     this.applyPage();
   }
+
+  get indicadores() {
+    const total = this.coresAll.length;
+    const ativas = this.coresAll.filter(c => this.isAtivo(c)).length;
+    return { total, ativas, inativas: total - ativas, codigos: this.coresAll.filter(c => !!c.Codigo).length, nomes: this.coresAll.filter(c => !!c.Cor).length };
+  }
+
+  corId(c: Cor | null): number | null {
+    return c ? ((c as any).Idcor ?? null) : null;
+  }
+
+  selecionarCor(c: Cor): void {
+    this.selectedCor = this.isSelected(c) ? null : c;
+  }
+
+  isSelected(c: Cor): boolean {
+    return !!this.selectedCor && this.corId(this.selectedCor) === this.corId(c);
+  }
+
+  consultarSelecionado(): void { if (this.selectedCor) this.consultar(this.selectedCor); }
+  editarSelecionado(): void { if (this.selectedCor && this.podeEditarModulo) this.editar(this.selectedCor); }
+  excluirSelecionado(): void { if (this.selectedCor && this.podeExcluirModulo) this.excluir(this.selectedCor); }
+
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.cores.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-cores-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-cores-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-cores-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novo(): void {
     this.showForm = true;
@@ -383,6 +432,8 @@ export class CoresComponent implements OnInit {
   }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.cores.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
     try {
       const raw = localStorage.getItem(this.columnsStorageKey);
       if (!raw) return;
@@ -394,5 +445,19 @@ export class CoresComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

@@ -28,6 +28,7 @@ export class ShellComponent {
   private produtosRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
   private estoqueConsultaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'];
   private estoqueOperacaoRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
+  private moduloLojaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Caixa'];
   private pdvRoles: NavItem['roles'] = ['Caixa', 'Gerente'];
   private vendasGestaoRoles: NavItem['roles'] = ['Diretor', 'Gerente'];
   private comprasRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistentePagar'];
@@ -72,6 +73,7 @@ export class ShellComponent {
         { label: 'C.F.O.P'    , link: '/fiscal/cfop', icon: 'bi bi-file-earmark-text',        roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
         { label: 'Tributos'   , link: '/fiscal/tributos', icon: 'bi bi-percent',              roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
         { label: 'Regras Tributárias', link: '/fiscal/regras-tributarias', icon: 'bi bi-sliders', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
+        { label: 'Faturamento', link: '/fiscal/faturamento', icon: 'bi bi-file-earmark-check', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
         { label: 'Plano Contábil',      link: '/plano-contabil', icon: 'bi bi-diagram-3',     roles: this.cadastrosRoles, moduloEmpresa: 'fiscal' },
         { label: 'Material'   , link: '/material'   , icon: 'bi bi-arrow-counterclockwise',  roles: this.produtosRoles, moduloEmpresa: 'fiscal' },       
         
@@ -98,21 +100,41 @@ export class ShellComponent {
     },
     { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
     { label: 'Inventário',    link: '/estoque/inventario',    icon: 'bi bi-clipboard-data',  roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+    { label: 'Distribuição',   link: '/distribuicao',          icon: 'bi bi-diagram-3',       roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+    { label: 'Pedidos Venda Distribuição', link: '/distribuicao/pedidos-venda', icon: 'bi bi-receipt', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
     { label: 'Etiquetas',     link: '/estoque/etiquetas',     icon: 'bi bi-upc-scan',        roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
   ]
 },
+
+    {
+      label: 'Módulo Loja', icon: 'bi bi-shop-window', roles: this.moduloLojaRoles, moduloEmpresa: 'estoque',
+      children: [
+        { label: 'Recebimento de Mercadorias', link: '/loja/recebimento', icon: 'bi bi-box-arrow-in-down', roles: this.moduloLojaRoles, moduloEmpresa: 'estoque' },
+        { label: 'PDV Offline', link: '/loja/pdv-offline', icon: 'bi bi-pc-display', roles: this.pdvRoles, moduloEmpresa: 'estoque' },
+        { label: 'Devoluções de vendas', link: '/loja/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles, moduloEmpresa: 'estoque' },
+      ]
+    },
 
 
     {
       label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'], moduloEmpresa: 'vendas',
       children: [
         { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles, moduloEmpresa: 'vendas' },
-        { label: 'PDV Desktop'          , link: '/vendas/pdv-desktop', icon: 'bi bi-pc-display',             roles: this.pdvRoles, moduloEmpresa: 'vendas' },
         { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
         { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
         { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-        { label: 'Devoluções de vendas' , link: '/vendas/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles, moduloEmpresa: 'vendas' },
         { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+      ]
+    },
+
+    {
+      label: 'Dashboards', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios',
+      children: [
+        { label: 'Executivo', link: '/dashboard/executivo', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor'], moduloEmpresa: 'relatorios' },
+        { label: 'Vendas', link: '/dashboard/vendas', icon: 'bi bi-graph-up-arrow', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
+        { label: 'Produtos', link: '/dashboard/produtos', icon: 'bi bi-box-seam', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
+        { label: 'Estoque', link: '/dashboard/estoque', icon: 'bi bi-archive', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
+        { label: 'Financeiro', link: '/dashboard/financeiro', icon: 'bi bi-cash-stack', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
       ]
     },
 
@@ -168,6 +190,7 @@ export class ShellComponent {
         { label: 'Usuários',               link: '/config/usuarios',            icon: 'bi bi-person-gear',  roles: ['Admin'], moduloEmpresa: 'configuracoes' },
         { label: 'Configuração Financeira', link: '/financeiro/configuracao',    icon: 'bi bi-sliders',      roles: ['Admin'], moduloEmpresa: 'configuracoes' },
         { label: 'Formas de Pagamento',     link: '/financeiro/formas-pagamento', icon: 'bi bi-credit-card',  roles: ['Admin'], moduloEmpresa: 'configuracoes' },
+        { label: 'Prazos de Pagamento',     link: '/financeiro/prazos-pagamento', icon: 'bi bi-calendar-range', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
         { label: 'Vales-troca',             link: '/financeiro/vales-troca',     icon: 'bi bi-ticket-perforated', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
         
       ]
@@ -178,6 +201,7 @@ export class ShellComponent {
   focusMode = false;
   currentPageTitle = 'Home';
   telaCheia = false;
+  barControlsOpen = false;
 
   constructor() {
     this.refreshMenu();
@@ -206,6 +230,71 @@ export class ShellComponent {
       return;
     }
     document.exitFullscreen?.();
+  }
+
+  get showPageBarControls(): boolean {
+    const path = this.normalizeUrl(this.router.url);
+    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
+  }
+
+  toggleBarControls(): void {
+    this.barControlsOpen = !this.barControlsOpen;
+  }
+
+  executarControleBarra(action: 'indicadores' | 'filtros' | 'restaurar'): void {
+    const path = this.normalizeUrl(this.router.url);
+    const scopes: Record<string, string> = {
+      '/clientes': 'clientes',
+      '/fornecedores': 'fornecedores',
+      '/lojas': 'lojas',
+      '/funcionarios': 'funcionarios',
+      '/natureza': 'naturezas',
+      '/produtos': 'produtos-revenda',
+      '/produtos-uso': 'produtos-uso',
+      '/grupos': 'grupos',
+      '/cores': 'cores',
+      '/grades': 'grades',
+      '/packs': 'packs',
+      '/unidades': 'unidades',
+      '/fiscal/ncm': 'ncms',
+      '/fiscal/cfop': 'cfops',
+      '/fiscal/tributos': 'tributos',
+      '/fiscal/regras-tributarias': 'regras-tributarias',
+      '/fiscal/faturamento': 'faturamento',
+      '/plano-contabil': 'plano-contabil',
+      '/material': 'material',
+      '/financeiro/lancamentos-contabeis': 'lancamentos-contabeis',
+      '/estoque/inventario': 'estoque-inventario',
+      '/distribuicao': 'distribuicao',
+      '/distribuicao/pedidos-venda': 'pedidos-venda-distribuicao',
+      '/loja/recebimento': 'loja-recebimento',
+      '/loja/devolucoes': 'devolucoes-vendas',
+      '/config/usuarios': 'usuarios',
+      '/financeiro/configuracao': 'config-financeira',
+      '/financeiro/formas-pagamento': 'formas-pagamento',
+      '/financeiro/prazos-pagamento': 'prazos-pagamento',
+      '/financeiro/vales-troca': 'vales-troca',
+      '/financeiro/receber': 'financeiro-receber',
+      '/financeiro/pagar': 'financeiro-pagar',
+      '/financeiro/caixa': 'caixas',
+      '/financeiro/contas': 'contas-bancarias',
+      '/financeiro/antecipacoes': 'antecipacoes-recebiveis',
+      '/financeiro/movimentacoes': 'movimentacoes-financeiras',
+      '/producao': 'producao',
+      '/producao/ficha-tecnica': 'ficha-tecnica',
+      '/producao/ordens': 'ordem-producao',
+      '/compras/pedidos-revenda': 'pedidos-revenda',
+      '/compras/pedidos-uso-consumo': 'pedidos-uso-consumo',
+      '/compras/notas-entrada': 'notas-entrada',
+    };
+    const scope = scopes[path] || 'clientes';
+    const eventName = action === 'indicadores'
+      ? `sysvar-${scope}-toggle-indicators`
+      : action === 'filtros'
+        ? `sysvar-${scope}-toggle-filters`
+        : `sysvar-${scope}-restore-view`;
+    window.dispatchEvent(new CustomEvent(eventName));
+    this.barControlsOpen = false;
   }
 
   sair() {
@@ -243,6 +332,7 @@ export class ShellComponent {
     this.focusMode = path !== '/home';
     this.sidebarOpen = !this.focusMode;
     this.currentPageTitle = this.findMenuLabel(this.menuItems, path) || 'SYSVAR';
+    this.barControlsOpen = false;
   }
 
   private normalizeUrl(url: string): string {

@@ -1,0 +1,71 @@
+@import '../cores/cores.component.css';
+
+.pedidos-filter {
+  grid-template-columns: minmax(360px, 1fr) minmax(210px, .35fr) auto auto;
+}
+
+.detail-area {
+  margin-top: 0;
+}
+
+.pedido-summary {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.2fr) minmax(150px, .8fr) minmax(100px, .5fr) minmax(120px, .6fr) minmax(90px, .4fr);
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dbe3ef;
+}
+
+.pedido-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pedido-summary small {
+  color: #475569;
+  font-size: 11px;
+}
+
+.pedido-summary strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.detail-table {
+  min-width: 1120px;
+}
+
+.num-input {
+  max-width: 96px;
+  text-align: right;
+}
+
+.btn.sm {
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
+.status-pill.st-fat {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pill.st-agf,
+.status-pill.st-ab {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.st-canc {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 1200px) {
+  .pedidos-filter,
+  .pedido-summary {
+    grid-template-columns: 1fr;
+  }
+}

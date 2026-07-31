@@ -4,6 +4,7 @@ export interface Caixa {
   tipo_caixa?: 'LOJA' | 'MASTER';
   codigo: string;
   descricao: string;
+  conta_contabil?: string | null;
   saldo_inicial: string | number;
   saldo_atual: string | number;
   ativo: boolean;

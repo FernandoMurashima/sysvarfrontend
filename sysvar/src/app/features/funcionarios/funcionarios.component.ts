@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, FormGroup } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -56,7 +56,11 @@ export class FuncionariosComponent implements OnInit {
   errorOverlayOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedFuncionario: Funcionario | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.funcionarios.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.funcionarios';
   columns = [
     { key: 'apelido', label: 'Apelido', visible: true, required: false },
     { key: 'cpf', label: 'CPF', visible: true, required: false },
@@ -185,6 +189,7 @@ export class FuncionariosComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
     this.loadLojas();
   }
@@ -264,6 +269,9 @@ export class FuncionariosComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.funcionarios = filtered.slice(start, end);
+    if (this.selectedFuncionario && !filtered.some(f => f.id === this.selectedFuncionario?.id)) {
+      this.selectedFuncionario = null;
+    }
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -289,6 +297,62 @@ export class FuncionariosComponent implements OnInit {
     this.filterFim = '';
     this.page = 1;
     this.applyPage();
+  }
+
+  selecionarFuncionario(row: Funcionario): void {
+    this.selectedFuncionario = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: Funcionario): boolean {
+    return !!this.selectedFuncionario && this.selectedFuncionario.id === row.id;
+  }
+
+  consultarSelecionado(): void {
+    if (this.selectedFuncionario) this.consultar(this.selectedFuncionario);
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedFuncionario && this.podeEditarModulo) this.editar(this.selectedFuncionario);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedFuncionario && this.podeExcluirModulo) this.excluir(this.selectedFuncionario);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.funcionarios.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-funcionarios-toggle-indicators')
+  onToggleIndicatorsEvent(): void {
+    this.toggleIndicators();
+  }
+
+  @HostListener('window:sysvar-funcionarios-toggle-filters')
+  onToggleFiltersEvent(): void {
+    this.toggleFilters();
+  }
+
+  @HostListener('window:sysvar-funcionarios-restore-view')
+  onRestoreViewEvent(): void {
+    this.restoreViewPreference();
   }
 
   lojaNome(id: number | null | undefined): string {
@@ -581,5 +645,24 @@ export class FuncionariosComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 }

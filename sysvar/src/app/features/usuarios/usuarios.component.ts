@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -79,6 +79,28 @@ export class UsuariosComponent implements OnInit {
   lojas: Loja[] = [];
   usuarioAtual: User | null = null;
   search = '';
+  filterType = '';
+  filterStatus = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  selectedUser: User | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50, 100];
+  private readonly columnsStorageKey = 'sysvar.list.usuarios.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.usuarios';
+  columns = [
+    { key: 'usuario', label: 'Usuário', visible: true, required: true },
+    { key: 'nome', label: 'Nome', visible: true, required: false },
+    { key: 'email', label: 'Email', visible: true, required: false },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'empresa', label: 'Empresa', visible: true, required: false },
+    { key: 'loja', label: 'Loja principal', visible: true, required: false },
+    { key: 'lojas', label: 'Lojas', visible: true, required: false },
+  ];
   editingId: number | null = null;
 
   typeOptions: User['type'][] = [
@@ -148,6 +170,8 @@ export class UsuariosComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadUsuarioAtual();
     this.load();
     this.loadLojas();
@@ -235,14 +259,14 @@ export class UsuariosComponent implements OnInit {
   }
 
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.load(); }
-  doSearch() { this.load(); }
-  clearSearch() { this.search = ''; this.load(); }
+  doSearch() { this.page = 1; }
+  clearSearch() { this.search = ''; this.filterType = ''; this.filterStatus = ''; this.page = 1; }
 
   load() {
     this.loading = true;
     this.errorMsg = '';
     this.api.list({ search: this.search, ordering: '-id' }).subscribe({
-      next: (data) => { this.usuarios = Array.isArray(data) ? data : (data as any).results ?? []; },
+      next: (data) => { this.usuarios = Array.isArray(data) ? data : (data as any).results ?? []; this.page = 1; },
       error: (err) => { this.errorMsg = 'Falha ao carregar usuários.'; console.error(err); },
       complete: () => this.loading = false
     });
@@ -564,6 +588,49 @@ export class UsuariosComponent implements OnInit {
     this.excluirModal = null;
   }
 
+  get usuariosFiltrados(): User[] {
+    const term = this.normalize(this.search);
+    return this.usuarios.filter(u => {
+      const nome = `${u.first_name || ''} ${u.last_name || ''}`;
+      const matchesSearch = !term || [u.username, nome, u.email, u.type, this.empresaNome(u.Idempresa ?? u.empresa?.id), this.lojaNome(u.Idloja || u.loja?.Idloja)].some(v => this.normalize(v).includes(term));
+      const matchesType = !this.filterType || u.type === this.filterType;
+      const ativo = u.is_staff !== false;
+      const matchesStatus = !this.filterStatus || (this.filterStatus === 'ativo' && ativo) || (this.filterStatus === 'inativo' && !ativo);
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }
+
+  get usuariosPaginados(): User[] {
+    return this.usuariosFiltrados.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
+  }
+
+  get totalFiltrado(): number { return this.usuariosFiltrados.length; }
+  get totalPages(): number { return Math.max(1, Math.ceil(this.totalFiltrado / this.pageSize)); }
+  get pageStart(): number { return this.totalFiltrado ? (this.page - 1) * this.pageSize + 1 : 0; }
+  get pageEnd(): number { return Math.min(this.page * this.pageSize, this.totalFiltrado); }
+  get indicadores() {
+    const total = this.usuarios.length;
+    return { total, ativos: this.usuarios.filter(u => u.is_staff !== false).length, admins: this.usuarios.filter(u => u.type === 'Admin').length, lojas: this.usuarios.filter(u => !!u.Idloja || !!u.loja).length, filtrados: this.totalFiltrado };
+  }
+  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 20; localStorage.setItem('sysvar.list.usuarios.pageSize', String(this.pageSize)); this.page = 1; }
+  firstPage(): void { this.page = 1; }
+  prevPage(): void { if (this.page > 1) this.page--; }
+  nextPage(): void { if (this.page < this.totalPages) this.page++; }
+  lastPage(): void { this.page = this.totalPages; }
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  selecionarUsuario(u: User): void { this.selectedUser = this.selectedUser?.id === u.id ? null : u; }
+  isSelected(u: User): boolean { return this.selectedUser?.id === u.id; }
+  consultarSelecionado(): void { if (this.selectedUser) this.consultar(this.selectedUser); }
+  editarSelecionado(): void { if (this.selectedUser && this.podeEditarModulo) this.editar(this.selectedUser); }
+  excluirSelecionado(): void { if (this.selectedUser && this.podeExcluirModulo) this.excluir(this.selectedUser); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.usuarios.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); }
+  @HostListener('window:sysvar-usuarios-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-usuarios-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-usuarios-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   lojaId(loja: Loja): number | null {
     return loja.id ?? loja.Idloja ?? null;
   }
@@ -641,4 +708,22 @@ export class UsuariosComponent implements OnInit {
     }
     this.form.patchValue({ Idlojas: Array.from(selecionadas) });
   }
+
+  private normalize(value: any): string {
+    return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.usuarios.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try { const saved = JSON.parse(raw) as Record<string, boolean>; this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible }); } catch {}
+  }
+  private saveColumnsPreference(): void { localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible])))); }
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try { const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean }; this.indicatorsVisible = pref.indicatorsVisible !== false; this.filtersVisible = pref.filtersVisible !== false; } catch {}
+  }
+  private saveViewPreference(): void { localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible })); }
 }

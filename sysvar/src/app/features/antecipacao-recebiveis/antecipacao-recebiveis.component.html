@@ -1,16 +1,29 @@
-<div class="financeiro-page">
-  <header class="toolbar">
-    <h2>Antecipação de Recebíveis</h2>
-    <div class="toolbar-actions">
-      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Antecipação de Recebíveis</h1>
+      <button class="info-button" type="button" aria-label="Informações da tela" title="Antecipe recebíveis de cartão">i</button>
     </div>
-  </header>
+    <div class="title-actions">
+      <button class="btn icon-btn" type="button" [routerLink]="['/ajuda/financeiro']"><span>?</span>Ajuda</button>
+      <button class="btn icon-btn" type="button" [routerLink]="['/home']"><span>⌂</span>Home</button>
+      <button class="btn icon-btn" type="button" (click)="limparSelecao()"><span>×</span>Limpar</button>
+      <button class="btn icon-btn" type="button" (click)="exportOpen = !exportOpen"><span>⇩</span>Exportar</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><strong>{{ indicadores.disponiveis }}</strong><small>Disponíveis</small></div>
+    <div class="indicator"><span class="indicator-icon cyan">✓</span><strong>{{ indicadores.selecionados }}</strong><small>Selecionados</small></div>
+    <div class="indicator"><span class="indicator-icon purple">▤</span><strong>{{ indicadores.antecipacoes }}</strong><small>Operações</small></div>
+    <div class="indicator"><span class="indicator-icon orange">$</span><strong>{{ indicadores.bruto | currency:'BRL' }}</strong><small>Bruto</small></div>
+    <div class="indicator"><span class="indicator-icon green">$</span><strong>{{ indicadores.liquido | currency:'BRL' }}</strong><small>Líquido</small></div>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
-  <section class="panel filters">
-    <strong>Recebíveis</strong>
+  <section class="filter-bar" *ngIf="filtersVisible">
     <select [(ngModel)]="lojaFiltro">
       <option [ngValue]="null">Todas as lojas</option>
       <option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
@@ -28,9 +41,15 @@
     <button class="btn primary" type="button" (click)="buscarRecebiveis()" [disabled]="loading">
       {{ loading ? 'Buscando...' : 'Buscar' }}
     </button>
+    <div class="menu-holder">
+      <button class="btn icon-btn" type="button" (click)="columnsOpen = !columnsOpen"><span>▦</span>Colunas</button>
+      <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />{{ col.label }}</label>
+      </div>
+    </div>
   </section>
 
-  <section class="summary-grid">
+  <section class="action-bar">
     <div class="summary-card">
       <span>Selecionados</span>
       <strong>{{ qtdSelecionada() }}</strong>
@@ -49,7 +68,7 @@
     </div>
   </section>
 
-  <section class="panel operation">
+  <section class="action-bar operation">
     <strong>Operação</strong>
     <label>
       Data antecipação
@@ -77,48 +96,52 @@
     </button>
   </section>
 
-  <section class="panel">
-    <div class="list-header">
-      <strong>Recebíveis disponíveis</strong>
-      <span>{{ recebiveis.length }} item(ns)</span>
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Recebíveis disponíveis</strong><span>{{ totalFiltrado }} item(ns)</span></div>
+      <div class="list-controls"><label for="pageSize">Itens por página:</label><select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
     </div>
     <div class="table-wrapper">
-      <table class="table" *ngIf="recebiveis.length; else semRecebiveisTpl">
+      <table class="table" *ngIf="recebiveisPaginados.length; else semRecebiveisTpl">
         <thead>
           <tr>
             <th class="select-col"></th>
             <th>Venc.</th>
             <th>Documento</th>
-            <th>Loja</th>
-            <th>Conta</th>
-            <th>Forma</th>
-            <th>Histórico</th>
-            <th class="money-col">Valor</th>
+            <th *ngIf="visibleColumn('loja')">Loja</th>
+            <th *ngIf="visibleColumn('conta')">Conta</th>
+            <th *ngIf="visibleColumn('forma')">Forma</th>
+            <th *ngIf="visibleColumn('historico')">Histórico</th>
+            <th *ngIf="visibleColumn('valor')" class="money-col">Valor</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of recebiveis">
+          <tr *ngFor="let item of recebiveisPaginados">
             <td class="select-col">
               <input type="checkbox" [checked]="selecionado(item)" (change)="alternar(item, $any($event.target).checked)" />
             </td>
             <td>{{ item.data_movimento | date:'dd/MM/yyyy' }}</td>
             <td class="doc">{{ item.documento || '-' }}</td>
-            <td>{{ lojaNome(item.idloja) }}</td>
-            <td>{{ contaNome(item.conta_bancaria) }}</td>
-            <td>{{ item.FormaPagamento || '-' }}</td>
-            <td>{{ item.historico }}</td>
-            <td class="money money-col">{{ item.valor | currency:'BRL' }}</td>
+            <td *ngIf="visibleColumn('loja')">{{ lojaNome(item.idloja) }}</td>
+            <td *ngIf="visibleColumn('conta')">{{ contaNome(item.conta_bancaria) }}</td>
+            <td *ngIf="visibleColumn('forma')">{{ item.FormaPagamento || '-' }}</td>
+            <td *ngIf="visibleColumn('historico')">{{ item.historico }}</td>
+            <td *ngIf="visibleColumn('valor')" class="money money-col">{{ item.valor | currency:'BRL' }}</td>
           </tr>
         </tbody>
       </table>
       <ng-template #semRecebiveisTpl><div class="empty">Nenhum recebível disponível para antecipação.</div></ng-template>
     </div>
+    <div class="pager" *ngIf="totalFiltrado > 0">
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ totalFiltrado }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
   </section>
 
-  <section class="panel">
-    <div class="list-header">
-      <strong>Antecipações registradas</strong>
-      <span>{{ antecipacoes.length }} operação(ões)</span>
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Antecipações registradas</strong><span>{{ antecipacoes.length }} operação(ões)</span></div>
     </div>
     <div class="table-wrapper small">
       <table class="table" *ngIf="antecipacoes.length; else semAntecipacoesTpl">

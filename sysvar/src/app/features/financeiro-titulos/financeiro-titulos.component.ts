@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
@@ -44,6 +44,33 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   submitted = false;
   showForm = false;
   search = '';
+  filterLoja = '';
+  filterStatus = '';
+  filterEmissaoIni = '';
+  filterEmissaoFim = '';
+  filterVencimentoIni = '';
+  filterVencimentoFim = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  indicatorsVisible = true;
+  filtersVisible = true;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50, 100];
+  selectedLinha: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira } | null = null;
+  columns = [
+    { key: 'parceiro', label: 'Parceiro', visible: true, required: false },
+    { key: 'loja', label: 'Loja', visible: true, required: false },
+    { key: 'emissao', label: 'Emissão', visible: true, required: false },
+    { key: 'total', label: 'Total', visible: true, required: false },
+    { key: 'forma', label: 'Forma', visible: true, required: false },
+    { key: 'vencimento', label: 'Vencimento', visible: true, required: false },
+    { key: 'valor', label: 'Valor', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false }
+  ];
+  private readonly columnsStorageKeyBase = 'sysvar.list.financeiro-titulos.columns';
+  private readonly viewPrefsKeyBase = 'sysvar.ui.preferences.financeiro-titulos';
   successMsg = '';
   errorMsg = '';
 
@@ -119,11 +146,71 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     return this.tipo === 'pagar' ? 'Fornecedor' : 'Cliente';
   }
 
+  get linhasFiltradas(): Array<{ titulo: TituloFinanceiro; parcela: ParcelaFinanceira }> {
+    const q = this.normalize(this.search);
+    return this.titulos
+      .flatMap(titulo => (titulo.itens || []).map(parcela => ({ titulo, parcela })))
+      .filter(row => {
+        const lojaOk = !this.filterLoja || String(row.titulo.idloja) === this.filterLoja;
+        const statusOk = !this.filterStatus || row.parcela.status === this.filterStatus;
+        const emissao = String(row.titulo.Data_emissao || '');
+        const vencimento = String(row.parcela.Data_vencimento || '');
+        const emissaoOk = (!this.filterEmissaoIni || emissao >= this.filterEmissaoIni) &&
+          (!this.filterEmissaoFim || emissao <= this.filterEmissaoFim);
+        const vencimentoOk = (!this.filterVencimentoIni || vencimento >= this.filterVencimentoIni) &&
+          (!this.filterVencimentoFim || vencimento <= this.filterVencimentoFim);
+        const buscaOk = !q || [
+          row.titulo.Titulo,
+          row.titulo.Documento,
+          this.parceiroNome(row.titulo),
+          this.lojaNome(row.titulo.idloja),
+          row.parcela.FormaPagamento,
+          this.parcelaTitulo(row.titulo, row.parcela)
+        ].some(value => this.normalize(value).includes(q));
+        return lojaOk && statusOk && emissaoOk && vencimentoOk && buscaOk;
+      });
+  }
+
+  get linhasPaginadas(): Array<{ titulo: TituloFinanceiro; parcela: ParcelaFinanceira }> {
+    const start = (this.page - 1) * this.pageSize;
+    return this.linhasFiltradas.slice(start, start + this.pageSize);
+  }
+
+  get totalFiltrado(): number {
+    return this.linhasFiltradas.length;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalFiltrado / this.pageSize));
+  }
+
+  get pageStart(): number {
+    return this.totalFiltrado ? (this.page - 1) * this.pageSize + 1 : 0;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.page * this.pageSize, this.totalFiltrado);
+  }
+
+  get indicadores() {
+    const linhas = this.titulos.flatMap(t => t.itens || []);
+    return {
+      total: this.titulos.length,
+      parcelas: linhas.length,
+      abertas: linhas.filter(p => p.status === 'PREVISTO' || p.status === 'EFETIVO').length,
+      baixadas: linhas.filter(p => p.status === 'BAIXADO').length,
+      vencidas: linhas.filter(p => this.parcelaVencida(p)).length
+    };
+  }
+
   ngOnInit(): void {
     this.loadAuxiliares();
     this.sub = this.route.data.subscribe(data => {
       this.tipo = (data['tipo'] as TipoTituloFinanceiro) || 'pagar';
+      this.loadViewPreference();
+      this.loadColumnPreference();
       this.cancelar();
+      this.selectedLinha = null;
       this.load();
     });
   }
@@ -157,15 +244,9 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.api.list(this.tipo).subscribe({
       next: res => {
-        const all = this.unwrap<TituloFinanceiro>(res);
-        const q = this.search.trim().toLowerCase();
-        this.titulos = q
-          ? all.filter(t =>
-              (t.Titulo || '').toLowerCase().includes(q) ||
-              (t.Documento || '').toLowerCase().includes(q) ||
-              this.parceiroNome(t).toLowerCase().includes(q)
-            )
-          : all;
+        this.titulos = this.unwrap<TituloFinanceiro>(res);
+        this.page = 1;
+        this.selectedLinha = null;
         this.loading = false;
         this.errorMsg = '';
       },
@@ -315,7 +396,7 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
         this.baixaModal = null;
         this.load();
       },
-      error: () => this.errorMsg = 'Falha ao baixar parcela.'
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao baixar parcela.')
     });
   }
 
@@ -381,6 +462,78 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     this.excluirModal = null;
   }
 
+  doSearch(): void {
+    this.page = 1;
+  }
+
+  clearSearch(): void {
+    this.search = '';
+    this.filterLoja = '';
+    this.filterStatus = '';
+    this.filterEmissaoIni = '';
+    this.filterEmissaoFim = '';
+    this.filterVencimentoIni = '';
+    this.filterVencimentoFim = '';
+    this.page = 1;
+  }
+
+  selecionarLinha(row: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira }): void {
+    this.selectedLinha = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira }): boolean {
+    return !!this.selectedLinha && this.rowKey(this.selectedLinha) === this.rowKey(row);
+  }
+
+  baixarSelecionada(): void {
+    if (this.selectedLinha) this.baixar(this.selectedLinha.parcela);
+  }
+
+  cancelarSelecionada(): void {
+    if (this.selectedLinha) this.cancelarParcela(this.selectedLinha.parcela);
+  }
+
+  reabrirSelecionada(): void {
+    if (this.selectedLinha) this.reabrirParcela(this.selectedLinha.parcela);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedLinha) this.excluir(this.selectedLinha.titulo);
+  }
+
+  visibleColumn(key: string): boolean {
+    return this.columns.find(c => c.key === key)?.visible !== false;
+  }
+
+  toggleColumn(key: string, visible: boolean): void {
+    const col = this.columns.find(c => c.key === key);
+    if (!col || col.required) return;
+    col.visible = visible;
+    this.saveColumnPreference();
+  }
+
+  onPageSizeChange(value: number | string): void {
+    this.pageSize = Number(value) || 20;
+    this.page = 1;
+  }
+
+  firstPage(): void { this.page = 1; }
+  prevPage(): void { this.page = Math.max(1, this.page - 1); }
+  nextPage(): void { this.page = Math.min(this.totalPages, this.page + 1); }
+  lastPage(): void { this.page = this.totalPages; }
+
+  @HostListener('window:sysvar-financeiro-receber-toggle-indicators')
+  @HostListener('window:sysvar-financeiro-pagar-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+
+  @HostListener('window:sysvar-financeiro-receber-toggle-filters')
+  @HostListener('window:sysvar-financeiro-pagar-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+
+  @HostListener('window:sysvar-financeiro-receber-restore-view')
+  @HostListener('window:sysvar-financeiro-pagar-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   tituloId(titulo: TituloFinanceiro): number | null {
     return this.tipo === 'pagar' ? (titulo.Idpagar ?? null) : (titulo.Idreceber ?? null);
   }
@@ -421,6 +574,10 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   statusClass(status: string): string {
     return `status-${status.toLowerCase()}`;
+  }
+
+  rowKey(row: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira }): string {
+    return `${this.tituloId(row.titulo) || 0}-${this.parcelaId(row.parcela) || row.parcela.parcela_n}`;
   }
 
   get naturezasTitulo(): NatLancamento[] {
@@ -513,5 +670,83 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     const date = new Date(`${dateText}T00:00:00`);
     date.setDate(date.getDate() + days);
     return date.toISOString().slice(0, 10);
+  }
+
+  private parcelaVencida(parcela: ParcelaFinanceira): boolean {
+    if (parcela.status === 'BAIXADO' || parcela.status === 'CANCELADO') return false;
+    return String(parcela.Data_vencimento || '') < this.today();
+  }
+
+  private normalize(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase();
+  }
+
+  private errorText(err: any, fallback: string): string {
+    const data = err?.error;
+    if (!data) return fallback;
+    if (typeof data === 'string') return data;
+    if (data.detail) return data.detail;
+    const first = Object.values(data)[0];
+    if (Array.isArray(first)) return String(first[0]);
+    return String(first || fallback);
+  }
+
+  private toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  private toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  private restoreViewPreference(): void {
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns.forEach(col => col.visible = true);
+    localStorage.removeItem(this.viewPrefsKey());
+    localStorage.removeItem(this.columnsStorageKey());
+  }
+
+  private viewPrefsKey(): string {
+    return `${this.viewPrefsKeyBase}.${this.tipo}`;
+  }
+
+  private columnsStorageKey(): string {
+    return `${this.columnsStorageKeyBase}.${this.tipo}`;
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey());
+    if (!raw) return;
+    try {
+      const prefs = JSON.parse(raw);
+      this.indicatorsVisible = prefs.indicatorsVisible !== false;
+      this.filtersVisible = prefs.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey(), JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible
+    }));
+  }
+
+  private loadColumnPreference(): void {
+    const raw = localStorage.getItem(this.columnsStorageKey());
+    if (!raw) return;
+    try {
+      const state = JSON.parse(raw) as Record<string, boolean>;
+      this.columns.forEach(col => {
+        if (!col.required && state[col.key] !== undefined) col.visible = state[col.key];
+      });
+    } catch {}
+  }
+
+  private saveColumnPreference(): void {
+    const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
+    localStorage.setItem(this.columnsStorageKey(), JSON.stringify(state));
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -76,6 +76,9 @@ export class LojasComponent implements OnInit {
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedLoja: Loja | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   filterEmpresa: number | '' = '';
   filterTipo = '';
   filterCidade = '';
@@ -85,6 +88,7 @@ export class LojasComponent implements OnInit {
   sortKey: 'nome' | 'empresa' | 'tipo' | 'cidade' | 'status' | 'data' = 'nome';
   sortDir: 'asc' | 'desc' = 'asc';
   private readonly columnsStorageKey = 'sysvar.list.lojas.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.lojas';
   columns = [
     { key: 'empresa', label: 'Empresa', visible: true, required: false },
     { key: 'tipo', label: 'Tipo', visible: true, required: false },
@@ -187,6 +191,7 @@ export class LojasComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadUsuarioAtual();
     this.load();
   }
@@ -346,9 +351,13 @@ export class LojasComponent implements OnInit {
   applyPage(): void {
     const filtered = this.lojasFiltradas;
     this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.lojas = filtered.slice(start, end);
+    if (this.selectedLoja && !filtered.some(l => this.lojaId(l) === this.lojaId(this.selectedLoja))) {
+      this.selectedLoja = null;
+    }
   }
   onPageSizeChange(size: number | string): void {
     this.pageSize = Number(size) || 20;
@@ -376,6 +385,80 @@ export class LojasComponent implements OnInit {
     this.filterCnpj = '';
     this.page = 1;
     this.applyPage();
+  }
+
+  lojaId(loja: Loja | null): number | string | null {
+    if (!loja) return null;
+    return (loja as any).id ?? (loja as any).Idloja ?? null;
+  }
+
+  selecionarLoja(row: Loja): void {
+    this.selectedLoja = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: Loja): boolean {
+    return !!this.selectedLoja && this.lojaId(this.selectedLoja) === this.lojaId(row);
+  }
+
+  consultarSelecionado(): void {
+    if (this.selectedLoja) this.consultar(this.selectedLoja);
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedLoja && this.podeEditarModulo) this.editar(this.selectedLoja);
+  }
+
+  duplicarSelecionado(): void {
+    if (this.selectedLoja && this.podeEditarModulo) this.duplicar(this.selectedLoja);
+  }
+
+  alternarAtivoSelecionado(): void {
+    if (!this.selectedLoja || !this.podeEditarModulo) return;
+    this.isAtiva(this.selectedLoja) ? this.abrirInativar(this.selectedLoja) : this.abrirReativar(this.selectedLoja);
+  }
+
+  historicoSelecionado(): void {
+    if (this.selectedLoja) this.historicoModal = this.selectedLoja;
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedLoja && this.podeExcluirModulo) this.excluir(this.selectedLoja);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.lojas.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-lojas-toggle-indicators')
+  onToggleIndicatorsEvent(): void {
+    this.toggleIndicators();
+  }
+
+  @HostListener('window:sysvar-lojas-toggle-filters')
+  onToggleFiltersEvent(): void {
+    this.toggleFilters();
+  }
+
+  @HostListener('window:sysvar-lojas-restore-view')
+  onRestoreViewEvent(): void {
+    this.restoreViewPreference();
   }
 
   novo(): void {
@@ -857,6 +940,25 @@ export class LojasComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 
   // ====== Overlay de erros ======

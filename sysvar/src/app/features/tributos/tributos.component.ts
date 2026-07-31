@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Tributo } from '../../core/models/tributo';
@@ -35,6 +35,10 @@ export class TributosComponent {
   filterAtual = '';
   filterStatus = '';
   private readonly columnsStorageKey = 'sysvar.list.tributos.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.tributos';
+  selectedItem = signal<Tributo | null>(null);
+  indicatorsVisible = true;
+  filtersVisible = true;
   columns = [
     { key: 'codigo', label: 'Código', visible: true, required: true },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
@@ -60,6 +64,18 @@ export class TributosComponent {
     });
   });
   total = computed(() => this.filteredItems().length);
+  indicadores = computed(() => {
+    const rows = this.items();
+    const total = rows.length;
+    const ativos = rows.filter(i => i.ativo !== false).length;
+    return {
+      total,
+      ativos,
+      inativos: total - ativos,
+      atuais: rows.filter(i => i.atual).length,
+      federais: rows.filter(i => i.esfera === 'FEDERAL').length,
+    };
+  });
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
@@ -96,7 +112,12 @@ export class TributosComponent {
 
   constructor() {
     effect(() => { if (this.page() > this.totalPages()) this.page.set(this.totalPages()); });
+    effect(() => {
+      const selected = this.selectedItem();
+      if (selected && !this.filteredItems().some(item => item.id === selected.id)) this.selectedItem.set(null);
+    });
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -113,11 +134,31 @@ export class TributosComponent {
   doFilter() { this.page.set(1); }
   clearFilters() { this.search = ''; this.filterEsfera = ''; this.filterAtual = ''; this.filterStatus = ''; this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.tributos.pageSize', String(+v)); this.page.set(1); }
   firstPage() { this.page.set(1); }
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
   lastPage() { this.page.set(this.totalPages()); }
+
+  selecionarItem(row: Tributo): void { this.selectedItem.set(this.isSelected(row) ? null : row); }
+  isSelected(row: Tributo): boolean { return !!this.selectedItem() && this.selectedItem()?.id === row.id; }
+  consultarSelecionado(): void { const row = this.selectedItem(); if (row) this.consultar(row); }
+  editarSelecionado(): void { const row = this.selectedItem(); if (row && this.podeEditarModulo) this.editar(row); }
+  excluirSelecionado(): void { const row = this.selectedItem(); if (row && this.podeExcluirModulo) this.excluir(row); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.tributos.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize.set(20);
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-tributos-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-tributos-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-tributos-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novo() {
     if (!this.podeEditarModulo) return;
@@ -239,6 +280,8 @@ export class TributosComponent {
   closeErrorOverlay() { this.errorOverlayOpen.set(false); }
 
   private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.tributos.pageSize'));
+    if ([10, 20, 50].includes(size)) this.pageSize.set(size);
     const raw = localStorage.getItem(this.columnsStorageKey);
     if (!raw) return;
     try {
@@ -253,5 +296,19 @@ export class TributosComponent {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

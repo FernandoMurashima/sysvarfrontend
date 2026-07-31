@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -47,7 +47,11 @@ export class GruposComponent implements OnInit {
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedGrupo: GrupoModel | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.grupos.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.grupos';
   columns = [
     { key: 'codigo', label: 'Codigo', visible: true, required: true },
     { key: 'descricao', label: 'Descricao', visible: true, required: true },
@@ -138,6 +142,7 @@ export class GruposComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadGrupos();
   }
 
@@ -161,6 +166,36 @@ export class GruposComponent implements OnInit {
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadGrupos(); }
   doSearch() { this.errorMsg = ''; }
   clearSearch() { this.search = ''; this.filterMargem = ''; this.doSearch(); }
+
+  selecionarGrupoLinha(g: GrupoModel): void {
+    this.selectedGrupo = this.isSelectedGrupo(g) ? null : g;
+  }
+
+  isSelectedGrupo(g: GrupoModel): boolean {
+    return !!this.selectedGrupo && this.selectedGrupo.Idgrupo === g.Idgrupo;
+  }
+
+  consultarGrupoSelecionado(): void { if (this.selectedGrupo) this.consultarGrupo(this.selectedGrupo); }
+  editarGrupoSelecionado(): void { if (this.selectedGrupo && this.podeEditarModulo) this.editarGrupo(this.selectedGrupo); }
+  abrirSubgruposSelecionado(): void { if (this.selectedGrupo?.Idgrupo) this.selecionarGrupo(this.selectedGrupo.Idgrupo); }
+  excluirGrupoSelecionado(): void { if (this.selectedGrupo && this.podeExcluirModulo) this.excluirGrupo(this.selectedGrupo); }
+
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+
+  @HostListener('window:sysvar-grupos-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-grupos-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-grupos-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novoGrupo() {
     this.editingGrupoId = null;
@@ -508,5 +543,19 @@ export class GruposComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

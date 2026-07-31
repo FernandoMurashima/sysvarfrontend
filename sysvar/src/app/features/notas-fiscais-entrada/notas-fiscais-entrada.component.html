@@ -1,16 +1,17 @@
-<div class="nfe-page">
-  <div class="header-with-actions">
-    <app-page-header
-      title="Entrada de NF-e"
-      subtitle="Registre recebimentos de pedidos de compra"
-      [showPrimaryAction]="false"
-    />
-    <div class="header-extra-actions">
+<div class="cadastro-page nfe-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Entrada de NF-e</h1>
+      <button class="info-button" type="button" title="Registre recebimentos de pedidos de compra.">i</button>
+    </div>
+    <div class="title-actions">
       <button class="btn" type="button">Ajuda</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="loadNotas()">Atualizar</button>
       <button class="btn primary" type="button" (click)="novo()">+ Nova NF-e</button>
     </div>
-  </div>
+  </section>
 
   <section class="alert success" *ngIf="mensagem">{{ mensagem }}</section>
   <section class="alert error" *ngIf="erro">{{ erro }}</section>
@@ -26,70 +27,44 @@
     </section>
   </div>
 
-  <section class="summary-grid" *ngIf="view() === 'list'">
-    <div class="mini-indicator"><strong>{{ notas.length }}</strong><span>NF-e total</span></div>
-    <div class="mini-indicator"><strong>{{ abertas }}</strong><span>abertas</span></div>
-    <div class="mini-indicator"><strong>{{ fechadas }}</strong><span>fechadas geradas</span></div>
-    <div class="mini-indicator"><strong>{{ canceladas }}</strong><span>canceladas</span></div>
-    <div class="mini-indicator value"><strong>R$ {{ valorTotalListado | number : '1.2-2' }}</strong><span>valor listado</span></div>
+  <section class="indicator-bar" *ngIf="view() === 'list' && indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ notas.length }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ abertas }}</strong><small>Abertas</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">■</span><div><strong>{{ fechadas }}</strong><small>Fechadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ canceladas }}</strong><small>Canceladas</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ valorTotalListado | number : '1.2-2' }}</strong><small>Total listado</small></div></div>
   </section>
 
-  <section class="filters-panel" *ngIf="view() === 'list'">
-    <div class="filter-main">
-      <app-search-suggest
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        placeholder="Buscar por pedido, número, série ou chave"
-        [showActions]="false"
-        (search)="applyFilter()"
-        (cleared)="clearSearch()"
-      />
-      <button class="btn primary" type="button" (click)="applyFilter()">Buscar</button>
-      <button class="btn" type="button" (click)="clearSearch()">Limpar</button>
-      <button class="btn" type="button" (click)="loadNotas()">Atualizar</button>
-    </div>
-
-    <div class="filter-extra">
-      <label>
-        Status
-        <select [(ngModel)]="filtroStatus">
-          <option value="">Todos</option>
-          <option value="AB">Aberta</option>
-          <option value="FE">Fechada</option>
-          <option value="CA">Cancelada</option>
-        </select>
-      </label>
-      <label>
-        Emissão de
-        <input type="date" [(ngModel)]="filtroEmissaoDe" />
-      </label>
-      <label>
-        Emissão até
-        <input type="date" [(ngModel)]="filtroEmissaoAte" />
-      </label>
-      <label>
-        Entrada de
-        <input type="date" [(ngModel)]="filtroEntradaDe" />
-      </label>
-      <label>
-        Entrada até
-        <input type="date" [(ngModel)]="filtroEntradaAte" />
-      </label>
-      <label>
-        Valor mín.
-        <input type="number" [(ngModel)]="filtroValorMin" min="0" step="0.01" />
-      </label>
-      <label>
-        Valor máx.
-        <input type="number" [(ngModel)]="filtroValorMax" min="0" step="0.01" />
-      </label>
+  <section class="filter-bar nfe-filter-bar" *ngIf="view() === 'list' && filtersVisible">
+    <app-search-suggest
+      class="main-search"
+      [(value)]="search"
+      [suggestions]="searchSuggestions"
+      placeholder="Buscar por pedido, número, série ou chave"
+      [showActions]="false"
+      (search)="applyFilter()"
+      (cleared)="clearSearch()"
+    />
+    <label class="inline-filter status-filter"><span>Status</span><select [(ngModel)]="filtroStatus"><option value="">Todos</option><option value="AB">Aberta</option><option value="FE">Fechada</option><option value="CA">Cancelada</option></select></label>
+    <label class="inline-filter range-filter"><span>Emissão</span><input type="date" [(ngModel)]="filtroEmissaoDe" /><input type="date" [(ngModel)]="filtroEmissaoAte" /></label>
+    <label class="inline-filter range-filter"><span>Entrada</span><input type="date" [(ngModel)]="filtroEntradaDe" /><input type="date" [(ngModel)]="filtroEntradaAte" /></label>
+    <button class="btn primary" type="button" (click)="applyFilter()">Pesquisar</button>
+    <button class="btn" type="button" (click)="toggleAdvancedFilters()">Filtros avançados</button>
+    <div class="advanced-filters value-filters" *ngIf="advancedFiltersOpen">
+      <label class="inline-filter"><span>Valor mín.</span><input type="number" [(ngModel)]="filtroValorMin" min="0" step="0.01" /></label>
+      <label class="inline-filter"><span>Valor máx.</span><input type="number" [(ngModel)]="filtroValorMax" min="0" step="0.01" /></label>
     </div>
   </section>
 
-  <section class="card list table-card" *ngIf="view() === 'list'">
-    <div class="list-bar">
+  <section class="action-bar" *ngIf="view() === 'list'">
+    <button class="btn" type="button" [disabled]="acaoSelecionadaDesabilitada('abrir')" (click)="executarAcaoSelecionada('abrir')">Abrir</button>
+    <button class="btn danger" type="button" [disabled]="acaoSelecionadaDesabilitada('cancelar')" (click)="executarAcaoSelecionada('cancelar')">Cancelar NF</button>
+  </section>
+
+  <section class="results-area table-card" *ngIf="view() === 'list'">
+    <div class="results-header">
       <div class="left"><strong>Notas cadastradas</strong> <span>{{ total }} registro(s) encontrado(s)</span></div>
-      <div class="list-tools">
+      <div class="right">
         <label>Itens por página</label>
         <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
           <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
@@ -109,11 +84,10 @@
             <th>Entrada</th>
             <th>Status</th>
             <th>Total</th>
-            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let nota of notasPagina" (click)="editar(nota)">
+          <tr *ngFor="let nota of notasPagina" [class.selected]="notaSelecionada(nota)" (click)="selecionarNota(nota)" (dblclick)="editar(nota)">
             <td>{{ nota.pedido_compra }}</td>
             <td>{{ nota.modelo }}</td>
             <td>{{ nota.serie || '-' }}</td>
@@ -126,13 +100,6 @@
               </span>
             </td>
             <td>{{ nota.valor_total | number : '1.2-2' }}</td>
-            <td class="actions-cell" (click)="$event.stopPropagation()">
-              <app-row-actions-menu
-                [actions]="rowActions(nota)"
-                [ariaLabel]="'Ações da nota fiscal'"
-                (action)="executarAcao($event, nota)"
-              />
-            </td>
           </tr>
         </tbody>
       </table>
@@ -144,9 +111,18 @@
     </div>
 
     <div class="pager" *ngIf="total > 0">
-      <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
-      <span>Página {{ page }} de {{ totalPages }}</span>
-      <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
+      <div class="left">
+        <button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
+        <button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button>
+      </div>
+      <div class="center">
+        Página {{ page }} de {{ totalPages }}
+        <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span>
+      </div>
+      <div class="right">
+        <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
+        <button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button>
+      </div>
     </div>
   </section>
 
@@ -282,11 +258,12 @@
             </td>
             <td>{{ item.total_item | number : '1.2-2' }}</td>
             <td class="actions-cell">
-              <app-row-actions-menu
-                [actions]="itemRowActions(item)"
-                [ariaLabel]="'Ações do item da nota'"
-                (action)="executarItemAcao($event, item)"
-              />
+              <button class="btn sm primary" type="button" (click)="salvarItem(item)" [disabled]="notaAtual()?.status !== 'AB' || saving">
+                Inserir
+              </button>
+              <button class="btn sm danger" type="button" (click)="removerItem(item)" [disabled]="notaAtual()?.status !== 'AB' || !item.nota_item">
+                Remover
+              </button>
             </td>
           </tr>
         </tbody>

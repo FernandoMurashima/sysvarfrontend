@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -60,7 +60,11 @@ export class FornecedoresComponent implements OnInit {
   errorOverlayOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedFornecedor: Fornecedor | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.fornecedores.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.fornecedores';
   columns = [
     { key: 'apelido', label: 'Apelido', visible: true, required: false },
     { key: 'categoria', label: 'Categoria', visible: true, required: false },
@@ -202,6 +206,7 @@ export class FornecedoresComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -286,6 +291,9 @@ export class FornecedoresComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.fornecedores = filtered.slice(start, end);
+    if (this.selectedFornecedor && !filtered.some(f => f.id === this.selectedFornecedor?.id)) {
+      this.selectedFornecedor = null;
+    }
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -412,6 +420,62 @@ export class FornecedoresComponent implements OnInit {
     if (action === 'consultar') this.consultar(row);
     if (action === 'editar') this.editar(row);
     if (action === 'excluir') this.excluir(row);
+  }
+
+  selecionarFornecedor(row: Fornecedor): void {
+    this.selectedFornecedor = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: Fornecedor): boolean {
+    return !!this.selectedFornecedor && this.selectedFornecedor.id === row.id;
+  }
+
+  consultarSelecionado(): void {
+    if (this.selectedFornecedor) this.consultar(this.selectedFornecedor);
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedFornecedor && this.podeEditarModulo) this.editar(this.selectedFornecedor);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedFornecedor && this.podeExcluirModulo) this.excluir(this.selectedFornecedor);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.fornecedores.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-fornecedores-toggle-indicators')
+  onToggleIndicatorsEvent(): void {
+    this.toggleIndicators();
+  }
+
+  @HostListener('window:sysvar-fornecedores-toggle-filters')
+  onToggleFiltersEvent(): void {
+    this.toggleFilters();
+  }
+
+  @HostListener('window:sysvar-fornecedores-restore-view')
+  onRestoreViewEvent(): void {
+    this.restoreViewPreference();
   }
 
   visibleColumn(key: string): boolean {
@@ -633,5 +697,24 @@ export class FornecedoresComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible ?? true;
+      this.filtersVisible = pref.filtersVisible ?? true;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 }

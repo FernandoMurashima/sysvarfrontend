@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -29,6 +29,9 @@ export class LancamentosContabeisComponent implements OnInit {
   exportOpen = false;
   advancedOpen = false;
   private readonly columnsStorageKey = 'sysvar.list.lancamentos-contabeis.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.lancamentos-contabeis';
+  indicatorsVisible = true;
+  filtersVisible = true;
   columns = [
     { key: 'data', label: 'Data', visible: true, required: true },
     { key: 'loja', label: 'Loja', visible: true, required: false },
@@ -55,6 +58,7 @@ export class LancamentosContabeisComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.definirPeriodoPadrao();
     this.carregarBase();
   }
@@ -102,6 +106,10 @@ export class LancamentosContabeisComponent implements OnInit {
 
   verPendentes(): void {
     this.filtros.status = 'PENDENTE';
+    this.consultar();
+  }
+
+  doSearch(): void {
     this.consultar();
   }
 
@@ -156,6 +164,19 @@ export class LancamentosContabeisComponent implements OnInit {
   get totalEstornados(): number {
     return this.listaVisivel.filter(item => item.status === 'ESTORNADO').length;
   }
+
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-lancamentos-contabeis-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-lancamentos-contabeis-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-lancamentos-contabeis-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   get listaVisivel(): LancamentoContabil[] {
     const term = this.search.trim().toLowerCase();
@@ -279,5 +300,19 @@ export class LancamentosContabeisComponent implements OnInit {
     const state: Record<string, boolean> = {};
     this.columns.forEach(c => state[c.key] = c.visible);
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -51,7 +51,11 @@ export class NatLancamentosComponent implements OnInit {
   errorOverlayOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedNatureza: NatLancamento | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.naturezas.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.naturezas';
   columns = [
     { key: 'categoria', label: 'Categoria', visible: true, required: false },
     { key: 'subcategoria', label: 'Subcategoria', visible: true, required: false },
@@ -197,6 +201,7 @@ export class NatLancamentosComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadEmpresas();
     this.loadPlanoContabil();
     this.load();
@@ -257,6 +262,9 @@ export class NatLancamentosComponent implements OnInit {
     const a = (this.page - 1) * this.pageSize;
     const b = a + this.pageSize;
     this.itens = filtered.slice(a, b);
+    if (this.selectedNatureza && !filtered.some(n => n.idnatureza === this.selectedNatureza?.idnatureza)) {
+      this.selectedNatureza = null;
+    }
   }
 
   onPageSizeChange(v: string): void {
@@ -282,6 +290,62 @@ export class NatLancamentosComponent implements OnInit {
     this.filterDre = '';
     this.page = 1;
     this.applyPage();
+  }
+
+  selecionarNatureza(row: NatLancamento): void {
+    this.selectedNatureza = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: NatLancamento): boolean {
+    return !!this.selectedNatureza && this.selectedNatureza.idnatureza === row.idnatureza;
+  }
+
+  consultarSelecionado(): void {
+    if (this.selectedNatureza) this.consultar(this.selectedNatureza);
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedNatureza && this.podeEditarModulo) this.editar(this.selectedNatureza);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedNatureza && this.podeExcluirModulo) this.excluir(this.selectedNatureza);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.naturezas.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-naturezas-toggle-indicators')
+  onToggleIndicatorsEvent(): void {
+    this.toggleIndicators();
+  }
+
+  @HostListener('window:sysvar-naturezas-toggle-filters')
+  onToggleFiltersEvent(): void {
+    this.toggleFilters();
+  }
+
+  @HostListener('window:sysvar-naturezas-restore-view')
+  onRestoreViewEvent(): void {
+    this.restoreViewPreference();
   }
 
   novo(): void {
@@ -532,5 +596,24 @@ export class NatLancamentosComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 }

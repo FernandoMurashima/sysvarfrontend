@@ -1,134 +1,116 @@
-<section class="contabil-page">
-  <div class="header-with-actions">
-    <app-page-header
-      title="Lançamentos Contábeis"
-      subtitle="Consulte os lançamentos gerados pelo financeiro, vendas, compras e estoque"
-      [showPrimaryAction]="false"
-    />
-    <div class="header-extra-actions">
-      <button type="button" class="btn" (click)="alternarTelaCheia()">Tela cheia</button>
-      <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Atualizar</button>
-      <a class="btn" routerLink="/home">Home</a>
+<section class="cadastro-page contabil-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Lançamentos Contábeis</h1>
+      <button class="info-button" type="button" title="Consulte os lançamentos gerados pelo financeiro, vendas, compras e estoque.">i</button>
     </div>
-  </div>
 
-  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
-
-  <section class="panel filters-panel">
-    <div class="quick-filters">
-      <app-search-suggest
-        class="main-search"
-        [(value)]="search"
-        [suggestions]="searchSuggestions"
-        [showActions]="false"
-        placeholder="Buscar por documento, histórico, conta ou natureza..."
-        (search)="consultar()"
-        (cleared)="clearSearch()"
-      />
-
-      <label>
-        Loja
-        <select [(ngModel)]="filtros.loja">
-          <option value="">Todas</option>
-          <option *ngFor="let loja of lojas" [value]="lojaId(loja)">{{ loja.nome_loja }}</option>
-        </select>
-      </label>
-
-      <label>
-        Status
-        <select [(ngModel)]="filtros.status">
-          <option value="">Todos</option>
-          <option value="GERADO">Gerado</option>
-          <option value="PENDENTE">Pendente</option>
-          <option value="ESTORNADO">Estornado</option>
-        </select>
-      </label>
-
-      <label>
-        Origem
-        <select [(ngModel)]="filtros.origem">
-          <option value="">Todas</option>
-          <option value="RECEBER">Receber</option>
-          <option value="PAGAR">Pagar</option>
-          <option value="CARTAO">Cartão</option>
-          <option value="ANTECIPACAO">Antecipação</option>
-          <option value="TRANSFERENCIA">Transferência</option>
-          <option value="MANUAL">Manual</option>
-          <option value="CMV">CMV</option>
-        </select>
-      </label>
-
-      <label>
-        De
-        <input type="date" [(ngModel)]="filtros.data_ini">
-      </label>
-
-      <label>
-        Até
-        <input type="date" [(ngModel)]="filtros.data_fim">
-      </label>
-
-      <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Pesquisar</button>
-      <button type="button" class="btn" (click)="limpar()">Limpar</button>
+    <div class="title-actions">
+      <button type="button" class="btn">Ajuda</button>
+      <button type="button" class="btn" routerLink="/home">Home</button>
       <button type="button" class="btn warn" (click)="verPendentes()">Pendentes</button>
-    </div>
-
-    <div class="filter-actions">
-      <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+      <button type="button" class="btn" (click)="limpar()">Limpar</button>
       <div class="menu-holder">
-        <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
-        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
-          <label class="column-option" *ngFor="let col of columns">
-            <input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />
-            {{ col.label }}
-          </label>
-        </div>
-      </div>
-      <div class="menu-holder">
-        <button class="btn" type="button" (click)="exportOpen = !exportOpen">Exportar</button>
-        <div class="floating-menu export-menu" *ngIf="exportOpen">
+        <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
+        <div class="floating-menu" *ngIf="exportOpen">
           <button type="button" (click)="exportarCsv()">CSV</button>
           <button type="button" disabled>Excel</button>
           <button type="button" disabled>PDF</button>
         </div>
       </div>
-    </div>
-
-    <div class="advanced-filters" *ngIf="advancedOpen">
-      <span>Use os filtros de loja, status, origem e período junto com a busca textual.</span>
+      <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Atualizar</button>
     </div>
   </section>
 
-  <div class="summary-grid">
-    <div class="summary-card">
-      <span>Total listado</span>
-      <strong>{{ money(totalValor) }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Lançamentos</span>
-      <strong>{{ listaVisivel.length }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Gerados</span>
-      <strong class="valor-pos">{{ totalGerados }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Pendentes</span>
-      <strong class="valor-warn">{{ totalPendentes }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Estornados</span>
-      <strong class="valor-muted">{{ totalEstornados }}</strong>
-    </div>
-  </div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
 
-  <div class="panel table-panel">
-    <div class="list-header">
-      <h3>Consulta contábil <span>{{ listaVisivel.length }} de {{ totalRegistrosApi }} lançamento(s)</span></h3>
+  <section class="indicator-bar contabil-indicators" *ngIf="indicatorsVisible">
+    <div class="indicator total-value">
+      <span class="indicator-icon blue">$</span>
+      <div><strong>{{ money(totalValor) }}</strong><small>Total listado</small></div>
+    </div>
+    <div class="indicator"><span class="indicator-icon cyan">▣</span><div><strong>{{ listaVisivel.length }}</strong><small>Lançamentos</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ totalGerados }}</strong><small>Gerados</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ totalPendentes }}</strong><small>Pendentes</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">×</span><div><strong>{{ totalEstornados }}</strong><small>Estornados</small></div></div>
+  </section>
+
+  <section class="filter-bar contabil-filter" *ngIf="filtersVisible">
+    <app-search-suggest
+      class="main-search"
+      [(value)]="search"
+      [suggestions]="searchSuggestions"
+      [showActions]="false"
+      placeholder="Buscar por documento, histórico, conta ou natureza..."
+      (search)="doSearch()"
+      (cleared)="clearSearch()"
+    />
+
+    <label class="inline-filter">
+      <span>Loja</span>
+      <select [(ngModel)]="filtros.loja">
+        <option value="">Todas</option>
+        <option *ngFor="let loja of lojas" [value]="lojaId(loja)">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+
+    <label class="inline-filter">
+      <span>Status</span>
+      <select [(ngModel)]="filtros.status">
+        <option value="">Todos</option>
+        <option value="GERADO">Gerado</option>
+        <option value="PENDENTE">Pendente</option>
+        <option value="ESTORNADO">Estornado</option>
+      </select>
+    </label>
+
+    <label class="inline-filter">
+      <span>Origem</span>
+      <select [(ngModel)]="filtros.origem">
+        <option value="">Todas</option>
+        <option value="RECEBER">Receber</option>
+        <option value="PAGAR">Pagar</option>
+        <option value="CARTAO">Cartão</option>
+        <option value="ANTECIPACAO">Antecipação</option>
+        <option value="TRANSFERENCIA">Transferência</option>
+        <option value="MANUAL">Manual</option>
+        <option value="CMV">CMV</option>
+      </select>
+    </label>
+
+    <label class="inline-filter compact-date">
+      <span>De</span>
+      <input type="date" [(ngModel)]="filtros.data_ini">
+    </label>
+
+    <label class="inline-filter compact-date">
+      <span>Até</span>
+      <input type="date" [(ngModel)]="filtros.data_fim">
+    </label>
+
+    <button type="button" class="btn primary" (click)="consultar()" [disabled]="loading">Pesquisar</button>
+
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen; exportOpen = false">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen">
+        <label class="column-option" *ngFor="let col of columns">
+          <input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />
+          <span>{{ col.label }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="advanced-filters" *ngIf="advancedOpen">Use os filtros de loja, status, origem, período e busca textual para refinar a lista.</div>
+  </section>
+
+  <section class="results-area contabil-results">
+    <div class="results-header">
+      <div><strong>Consulta contábil</strong><span>{{ listaVisivel.length }} de {{ totalRegistrosApi }} lançamento(s)</span></div>
+      <div class="results-meta">{{ filtros.data_ini | date:'dd/MM/yyyy' }} a {{ filtros.data_fim | date:'dd/MM/yyyy' }}</div>
     </div>
 
     <div class="table-wrapper">
-      <table class="table">
+      <table class="table contabil-table">
         <thead>
           <tr>
             <th *ngIf="visibleColumn('data')">Data</th>
@@ -144,7 +126,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of listaVisivel" [class.pendente]="item.status === 'PENDENTE'">
+          <tr *ngFor="let item of listaVisivel">
             <td *ngIf="visibleColumn('data')">{{ item.data_lancamento | date:'dd/MM/yyyy' }}</td>
             <td *ngIf="visibleColumn('loja')">{{ item.loja_nome || item.idloja }}</td>
             <td *ngIf="visibleColumn('documento')">{{ item.documento || '-' }}</td>
@@ -155,17 +137,17 @@
             <td *ngIf="visibleColumn('credito')">{{ contaLabel(item.conta_credito_codigo, item.conta_credito_descricao) }}</td>
             <td *ngIf="visibleColumn('valor')" class="num">{{ money(item.valor) }}</td>
             <td *ngIf="visibleColumn('status')">
-              <span [class]="statusClass(item.status)">{{ item.status }}</span>
+              <span class="status-pill" [class.warn]="item.status === 'PENDENTE'" [class.off]="item.status === 'ESTORNADO'">• {{ item.status }}</span>
             </td>
           </tr>
           <tr *ngIf="!listaVisivel.length && !loading">
-            <td [attr.colspan]="columns.length" class="empty">Nenhum lançamento contábil encontrado.</td>
+            <td [attr.colspan]="columns.length" class="empty-hint">Nenhum lançamento contábil encontrado.</td>
           </tr>
           <tr *ngIf="loading">
-            <td [attr.colspan]="columns.length" class="empty">Carregando...</td>
+            <td [attr.colspan]="columns.length" class="empty-hint">Carregando...</td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </section>

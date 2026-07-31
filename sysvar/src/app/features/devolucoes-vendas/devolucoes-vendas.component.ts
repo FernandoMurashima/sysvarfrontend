@@ -13,13 +13,15 @@ import { LojasService } from '../../core/services/lojas.service';
 import { ValeTrocaService } from '../../core/services/vale-troca.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 import { PdvConnectivityService } from '../../core/connectivity/pdv-connectivity.service';
 import { PdvOfflineDevolucaoQueueService } from '../../core/services/pdv-offline-devolucao-queue.service';
 
 @Component({
   selector: 'app-devolucoes-vendas',
   standalone: true,
-  imports: [CommonModule, FormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent, PageHeaderComponent, SummaryCardComponent],
   templateUrl: './devolucoes-vendas.component.html',
   styleUrls: ['./devolucoes-vendas.component.css']
 })
@@ -77,6 +79,27 @@ export class DevolucoesVendasComponent implements OnInit {
       vale.devolucao_documento
     ]).filter((v): v is string => !!v);
     return Array.from(new Set(valores));
+  }
+
+  get totalItensDisponiveis(): number {
+    return this.vendas.reduce((total, venda) => total + this.saldoDisponivelVenda(venda), 0);
+  }
+
+  get totalClientesComVenda(): number {
+    const clientes = this.vendas.map(venda => venda.cliente_nome).filter(Boolean);
+    return new Set(clientes).size;
+  }
+
+  get valorVendasDisponiveis(): number {
+    return this.vendas.reduce((total, venda) => total + Number(venda.total || 0), 0);
+  }
+
+  get creditoSelecionado(): number {
+    return this.totalSelecionado();
+  }
+
+  get creditoSelecionadoFormatado(): string {
+    return this.moeda(this.creditoSelecionado);
   }
 
   ngOnInit(): void {
@@ -352,6 +375,10 @@ export class DevolucoesVendasComponent implements OnInit {
 
   itemDisponivel(item: VendaDevolucaoItemConsulta): boolean {
     return Number(item.quantidade_disponivel || 0) > 0;
+  }
+
+  moeda(valor: number): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   }
 
   irHome(): void {

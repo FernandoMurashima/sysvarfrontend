@@ -1,5 +1,5 @@
 // src/app/features/formas-pagamento/formas-pagamento.component.ts
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -13,7 +13,7 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
-import { FormaPagamento, FormaPagamentoParcela } from '../../core/models/forma-pagamento';
+import { FormaPagamento, FormaPagamentoParcela, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
 import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { AuthService } from '../../core/auth.service';
@@ -40,6 +40,26 @@ export class FormasPagamentoComponent implements OnInit {
   consultando = false;
 
   search = '';
+  filterLiquidacao = '';
+  filterTipo = '';
+  filterStatus = '';
+  advancedOpen = false;
+  columnsOpen = false;
+  exportOpen = false;
+  selectedForma: FormaPagamento | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
+  private readonly columnsStorageKey = 'sysvar.list.formas-pagamento.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.formas-pagamento';
+  columns = [
+    { key: 'codigo', label: 'Código', visible: true, required: true },
+    { key: 'descricao', label: 'Descrição', visible: true, required: true },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'parcelas', label: 'Parcelas', visible: true, required: false },
+    { key: 'liquidacao', label: 'Liquidação', visible: true, required: false },
+    { key: 'taxa', label: 'Taxa', visible: true, required: false },
+    { key: 'status', label: 'Status', visible: true, required: false },
+  ];
   successMsg = '';
   errorMsg = '';
   errorOverlayOpen = false;
@@ -48,6 +68,17 @@ export class FormasPagamentoComponent implements OnInit {
   formasAll: FormaPagamento[] = [];
   formas: FormaPagamento[] = [];
   contas: ContaBancaria[] = [];
+  prazos: PrazoPagamento[] = [];
+  tipos = [
+    { value: 'DINHEIRO' as TipoFormaPagamento, label: 'Dinheiro' },
+    { value: 'PIX' as TipoFormaPagamento, label: 'Pix' },
+    { value: 'DEBITO' as TipoFormaPagamento, label: 'Cartão débito' },
+    { value: 'CREDITO_ROTATIVO' as TipoFormaPagamento, label: 'Crédito rotativo' },
+    { value: 'CREDITO_PARCELADO' as TipoFormaPagamento, label: 'Crédito parcelado' },
+    { value: 'BOLETO' as TipoFormaPagamento, label: 'Boleto' },
+    { value: 'TRANSFERENCIA' as TipoFormaPagamento, label: 'Transferência' },
+    { value: 'OUTRO' as TipoFormaPagamento, label: 'Outro' },
+  ];
 
   page = 1;
   pageSize = 20;
@@ -59,10 +90,12 @@ export class FormasPagamentoComponent implements OnInit {
   form: FormGroup = this.fb.group({
     codigo: ['', [Validators.required, Validators.maxLength(10)]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
+    tipo: ['DINHEIRO' as TipoFormaPagamento, Validators.required],
     ativo: [true],
     gera_recebivel_bancario: [false],
     adquirente: ['', Validators.maxLength(80)],
     conta_liquidacao: [null as number | null],
+    prazo_pagamento: [null as number | null],
     prazo_credito_dias: [0, [Validators.min(0)]],
     taxa_percentual: [0, [Validators.min(0)]],
     taxa_fixa: [0, [Validators.min(0)]],
@@ -94,13 +127,15 @@ export class FormasPagamentoComponent implements OnInit {
     const valores = this.formasAll.flatMap(item => [
       item.codigo,
       item.descricao,
-      item.adquirente || '',
+      this.tipoLabel(item.tipo),
       item.ativo ? 'Ativo' : 'Inativo'
     ]).filter((v): v is string => !!v);
     return Array.from(new Set(valores));
   }
 
   ngOnInit(): void {
+    this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -118,7 +153,11 @@ export class FormasPagamentoComponent implements OnInit {
   private applyPage(): void {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
-    this.formas = this.formasAll.slice(start, end);
+    const filtered = this.formasFiltradas;
+    this.total = filtered.length;
+    if (this.page > this.totalPages) this.page = this.totalPages;
+    this.formas = filtered.slice(start, end);
+    if (this.selectedForma && !filtered.some(f => this.formaId(f) === this.formaId(this.selectedForma))) this.selectedForma = null;
   }
 
   private makeParcelaGroup(p?: Partial<FormaPagamentoParcela>): FormGroup {
@@ -147,13 +186,13 @@ export class FormasPagamentoComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }) }).subscribe({
+    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }), prazos: this.api.listPrazos({ ativo: true }) }).subscribe({
       next: (res: any) => {
         this.contas = Array.isArray(res.contas) ? res.contas : (res.contas?.results ?? []);
+        this.prazos = Array.isArray(res.prazos) ? res.prazos : (res.prazos?.results ?? []);
         const rawArr: FormaPagamento[] = Array.isArray(res.formas) ? res.formas : (res.formas?.results ?? []);
-        const filtered = this.filterList(rawArr);
-        this.formasAll = filtered;
-        this.total = filtered.length;
+        this.formasAll = rawArr;
+        this.total = this.formasFiltradas.length;
         this.page = 1;
         this.applyPage();
         this.loading = false;
@@ -162,6 +201,7 @@ export class FormasPagamentoComponent implements OnInit {
       error: () => {
         this.formasAll = [];
         this.formas = [];
+        this.prazos = [];
         this.total = 0;
         this.loading = false;
         this.errorMsg = 'Falha ao carregar formas de pagamento.';
@@ -171,6 +211,7 @@ export class FormasPagamentoComponent implements OnInit {
 
   onPageSizeChange(sizeStr: string): void {
     this.pageSize = Number(sizeStr) || 10;
+    localStorage.setItem('sysvar.list.formas-pagamento.pageSize', String(this.pageSize));
     this.page = 1;
     this.applyPage();
   }
@@ -209,13 +250,16 @@ export class FormasPagamentoComponent implements OnInit {
 
   doSearch(): void {
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
 
   clearSearch(): void {
-    this.search = '';
+      this.search = '';
+      this.filterLiquidacao = '';
+      this.filterTipo = '';
+      this.filterStatus = '';
     this.page = 1;
-    this.load();
+    this.applyPage();
   }
 
   // ====== Fluxo form ======
@@ -232,10 +276,12 @@ export class FormasPagamentoComponent implements OnInit {
     this.form.reset({
       codigo: '',
       descricao: '',
+      tipo: 'DINHEIRO',
       ativo: true,
       gera_recebivel_bancario: false,
       adquirente: '',
       conta_liquidacao: null,
+      prazo_pagamento: null,
       prazo_credito_dias: 0,
       taxa_percentual: 0,
       taxa_fixa: 0,
@@ -267,10 +313,12 @@ export class FormasPagamentoComponent implements OnInit {
         this.form.reset({
           codigo: det.codigo ?? '',
           descricao: det.descricao ?? '',
+          tipo: det.tipo ?? 'OUTRO',
           ativo: !!det.ativo,
           gera_recebivel_bancario: !!det.gera_recebivel_bancario,
           adquirente: det.adquirente ?? '',
           conta_liquidacao: det.conta_liquidacao ?? null,
+          prazo_pagamento: det.prazo_pagamento ?? null,
           prazo_credito_dias: Number(det.prazo_credito_dias || 0),
           taxa_percentual: Number(det.taxa_percentual || 0),
           taxa_fixa: Number(det.taxa_fixa || 0),
@@ -360,17 +408,19 @@ export class FormasPagamentoComponent implements OnInit {
     const payload: any = {
       codigo: (f.codigo || '').toString().trim(),
       descricao: (f.descricao || '').toString().trim(),
+      tipo: f.tipo || 'OUTRO',
       ativo: !!f.ativo,
       gera_recebivel_bancario: !!f.gera_recebivel_bancario,
-      adquirente: (f.adquirente || '').toString().trim() || null,
+      adquirente: null,
       conta_liquidacao: f.gera_recebivel_bancario ? Number(f.conta_liquidacao) : null,
+      prazo_pagamento: f.prazo_pagamento ? Number(f.prazo_pagamento) : null,
       prazo_credito_dias: Number(f.prazo_credito_dias || 0),
       taxa_percentual: this.blankToNull(f.taxa_percentual) ?? '0',
       taxa_fixa: this.blankToNull(f.taxa_fixa) ?? '0',
-      tef_habilitado: !!f.tef_habilitado,
-      tef_modalidade: f.tef_habilitado ? (f.tef_modalidade || '').toString().trim() : '',
-      tef_adquirente_codigo: f.tef_habilitado ? (f.tef_adquirente_codigo || '').toString().trim() : '',
-      tef_terminal_logico: f.tef_habilitado ? (f.tef_terminal_logico || '').toString().trim() : '',
+      tef_habilitado: false,
+      tef_modalidade: '',
+      tef_adquirente_codigo: '',
+      tef_terminal_logico: '',
       num_parcelas: numParcelas
     };
 
@@ -503,6 +553,51 @@ export class FormasPagamentoComponent implements OnInit {
     this.excluirModal = null;
   }
 
+  get formasFiltradas(): FormaPagamento[] {
+    const term = this.search.trim().toLowerCase();
+    return this.formasAll.filter(f => {
+      const tipo = this.tipoLabel(f.tipo).toLowerCase();
+      const matchesSearch = !term || (f.codigo || '').toLowerCase().includes(term) || (f.descricao || '').toLowerCase().includes(term) || tipo.includes(term);
+      const matchesLiquidacao = !this.filterLiquidacao || (this.filterLiquidacao === 'banco' && !!f.gera_recebivel_bancario) || (this.filterLiquidacao === 'caixa' && !f.gera_recebivel_bancario);
+      const matchesTipo = !this.filterTipo || f.tipo === this.filterTipo;
+      const matchesStatus = !this.filterStatus || (this.filterStatus === 'ativo' && f.ativo !== false) || (this.filterStatus === 'inativo' && f.ativo === false);
+      return matchesSearch && matchesLiquidacao && matchesTipo && matchesStatus;
+    });
+  }
+  get indicadores() {
+    const total = this.formasAll.length;
+    return { total, ativas: this.formasAll.filter(f => f.ativo !== false).length, banco: this.formasAll.filter(f => f.gera_recebivel_bancario).length, comTaxa: this.formasAll.filter(f => Number(f.taxa_percentual || 0) > 0 || Number(f.taxa_fixa || 0) > 0).length, filtradas: this.total };
+  }
+  tipoLabel(tipo?: string | null): string { return this.tipos.find(t => t.value === tipo)?.label ?? 'Outro'; }
+  prazoLabel(id?: number | null): string {
+    if (!id) return 'Sem prazo';
+    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === id);
+    return prazo ? prazo.descricao : 'Prazo';
+  }
+  taxaLabel(f: FormaPagamento): string {
+    const percentual = Number(f.taxa_percentual || 0);
+    const fixa = Number(f.taxa_fixa || 0);
+    if (!percentual && !fixa) return '0';
+    const partes = [];
+    if (percentual) partes.push(`${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}%`);
+    if (fixa) partes.push(`R$ ${fixa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    return partes.join(' + ');
+  }
+  formaId(f: FormaPagamento | null): number | null { return f ? (f.Idformapagamento ?? (f as any).id ?? null) : null; }
+  selecionarForma(f: FormaPagamento): void { this.selectedForma = this.formaId(this.selectedForma) === this.formaId(f) ? null : f; }
+  isSelected(f: FormaPagamento): boolean { return this.formaId(this.selectedForma) === this.formaId(f); }
+  consultarSelecionada(): void { if (this.selectedForma) this.consultar(this.selectedForma); }
+  editarSelecionada(): void { if (this.selectedForma && this.podeEditarModulo) this.editar(this.selectedForma); }
+  excluirSelecionada(): void { if (this.selectedForma && this.podeEditarModulo) this.excluir(this.selectedForma); }
+  visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
+  toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.formas-pagamento.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.applyPage(); }
+  @HostListener('window:sysvar-formas-pagamento-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-formas-pagamento-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-formas-pagamento-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
+
   // ====== Erros / overlay ======
 
   getFormErrors(): string[] {
@@ -514,11 +609,10 @@ export class FormasPagamentoComponent implements OnInit {
     push(f.get('codigo')?.hasError('maxlength') || false, 'codigo: Máx. 10 caracteres.');
     push(f.get('descricao')?.hasError('required') || false, 'descricao: Este campo é obrigatório.');
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
+    push(f.get('tipo')?.hasError('required') || false, 'tipo: Informe o tipo da forma.');
     push(!!f.get('gera_recebivel_bancario')?.value && !f.get('conta_liquidacao')?.value, 'conta_liquidacao: Informe a conta de liquidação.');
-    push(!!f.get('tef_habilitado')?.value && !f.get('adquirente')?.value, 'adquirente: Informe a adquirente do TEF.');
-    push(!!f.get('tef_habilitado')?.value && !f.get('tef_modalidade')?.value, 'tef_modalidade: Informe a modalidade do TEF.');
 
-    const fields = ['codigo', 'descricao'];
+    const fields = ['codigo', 'descricao', 'tipo', 'conta_liquidacao', 'prazo_pagamento'];
     const seen = new Set<string>();
     fields.forEach(field => {
       const err = f.get(field)?.errors?.['server'];
@@ -574,5 +668,34 @@ export class FormasPagamentoComponent implements OnInit {
       });
     }
     this.openErrorOverlayIfNeeded();
+  }
+
+  private loadColumnsPreference(): void {
+    const size = Number(localStorage.getItem('sysvar.list.formas-pagamento.pageSize'));
+    if ([10, 20, 50, 100].includes(size)) this.pageSize = size;
+    const raw = localStorage.getItem(this.columnsStorageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+    } catch {}
+  }
+
+  private saveColumnsPreference(): void {
+    localStorage.setItem(this.columnsStorageKey, JSON.stringify(Object.fromEntries(this.columns.map(c => [c.key, c.visible]))));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

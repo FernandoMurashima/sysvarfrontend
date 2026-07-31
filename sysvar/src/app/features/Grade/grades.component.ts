@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -45,7 +45,11 @@ export class GradesComponent implements OnInit {
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedGrade: GradeModel | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.grades.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.grades';
   columns = [
     { key: 'id', label: 'ID', visible: true, required: false },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
@@ -93,6 +97,12 @@ export class GradesComponent implements OnInit {
     });
   }
 
+  get indicadores() {
+    const total = this.grades.length;
+    const ativas = this.grades.filter(g => this.isAtiva(g.Status)).length;
+    return { total, ativas, inativas: total - ativas, tamanhos: this.allTamanhos.length };
+  }
+
   formModeGrade: 'new' | 'edit' | null = null;
   editingGradeId: number | null = null;
   consultandoGrade = false;
@@ -115,6 +125,7 @@ export class GradesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.loadGrades();
   }
 
@@ -138,6 +149,28 @@ export class GradesComponent implements OnInit {
     this.errorMsg = '';
   }
   clearSearch() { this.search = ''; this.filterStatus = ''; }
+
+  selecionarGradeLinha(g: GradeModel): void { this.selectedGrade = this.isSelectedGrade(g) ? null : g; }
+  isSelectedGrade(g: GradeModel): boolean { return !!this.selectedGrade && this.selectedGrade.Idgrade === g.Idgrade; }
+  consultarGradeSelecionada(): void { if (this.selectedGrade) this.consultarGrade(this.selectedGrade); }
+  editarGradeSelecionada(): void { if (this.selectedGrade && this.podeEditarModulo) this.editarGrade(this.selectedGrade); }
+  abrirTamanhosSelecionado(): void { if (this.selectedGrade?.Idgrade) this.selecionarGrade(this.selectedGrade.Idgrade); }
+  excluirGradeSelecionada(): void { if (this.selectedGrade && this.podeExcluirModulo) this.excluirGrade(this.selectedGrade); }
+  toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
+  toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+  }
+  @HostListener('window:sysvar-grades-toggle-indicators')
+  onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
+  @HostListener('window:sysvar-grades-toggle-filters')
+  onToggleFiltersEvent(): void { this.toggleFilters(); }
+  @HostListener('window:sysvar-grades-restore-view')
+  onRestoreViewEvent(): void { this.restoreViewPreference(); }
 
   novoGrade() {
     this.editingGradeId = null;
@@ -466,5 +499,19 @@ export class GradesComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(col => [col.key, col.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible !== false;
+      this.filtersVisible = pref.filtersVisible !== false;
+    } catch {}
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }

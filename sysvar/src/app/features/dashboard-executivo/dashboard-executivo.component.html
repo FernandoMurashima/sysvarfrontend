@@ -1,0 +1,207 @@
+<section class="exec-page">
+  <header class="exec-hero">
+    <div>
+      <h1>Dashboard Executivo</h1>
+      <p>Visão estratégica do desempenho da empresa</p>
+    </div>
+    <div class="hero-actions">
+      <label>
+        <span>De</span>
+        <input type="date" [(ngModel)]="filtros.inicio">
+      </label>
+      <label>
+        <span>Até</span>
+        <input type="date" [(ngModel)]="filtros.fim">
+      </label>
+      <label>
+        <span>Comparar</span>
+        <select [(ngModel)]="filtros.comparacao">
+          <option value="periodo_anterior">Período anterior</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ano_anterior">Ano anterior</option>
+        </select>
+      </label>
+      <button class="btn primary" (click)="carregar()">Atualizar</button>
+      <button class="btn" (click)="alternarTelaCheia()">{{ telaCheia ? 'Sair da tela cheia' : 'Tela cheia' }}</button>
+      <button class="btn" (click)="home()">Home</button>
+    </div>
+  </header>
+
+  <div class="filters" *ngIf="dados">
+    <label *ngIf="dados.filtros.empresas.length > 1">
+      <span>Empresa</span>
+      <select [(ngModel)]="filtros.empresa" (change)="filtros.loja = ''; filtros.vendedor = ''; carregar()">
+        <option value="">Empresa com vendas</option>
+        <option *ngFor="let empresa of dados.filtros.empresas" [value]="empresa.id">{{ empresa.nome }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Loja</span>
+      <select [(ngModel)]="filtros.loja">
+        <option value="">Todas</option>
+        <option *ngFor="let loja of dados.filtros.lojas" [value]="loja.id">{{ loja.nome }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Vendedor</span>
+      <select [(ngModel)]="filtros.vendedor">
+        <option value="">Todos</option>
+        <option *ngFor="let vendedor of dados.filtros.vendedores" [value]="vendedor.id">{{ vendedor.nome }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Canal</span>
+      <select [(ngModel)]="filtros.canal">
+        <option value="">Todos</option>
+        <option value="DINHEIRO">Dinheiro</option>
+        <option value="PIX">Pix</option>
+        <option value="CARTAO">Cartão</option>
+        <option value="CREDITO">Crédito</option>
+        <option value="DEBITO">Débito</option>
+      </select>
+    </label>
+    <button class="btn primary" (click)="carregar()">Pesquisar</button>
+    <button class="btn" (click)="limpar()">Limpar</button>
+    <span class="updated">Atualizado em {{ dados.atualizado_em | date:'dd/MM/yyyy HH:mm' }}</span>
+  </div>
+
+  <div class="message error" *ngIf="erro">{{ erro }}</div>
+  <div class="message" *ngIf="carregando">Carregando dashboard...</div>
+
+  <ng-container *ngIf="dados as d">
+    <section class="cards">
+      <article class="kpi" *ngFor="let card of d.indicadores.cards">
+        <div class="kpi-head">
+          <span class="icon"><i class="bi" [ngClass]="cardIcons[card.key] || 'bi-graph-up'"></i></span>
+          <span class="trend" [class.good]="card.positive" [class.bad]="!card.positive">
+            {{ card.variation >= 0 ? '▲' : '▼' }} {{ percentual(card.variation) }}
+          </span>
+        </div>
+        <strong>{{ card.label }}</strong>
+        <b>{{ formatar(card) }}</b>
+        <small>Comparativo: {{ card.kind === 'money' ? moeda(card.previous) : card.kind === 'percent' ? percentual(card.previous) : numero(card.previous) }}</small>
+        <svg viewBox="0 0 100 46" preserveAspectRatio="none" aria-hidden="true">
+          <polyline [attr.points]="sparkline(d.graficos.faturamento_diario)" />
+        </svg>
+      </article>
+    </section>
+
+    <section class="grid-main">
+      <article class="panel sales-line">
+        <header>
+          <h2>Faturamento por dia</h2>
+          <span>{{ data(d.periodo.inicio) }} a {{ data(d.periodo.fim) }}</span>
+        </header>
+        <svg viewBox="0 0 480 210" preserveAspectRatio="none">
+          <polyline class="prev" [attr.points]="linePath('anterior')" />
+          <polyline class="now" [attr.points]="linePath('atual')" />
+        </svg>
+        <footer>
+          <span><i class="dot blue"></i> Atual</span>
+          <span><i class="dot gray"></i> Comparativo</span>
+          <strong>{{ moeda(d.indicadores.base['faturamento']) }}</strong>
+        </footer>
+      </article>
+
+      <article class="panel payments">
+        <header>
+          <h2>Faturamento por forma de pagamento</h2>
+          <span>{{ d.graficos.pagamentos.length }} forma(s)</span>
+        </header>
+        <div class="pay-layout">
+          <div class="donut">
+            <div>Total<br><b>{{ moeda(d.indicadores.base['faturamento']) }}</b></div>
+          </div>
+          <ul>
+            <li *ngFor="let item of d.graficos.pagamentos; let i = index">
+              <span><i [style.background]="pagamentoColor(i)"></i>{{ item.forma }}</span>
+              <b>{{ percentual(item.percentual) }}</b>
+              <strong>{{ moeda(item.total) }}</strong>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="panel store-bars">
+        <header>
+          <h2>Faturamento por loja</h2>
+          <span>{{ d.graficos.lojas.length }} loja(s)</span>
+        </header>
+        <div class="bars">
+          <div class="bar-item" *ngFor="let loja of d.graficos.lojas">
+            <span>{{ loja.loja }}</span>
+            <div><i [style.width.%]="(loja.total / maxLoja()) * 100"></i></div>
+            <b>{{ moeda(loja.total) }}</b>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-bottom">
+      <article class="panel">
+        <header><h2>Evolução dos indicadores</h2></header>
+        <table>
+          <thead>
+            <tr><th>Indicador</th><th>Atual</th><th>Anterior</th><th>Dif.</th><th>%</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.evolucao">
+              <td>{{ row.indicador }}</td>
+              <td>{{ row.kind === 'money' ? moeda(row.atual) : row.kind === 'percent' ? percentual(row.atual) : numero(row.atual) }}</td>
+              <td>{{ row.kind === 'money' ? moeda(row.anterior) : row.kind === 'percent' ? percentual(row.anterior) : numero(row.anterior) }}</td>
+              <td>{{ row.kind === 'money' ? moeda(row.diferenca) : numero(row.diferenca) }}</td>
+              <td [class.positive]="row.variacao >= 0" [class.negative]="row.variacao < 0">{{ percentual(row.variacao) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <header><h2>Metas e resultados</h2></header>
+        <div class="goals">
+          <div class="goal" *ngFor="let meta of d.tabelas.metas">
+            <div><strong>{{ meta.meta }}</strong><span>{{ percentual(meta.percentual) }}</span></div>
+            <div class="progress"><i [style.width]="goalWidth(meta.percentual)"></i></div>
+            <small>{{ moeda(meta.realizado) }} de {{ moeda(meta.objetivo) }}</small>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <header><h2>Alertas importantes</h2></header>
+        <ul class="alerts">
+          <li *ngFor="let alerta of d.alertas" [class]="alerta.tipo">
+            <i class="bi" [ngClass]="alertaIcon(alerta.tipo)"></i>
+            <div><strong>{{ alerta.titulo }}</strong><span>{{ alerta.descricao }}</span></div>
+          </li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid-bottom">
+      <article class="panel">
+        <header><h2>Top vendedores</h2></header>
+        <table>
+          <thead><tr><th>Vendedor</th><th>Vendas</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.vendedores">
+              <td>{{ row.vendedor }}</td><td>{{ row.vendas }}</td><td>{{ moeda(row.total) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel wide">
+        <header><h2>Produtos mais vendidos</h2></header>
+        <table>
+          <thead><tr><th>Produto</th><th>Referência</th><th>Qtd</th><th>Total</th><th>CMV</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of d.tabelas.produtos">
+              <td>{{ row.produto }}</td><td>{{ row.referencia }}</td><td>{{ numero(row.qtd) }}</td><td>{{ moeda(row.total) }}</td><td>{{ moeda(row.cmv) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
+  </ng-container>
+</section>

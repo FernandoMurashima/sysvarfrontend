@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -60,7 +60,11 @@ export class ClientesComponent implements OnInit {
   errorOverlayOpen = false;
   columnsOpen = false;
   exportOpen = false;
+  selectedCliente: Cliente | null = null;
+  indicatorsVisible = true;
+  filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.clientes.columns';
+  private readonly viewPrefsKey = 'sysvar.ui.preferences.clientes';
   columns = [
     { key: 'apelido', label: 'Apelido', visible: true, required: false },
     { key: 'cpf', label: 'CPF', visible: true, required: false },
@@ -190,6 +194,7 @@ export class ClientesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadColumnsPreference();
+    this.loadViewPreference();
     this.load();
   }
 
@@ -281,6 +286,9 @@ export class ClientesComponent implements OnInit {
     const start = (this.page - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.clientes = filtered.slice(start, end);
+    if (this.selectedCliente && !filtered.some(c => c.id === this.selectedCliente?.id)) {
+      this.selectedCliente = null;
+    }
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -412,6 +420,62 @@ export class ClientesComponent implements OnInit {
     if (action === 'consultar') this.consultar(row);
     if (action === 'editar') this.editar(row);
     if (action === 'excluir') this.excluir(row);
+  }
+
+  selecionarCliente(row: Cliente): void {
+    this.selectedCliente = this.isSelected(row) ? null : row;
+  }
+
+  isSelected(row: Cliente): boolean {
+    return !!this.selectedCliente && this.selectedCliente.id === row.id;
+  }
+
+  consultarSelecionado(): void {
+    if (this.selectedCliente) this.consultar(this.selectedCliente);
+  }
+
+  editarSelecionado(): void {
+    if (this.selectedCliente && this.podeEditarModulo) this.editar(this.selectedCliente);
+  }
+
+  excluirSelecionado(): void {
+    if (this.selectedCliente && this.podeExcluirModulo) this.excluir(this.selectedCliente);
+  }
+
+  toggleIndicators(): void {
+    this.indicatorsVisible = !this.indicatorsVisible;
+    this.saveViewPreference();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+    this.saveViewPreference();
+  }
+
+  restoreViewPreference(): void {
+    localStorage.removeItem(this.viewPrefsKey);
+    localStorage.removeItem('sysvar.list.clientes.pageSize');
+    this.indicatorsVisible = true;
+    this.filtersVisible = true;
+    this.pageSize = 20;
+    this.columns = this.columns.map(c => ({ ...c, visible: true }));
+    this.saveColumnsPreference();
+    this.applyPage();
+  }
+
+  @HostListener('window:sysvar-clientes-toggle-indicators')
+  onToggleIndicatorsEvent(): void {
+    this.toggleIndicators();
+  }
+
+  @HostListener('window:sysvar-clientes-toggle-filters')
+  onToggleFiltersEvent(): void {
+    this.toggleFilters();
+  }
+
+  @HostListener('window:sysvar-clientes-restore-view')
+  onRestoreViewEvent(): void {
+    this.restoreViewPreference();
   }
 
   visibleColumn(key: string): boolean {
@@ -657,5 +721,24 @@ export class ClientesComponent implements OnInit {
   private saveColumnsPreference(): void {
     const state = Object.fromEntries(this.columns.map(c => [c.key, c.visible]));
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
+  }
+
+  private loadViewPreference(): void {
+    const raw = localStorage.getItem(this.viewPrefsKey);
+    if (!raw) return;
+    try {
+      const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean };
+      this.indicatorsVisible = pref.indicatorsVisible ?? true;
+      this.filtersVisible = pref.filtersVisible ?? true;
+    } catch {
+      return;
+    }
+  }
+
+  private saveViewPreference(): void {
+    localStorage.setItem(this.viewPrefsKey, JSON.stringify({
+      indicatorsVisible: this.indicatorsVisible,
+      filtersVisible: this.filtersVisible,
+    }));
   }
 }

@@ -1,0 +1,234 @@
+<div class="cadastro-page distribuicao-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Distribuição</h1>
+      <button class="info-button" type="button" title="Distribui estoque da fábrica ou matriz para lojas e gera pedido de venda para faturamento.">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" *ngIf="podeEditarModulo" (click)="novoPerfil()">Perfis</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">+ Nova distribuição</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ totalDistribuicoes }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">≡</span><div><strong>{{ rascunhos }}</strong><small>Em preparo</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ confirmadas }}</strong><small>Confirmadas</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">→</span><div><strong>{{ comPedidos }}</strong><small>Com pedidos</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">Σ</span><div><strong>{{ qty(totalPecas) }}</strong><small>Peças</small></div></div>
+  </section>
+
+  <section class="filter-bar distribuicao-filter" *ngIf="filtersVisible">
+    <input class="main-search" [(ngModel)]="search" placeholder="Buscar distribuição por número, origem ou observação..." (keyup.enter)="doSearch()" />
+    <label class="inline-filter"><span>Origem</span><select [(ngModel)]="filterOrigem"><option value="">Todas</option><option *ngFor="let loja of lojas" [value]="loja.id">{{ loja.nome_loja }}</option></select></label>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus"><option value="">Todos</option><option value="RASC">Rascunho</option><option value="CALC">Calculada</option><option value="CONF">Confirmada</option><option value="PED">Pedidos</option><option value="CANC">Cancelada</option></select></label>
+    <label class="inline-filter period"><span>De</span><input type="date" [(ngModel)]="filterDataIni" /></label>
+    <label class="inline-filter period"><span>Até</span><input type="date" [(ngModel)]="filterDataFim" /></label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
+    <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
+    <div class="menu-holder">
+      <button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button>
+      <div class="floating-menu" *ngIf="columnsOpen"><button type="button" disabled>Número</button><button type="button" disabled>Status</button><button type="button" disabled>Total</button></div>
+    </div>
+    <div class="advanced-filters" *ngIf="advancedOpen">Use origem, status e período para refinar as distribuições.</div>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selecionada">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !podeEditarModulo || !['RASC','CALC'].includes(selecionada.status)" (click)="carregarEstoque()">▤ Carregar estoque</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !podeEditarModulo || !['RASC','CALC'].includes(selecionada.status) || !matrizItens.length" (click)="montarMatrizManual()">▦ Matriz manual</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !selecionada.perfil || !podeEditarModulo || !['RASC','CALC'].includes(selecionada.status)" (click)="aplicarPerfilSelecionado()">↔ Aplicar perfil</button>
+    <button class="btn" type="button" [disabled]="!selecionada || !podeEditarModulo || !['RASC','CALC'].includes(selecionada.status)" (click)="confirmar()">✓ Confirmar</button>
+    <button class="btn primary" type="button" [disabled]="!selecionada || !podeEditarModulo || selecionada.status !== 'CONF'" (click)="gerarPedidos()">Gerar pedidos</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selecionada || !podeEditarModulo || ['CANC','NF','TRANS','RECB'].includes(selecionada.status)" (click)="cancelar()">Excluir/Cancelar</button>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="card form-panel" *ngIf="showForm">
+    <div class="form-title">
+      <div><h3>Nova distribuição</h3><p>Informe a origem e o perfil de cálculo.</p></div>
+      <div class="form-title-actions">
+        <button class="btn ghost" type="button" (click)="showForm = false">Cancelar</button>
+        <button class="btn primary" type="button" [disabled]="saving || form.invalid" (click)="salvar()">Salvar</button>
+      </div>
+    </div>
+    <form [formGroup]="form">
+      <div class="form-grid">
+        <label class="span-4 input-item">Origem*<select formControlName="unidade_origem"><option [ngValue]="null">Selecione</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.nome_loja }}</option></select></label>
+        <label class="span-2 input-item">Data*<input type="date" formControlName="data" /></label>
+        <label class="span-3 input-item">Perfil<select formControlName="perfil" (change)="onPerfilChange(form.value.perfil)"><option [ngValue]="null">Manual</option><option *ngFor="let perfil of perfis" [ngValue]="perfil.id">{{ perfil.codigo }} - {{ perfil.descricao }}</option></select></label>
+        <label class="span-2 input-item">Fator preço<input type="number" min="0" step="0.0001" formControlName="fator_preco" /></label>
+        <div class="span-1 form-inline-action"><button class="btn" type="button" (click)="editarPerfilSelecionado()">Perfil</button></div>
+        <label class="span-12 input-item">Observação<input formControlName="observacao" /></label>
+      </div>
+    </form>
+  </section>
+
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Distribuições cadastradas</strong><span>{{ distribuicoesFiltradas.length }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label>Itens por página:</label><select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="distribuicoesPaginadas.length; else vazioTpl">
+        <thead><tr><th class="select-col"></th><th>Número</th><th>Origem</th><th>Data</th><th>Status</th><th>Perfil</th><th>Fator</th><th>Peças</th><th>Custo</th><th>Venda</th><th>Pedidos</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let dist of distribuicoesPaginadas; trackBy: trackByDistribuicao" [class.selected]="isSelected(dist)" (click)="selecionar(dist)">
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(dist)" (click)="$event.stopPropagation(); selecionar(dist)" /></td>
+            <td>{{ dist.numero }}</td>
+            <td>{{ dist.unidade_origem_nome }}</td>
+            <td>{{ dist.data | date:'dd/MM/yyyy' }}</td>
+            <td><span class="status-pill" [ngClass]="statusClass(dist.status)">• {{ statusLabel(dist.status) }}</span></td>
+            <td>{{ dist.perfil_descricao || 'Manual' }}</td>
+            <td>{{ num(dist.fator_preco) | percent:'1.0-2' }}</td>
+            <td>{{ qty(dist.quantidade_total) }}</td>
+            <td>{{ money(dist.valor_total_custo) }}</td>
+            <td>{{ money(dist.valor_total_venda) }}</td>
+            <td>{{ dist.pedidos_count || 0 }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma distribuição encontrada.' }}</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="distribuicoesFiltradas.length > 0">
+      <div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPagesView }}<span class="range">— Mostrando {{ pageStartView }} – {{ pageEndView }} de {{ distribuicoesFiltradas.length }}</span></div>
+      <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPagesView">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPagesView">Última »</button></div>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="selecionada && detalheAberto">
+  <section class="modal-card distribution-modal">
+    <div class="form-title modal-title-compact">
+      <div><h3>Distribuição {{ selecionada.numero }}</h3><p>{{ selecionada.unidade_origem_nome }} · {{ statusLabel(selecionada.status) }}</p></div>
+      <div class="form-title-actions">
+        <button class="btn" type="button" [disabled]="loading" (click)="verReferenciasDisponiveis()">Ver refs.</button>
+        <button class="btn" type="button" [disabled]="loading || !podeEditarModulo || !['RASC','CALC'].includes(selecionada.status)" (click)="carregarEstoque()">Carregar</button>
+        <button class="btn" type="button" [disabled]="!podeEditarModulo || !['RASC','CALC'].includes(selecionada.status)" (click)="confirmar()">Confirmar</button>
+        <button class="btn primary" type="button" [disabled]="!podeEditarModulo || selecionada.status !== 'CONF'" (click)="gerarPedidos()">Gerar pedidos</button>
+        <button class="btn" type="button" (click)="fecharDetalhe()">Fechar</button>
+      </div>
+    </div>
+    <div class="distribution-summary">
+      <div><small>Distribuição</small><strong>{{ selecionada.numero }}</strong></div>
+      <div><small>Origem</small><strong [title]="selecionada.unidade_origem_nome">{{ selecionada.unidade_origem_nome }}</strong></div>
+      <div><small>Status</small><strong>{{ statusLabel(selecionada.status) }}</strong></div>
+      <div><small>Peças</small><strong>{{ qty(selecionada.quantidade_total) }}</strong></div>
+      <div><small>Custo un.</small><strong>{{ money(custoUnitarioDist(selecionada)) }}</strong></div>
+      <div><small>Venda un.</small><strong>{{ money(vendaUnitarioDist(selecionada)) }}</strong></div>
+      <div><small>Fator preço</small><strong>{{ num(selecionada.fator_preco) | percent:'1.0-2' }}</strong></div>
+      <label><small>SKU</small><input [(ngModel)]="estoqueSearch" placeholder="Referência ou EAN" /></label>
+      <label class="check-inline"><input type="checkbox" [(ngModel)]="distribuirDisponivel" /><span>Todo disp.</span></label>
+      <label *ngIf="!distribuirDisponivel"><small>Mín. origem</small><input type="number" min="0" [(ngModel)]="manterMinimo" /></label>
+    </div>
+
+    <div class="available-toolbar" *ngIf="['RASC','CALC'].includes(selecionada.status)">
+      <div>
+        <strong>Referências disponíveis</strong>
+        <span>Consulte o saldo da origem antes de carregar para a matriz.</span>
+      </div>
+      <div class="available-actions">
+        <button class="btn" type="button" [disabled]="loading" (click)="verReferenciasDisponiveis()">Ver referências</button>
+        <button class="btn primary" type="button" [disabled]="loading || !podeEditarModulo" (click)="carregarEstoque()">Carregar para matriz</button>
+      </div>
+    </div>
+
+    <div class="table-wrapper available-wrapper" *ngIf="estoqueDisponivel.length && !matrizItens.length">
+      <table class="table">
+        <thead><tr><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tam.</th><th>EAN</th><th>Disponível</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of estoqueDisponivel; trackBy: trackByEstoque">
+            <td>{{ row.referencia }}</td>
+            <td>{{ row.descricao }}</td>
+            <td>{{ row.cor_descricao || '-' }}</td>
+            <td>{{ row.tamanho_descricao || '-' }}</td>
+            <td>{{ row.ean13 }}</td>
+            <td class="num">{{ qty(row.estoque_disponivel) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="matrix-toolbar">
+      <div><strong>Matriz de distribuição</strong><span>{{ matrizItens.length }} SKU(s) · {{ matrizLojas.length }} loja(s)</span></div>
+      <div class="generated-orders" *ngIf="pedidosGerados.length">Pedidos: {{ pedidosGerados.join(', ') }}</div>
+    </div>
+
+    <div class="table-wrapper matrix-wrapper">
+      <table class="table matrix-table" *ngIf="matrizItens.length; else matrizVaziaTpl">
+        <thead>
+          <tr>
+            <th class="sticky-col">SKU</th>
+            <th>Cor</th>
+            <th class="size-col">Tam.</th>
+            <th class="qty-col">Disp.</th>
+            <th class="store-col" *ngFor="let loja of matrizLojas; trackBy: trackByLoja" [title]="loja.titulo">{{ loja.nome }}</th>
+            <th class="qty-col">Total</th>
+            <th class="qty-col">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of matrizItens; trackBy: trackByItem" [class.exceeded]="saldoItem(item) < 0">
+            <td class="sticky-col"><strong>{{ item.referencia }}</strong><small>{{ item.descricao }} · {{ item.ean13 }}</small></td>
+            <td>{{ item.cor_descricao || '-' }}</td>
+            <td class="size-col">{{ item.tamanho_descricao || '-' }}</td>
+            <td class="matrix-number qty-col">{{ qtyInt(item.quantidade_selecionada) }}</td>
+            <td class="matrix-cell" *ngFor="let loja of matrizLojas; trackBy: trackByLoja" [title]="loja.titulo">
+              <ng-container *ngIf="destinoCell(item, loja.id) as destino; else semDestino">
+                <input type="number" min="0" step="1" inputmode="numeric" [disabled]="!['RASC','CALC'].includes(selecionada.status)" [ngModel]="qtyInput(destino.quantidade_ajustada || destino.quantidade_sugerida)" (change)="ajustarDestino(destino, $any($event.target).value)" />
+              </ng-container>
+              <ng-template #semDestino><span class="muted">-</span></ng-template>
+            </td>
+            <td class="matrix-number qty-col">{{ qtyInt(totalItem(item)) }}</td>
+            <td class="matrix-number qty-col" [class.negative]="saldoItem(item) < 0">{{ qtyInt(saldoItem(item)) }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="sticky-col">Total por loja</td><td></td><td></td><td></td>
+            <td class="matrix-total" *ngFor="let loja of matrizLojas; trackBy: trackByLoja">{{ qtyInt(totalLoja(loja.id)) }}</td>
+            <td></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <ng-template #matrizVaziaTpl><div class="empty-hint">Carregue o estoque da origem para montar a matriz.</div></ng-template>
+    </div>
+  </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showPerfilModal">
+    <section class="modal-card perfil-modal">
+      <div class="form-title">
+        <div><h3>{{ perfilEditandoId ? 'Editar perfil' : 'Novo perfil' }}</h3><p>Defina lojas, percentuais e fator de preço para a transferência.</p></div>
+        <div class="form-title-actions"><button class="btn" type="button" (click)="novoPerfil()">Novo</button><button class="btn primary" type="button" (click)="salvarPerfil()">Salvar</button><button class="btn" type="button" (click)="showPerfilModal = false">Fechar</button></div>
+      </div>
+      <div class="profile-list" *ngIf="perfis.length">
+        <button class="btn" type="button" *ngFor="let perfil of perfis" [class.primary]="perfil.id === perfilEditandoId" (click)="abrirPerfilModal(perfil)">
+          {{ perfil.codigo }} - {{ perfil.descricao }}
+        </button>
+      </div>
+      <form [formGroup]="perfilForm" class="form-grid">
+        <label class="span-3 input-item">Código<input formControlName="codigo" /></label>
+        <label class="span-4 input-item">Descrição<input formControlName="descricao" /></label>
+        <label class="span-3 input-item">Tipo<select formControlName="tipo"><option value="PERCENTUAL">Percentual</option><option value="FIXA">Quantidade fixa</option></select></label>
+        <label class="span-2 input-item">Fator preço<input type="number" min="0" step="0.0001" formControlName="fator_preco" /></label>
+      </form>
+      <div class="profile-grid">
+        <div class="profile-row profile-head"><span>Usa</span><span>Loja</span><span>%</span><span>Fixo</span><span>Prior.</span></div>
+        <div class="profile-row" *ngFor="let item of perfilItens">
+          <label><input type="checkbox" [(ngModel)]="item.ativo" /></label>
+          <strong [title]="item.loja.nome_loja">{{ lojaNomeCurto(item.loja.id) }}</strong>
+          <input type="number" min="0" max="100" step="0.0001" [(ngModel)]="item.percentual" [disabled]="perfilForm.value.tipo !== 'PERCENTUAL' || !item.ativo" />
+          <input type="number" min="0" step="1" [(ngModel)]="item.quantidade_fixa" [disabled]="perfilForm.value.tipo !== 'FIXA' || !item.ativo" />
+          <input type="number" min="0" step="1" [(ngModel)]="item.prioridade" [disabled]="!item.ativo" />
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

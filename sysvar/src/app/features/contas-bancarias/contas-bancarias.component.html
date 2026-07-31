@@ -1,8 +1,29 @@
-<div class="financeiro-page">
-  <header class="toolbar">
-    <h2>Contas Bancárias</h2>
-    <div class="toolbar-actions">
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Contas Bancárias</h1>
+      <button class="info-button" type="button" aria-label="Informações da tela" title="Controle de contas bancárias">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn icon-btn" type="button" [routerLink]="['/ajuda/financeiro']"><span>?</span>Ajuda</button>
+      <button class="btn icon-btn" type="button" [routerLink]="['/home']"><span>⌂</span>Home</button>
+      <button class="btn icon-btn" type="button" (click)="limparFiltros()"><span>×</span>Limpar</button>
+      <button class="btn icon-btn" type="button" (click)="exportOpen = !exportOpen"><span>⇩</span>Exportar</button>
+      <button class="btn primary icon-btn" type="button" (click)="novo()" *ngIf="podeEditarModulo"><span>+</span>Nova</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><strong>{{ indicadores.total }}</strong><small>Total</small></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><strong>{{ indicadores.ativas }}</strong><small>Ativas</small></div>
+    <div class="indicator"><span class="indicator-icon cyan">▤</span><strong>{{ indicadores.correntes }}</strong><small>Correntes</small></div>
+    <div class="indicator"><span class="indicator-icon purple">◇</span><strong>{{ indicadores.pagamento }}</strong><small>Pagamento</small></div>
+    <div class="indicator"><span class="indicator-icon orange">$</span><strong>{{ indicadores.saldo | currency:'BRL' }}</strong><small>Saldo total</small></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
       <app-search-suggest
+        class="main-search"
         [(value)]="search"
         [suggestions]="searchSuggestions"
         placeholder="Buscar conta, banco, loja..."
@@ -10,12 +31,21 @@
         (search)="filtrarContas()"
         (cleared)="filtrarContas()"
       />
-      <button class="btn primary" type="button" (click)="filtrarContas()">Buscar</button>
-      <button class="btn" type="button" (click)="limparFiltros()">Limpar</button>
-      <button class="btn primary" type="button" (click)="novo()" *ngIf="podeEditarModulo">Nova</button>
-      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
-    </div>
-  </header>
+      <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="filtrarContas()"><option value="">Todos</option><option value="CORRENTE">Corrente</option><option value="POUPANCA">Poupança</option><option value="PAGAMENTO">Pagamento</option></select></label>
+      <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="filtrarContas()"><option value="">Todos</option><option value="ATIVO">Ativas</option><option value="INATIVO">Inativas</option></select></label>
+      <button class="btn primary" type="button" (click)="filtrarContas()">Pesquisar</button>
+      <div class="menu-holder">
+        <button class="btn icon-btn" type="button" (click)="columnsOpen = !columnsOpen"><span>▦</span>Colunas</button>
+        <div class="floating-menu columns-menu" *ngIf="columnsOpen">
+          <label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />{{ col.label }}</label>
+        </div>
+      </div>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn icon-btn" type="button" [disabled]="!contaSelecionada() || !podeEditarModulo" (click)="editarSelecionado()"><span>✎</span>Editar</button>
+    <button class="btn danger-soft icon-btn" type="button" [disabled]="!contaSelecionada() || !podeEditarModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir</button>
+  </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
@@ -119,7 +149,13 @@
       <label>Agência*<input type="text" formControlName="agencia" /></label>
       <label>Conta*<input type="text" formControlName="conta" /></label>
       <label>Pix<input type="text" formControlName="pix_chave" /></label>
-      <label>Conta contábil<input type="text" formControlName="conta_contabil" placeholder="Ex.: 1.1.02.001" /></label>
+      <label>
+        Conta contábil
+        <select formControlName="conta_contabil">
+          <option value="">Selecione</option>
+          <option *ngFor="let conta of planoContabil" [value]="conta.codigo">{{ contaContabilLabel(conta) }}</option>
+        </select>
+      </label>
       <label>
         Saldo inicial*
         <span class="money-input"><span>R$</span><input type="number" step="0.01" formControlName="saldo_inicial" /></span>
@@ -139,9 +175,8 @@
 
   <section class="summary-grid" *ngIf="contaSelecionada() as conta">
     <div class="summary-card wide">
-      <span>Conta selecionada</span>
       <strong>{{ conta.descricao }}</strong>
-      <small>{{ lojaNome(conta.idloja) }} · {{ conta.banco }} Ag {{ conta.agencia }} Cc {{ conta.conta }}</small>
+      <small>{{ conta.banco }} · Ag {{ conta.agencia }} · Cc {{ conta.conta }}</small>
     </div>
     <div class="summary-card">
       <span>Saldo atual</span>
@@ -161,6 +196,36 @@
     </div>
   </section>
 
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Contas cadastradas</strong><span>{{ totalFiltrado }} registro(s) encontrado(s)</span></div>
+      <div class="list-controls"><label for="pageSize">Itens por página:</label><select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div>
+    </div>
+    <div class="table-wrapper compact">
+      <table class="table" *ngIf="contasPaginadas.length; else contasVazioTpl">
+        <thead><tr><th class="select-col"><input type="checkbox" disabled /></th><th>Descrição</th><th *ngIf="visibleColumn('banco')">Banco</th><th *ngIf="visibleColumn('agencia')">Agência</th><th *ngIf="visibleColumn('conta')">Conta</th><th *ngIf="visibleColumn('loja')">Loja</th><th *ngIf="visibleColumn('saldo')">Saldo atual</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let conta of contasPaginadas" [class.selected]="isSelected(conta)" (click)="selecionarConta(conta)">
+            <td class="select-col" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="isSelected(conta)" (change)="selecionarConta(conta)" /></td>
+            <td>{{ conta.descricao }}</td>
+            <td *ngIf="visibleColumn('banco')">{{ conta.banco }}</td>
+            <td *ngIf="visibleColumn('agencia')">{{ conta.agencia }}</td>
+            <td *ngIf="visibleColumn('conta')">{{ conta.conta }}</td>
+            <td *ngIf="visibleColumn('loja')">{{ lojaNome(conta.idloja) }}</td>
+            <td *ngIf="visibleColumn('saldo')" [class.negative]="(+conta.saldo_atual || 0) < 0">{{ conta.saldo_atual | currency:'BRL' }}</td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="!conta.ativo">• {{ conta.ativo ? 'Ativa' : 'Inativa' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #contasVazioTpl><div class="empty-hint" *ngIf="!loading">Nenhuma conta bancária encontrada.</div></ng-template>
+    </div>
+    <div class="pager" *ngIf="totalFiltrado > 0">
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ totalFiltrado }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
+    </div>
+  </section>
+
   <section class="panel action-tabs">
     <button class="btn primary" type="button" (click)="abrirPainel('contas')">Contas bancárias</button>
     <button class="btn" type="button" (click)="abrirPainel('extrato')" [disabled]="!selectedContaId">Extrato</button>
@@ -172,7 +237,18 @@
     <section class="modal-card work-modal">
       <div class="modal-head">
         <h3>{{ tituloPainel() }}</h3>
-        <button class="btn" type="button" (click)="fecharPainel()">Fechar</button>
+        <div class="modal-head-actions">
+          <button
+            class="btn primary"
+            type="button"
+            *ngIf="painelAberto === 'transferencia' && podeEditarModulo"
+            (click)="transferir()"
+            [disabled]="transferindo"
+          >
+            {{ transferindo ? 'Transferindo...' : 'Transferir' }}
+          </button>
+          <button class="btn" type="button" (click)="fecharPainel()">Fechar</button>
+        </div>
       </div>
 
       <ng-container [ngSwitch]="painelAberto">
@@ -317,7 +393,6 @@
         <ng-container *ngSwitchCase="'conciliacao'">
           <section class="conciliacao-panel" *ngIf="podeEditarModulo">
             <div class="conciliacao-bar">
-              <strong>Conciliação</strong>
               <select [(ngModel)]="conciliacaoForma" aria-label="Forma de pagamento">
                 <option value="">Todas as formas</option>
                 <option *ngFor="let forma of formasPagamento" [value]="forma.codigo">
@@ -377,7 +452,6 @@
 
         <ng-container *ngSwitchCase="'transferencia'">
           <section class="transfer-panel" [formGroup]="transferenciaForm" *ngIf="podeEditarModulo">
-            <strong>Transferência</strong>
             <select formControlName="origem_tipo" aria-label="Tipo de origem" (change)="sincronizarTransferencia()">
               <option value="CAIXA">Caixa</option>
               <option value="CONTA">Banco</option>
@@ -398,9 +472,6 @@
             <input type="date" formControlName="data_movimento" aria-label="Data" />
             <span class="money-input transfer-money"><span>R$</span><input type="number" step="0.01" min="0.01" formControlName="valor" placeholder="0,00" aria-label="Valor" /></span>
             <input type="text" formControlName="observacao" placeholder="Observação" aria-label="Observação" />
-            <button class="btn primary" type="button" (click)="transferir()" [disabled]="transferindo">
-              {{ transferindo ? 'Transferindo...' : 'Transferir' }}
-            </button>
           </section>
         </ng-container>
       </ng-container>

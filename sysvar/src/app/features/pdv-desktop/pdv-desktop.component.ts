@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 
 import { AuthService } from '../../core/auth.service';
@@ -91,6 +92,7 @@ interface PdvCupomLocal {
 })
 export class PdvDesktopComponent implements OnInit {
   private auth = inject(AuthService);
+  private router = inject(Router);
   private produtosApi = inject(ProdutosService);
   private skusApi = inject(ProdutoDetalheService);
   private lojasApi = inject(LojasService);
@@ -150,7 +152,7 @@ export class PdvDesktopComponent implements OnInit {
   atualizandoCatalogo = false;
   caixaLocalAberto = false;
   private buscaTimer: ReturnType<typeof setTimeout> | null = null;
-  modalAtalho: '' | 'cliente' | 'vendedor' | 'resumo' | 'pagamentos' | 'preco' | 'cancelar-venda' | 'despesa' | 'pendentes' | 'fechamento' | 'reimpressao' = '';
+  modalAtalho: '' | 'cliente' | 'vendedor' | 'resumo' | 'pagamentos' | 'preco' | 'cancelar-venda' | 'despesa' | 'pendentes' | 'fechamento' | 'reimpressao' | 'vale-troca' = '';
   buscaModal = '';
   resumoVendedores: RelatorioVendedor[] = [];
   resumoPagamentos: RelatorioPagamentoVenda[] = [];
@@ -214,6 +216,10 @@ export class PdvDesktopComponent implements OnInit {
 
   @HostListener('document:keydown.f9', ['$event'])
   atalhoF9(event: KeyboardEvent): void { this.abrirAtalho(event, 'pagamentos'); }
+
+  voltarHome(): void {
+    this.router.navigateByUrl('/home');
+  }
 
   ngOnInit(): void {
     const user = this.auth.getCurrentUser();
@@ -1491,6 +1497,26 @@ export class PdvDesktopComponent implements OnInit {
   pagarCom(forma: PdvFormaPagamento): void {
     this.formaPagamento = forma;
     this.atualizarValorPagamento();
+    if (forma === 'TROCA') this.carregarValesTrocaCliente();
+  }
+
+  abrirValesTroca(): void {
+    if (!this.clienteId) {
+      this.mensagem = 'Identifique o cliente para consultar vale-troca.';
+      return;
+    }
+    this.carregarValesTrocaCliente();
+    this.modalAtalho = 'vale-troca';
+  }
+
+  selecionarValeTroca(vale: ValeTroca): void {
+    this.formaPagamento = 'TROCA';
+    this.valeTrocaDocumento = vale.documento;
+    const saldo = this.numero(vale.saldo);
+    const pendente = this.pendente();
+    this.valorPagamento = Number(Math.min(saldo, pendente).toFixed(2));
+    this.mensagem = '';
+    this.fecharAtalho();
   }
 
   abrirReimpressao(): void {
@@ -1761,9 +1787,20 @@ export class PdvDesktopComponent implements OnInit {
     if (this.formaPagamento === 'CARTAO') return this.tipoCartao === 'DEBITO' ? 'Cartão débito' : 'Cartão crédito';
     if (this.formaPagamento === 'PIX') return 'Pix';
     if (this.formaPagamento === 'TROCA') {
-      return this.valeTrocaDocumento ? `Vale-troca ${this.valeTrocaDocumento}` : 'Vale-troca';
+      return this.valeTrocaDocumento ? `Vale ${this.documentoValeCurto(this.valeTrocaDocumento)}` : 'Vale-troca';
     }
     return 'Dinheiro';
+  }
+
+  documentoValeCurto(documento?: string | null): string {
+    const texto = String(documento || '').trim();
+    return texto.length > 18 ? `${texto.slice(0, 8)}...${texto.slice(-6)}` : texto;
+  }
+
+  valeTrocaResumo(): string {
+    const vale = this.valesTrocaValidos().find(v => v.documento === this.valeTrocaDocumento);
+    if (!vale) return 'Selecione o vale';
+    return `${this.documentoValeCurto(vale.documento)} - ${this.formatar(this.numero(vale.saldo))}`;
   }
 
   valesTrocaValidos(): ValeTroca[] {
