@@ -29,6 +29,21 @@ interface MeResponse {
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
 }
 
+export type ModuloEmpresa =
+  | 'operacional'
+  | 'cadastros'
+  | 'produtos'
+  | 'vendas'
+  | 'compras'
+  | 'estoque'
+  | 'distribuicao'
+  | 'financeiro'
+  | 'fiscal'
+  | 'fiscal_contabil'
+  | 'producao'
+  | 'relatorios'
+  | 'configuracoes';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
@@ -132,15 +147,31 @@ export class AuthService {
     }
   }
 
-  empresaModuloHabilitado(modulo: 'cadastros' | 'produtos' | 'vendas' | 'compras' | 'estoque' | 'financeiro' | 'fiscal' | 'producao' | 'relatorios' | 'configuracoes'): boolean {
+  empresaModuloHabilitado(modulo: ModuloEmpresa): boolean {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return true;
-    if (['cadastros', 'produtos', 'relatorios', 'configuracoes'].includes(modulo)) return true;
+    if (['operacional', 'cadastros', 'produtos', 'configuracoes'].includes(modulo)) return true;
     const empresa = user?.empresa;
     if (!empresa) return false;
     if (empresa.licenca_master === true) return true;
-    const campo = `usa_${modulo}` as keyof NonNullable<MeResponse['empresa']>;
-    return empresa[campo] === true;
+    const compat: Record<ModuloEmpresa, Array<keyof NonNullable<MeResponse['empresa']>>> = {
+      operacional: [],
+      cadastros: [],
+      produtos: [],
+      vendas: ['usa_vendas'],
+      compras: ['usa_compras'],
+      estoque: ['usa_estoque'],
+      distribuicao: ['usa_distribuicao_producao', 'usa_estoque', 'usa_producao'],
+      financeiro: ['usa_financeiro'],
+      fiscal: ['usa_fiscal'],
+      fiscal_contabil: ['usa_fiscal', 'usa_financeiro'],
+      producao: ['usa_producao', 'usa_ficha_tecnica', 'usa_faccao'],
+      relatorios: ['licenca_master'],
+      configuracoes: [],
+    };
+    const campos = compat[modulo] || [];
+    if (!campos.length) return true;
+    return campos.some(campo => empresa[campo] === true);
   }
 
   permissaoModulo(modulo?: string | null): 'NONE' | 'VIEW' | 'EDIT' | null {

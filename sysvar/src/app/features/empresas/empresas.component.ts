@@ -51,7 +51,20 @@ export class EmpresasComponent implements OnInit {
     usa_financeiro: [false],
     usa_fiscal: [false],
     usa_producao: [false],
+    usa_distribuicao_producao: [false],
   });
+
+  readonly modulosBasicos = ['Operacional', 'Cadastros', 'Produtos', 'Dashboards'];
+
+  readonly modulosContratados = [
+    { control: 'usa_compras', label: 'Compras' },
+    { control: 'usa_estoque', label: 'Estoque' },
+    { control: 'usa_distribuicao_producao', label: 'Distribuição' },
+    { control: 'usa_producao', label: 'Produção' },
+    { control: 'usa_vendas', label: 'Vendas' },
+    { control: 'usa_financeiro', label: 'Financeiro' },
+    { control: 'usa_fiscal', label: 'Fiscal e Contábil' },
+  ];
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.pageSize)); }
   get pageStart(): number { return this.total === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
@@ -124,6 +137,7 @@ export class EmpresasComponent implements OnInit {
       usa_financeiro: false,
       usa_fiscal: false,
       usa_producao: false,
+      usa_distribuicao_producao: false,
     });
     this.aplicarMaster(false);
   }
@@ -149,6 +163,7 @@ export class EmpresasComponent implements OnInit {
       usa_financeiro: row.usa_financeiro === true,
       usa_fiscal: row.usa_fiscal === true,
       usa_producao: row.usa_producao === true,
+      usa_distribuicao_producao: row.usa_distribuicao_producao === true,
     });
     this.aplicarMaster(row.licenca_master === true);
   }
@@ -177,6 +192,7 @@ export class EmpresasComponent implements OnInit {
       usa_financeiro: false,
       usa_fiscal: false,
       usa_producao: false,
+      usa_distribuicao_producao: false,
     });
   }
 
@@ -204,7 +220,7 @@ export class EmpresasComponent implements OnInit {
       usa_producao: raw.usa_producao === true,
       usa_ficha_tecnica: raw.usa_producao === true,
       usa_faccao: raw.usa_producao === true,
-      usa_distribuicao_producao: raw.usa_producao === true,
+      usa_distribuicao_producao: raw.usa_distribuicao_producao === true,
     };
 
     this.saving = true;
@@ -245,7 +261,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   private aplicarMaster(master: boolean): void {
-    const campos = ['usa_vendas', 'usa_compras', 'usa_estoque', 'usa_financeiro', 'usa_fiscal', 'usa_producao'];
+    const campos = ['usa_vendas', 'usa_compras', 'usa_estoque', 'usa_financeiro', 'usa_fiscal', 'usa_producao', 'usa_distribuicao_producao'];
     for (const campo of campos) {
       const ctrl = this.form.get(campo);
       if (!ctrl) continue;
@@ -264,10 +280,16 @@ export class EmpresasComponent implements OnInit {
     if (empresa.usa_vendas) tags.push('Vendas');
     if (empresa.usa_compras) tags.push('Compras');
     if (empresa.usa_estoque) tags.push('Estoque');
+    if (empresa.usa_distribuicao_producao) tags.push('Distribuição');
     if (empresa.usa_financeiro) tags.push('Financeiro');
-    if (empresa.usa_fiscal) tags.push('Fiscal');
+    if (empresa.usa_fiscal) tags.push('Fiscal e Contábil');
     if (empresa.usa_producao) tags.push('Produção');
+    if (empresa.usa_vendas || empresa.usa_estoque) tags.push('Módulo Loja');
     return tags;
+  }
+
+  moduloLojaContratado(): boolean {
+    return this.form.get('usa_vendas')?.value === true || this.form.get('usa_estoque')?.value === true;
   }
 
   alternarAtivo(row: Empresa): void {

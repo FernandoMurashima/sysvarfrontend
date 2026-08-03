@@ -67,11 +67,11 @@ export class UsuariosComponent implements OnInit {
   consultando = false;
 
   get podeEditarModulo(): boolean {
-    return this.auth.podeAcessarModulo('configuracoes', true) !== false;
+    return this.auth.podeAcessarModulo('operacional', true) !== false;
   }
 
   get podeExcluirModulo(): boolean {
-    return this.auth.podeExcluirModulo('configuracoes');
+    return this.auth.podeExcluirModulo('operacional');
   }
 
   usuarios: User[] = [];
@@ -117,15 +117,18 @@ export class UsuariosComponent implements OnInit {
   ];
 
   modulosPermissao: ModuloPermissao[] = [
+    { key: 'operacional', label: 'Operacional', acesso: 'VIEW' },
     { key: 'cadastros', label: 'Cadastros', acesso: 'EDIT' },
     { key: 'produtos', label: 'Produtos', acesso: 'EDIT' },
-    { key: 'fiscal', label: 'Fiscal', acesso: 'NONE' },
-    { key: 'estoque', label: 'Estoque', acesso: 'EDIT' },
-    { key: 'vendas', label: 'Vendas', acesso: 'EDIT' },
     { key: 'compras', label: 'Compras', acesso: 'EDIT' },
+    { key: 'estoque', label: 'Estoque', acesso: 'EDIT' },
+    { key: 'distribuicao', label: 'Distribuição', acesso: 'NONE' },
     { key: 'producao', label: 'Produção', acesso: 'NONE' },
+    { key: 'vendas', label: 'Vendas', acesso: 'EDIT' },
     { key: 'financeiro', label: 'Financeiro', acesso: 'NONE' },
-    { key: 'relatorios', label: 'Relatórios', acesso: 'VIEW' },
+    { key: 'fiscal_contabil', label: 'Fiscal e Contábil', acesso: 'NONE' },
+    { key: 'fiscal', label: 'Fiscal legado', acesso: 'NONE' },
+    { key: 'relatorios', label: 'Relatórios legado', acesso: 'VIEW' },
     { key: 'configuracoes', label: 'Configurações', acesso: 'VIEW' },
   ];
 
@@ -370,14 +373,17 @@ export class UsuariosComponent implements OnInit {
 
   private resetPermissoes(): void {
     const padrao: Record<string, 'NONE' | 'VIEW' | 'EDIT'> = {
+      operacional: 'VIEW',
       cadastros: 'EDIT',
       produtos: 'EDIT',
-      fiscal: 'NONE',
-      estoque: 'EDIT',
-      vendas: 'EDIT',
       compras: 'EDIT',
+      estoque: 'EDIT',
+      distribuicao: 'NONE',
       producao: 'NONE',
+      vendas: 'EDIT',
       financeiro: 'NONE',
+      fiscal_contabil: 'NONE',
+      fiscal: 'NONE',
       relatorios: 'VIEW',
       configuracoes: 'VIEW',
     };

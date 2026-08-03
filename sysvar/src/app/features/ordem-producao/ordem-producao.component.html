@@ -183,12 +183,20 @@
       </table>
     </section>
 
-    <section class="distribution-alert" *ngIf="ordemAtual?.status === 'FINALIZADA'">
+    <section class="distribution-alert" *ngIf="ordemAtual?.status === 'FINALIZADA' && !ordemAtual?.distribuicao_id">
       <div>
         <strong>OP finalizada aguardando distribuição</strong>
-        <span>Envie os produtos acabados da fábrica/estoque central para a loja de destino.</span>
+        <span>Prepare a distribuição oficial com perfil, matriz, pedidos, faturamento e recebimento.</span>
       </div>
       <button class="btn primary" type="button" (click)="abrirDistribuicao()" *ngIf="podeEditarModulo">Distribuir</button>
+    </section>
+
+    <section class="distribution-alert ready" *ngIf="ordemAtual?.status === 'FINALIZADA' && ordemAtual?.distribuicao_id">
+      <div>
+        <strong>Distribuição {{ ordemAtual?.distribuicao_numero }}</strong>
+        <span>Status: {{ distribuicaoStatusLabel(ordemAtual?.distribuicao_status) }}</span>
+      </div>
+      <button class="btn" type="button" routerLink="/distribuicao">Abrir distribuição</button>
     </section>
 
     <section class="faccao-panel" *ngIf="itensFaccao().length">
@@ -306,50 +314,19 @@
 
       <div class="distribution-form">
         <label class="field">
-          Loja destino
-          <select [(ngModel)]="distribuicao.loja_destino" aria-label="Loja destino">
-            <option [ngValue]="null">Selecione</option>
-            <option *ngFor="let loja of lojasDestino" [ngValue]="loja.id">{{ loja.nome_loja }}</option>
+          Perfil de distribuição
+          <select [(ngModel)]="perfilDistribuicaoId" aria-label="Perfil de distribuição">
+            <option [ngValue]="null">Perfil padrão</option>
+            <option *ngFor="let perfil of perfisDistribuicao" [ngValue]="perfil.id">{{ perfil.codigo }} - {{ perfil.descricao }}</option>
           </select>
         </label>
-        <label class="field">
-          Documento
-          <input [(ngModel)]="distribuicao.documento" placeholder="Opcional" />
-        </label>
+        <p class="distribution-note">A OP será enviada para o módulo Distribuição com os SKUs produzidos, o perfil selecionado e o fator de venda configurado no perfil.</p>
       </div>
-
-      <div class="grade-scroll" *ngIf="distribuicaoRows.length; else emptyDistribuicao">
-        <table class="table grade-table">
-          <thead>
-            <tr>
-              <th>Cor</th>
-              <th>Tamanho</th>
-              <th>Código de barras</th>
-              <th class="num">Produzido</th>
-              <th class="num">Distribuir</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let row of distribuicaoRows">
-              <td>{{ row.cor }}</td>
-              <td>{{ row.tamanho }}</td>
-              <td>{{ row.ean }}</td>
-              <td class="num">{{ formatQtd(row.produzido) }}</td>
-              <td class="num">
-                <input class="grade-qty" type="number" min="0" step="1" [(ngModel)]="row.quantidade" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <ng-template #emptyDistribuicao>
-        <div class="empty">Nenhum SKU produzido encontrado para distribuir.</div>
-      </ng-template>
 
       <footer class="modal-actions">
         <button class="btn" type="button" (click)="fecharDistribuicao()">Cancelar</button>
         <button class="btn primary" type="button" (click)="distribuir()" [disabled]="distribuindo">
-          {{ distribuindo ? 'Distribuindo...' : 'Confirmar distribuição' }}
+          {{ distribuindo ? 'Preparando...' : 'Preparar distribuição' }}
         </button>
       </footer>
     </section>

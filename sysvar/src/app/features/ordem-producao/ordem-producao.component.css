@@ -168,10 +168,20 @@
 }
 .distribution-form {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(180px, 320px);
+  grid-template-columns: minmax(260px, 420px) 1fr;
   gap: 8px;
-  align-items: end;
+  align-items: center;
   margin-bottom: 8px;
+}
+.distribution-alert.ready {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.distribution-note {
+  margin: 16px 0 0;
+  color: #465a76;
+  font-size: 12px;
+  line-height: 1.35;
 }
 .modal-actions { justify-content: flex-end; margin-top: 10px; }
 @media (max-width: 900px) {

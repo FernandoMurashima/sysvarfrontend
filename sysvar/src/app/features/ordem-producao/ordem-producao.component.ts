@@ -2,11 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { PerfilDistribuicao } from '../../core/models/distribuicao';
 import { FichaTecnica } from '../../core/models/ficha-tecnica';
 import { OrdemProducao, OrdemProducaoStatus } from '../../core/models/ordem-producao';
-import { Loja } from '../../core/models/loja';
+import { DistribuicaoService } from '../../core/services/distribuicao.service';
 import { FichaTecnicaService } from '../../core/services/ficha-tecnica.service';
-import { LojasService } from '../../core/services/lojas.service';
 import { OrdemProducaoService } from '../../core/services/ordem-producao.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
 import { AuthService } from '../../core/auth.service';
@@ -15,15 +15,6 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
 interface GradeProducaoRow {
   sku: ProdutoSku;
   skuId: number;
-  quantidade: number;
-}
-
-interface DistribuicaoRow {
-  skuFinal: number;
-  cor: string;
-  tamanho: string;
-  ean: string;
-  produzido: number;
   quantidade: number;
 }
 
@@ -36,9 +27,9 @@ interface DistribuicaoRow {
 })
 export class OrdemProducaoComponent implements OnInit {
   private api = inject(OrdemProducaoService);
+  private distribuicaoApi = inject(DistribuicaoService);
   private fichasApi = inject(FichaTecnicaService);
   private skusApi = inject(ProdutoDetalheService);
-  private lojasApi = inject(LojasService);
   private auth = inject(AuthService);
 
   loading = false;
@@ -68,13 +59,12 @@ export class OrdemProducaoComponent implements OnInit {
 
   ordens: OrdemProducao[] = [];
   fichas: FichaTecnica[] = [];
-  lojasDestino: Loja[] = [];
+  perfisDistribuicao: PerfilDistribuicao[] = [];
   skusFinal: ProdutoSku[] = [];
   gradeRows: GradeProducaoRow[] = [];
-  distribuicaoRows: DistribuicaoRow[] = [];
   ordemAtual: OrdemProducao | null = null;
   form: Partial<OrdemProducao> = this.blankForm();
-  distribuicao = { loja_destino: null as number | null, documento: '' };
+  perfilDistribuicaoId: number | null = null;
   distribuindo = false;
   showOrdemModal = false;
   showDistribuicaoModal = false;
@@ -123,11 +113,14 @@ export class OrdemProducaoComponent implements OnInit {
       next: res => this.fichas = this.unwrap<FichaTecnica>(res),
       error: () => this.fichas = [],
     });
-    this.lojasApi.list({ page_size: 500 }).subscribe({
+    this.distribuicaoApi.listPerfis({ ativo: 'true', page_size: 500 }).subscribe({
       next: res => {
-        this.lojasDestino = this.unwrap<Loja>(res).filter(loja => loja.ativo !== false && loja.tipo_unidade !== 'FABRICA' && loja.tipo_unidade !== 'MATRIZ');
+        this.perfisDistribuicao = this.unwrap<PerfilDistribuicao>(res).filter(perfil => perfil.ativo !== false);
+        if (!this.perfilDistribuicaoId && this.perfisDistribuicao.length) {
+          this.perfilDistribuicaoId = Number(this.perfisDistribuicao[0].id);
+        }
       },
-      error: () => this.lojasDestino = [],
+      error: () => this.perfisDistribuicao = [],
     });
   }
 
@@ -203,7 +196,6 @@ export class OrdemProducaoComponent implements OnInit {
     this.ordemAtual = ordem;
     this.form = { ...ordem };
     this.estoqueValidacao = null;
-    this.montarDistribuicao(ordem);
     this.loadSkusDaFicha(Number(ordem.ficha_tecnica), false);
     if (openModal) this.showOrdemModal = true;
     if (clear) this.clearMsgs();
@@ -321,32 +313,19 @@ export class OrdemProducaoComponent implements OnInit {
       return;
     }
     if (!this.ordemAtual?.id) return;
-    if (!this.distribuicao.loja_destino) {
-      this.showError('Informe a loja de destino da distribuição.');
-      return;
-    }
-    const itens = this.distribuicaoRows
-      .filter(row => Number(row.quantidade || 0) > 0)
-      .map(row => ({ sku_final: row.skuFinal, quantidade: Number(row.quantidade || 0) }));
-    if (!itens.length) {
-      this.showError('Informe ao menos um SKU com quantidade maior que zero para distribuir.');
-      return;
-    }
     this.distribuindo = true;
-    this.api.distribuir(this.ordemAtual.id, {
-      loja_destino: Number(this.distribuicao.loja_destino),
-      documento: this.distribuicao.documento || '',
-      itens,
-    }).subscribe({
-      next: res => {
-        const nfe = res?.nfe_numero ? ` NF-e ${res.nfe_serie || ''}/${res.nfe_numero} gerada.` : '';
-        this.showSuccess(`Distribuição registrada: ${res?.documento || ''}.${nfe}`.trim());
+    this.api.distribuir(this.ordemAtual.id, { perfil: this.perfilDistribuicaoId }).subscribe({
+      next: distribuicao => {
+        this.showSuccess(`Distribuição ${distribuicao.numero} preparada pelo fluxo oficial.`);
+        if (this.ordemAtual) {
+          this.ordemAtual.distribuicao_id = distribuicao.id || null;
+          this.ordemAtual.distribuicao_numero = distribuicao.numero;
+          this.ordemAtual.distribuicao_status = distribuicao.status;
+        }
         this.showDistribuicaoModal = false;
-        this.distribuicao.documento = '';
-        this.distribuicaoRows.forEach(row => row.quantidade = 0);
         this.load();
       },
-      error: err => this.showError(this.errorText(err, 'Não foi possível registrar a distribuição.')),
+      error: err => this.showError(this.errorText(err, 'Não foi possível preparar a distribuição da OP.')),
       complete: () => this.distribuindo = false,
     });
   }
@@ -469,6 +448,22 @@ export class OrdemProducaoComponent implements OnInit {
     return labels[String(status || '')] || '-';
   }
 
+  distribuicaoStatusLabel(status?: string | null): string {
+    const labels: Record<string, string> = {
+      RASC: 'Rascunho',
+      CALC: 'Calculada',
+      CONF: 'Confirmada',
+      PED: 'Pedidos gerados',
+      FATUR: 'Em faturamento',
+      NF: 'NF-e gerada',
+      TRANS: 'Em trânsito',
+      PARC: 'Recebida parcial',
+      RECB: 'Recebida',
+      CANC: 'Cancelada',
+    };
+    return labels[String(status || '')] || '-';
+  }
+
   canEdit(): boolean {
     return this.podeEditarModulo && (!this.ordemAtual?.id || this.ordemAtual.status === 'ABERTA');
   }
@@ -576,17 +571,6 @@ export class OrdemProducaoComponent implements OnInit {
 
   private round2(value: any): number {
     return Math.round(Number(value || 0) * 100) / 100;
-  }
-
-  private montarDistribuicao(ordem: OrdemProducao): void {
-    this.distribuicaoRows = (ordem.grade_producao || []).map(linha => ({
-      skuFinal: Number(linha.sku_final),
-      cor: linha.sku_cor || '-',
-      tamanho: linha.sku_tamanho || '-',
-      ean: linha.sku_ean || '-',
-      produzido: Number(linha.quantidade || 0),
-      quantidade: 0,
-    }));
   }
 
   private unwrap<T>(res: any): T[] {

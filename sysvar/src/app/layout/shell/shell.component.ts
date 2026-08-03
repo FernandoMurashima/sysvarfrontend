@@ -28,7 +28,6 @@ export class ShellComponent {
   private produtosRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
   private estoqueConsultaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'];
   private estoqueOperacaoRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Auxiliar'];
-  private moduloLojaRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'Caixa'];
   private pdvRoles: NavItem['roles'] = ['Caixa', 'Gerente'];
   private vendasGestaoRoles: NavItem['roles'] = ['Diretor', 'Gerente'];
   private comprasRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistentePagar'];
@@ -41,14 +40,20 @@ export class ShellComponent {
     { label: 'Home', link: '/home', icon: 'bi bi-house' },
 
     {
+      label: 'Operacional', icon: 'bi bi-building-gear', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional',
+      children: [
+        { label: 'Empresas', link: '/empresas', icon: 'bi bi-buildings', roles: ['Admin'], superOnly: true, moduloEmpresa: 'operacional' },
+        { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', roles: this.cadastrosRoles, moduloEmpresa: 'operacional' },
+        { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', roles: ['Admin'], moduloEmpresa: 'operacional' },
+      ]
+    },
+
+    {
       label: 'Cadastros', icon: 'bi bi-journal-text', roles: this.cadastrosRoles, moduloEmpresa: 'cadastros',
       children: [
-        { label: 'Empresas',            link: '/empresas',      icon: 'bi bi-buildings',     roles: ['Admin'], superOnly: true },
-        { label: 'Lojas',               link: '/lojas',         icon: 'bi bi-shop',          roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
         { label: 'Clientes',            link: '/clientes',      icon: 'bi bi-people',        roles: this.clientesRoles, moduloEmpresa: 'cadastros' },
         { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: this.comprasRoles, moduloEmpresa: 'cadastros' },
         { label: 'Funcionários',        link: '/funcionarios',  icon: 'bi bi-person-badge',  roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
-        { label: 'Natureza Lançamento', link: '/natureza', icon: 'bi bi-person-badge',  roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
       ]
     },
 
@@ -63,90 +68,45 @@ export class ShellComponent {
         { label: 'Coleções',               link: '/colecoes',      icon: 'bi bi-layers',        roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Pack'    ,               link: '/packs'    ,     icon: 'bi bi-bounding-box',  roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Unidades',               link: '/unidades',      icon: 'bi bi-rulers',        roles: this.produtosRoles, moduloEmpresa: 'produtos' },
-      ]
-    },
-
-    {
-      label: 'Fiscal', icon: 'bi bi-receipt', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal',
-      children: [
-        { label: 'N.C.M'      , link: '/fiscal/ncm' , icon: 'bi bi-cash',                    roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-        { label: 'C.F.O.P'    , link: '/fiscal/cfop', icon: 'bi bi-file-earmark-text',        roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-        { label: 'Tributos'   , link: '/fiscal/tributos', icon: 'bi bi-percent',              roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-        { label: 'Regras Tributárias', link: '/fiscal/regras-tributarias', icon: 'bi bi-sliders', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-        { label: 'Faturamento', link: '/fiscal/faturamento', icon: 'bi bi-file-earmark-check', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-        { label: 'Plano Contábil',      link: '/plano-contabil', icon: 'bi bi-diagram-3',     roles: this.cadastrosRoles, moduloEmpresa: 'fiscal' },
-        { label: 'Material'   , link: '/material'   , icon: 'bi bi-arrow-counterclockwise',  roles: this.produtosRoles, moduloEmpresa: 'fiscal' },       
-        
-        { label: 'Lançamentos Contábeis', link: '/financeiro/lancamentos-contabeis', icon: 'bi bi-journal-check', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal' },
-      ]
-    },
-
-
-    {
-  label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
-  children: [
-    {
-      label: 'Consultas', icon: 'bi bi-search', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
-      children: [
-        { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
-        { label: 'Movimentação por Referência', link: '/estoque/consulta-movimentacao-referencia', icon: 'bi bi-arrow-left-right', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
-        { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
-        
-
-        // adicione outras consultas aqui:
-        // { label: 'Por EAN',       link: '/estoque/consulta-ean',         icon: 'bi bi-dot', roles: ['Regular'] },
-        // { label: 'Por Loja',      link: '/estoque/consulta-loja',        icon: 'bi bi-dot', roles: ['Regular'] },
-      ]
-    },
-    { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-    { label: 'Inventário',    link: '/estoque/inventario',    icon: 'bi bi-clipboard-data',  roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-    { label: 'Distribuição',   link: '/distribuicao',          icon: 'bi bi-diagram-3',       roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-    { label: 'Pedidos Venda Distribuição', link: '/distribuicao/pedidos-venda', icon: 'bi bi-receipt', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-    { label: 'Etiquetas',     link: '/estoque/etiquetas',     icon: 'bi bi-upc-scan',        roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-  ]
-},
-
-    {
-      label: 'Módulo Loja', icon: 'bi bi-shop-window', roles: this.moduloLojaRoles, moduloEmpresa: 'estoque',
-      children: [
-        { label: 'Recebimento de Mercadorias', link: '/loja/recebimento', icon: 'bi bi-box-arrow-in-down', roles: this.moduloLojaRoles, moduloEmpresa: 'estoque' },
-        { label: 'PDV Offline', link: '/loja/pdv-offline', icon: 'bi bi-pc-display', roles: this.pdvRoles, moduloEmpresa: 'estoque' },
-        { label: 'Devoluções de vendas', link: '/loja/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles, moduloEmpresa: 'estoque' },
-      ]
-    },
-
-
-    {
-      label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'], moduloEmpresa: 'vendas',
-      children: [
-        { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles, moduloEmpresa: 'vendas' },
-        { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-        { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-        { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-        { label: 'Tabela de Preço'      , link: '/vendas/tabelas'   , icon: 'bi bi-arrow-counterclockwise', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-      ]
-    },
-
-    {
-      label: 'Dashboards', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios',
-      children: [
-        { label: 'Executivo', link: '/dashboard/executivo', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor'], moduloEmpresa: 'relatorios' },
-        { label: 'Vendas', link: '/dashboard/vendas', icon: 'bi bi-graph-up-arrow', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
-        { label: 'Produtos', link: '/dashboard/produtos', icon: 'bi bi-box-seam', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
-        { label: 'Estoque', link: '/dashboard/estoque', icon: 'bi bi-archive', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
-        { label: 'Financeiro', link: '/dashboard/financeiro', icon: 'bi bi-cash-stack', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'relatorios' },
+        { label: 'Tabela de Preço',         link: '/vendas/tabelas', icon: 'bi bi-tags',         roles: this.vendasGestaoRoles, moduloEmpresa: 'produtos' },
+        { label: 'Material',                link: '/material',       icon: 'bi bi-box2',         roles: this.produtosRoles, moduloEmpresa: 'produtos' },
       ]
     },
 
     {
       label: 'Compras', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras',
       children: [
-        
-        { label: 'Pedido de Compra Uso/Consumo' , link: '/compras/pedidos-uso-consumo' , icon: 'bi bi-bag-check',              roles: this.comprasRoles, moduloEmpresa: 'compras' },
-        { label: 'Pedido de Compra Revenda'     , link: '/compras/pedidos-revenda'     , icon: 'bi bi-bag-check',              roles: this.comprasRoles, moduloEmpresa: 'compras' },
-        { label: 'Entrada de Nf-e'              , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt',               roles: this.comprasRoles, moduloEmpresa: 'compras' },
-        { label: 'Notas Lançadas'               , link: '/compras/notas-entrada'       , icon: 'bi bi-receipt-cutoff',        roles: this.comprasRoles, moduloEmpresa: 'compras' },
+        { label: 'Pedido de Compra Revenda', link: '/compras/pedidos-revenda', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
+        { label: 'Pedido de Compra Uso/Consumo', link: '/compras/pedidos-uso-consumo', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
+        { label: 'Entrada de NF-e', link: '/compras/notas-entrada', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras' },
+        { label: 'Notas Lançadas', link: '/compras/notas-entrada', icon: 'bi bi-receipt-cutoff', roles: this.comprasRoles, moduloEmpresa: 'compras' },
+      ]
+    },
 
+    {
+      label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
+      children: [
+        {
+          label: 'Consultas', icon: 'bi bi-search', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
+          children: [
+            { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
+            { label: 'Movimentação por Referência', link: '/estoque/consulta-movimentacao-referencia', icon: 'bi bi-arrow-left-right', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
+            { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
+          ]
+        },
+        { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+        { label: 'Inventário', link: '/estoque/inventario', icon: 'bi bi-clipboard-data', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+        { label: 'Etiquetas', link: '/estoque/etiquetas', icon: 'bi bi-upc-scan', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+        { label: 'Recebimento de Mercadorias', link: '/loja/recebimento', icon: 'bi bi-box-arrow-in-down', roles: this.caixaRoles, moduloEmpresa: 'estoque' },
+      ]
+    },
+
+    {
+      label: 'Distribuição', icon: 'bi bi-diagram-3', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'distribuicao',
+      children: [
+        { label: 'Perfis e Distribuição', link: '/distribuicao', icon: 'bi bi-sliders', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'distribuicao' },
+        { label: 'Pedidos de Venda', link: '/distribuicao/pedidos-venda', icon: 'bi bi-receipt', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'distribuicao' },
+        { label: 'Faturamento', link: '/fiscal/faturamento', icon: 'bi bi-file-earmark-check', roles: this.vendasGestaoRoles, moduloEmpresa: 'distribuicao' },
       ]
     },
 
@@ -160,6 +120,32 @@ export class ShellComponent {
     },
 
     {
+      label: 'Vendas', icon: 'bi bi-receipt', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'], moduloEmpresa: 'vendas',
+      children: [
+        { label: 'PDV'                  , link: '/vendas/pdv',        icon: 'bi bi-display',                roles: this.pdvRoles, moduloEmpresa: 'vendas' },
+        { label: 'PDV Offline', link: '/loja/pdv-offline', icon: 'bi bi-pc-display', roles: this.pdvRoles, moduloEmpresa: 'vendas' },
+        { label: 'Consulta de vendas'   , link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line',         roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+        { label: 'Devoluções de vendas', link: '/loja/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles, moduloEmpresa: 'vendas' },
+        { label: 'Cashback'             , link: '/vendas/cashback',   icon: 'bi bi-gift',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+        { label: 'Vales-troca', link: '/financeiro/vales-troca', icon: 'bi bi-ticket-perforated', roles: ['Admin'], moduloEmpresa: 'vendas' },
+        { label: 'Promoções'            , link: '/vendas/promocoes',  icon: 'bi bi-tags',                   roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+      ]
+    },
+
+    {
+      label: 'Módulo Loja', icon: 'bi bi-shop-window', roles: ['Caixa', 'Gerente', 'Diretor', 'Vendedor'], moduloEmpresa: 'vendas',
+      children: [
+        { label: 'PDV Offline', link: '/loja/pdv-offline', icon: 'bi bi-pc-display', roles: this.pdvRoles, moduloEmpresa: 'vendas' },
+        { label: 'Recebimento de Mercadorias', link: '/loja/recebimento', icon: 'bi bi-box-arrow-in-down', roles: this.caixaRoles, moduloEmpresa: 'estoque' },
+        { label: 'Consulta de Vendas', link: '/vendas/relatorios', icon: 'bi bi-bar-chart-line', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+        { label: 'Devoluções de Vendas', link: '/loja/devolucoes', icon: 'bi bi-arrow-counterclockwise', roles: this.caixaRoles, moduloEmpresa: 'vendas' },
+        { label: 'Cashback', link: '/vendas/cashback', icon: 'bi bi-gift', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+        { label: 'Vales-troca', link: '/financeiro/vales-troca', icon: 'bi bi-ticket-perforated', roles: ['Admin'], moduloEmpresa: 'vendas' },
+        { label: 'Promoções', link: '/vendas/promocoes', icon: 'bi bi-tags', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
+      ]
+    },
+
+    {
       label: 'Financeiro', icon: 'bi bi-cash-coin', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro',
       children: [
         { label: 'Contas a Receber',          link: '/financeiro/receber',       icon: 'bi bi-cash-stack',       roles: this.receberRoles, moduloEmpresa: 'financeiro' },
@@ -168,31 +154,36 @@ export class ShellComponent {
         { label: 'Contas Bancárias',          link: '/financeiro/contas',        icon: 'bi bi-bank',             roles: this.financeiroRoles, moduloEmpresa: 'financeiro' },
         { label: 'Antecipação de Recebíveis', link: '/financeiro/antecipacoes',  icon: 'bi bi-lightning-charge', roles: this.receberRoles, moduloEmpresa: 'financeiro' },
         { label: 'Movimentações Financeiras', link: '/financeiro/movimentacoes', icon: 'bi bi-arrow-left-right', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' },
-        
+        { label: 'Formas de Pagamento', link: '/financeiro/formas-pagamento', icon: 'bi bi-credit-card', roles: ['Admin'], moduloEmpresa: 'financeiro' },
+        { label: 'Prazos de Pagamento', link: '/financeiro/prazos-pagamento', icon: 'bi bi-calendar-range', roles: ['Admin'], moduloEmpresa: 'financeiro' },
+        { label: 'Naturezas de Lançamento', link: '/natureza', icon: 'bi bi-list-check', roles: this.cadastrosRoles, moduloEmpresa: 'financeiro' },
+        { label: 'Configuração Financeira', link: '/financeiro/configuracao', icon: 'bi bi-sliders', roles: ['Admin'], moduloEmpresa: 'financeiro' },
+        { label: 'Consulta por Natureza', link: '/financeiro/consulta-naturezas', icon: 'bi bi-list-columns-reverse', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' },
       ]
     },
 
     {
-      label: 'Consultas', icon: 'bi bi-graph-up', roles: ['Diretor', 'Gerente'], moduloEmpresa: 'relatorios',
+      label: 'Fiscal e Contábil', icon: 'bi bi-receipt', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil',
       children: [
-        { label: 'Vendas'     ,  link: '/relatorios/vendas',     icon: 'bi bi-bar-chart', roles: this.vendasGestaoRoles, moduloEmpresa: 'relatorios' },
-        { label: 'Margem / CMV',  link: '/relatorios/margem-cmv', icon: 'bi bi-percent', roles: this.vendasGestaoRoles, moduloEmpresa: 'relatorios' },
-        { label: 'DRE Gerencial', link: '/financeiro/dre', icon: 'bi bi-clipboard-data', roles: this.vendasGestaoRoles, moduloEmpresa: 'relatorios' },
-        { label: 'Consulta por Natureza',     link: '/financeiro/consulta-naturezas', icon: 'bi bi-list-columns-reverse', roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'relatorios' },
-        
-
+        { label: 'NCM', link: '/fiscal/ncm', icon: 'bi bi-cash', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'CFOP', link: '/fiscal/cfop', icon: 'bi bi-file-earmark-text', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'Tributos', link: '/fiscal/tributos', icon: 'bi bi-percent', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'Regras Tributárias', link: '/fiscal/regras-tributarias', icon: 'bi bi-sliders', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'Plano Contábil', link: '/plano-contabil', icon: 'bi bi-diagram-3', roles: this.cadastrosRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'Lançamentos Contábeis', link: '/financeiro/lancamentos-contabeis', icon: 'bi bi-journal-check', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
+        { label: 'DRE', link: '/financeiro/dre', icon: 'bi bi-clipboard-data', roles: this.vendasGestaoRoles, moduloEmpresa: 'fiscal_contabil' },
       ]
     },
 
     {
-      label: 'Configurações', icon: 'bi bi-gear', roles: ['Admin'], moduloEmpresa: 'configuracoes',
+      label: 'Dashboards', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional',
       children: [
-        { label: 'Usuários',               link: '/config/usuarios',            icon: 'bi bi-person-gear',  roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        { label: 'Configuração Financeira', link: '/financeiro/configuracao',    icon: 'bi bi-sliders',      roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        { label: 'Formas de Pagamento',     link: '/financeiro/formas-pagamento', icon: 'bi bi-credit-card',  roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        { label: 'Prazos de Pagamento',     link: '/financeiro/prazos-pagamento', icon: 'bi bi-calendar-range', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        { label: 'Vales-troca',             link: '/financeiro/vales-troca',     icon: 'bi bi-ticket-perforated', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        
+        { label: 'Executivo', link: '/dashboard/executivo', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor'], moduloEmpresa: 'operacional' },
+        { label: 'Vendas', link: '/dashboard/vendas', icon: 'bi bi-graph-up-arrow', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'vendas' },
+        { label: 'Produtos', link: '/dashboard/produtos', icon: 'bi bi-box-seam', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'produtos' },
+        { label: 'Estoque', link: '/dashboard/estoque', icon: 'bi bi-archive', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'estoque' },
+        { label: 'Financeiro', link: '/dashboard/financeiro', icon: 'bi bi-cash-stack', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'financeiro' },
+        { label: 'Margem / CMV', link: '/relatorios/margem-cmv', icon: 'bi bi-percent', roles: this.vendasGestaoRoles, moduloEmpresa: 'financeiro' },
       ]
     },
   ];

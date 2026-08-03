@@ -62,6 +62,9 @@ export interface OrdemProducao {
   data_emissao?: string;
   data_inicio?: string | null;
   data_finalizacao?: string | null;
+  distribuicao_id?: number | null;
+  distribuicao_numero?: string | null;
+  distribuicao_status?: string | null;
   itens?: OrdemProducaoItem[];
   grade_producao?: OrdemProducaoGrade[];
 }

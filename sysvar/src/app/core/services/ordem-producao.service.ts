@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Distribuicao } from '../models/distribuicao';
 import { OrdemProducao, OrdemProducaoItem } from '../models/ordem-producao';
 
 type ListResp<T> = T[] | { results: T[]; count?: number; next?: string | null; previous?: string | null };
@@ -48,8 +49,8 @@ export class OrdemProducaoService {
     }>(`${this.base}${id}/validar-estoque/`);
   }
 
-  distribuir(id: number, body: { loja_destino: number; documento?: string; itens: Array<{ sku_final: number; quantidade: number }> }) {
-    return this.http.post<any>(`${this.base}${id}/distribuir/`, body);
+  distribuir(id: number, body: { perfil?: number | null } = {}) {
+    return this.http.post<Distribuicao>(`${this.base}${id}/distribuir/`, body);
   }
 
   cancelar(id: number) {

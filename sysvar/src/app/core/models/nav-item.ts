@@ -18,5 +18,18 @@ export interface NavItem {
   children?: NavItem[]; // submenus
   roles?: UserRole[];   // <- agora usando o tipo exportado
   superOnly?: boolean;
-  moduloEmpresa?: 'cadastros' | 'produtos' | 'vendas' | 'compras' | 'estoque' | 'financeiro' | 'fiscal' | 'producao' | 'relatorios' | 'configuracoes';
+  moduloEmpresa?:
+    | 'operacional'
+    | 'cadastros'
+    | 'produtos'
+    | 'vendas'
+    | 'compras'
+    | 'estoque'
+    | 'distribuicao'
+    | 'financeiro'
+    | 'fiscal'
+    | 'fiscal_contabil'
+    | 'producao'
+    | 'relatorios'
+    | 'configuracoes';
 }

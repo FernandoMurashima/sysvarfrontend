@@ -57,11 +57,11 @@ export class LojasComponent implements OnInit {
   consultando = false;
 
   get podeEditarModulo(): boolean {
-    return this.auth.podeAcessarModulo('cadastros', true) !== false;
+    return this.auth.podeAcessarModulo('operacional', true) !== false;
   }
 
   get podeExcluirModulo(): boolean {
-    return this.auth.podeExcluirModulo('cadastros');
+    return this.auth.podeExcluirModulo('operacional');
   }
 
   search = '';
@@ -184,8 +184,8 @@ export class LojasComponent implements OnInit {
     const count = (fn: (l: Loja) => boolean) => base.filter(fn).length;
     const ativas = count(l => this.isAtiva(l));
     const fabricas = count(l => (l.tipo_unidade || '').toUpperCase() === 'FABRICA');
-    const matrizes = count(l => (l.tipo_unidade || '').toUpperCase() === 'MATRIZ' || (l.Matriz || '').toUpperCase() === 'SIM');
-    const filiais = count(l => (l.tipo_unidade || '').toUpperCase() === 'LOJA');
+    const matrizes = count(l => (l.Matriz || '').toUpperCase() === 'SIM');
+    const filiais = count(l => ['LOJA', 'MATRIZ'].includes((l.tipo_unidade || '').toUpperCase()));
     return { total, ativas, fabricas, matrizes, filiais };
   }
 
@@ -343,7 +343,7 @@ export class LojasComponent implements OnInit {
         this.lojas = [];
         this.total = 0;
         this.loading = false;
-        this.errorMsg = 'Falha ao carregar lojas.';
+        this.errorMsg = 'Falha ao carregar estabelecimentos.';
       }
     });
   }
@@ -588,7 +588,7 @@ export class LojasComponent implements OnInit {
       emite_nfce: (row as any).emite_nfce !== false,
       emite_nfe: (row as any).emite_nfe !== false,
     });
-    this.successMsg = 'Revise os dados antes de salvar a nova loja.';
+    this.successMsg = 'Revise os dados antes de salvar o novo estabelecimento.';
   }
 
   cancelarEdicao(): void {
@@ -658,7 +658,7 @@ export class LojasComponent implements OnInit {
     req$.subscribe({
       next: () => {
         this.saving = false;
-        this.successMsg = this.editingId ? 'Alterações salvas com sucesso.' : 'Loja criada com sucesso.';
+        this.successMsg = this.editingId ? 'Alterações salvas com sucesso.' : 'Estabelecimento criado com sucesso.';
         this.cancelarEdicao();
         this.page = 1;
         this.load();
@@ -707,7 +707,7 @@ export class LojasComponent implements OnInit {
     this.api.remove(id).subscribe({
       next: () => {
         this.excluirModal = null;
-        this.successMsg = 'Loja excluída.';
+        this.successMsg = 'Estabelecimento excluído.';
         const eraUltimo = this.lojas.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
         this.load();
@@ -737,10 +737,10 @@ export class LojasComponent implements OnInit {
     this.api.patch(id, { ativo: false } as any).subscribe({
       next: () => {
         this.inativarModal = null;
-        this.successMsg = 'Loja inativada com sucesso.';
+        this.successMsg = 'Estabelecimento inativado com sucesso.';
         this.load();
       },
-      error: () => this.errorMsg = 'Não foi possível inativar a loja.'
+      error: () => this.errorMsg = 'Não foi possível inativar o estabelecimento.'
     });
   }
 
@@ -750,10 +750,10 @@ export class LojasComponent implements OnInit {
     this.api.patch(id, { ativo: true } as any).subscribe({
       next: () => {
         this.reativarModal = null;
-        this.successMsg = 'Loja reativada com sucesso.';
+        this.successMsg = 'Estabelecimento reativado com sucesso.';
         this.load();
       },
-      error: () => this.errorMsg = 'Não foi possível reativar a loja.'
+      error: () => this.errorMsg = 'Não foi possível reativar o estabelecimento.'
     });
   }
 
@@ -807,7 +807,7 @@ export class LojasComponent implements OnInit {
 
   exportarCsv(): void {
     const rows = this.lojasFiltradas;
-    const headers = ['Loja', 'Empresa', 'Tipo', 'Apelido', 'CNPJ', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
+    const headers = ['Estabelecimento', 'Empresa', 'Tipo', 'Apelido', 'CNPJ', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
     const body = rows.map(l => [
       l.nome_loja,
       this.empresaLabel(l),
@@ -827,7 +827,7 @@ export class LojasComponent implements OnInit {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'lojas.csv';
+    link.download = 'estabelecimentos.csv';
     link.click();
     URL.revokeObjectURL(url);
     this.exportOpen = false;
@@ -864,7 +864,7 @@ export class LojasComponent implements OnInit {
   tipoVariant(tipo?: string | null): 'info' | 'purple' | 'warning' | 'muted' {
     const t = (tipo || '').toUpperCase();
     if (t === 'LOJA') return 'info';
-    if (t === 'MATRIZ') return 'purple';
+    if (t === 'MATRIZ') return 'info';
     if (t === 'FABRICA') return 'warning';
     return 'muted';
   }
@@ -1002,7 +1002,7 @@ export class LojasComponent implements OnInit {
   tipoUnidadeLabel(tipo?: string | null): string {
     const labels: Record<string, string> = {
       LOJA: 'Loja',
-      MATRIZ: 'Matriz/Central',
+      MATRIZ: 'Loja',
       FABRICA: 'Fábrica',
     };
     return labels[tipo || ''] || '-';

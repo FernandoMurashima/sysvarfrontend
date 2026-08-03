@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { catchError, map, of, tap } from 'rxjs';
 import { AuthService } from '../auth.service';
+import { ModuloEmpresa } from '../auth.service';
 import { UserRole } from '../models/nav-item';
 
 export const authGuard: CanActivateFn = (route) => {
@@ -36,7 +37,7 @@ export const authGuard: CanActivateFn = (route) => {
     );
   }
 
-  const moduloEmpresa = route.data?.['moduloEmpresa'] as 'cadastros' | 'produtos' | 'vendas' | 'compras' | 'estoque' | 'financeiro' | 'fiscal' | 'producao' | 'relatorios' | 'configuracoes' | undefined;
+  const moduloEmpresa = route.data?.['moduloEmpresa'] as ModuloEmpresa | undefined;
   const permissaoModulo = auth.podeAcessarModulo(moduloEmpresa || null);
   if (permissaoModulo === false) {
     router.navigateByUrl('/home');
