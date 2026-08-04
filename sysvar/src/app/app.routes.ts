@@ -69,6 +69,7 @@ import { DashboardProdutosComponent } from './features/dashboard-produtos/dashbo
 import { DashboardVendasComponent } from './features/dashboard-vendas/dashboard-vendas.component';
 import { DashboardEstoqueComponent } from './features/dashboard-estoque/dashboard-estoque.component';
 import { DashboardFinanceiroComponent } from './features/dashboard-financeiro/dashboard-financeiro.component';
+import { PerfisAcessoComponent } from './features/perfis-acesso/perfis-acesso.component';
 
 
 
@@ -152,6 +153,7 @@ export const routes: Routes = [
       { path: 'loja/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'vendas' } },
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { roles: ['Admin'], moduloEmpresa: 'operacional' } },
+      { path: 'config/perfis', component: PerfisAcessoComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
 
       // ⬇️ rota de coleções
 

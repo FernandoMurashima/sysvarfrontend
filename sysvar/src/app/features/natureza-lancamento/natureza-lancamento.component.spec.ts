@@ -1,18 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 
-import { NaturezaLancamentoComponent } from './natureza-lancamento.component';
+import { NatLancamentosComponent } from './natureza-lancamento.component';
 
 describe('NaturezaLancamentoComponent', () => {
-  let component: NaturezaLancamentoComponent;
-  let fixture: ComponentFixture<NaturezaLancamentoComponent>;
+  let component: NatLancamentosComponent;
+  let fixture: ComponentFixture<NatLancamentosComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NaturezaLancamentoComponent]
+      imports: [NatLancamentosComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     })
     .compileComponents();
     
-    fixture = TestBed.createComponent(NaturezaLancamentoComponent);
+    fixture = TestBed.createComponent(NatLancamentosComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

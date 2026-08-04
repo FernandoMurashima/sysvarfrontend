@@ -13,6 +13,7 @@ import { Empresa } from '../../core/models/empresa';
 import {Router} from "@angular/router";
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { AccessControlService, PerfilAcesso } from '../../core/services/access-control.service';
 
 type Loja = {
   id?: number;
@@ -47,6 +48,7 @@ export class UsuariosComponent implements OnInit {
   private auth = inject(AuthService);
   private lojasApi = inject(LojasService);
   private empresasApi = inject(EmpresasService);
+  private accessApi = inject(AccessControlService);
   constructor(private router: Router) {}
 
   goHome() {
@@ -77,6 +79,7 @@ export class UsuariosComponent implements OnInit {
   usuarios: User[] = [];
   empresas: Empresa[] = [];
   lojas: Loja[] = [];
+  perfis: PerfilAcesso[] = [];
   usuarioAtual: User | null = null;
   search = '';
   filterType = '';
@@ -146,6 +149,7 @@ export class UsuariosComponent implements OnInit {
     Idempresa: [null as number | null],
     Idloja: [null as number | null],
     Idlojas: [[] as number[]],
+    perfil_principal_id: [null as number | null],
     password: [''],          // obrigatória somente no create
     confirm_password: [''],  // só no front
   });
@@ -178,6 +182,7 @@ export class UsuariosComponent implements OnInit {
     this.loadUsuarioAtual();
     this.load();
     this.loadLojas();
+    this.loadPerfis();
   }
 
   get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
@@ -292,6 +297,7 @@ export class UsuariosComponent implements OnInit {
       Idempresa: this.empresaDefaultId(),
       Idloja: null,       // limpa loja
       Idlojas: [],
+      perfil_principal_id: null,
       password: '',
       confirm_password: '',
     });
@@ -319,6 +325,7 @@ export class UsuariosComponent implements OnInit {
       Idempresa: item.Idempresa ?? item.empresa?.id ?? null,
       Idloja: item.Idloja ?? item.loja?.Idloja ?? null,
       Idlojas: item.Idlojas ?? item.lojas?.map(l => l.Idloja).filter((id): id is number => !!id) ?? [],
+      perfil_principal_id: item.perfil_principal_id ?? item.perfil_principal?.id ?? null,
       password: '',
       confirm_password: '',
     });
@@ -358,6 +365,9 @@ export class UsuariosComponent implements OnInit {
     const lojas = (raw.Idlojas || []).map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id));
     if (payload.Idloja && !lojas.includes(payload.Idloja)) lojas.push(payload.Idloja);
     payload.Idlojas = lojas;
+    if (raw.perfil_principal_id != null && raw.perfil_principal_id !== '') {
+      payload.perfil_principal_id = Number(raw.perfil_principal_id);
+    }
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
     payload.permissoes_modulos = this.modulosPermissao.map(m => ({
@@ -587,6 +597,15 @@ export class UsuariosComponent implements OnInit {
         console.error(err);
         this.errorMsg = 'Falha ao excluir.';
       }
+    });
+  }
+
+  private loadPerfis() {
+    this.accessApi.perfis().subscribe({
+      next: (res: any) => {
+        this.perfis = (Array.isArray(res) ? res : (res?.results ?? [])).filter((p: PerfilAcesso) => p.ativo !== false);
+      },
+      error: () => this.perfis = []
     });
   }
 

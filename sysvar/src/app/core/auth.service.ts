@@ -1,6 +1,7 @@
 // src/app/core/auth.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
@@ -27,6 +28,21 @@ interface MeResponse {
   is_superuser?: boolean;
   permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
+  is_platform_superuser?: boolean;
+  is_company_master?: boolean;
+  contrato?: {
+    status: string;
+    data_inicio: string;
+    data_fim?: string | null;
+    limite_usuarios: number;
+    usuarios_ativos: number;
+    licencas_disponiveis: number;
+    excedido: boolean;
+    plano_completo: boolean;
+    permissions_version: number;
+  } | null;
+  modulos_disponiveis_empresa?: string[];
+  permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
 }
 
 export type ModuloEmpresa =
@@ -47,6 +63,7 @@ export type ModuloEmpresa =
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
+  private router = inject(Router);
 
   private tokenKey = 'auth_token';
   private userTypeKey = 'user_type';
@@ -149,45 +166,37 @@ export class AuthService {
 
   empresaModuloHabilitado(modulo: ModuloEmpresa): boolean {
     const user = this.getCurrentUser();
-    if (user?.is_superuser) return true;
-    if (['operacional', 'cadastros', 'produtos', 'configuracoes'].includes(modulo)) return true;
-    const empresa = user?.empresa;
-    if (!empresa) return false;
-    if (empresa.licenca_master === true) return true;
-    const compat: Record<ModuloEmpresa, Array<keyof NonNullable<MeResponse['empresa']>>> = {
-      operacional: [],
-      cadastros: [],
-      produtos: [],
-      vendas: ['usa_vendas'],
-      compras: ['usa_compras'],
-      estoque: ['usa_estoque'],
-      distribuicao: ['usa_distribuicao_producao', 'usa_estoque', 'usa_producao'],
-      financeiro: ['usa_financeiro'],
-      fiscal: ['usa_fiscal'],
-      fiscal_contabil: ['usa_fiscal', 'usa_financeiro'],
-      producao: ['usa_producao', 'usa_ficha_tecnica', 'usa_faccao'],
-      relatorios: ['licenca_master'],
-      configuracoes: [],
-    };
-    const campos = compat[modulo] || [];
-    if (!campos.length) return true;
-    return campos.some(campo => empresa[campo] === true);
+    if (user?.is_superuser || user?.is_platform_superuser) return true;
+    return (user?.modulos_disponiveis_empresa || []).includes(modulo);
   }
 
   permissaoModulo(modulo?: string | null): 'NONE' | 'VIEW' | 'EDIT' | null {
     if (!modulo) return null;
     const user = this.getCurrentUser();
     if (user?.is_superuser) return 'EDIT';
+    if (user?.permissoes_efetivas && modulo in user.permissoes_efetivas) return user.permissoes_efetivas[modulo];
     const perm = user?.permissoes_modulos?.find(p => p.modulo === modulo);
-    return perm?.acesso ?? null;
+    return perm?.acesso ?? 'NONE';
   }
 
   podeAcessarModulo(modulo?: string | null, escrita = false): boolean | null {
     const acesso = this.permissaoModulo(modulo);
-    if (acesso === null) return null;
     if (acesso === 'NONE') return false;
     if (escrita) return acesso === 'EDIT';
     return acesso === 'VIEW' || acesso === 'EDIT';
+  }
+
+  handleUnauthorized(): void {
+    this.clearToken();
+    this.router.navigateByUrl('/login');
+  }
+
+  refreshMe() {
+    return this.me().pipe(tap(me => {
+      this.setUserType(me.type || 'Regular');
+      this.setUserName(me.username || '');
+      this.setCurrentUser(me);
+    }));
   }
 
   isAdministrador(): boolean {

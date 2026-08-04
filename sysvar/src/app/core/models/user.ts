@@ -16,5 +16,20 @@ export interface User {
   lojas?: Array<{ Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string }>;
   permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
+  perfil_principal?: { id: number; nome: string; descricao?: string; ativo: boolean; padrao?: boolean } | null;
+  perfil_principal_id?: number | null;
+  is_platform_superuser?: boolean;
+  is_company_master?: boolean;
+  contrato?: {
+    status: string;
+    limite_usuarios: number;
+    usuarios_ativos: number;
+    licencas_disponiveis: number;
+    excedido: boolean;
+    plano_completo: boolean;
+    permissions_version: number;
+  } | null;
+  modulos_disponiveis_empresa?: string[];
+  permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
   password?: string; // write-only no backend; só enviar em criação/alteração de senha
 }

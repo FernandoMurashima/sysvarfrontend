@@ -39,7 +39,7 @@ export const authGuard: CanActivateFn = (route) => {
 
   const moduloEmpresa = route.data?.['moduloEmpresa'] as ModuloEmpresa | undefined;
   const permissaoModulo = auth.podeAcessarModulo(moduloEmpresa || null);
-  if (permissaoModulo === false) {
+  if (moduloEmpresa && (permissaoModulo === false || permissaoModulo === null)) {
     router.navigateByUrl('/home');
     return false;
   }
@@ -53,7 +53,7 @@ export const authGuard: CanActivateFn = (route) => {
 
   const current = auth.getUserType() as UserRole | null;
   if (permissaoModulo === true) return true;
-  if (current === 'Admin' || (current && roles.includes(current))) return true;
+  if (current && roles.includes(current)) return true;
 
   router.navigateByUrl('/home');
   return false;

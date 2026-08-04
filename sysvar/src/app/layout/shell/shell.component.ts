@@ -45,6 +45,7 @@ export class ShellComponent {
         { label: 'Empresas', link: '/empresas', icon: 'bi bi-buildings', roles: ['Admin'], superOnly: true, moduloEmpresa: 'operacional' },
         { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', roles: this.cadastrosRoles, moduloEmpresa: 'operacional' },
         { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', roles: ['Admin'], moduloEmpresa: 'operacional' },
+        { label: 'Perfis de acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
       ]
     },
 
@@ -225,7 +226,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
+    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
   }
 
   toggleBarControls(): void {

@@ -1,0 +1,9 @@
+.page { padding: 16px; }
+.titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+.form { display: grid; gap: 12px; max-width: 960px; }
+.actions { display: flex; gap: 8px; }
+.message { padding: 8px; border-radius: 6px; margin: 8px 0; }
+.error { background: #fee2e2; }
+.success { background: #dcfce7; }

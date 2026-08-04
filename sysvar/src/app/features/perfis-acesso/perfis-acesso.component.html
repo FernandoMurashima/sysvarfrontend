@@ -1,0 +1,58 @@
+<section class="page">
+  <header class="titlebar">
+    <h1>Perfis de acesso</h1>
+    <button type="button" (click)="novo()">Novo</button>
+  </header>
+
+  <div class="message error" *ngIf="errorMsg">{{ errorMsg }}</div>
+  <div class="message success" *ngIf="successMsg">{{ successMsg }}</div>
+
+  <div class="grid" *ngIf="!form">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Descrição</th>
+          <th>Ativo</th>
+          <th>Padrão</th>
+          <th>Usuários</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let perfil of perfis">
+          <td>{{ perfil.nome }}</td>
+          <td>{{ perfil.descricao || '-' }}</td>
+          <td>{{ perfil.ativo === false ? 'Não' : 'Sim' }}</td>
+          <td>{{ perfil.padrao ? 'Sim' : 'Não' }}</td>
+          <td>{{ perfil.usuarios_count || 0 }}</td>
+          <td><button type="button" (click)="editar(perfil)">Editar</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <form class="form" *ngIf="form" (ngSubmit)="salvar()">
+    <label>Nome <input name="nome" [(ngModel)]="form.nome" required /></label>
+    <label>Descrição <input name="descricao" [(ngModel)]="form.descricao" /></label>
+    <label><input type="checkbox" name="ativo" [(ngModel)]="form.ativo" /> Ativo</label>
+    <label><input type="checkbox" name="padrao" [(ngModel)]="form.padrao" /> Padrão</label>
+
+    <table>
+      <thead><tr><th>Módulo</th><th>Sem acesso</th><th>Consulta</th><th>Edição</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let perm of form.permissoes_modulos">
+          <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button type="submit" [disabled]="saving">Salvar</button>
+      <button type="button" (click)="form = null">Cancelar</button>
+    </div>
+  </form>
+</section>
