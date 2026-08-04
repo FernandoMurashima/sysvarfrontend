@@ -21,17 +21,22 @@ export interface Empresa {
 export interface EmpresaContrato {
   id?: number;
   empresa: number;
+  empresa_id?: number;
   status: 'PENDENTE' | 'ATIVO' | 'SUSPENSO' | 'VENCIDO' | 'CANCELADO';
-  data_inicio: string;
+  data_inicio: string | null;
   data_fim?: string | null;
   limite_usuarios: number;
   plano_completo: boolean;
-  usuario_master?: number | null;
+  usuario_master?: { id: number; username: string; nome: string; email?: string; is_active?: boolean } | number | null;
+  usuario_master_id?: number | null;
   observacoes?: string;
   permissions_version?: number;
   usuarios_ativos?: number;
   licencas_disponiveis?: number;
   excedido?: boolean;
+  excedente?: number;
+  warning?: string;
+  modulos_contratados?: EmpresaModulo[];
 }
 
 export interface ModuloSistema {

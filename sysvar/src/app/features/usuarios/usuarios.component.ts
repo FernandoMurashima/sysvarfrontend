@@ -191,6 +191,15 @@ export class UsuariosComponent implements OnInit {
     return this.form.getRawValue().type === 'Admin';
   }
 
+  get contratoUsuario(): any {
+    return (this.usuarioAtual as any)?.contrato || null;
+  }
+
+  get semLicencaDisponivel(): boolean {
+    const contrato = this.contratoUsuario;
+    return !!contrato && !this.editingId && Number(contrato.licencas_disponiveis || 0) <= 0;
+  }
+
   private empresaUsuarioId(): number | null {
     return this.usuarioAtual?.Idempresa ?? this.usuarioAtual?.empresa?.id ?? null;
   }
@@ -542,6 +551,11 @@ export class UsuariosComponent implements OnInit {
     if (!raw.Idempresa) {
       const current = this.form.get('Idempresa')?.errors || {};
       this.form.get('Idempresa')?.setErrors({ ...current, required: true });
+    }
+    if (this.semLicencaDisponivel) {
+      this.errorMsg = 'Não há licenças disponíveis para criar usuário ativo.';
+      this.errorOverlayOpen = true;
+      return;
     }
 
     if (this.form.invalid || !!pwdPairMsg) {

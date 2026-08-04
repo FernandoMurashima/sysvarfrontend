@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Empresa } from '../models/empresa';
+import { Empresa, EmpresaContrato } from '../models/empresa';
 
 type ListResp = Empresa[] | { results: Empresa[]; count: number };
 
@@ -38,5 +38,13 @@ export class EmpresasService {
 
   remove(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}${id}/`);
+  }
+
+  getContrato(empresaId: number): Observable<EmpresaContrato> {
+    return this.http.get<EmpresaContrato>(`${this.base}${empresaId}/contrato/`);
+  }
+
+  updateContrato(empresaId: number, payload: Partial<EmpresaContrato>): Observable<EmpresaContrato> {
+    return this.http.patch<EmpresaContrato>(`${this.base}${empresaId}/contrato/`, payload);
   }
 }

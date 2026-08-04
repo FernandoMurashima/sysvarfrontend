@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Empresa } from '../../core/models/empresa';
+import { Empresa, EmpresaContrato, EmpresaModulo, ModuloSistema } from '../../core/models/empresa';
 import { EmpresasService } from '../../core/services/empresas.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { AccessControlService } from '../../core/services/access-control.service';
 
 @Component({
   selector: 'app-empresas',
@@ -17,6 +18,7 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
 export class EmpresasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(EmpresasService);
+  private accessApi = inject(AccessControlService);
 
   loading = false;
   saving = false;
@@ -33,6 +35,9 @@ export class EmpresasComponent implements OnInit {
 
   empresasAll: Empresa[] = [];
   empresas: Empresa[] = [];
+  contratoAtual: EmpresaContrato | null = null;
+  modulosCatalogo: ModuloSistema[] = [];
+  empresaModulos: EmpresaModulo[] = [];
 
   page = 1;
   pageSize = 20;
@@ -44,6 +49,12 @@ export class EmpresasComponent implements OnInit {
     nome_fantasia: ['', [Validators.maxLength(120)]],
     documento: ['', [Validators.maxLength(18)]],
     ativo: [true],
+    contrato_status: ['ATIVO'],
+    contrato_data_inicio: [this.today()],
+    contrato_data_fim: [''],
+    contrato_limite_usuarios: [1, [Validators.required, Validators.min(0)]],
+    contrato_plano_completo: [false],
+    contrato_observacoes: [''],
     licenca_master: [false],
     usa_vendas: [false],
     usa_compras: [false],
@@ -79,6 +90,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadModulosCatalogo();
     this.load();
   }
 
@@ -130,6 +142,12 @@ export class EmpresasComponent implements OnInit {
       nome_fantasia: '',
       documento: '',
       ativo: true,
+      contrato_status: 'ATIVO',
+      contrato_data_inicio: this.today(),
+      contrato_data_fim: '',
+      contrato_limite_usuarios: 1,
+      contrato_plano_completo: false,
+      contrato_observacoes: '',
       licenca_master: false,
       usa_vendas: false,
       usa_compras: false,
@@ -139,6 +157,8 @@ export class EmpresasComponent implements OnInit {
       usa_producao: false,
       usa_distribuicao_producao: false,
     });
+    this.contratoAtual = null;
+    this.empresaModulos = [];
     this.aplicarMaster(false);
   }
 
@@ -156,6 +176,12 @@ export class EmpresasComponent implements OnInit {
       nome_fantasia: row.nome_fantasia ?? '',
       documento: row.documento ?? '',
       ativo: row.ativo !== false,
+      contrato_status: 'ATIVO',
+      contrato_data_inicio: this.today(),
+      contrato_data_fim: '',
+      contrato_limite_usuarios: 1,
+      contrato_plano_completo: row.plano_completo === true,
+      contrato_observacoes: '',
       licenca_master: row.licenca_master === true,
       usa_vendas: row.usa_vendas === true,
       usa_compras: row.usa_compras === true,
@@ -166,6 +192,7 @@ export class EmpresasComponent implements OnInit {
       usa_distribuicao_producao: row.usa_distribuicao_producao === true,
     });
     this.aplicarMaster(row.licenca_master === true);
+    this.loadContrato(row.id);
   }
 
   consultar(row: Empresa): void {
@@ -185,6 +212,12 @@ export class EmpresasComponent implements OnInit {
       nome_fantasia: '',
       documento: '',
       ativo: true,
+      contrato_status: 'ATIVO',
+      contrato_data_inicio: this.today(),
+      contrato_data_fim: '',
+      contrato_limite_usuarios: 1,
+      contrato_plano_completo: false,
+      contrato_observacoes: '',
       licenca_master: false,
       usa_vendas: false,
       usa_compras: false,
@@ -206,12 +239,19 @@ export class EmpresasComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
+    const contratoPayload = this.contratoPayload(raw);
+    if (this.contratoAtual && Number(contratoPayload.limite_usuarios) < Number(this.contratoAtual.usuarios_ativos || 0)) {
+      const excedente = Number(this.contratoAtual.usuarios_ativos || 0) - Number(contratoPayload.limite_usuarios || 0);
+      const ok = window.confirm(`A empresa ficará com ${excedente} usuário(s) acima do limite contratado. Deseja salvar mesmo assim?`);
+      if (!ok) return;
+    }
     const payload: Partial<Empresa> = {
       nome: (raw.nome || '').trim(),
       nome_fantasia: this.blankToNull(raw.nome_fantasia),
       documento: this.blankToNull(raw.documento),
       ativo: raw.ativo !== false,
-      licenca_master: raw.licenca_master === true,
+      plano_completo: contratoPayload.plano_completo === true,
+      licenca_master: contratoPayload.plano_completo === true,
       usa_vendas: raw.usa_vendas === true,
       usa_compras: raw.usa_compras === true,
       usa_estoque: raw.usa_estoque === true,
@@ -229,12 +269,19 @@ export class EmpresasComponent implements OnInit {
       : this.api.create(payload);
 
     req.subscribe({
-      next: () => {
-        this.saving = false;
-        this.setSuccess(this.editingId ? 'Empresa atualizada.' : 'Empresa cadastrada.');
-        this.search = '';
-        this.cancelar();
-        this.load();
+      next: (empresa) => {
+        const id = this.editingId || empresa.id;
+        if (!id) {
+          this.finalizarSalvar();
+          return;
+        }
+        this.api.updateContrato(id, contratoPayload).subscribe({
+          next: () => this.finalizarSalvar(),
+          error: (err) => {
+            this.saving = false;
+            this.errorMsg = `Empresa salva, mas contrato não foi atualizado: ${this.errorText(err)}`;
+          }
+        });
       },
       error: (err) => {
         this.saving = false;
@@ -253,11 +300,21 @@ export class EmpresasComponent implements OnInit {
     if (nome?.errors?.['maxlength']) errors.push('Razão social deve ter no máximo 120 caracteres.');
     if (fantasia?.errors?.['maxlength']) errors.push('Nome fantasia deve ter no máximo 120 caracteres.');
     if (documento?.errors?.['maxlength']) errors.push('Documento deve ter no máximo 18 caracteres.');
+    if (this.form.get('contrato_limite_usuarios')?.errors?.['required']) errors.push('Informe a quantidade de licenças.');
+    if (this.form.get('contrato_limite_usuarios')?.errors?.['min']) errors.push('Quantidade de licenças não pode ser negativa.');
     return errors;
   }
 
   onMasterChange(): void {
-    this.aplicarMaster(this.form.get('licenca_master')?.value === true);
+    const enabled = this.form.get('licenca_master')?.value === true;
+    this.form.patchValue({ contrato_plano_completo: enabled }, { emitEvent: false });
+    this.aplicarMaster(enabled);
+  }
+
+  onPlanoCompletoChange(): void {
+    const enabled = this.form.get('contrato_plano_completo')?.value === true;
+    this.form.patchValue({ licenca_master: enabled }, { emitEvent: false });
+    this.aplicarMaster(enabled);
   }
 
   private aplicarMaster(master: boolean): void {
@@ -290,6 +347,59 @@ export class EmpresasComponent implements OnInit {
 
   moduloLojaContratado(): boolean {
     return this.form.get('usa_vendas')?.value === true || this.form.get('usa_estoque')?.value === true;
+  }
+
+  indicadoresContrato(): { contratadas: number; usadas: number; disponiveis: number; excedente: number; situacao: string } {
+    const raw = this.form.getRawValue();
+    const contratadas = Number(raw.contrato_limite_usuarios || this.contratoAtual?.limite_usuarios || 0);
+    const usadas = Number(this.contratoAtual?.usuarios_ativos || 0);
+    const disponiveis = Math.max(0, contratadas - usadas);
+    const excedente = Math.max(0, usadas - contratadas);
+    return {
+      contratadas,
+      usadas,
+      disponiveis,
+      excedente,
+      situacao: excedente > 0 ? 'Acima do limite' : 'Regular',
+    };
+  }
+
+  usuarioMasterLabel(): string {
+    const master = this.contratoAtual?.usuario_master as any;
+    if (!master) return 'Nenhum master definido';
+    return `${master.nome || master.username} (${master.username})${master.is_active === false ? ' - inativo' : ''}`;
+  }
+
+  modulosPorCategoria(categoria: 'BASICO' | 'COMERCIAL'): ModuloSistema[] {
+    return this.modulosCatalogo.filter(m => m.categoria === categoria && m.ativo !== false);
+  }
+
+  moduloContratado(chave: string): boolean {
+    if (this.form.get('contrato_plano_completo')?.value === true) {
+      return this.modulosCatalogo.some(m => m.chave === chave && m.categoria === 'COMERCIAL');
+    }
+    return this.empresaModulos.some(m => m.modulo_chave === chave && m.contratado);
+  }
+
+  moduloControlFor(chave: string): string | null {
+    const map: Record<string, string> = {
+      vendas: 'usa_vendas',
+      compras: 'usa_compras',
+      estoque: 'usa_estoque',
+      financeiro: 'usa_financeiro',
+      fiscal: 'usa_fiscal',
+      producao: 'usa_producao',
+      distribuicao: 'usa_distribuicao_producao',
+    };
+    return map[chave] || null;
+  }
+
+  toggleModuloContratado(chave: string, checked: boolean): void {
+    const control = this.moduloControlFor(chave);
+    if (!control || this.form.get('contrato_plano_completo')?.value === true) return;
+    this.form.get(control)?.setValue(checked);
+    const found = this.empresaModulos.find(m => m.modulo_chave === chave);
+    if (found) found.contratado = checked;
   }
 
   alternarAtivo(row: Empresa): void {
@@ -364,6 +474,67 @@ export class EmpresasComponent implements OnInit {
     if (Array.isArray(value)) return `${firstKey}: ${value.join(', ')}`;
     if (value) return `${firstKey}: ${value}`;
     return 'Não foi possível salvar a empresa.';
+  }
+
+  private loadModulosCatalogo(): void {
+    this.accessApi.modulos().subscribe({
+      next: (res: any) => this.modulosCatalogo = Array.isArray(res) ? res : (res?.results ?? []),
+      error: () => this.modulosCatalogo = [],
+    });
+  }
+
+  private loadContrato(empresaId: number): void {
+    this.api.getContrato(empresaId).subscribe({
+      next: (contrato) => {
+        this.contratoAtual = contrato;
+        this.empresaModulos = contrato.modulos_contratados || [];
+        const contracted = new Set(this.empresaModulos.filter(m => m.contratado).map(m => m.modulo_chave));
+        this.form.patchValue({
+          contrato_status: contrato.status,
+          contrato_data_inicio: contrato.data_inicio || this.today(),
+          contrato_data_fim: contrato.data_fim || '',
+          contrato_limite_usuarios: contrato.limite_usuarios,
+          contrato_plano_completo: contrato.plano_completo === true,
+          contrato_observacoes: contrato.observacoes || '',
+          licenca_master: contrato.plano_completo === true,
+          usa_vendas: contracted.has('vendas'),
+          usa_compras: contracted.has('compras'),
+          usa_estoque: contracted.has('estoque'),
+          usa_financeiro: contracted.has('financeiro'),
+          usa_fiscal: contracted.has('fiscal'),
+          usa_producao: contracted.has('producao'),
+          usa_distribuicao_producao: contracted.has('distribuicao'),
+        });
+        this.aplicarMaster(contrato.plano_completo === true);
+      },
+      error: () => {
+        this.contratoAtual = null;
+        this.empresaModulos = [];
+      }
+    });
+  }
+
+  private contratoPayload(raw: any): Partial<EmpresaContrato> {
+    return {
+      status: raw.contrato_status,
+      data_inicio: raw.contrato_data_inicio || this.today(),
+      data_fim: this.blankToNull(raw.contrato_data_fim),
+      limite_usuarios: Number(raw.contrato_limite_usuarios || 0),
+      plano_completo: raw.contrato_plano_completo === true,
+      observacoes: raw.contrato_observacoes || '',
+    };
+  }
+
+  private finalizarSalvar(): void {
+    this.saving = false;
+    this.setSuccess(this.editingId ? 'Empresa e contrato atualizados.' : 'Empresa e contrato cadastrados.');
+    this.search = '';
+    this.cancelar();
+    this.load();
+  }
+
+  private today(): string {
+    return new Date().toISOString().slice(0, 10);
   }
 
   private setSuccess(message: string): void {

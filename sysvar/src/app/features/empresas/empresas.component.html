@@ -76,6 +76,60 @@
 
       <div class="modules-panel">
         <div class="modules-title">
+          <strong>Contrato</strong>
+          <span *ngIf="contratoAtual?.permissions_version">Versão {{ contratoAtual?.permissions_version }}</span>
+        </div>
+        <div class="form-grid">
+          <label class="field span-2">
+            Status
+            <select formControlName="contrato_status">
+              <option value="ATIVO">Ativo</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="SUSPENSO">Suspenso</option>
+              <option value="VENCIDO">Vencido</option>
+              <option value="CANCELADO">Cancelado</option>
+            </select>
+          </label>
+          <label class="field span-2">
+            Data inicial
+            <input type="date" formControlName="contrato_data_inicio" />
+          </label>
+          <label class="field span-2">
+            Data final
+            <input type="date" formControlName="contrato_data_fim" />
+          </label>
+          <label class="field span-2">
+            Licenças
+            <input type="number" min="0" formControlName="contrato_limite_usuarios" />
+          </label>
+          <label class="field span-2">
+            Plano completo
+            <select formControlName="contrato_plano_completo" (change)="onPlanoCompletoChange()">
+              <option [ngValue]="false">Não</option>
+              <option [ngValue]="true">Sim</option>
+            </select>
+          </label>
+          <label class="field span-12">
+            Observações
+            <input type="text" formControlName="contrato_observacoes" />
+          </label>
+        </div>
+
+        <div class="indicator-bar">
+          <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ indicadoresContrato().contratadas }}</strong><small>Contratadas</small></div></div>
+          <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ indicadoresContrato().usadas }}</strong><small>Utilizadas</small></div></div>
+          <div class="indicator"><span class="indicator-icon cyan">−</span><div><strong>{{ indicadoresContrato().disponiveis }}</strong><small>Disponíveis</small></div></div>
+          <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ indicadoresContrato().excedente }}</strong><small>{{ indicadoresContrato().situacao }}</small></div></div>
+        </div>
+
+        <div class="module-tags">
+          <strong>Usuário master:</strong>
+          <span>{{ usuarioMasterLabel() }}</span>
+        </div>
+      </div>
+
+      <div class="modules-panel">
+        <div class="modules-title">
           <strong>Módulos contratados</strong>
           <label class="master-check">
             <input type="checkbox" formControlName="licenca_master" (change)="onMasterChange()" />
@@ -84,16 +138,16 @@
         </div>
 
         <div class="module-grid">
-          <label class="module-card basic" *ngFor="let modulo of modulosBasicos">
+          <label class="module-card basic" *ngFor="let modulo of modulosPorCategoria('BASICO')">
             <input type="checkbox" checked disabled />
-            <span>{{ modulo }}</span>
+            <span>{{ modulo.nome }}</span>
             <small>Básico</small>
           </label>
 
-          <label class="module-card" *ngFor="let modulo of modulosContratados">
-            <input type="checkbox" [formControlName]="modulo.control" />
-            <span>{{ modulo.label }}</span>
-            <small>Contratado</small>
+          <label class="module-card" *ngFor="let modulo of modulosPorCategoria('COMERCIAL')">
+            <input type="checkbox" [checked]="moduloContratado(modulo.chave)" [disabled]="form.get('contrato_plano_completo')?.value === true" (change)="toggleModuloContratado(modulo.chave, $any($event.target).checked)" />
+            <span>{{ modulo.nome }}</span>
+            <small>{{ moduloContratado(modulo.chave) ? 'Contratado' : 'Indisponível' }}</small>
           </label>
 
           <label class="module-card derived">
