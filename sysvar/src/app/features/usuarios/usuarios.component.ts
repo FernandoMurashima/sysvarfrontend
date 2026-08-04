@@ -370,7 +370,11 @@ export class UsuariosComponent implements OnInit {
     }
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
-    payload.permissoes_modulos = this.modulosPermissao.map(m => ({
+    const perfil = this.perfilSelecionado();
+    const modulosPermitidos = perfil?.permissoes_modulos?.length
+      ? new Set(perfil.permissoes_modulos.filter(p => p.acesso !== 'NONE').map(p => p.modulo_chave).filter((key): key is string => !!key))
+      : null;
+    payload.permissoes_modulos = this.modulosPermissao.filter(m => !modulosPermitidos || modulosPermitidos.has(m.key)).map(m => ({
       modulo: m.key,
       acesso: m.acesso,
     }));
@@ -417,6 +421,8 @@ export class UsuariosComponent implements OnInit {
 
   onTipoChange(): void {
     this.normalizarPermissoesPorTipo();
+    this.selecionarPerfilPadraoPorTipo();
+    this.aplicarPerfilSelecionado();
   }
 
   private normalizarPermissoesPorTipo(): void {
@@ -601,9 +607,16 @@ export class UsuariosComponent implements OnInit {
   }
 
   private loadPerfis() {
-    this.accessApi.perfis().subscribe({
+    const empresa = this.empresaSelecionadaId() ?? this.empresaDefaultId() ?? undefined;
+    this.accessApi.perfis(empresa ? { empresa } : undefined).subscribe({
       next: (res: any) => {
         this.perfis = (Array.isArray(res) ? res : (res?.results ?? [])).filter((p: PerfilAcesso) => p.ativo !== false);
+        const atual = this.form.getRawValue().perfil_principal_id;
+        if (atual && !this.perfis.some(p => p.id === Number(atual))) {
+          this.form.patchValue({ perfil_principal_id: null });
+        }
+        this.selecionarPerfilPadraoPorTipo();
+        this.aplicarPerfilSelecionado();
       },
       error: () => this.perfis = []
     });
@@ -690,6 +703,42 @@ export class UsuariosComponent implements OnInit {
     }
     const lojasSelecionadas = (this.form.value.Idlojas || []).filter((id: number) => permitidas.has(Number(id)));
     this.form.patchValue({ Idlojas: lojasSelecionadas });
+    this.loadPerfis();
+  }
+
+  onPerfilChange(): void {
+    this.aplicarPerfilSelecionado();
+  }
+
+  private perfilSelecionado(): PerfilAcesso | null {
+    const id = Number(this.form.getRawValue().perfil_principal_id || 0);
+    return this.perfis.find(p => Number(p.id) === id) ?? null;
+  }
+
+  private selecionarPerfilPadraoPorTipo(): void {
+    if (!this.perfis.length || this.form.getRawValue().perfil_principal_id) return;
+    const tipo = this.form.getRawValue().type as User['type'];
+    const nomePreferido =
+      tipo === 'Admin' || tipo === 'Diretor' ? 'Administrador delegado' :
+      tipo === 'Gerente' ? 'Gerente' :
+      tipo === 'Vendedor' ? 'Vendedor' :
+      tipo === 'Caixa' ? 'Caixa' :
+      tipo === 'AssistenteReceber' ? 'Financeiro' :
+      tipo === 'AssistentePagar' ? 'Compras' :
+      'Regular';
+    const perfil = this.perfis.find(p => p.nome === nomePreferido) || this.perfis.find(p => p.padrao) || this.perfis[0];
+    if (perfil?.id) this.form.patchValue({ perfil_principal_id: perfil.id });
+  }
+
+  private aplicarPerfilSelecionado(): void {
+    const perfil = this.perfilSelecionado();
+    if (!perfil?.permissoes_modulos?.length) return;
+    const perms = new Map(perfil.permissoes_modulos.map(p => [p.modulo_chave, p.acesso]));
+    this.modulosPermissao = this.modulosPermissao.map(m => ({
+      ...m,
+      acesso: (perms.get(m.key) as any) || 'NONE',
+    }));
+    this.normalizarPermissoesPorTipo();
   }
 
   onLojaPrincipalChange(): void {

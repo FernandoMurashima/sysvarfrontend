@@ -50,8 +50,10 @@ export class AccessControlService {
     return this.http.patch<EmpresaModulo>(`${this.base}/empresa-modulos/${id}/`, payload);
   }
 
-  perfis(): Observable<ListResp<PerfilAcesso>> {
-    return this.http.get<ListResp<PerfilAcesso>>(`${this.base}/perfis/`);
+  perfis(params?: { empresa?: number }): Observable<ListResp<PerfilAcesso>> {
+    let p = new HttpParams();
+    if (params?.empresa) p = p.set('empresa', String(params.empresa));
+    return this.http.get<ListResp<PerfilAcesso>>(`${this.base}/perfis/`, { params: p });
   }
 
   createPerfil(payload: PerfilAcesso): Observable<PerfilAcesso> {
