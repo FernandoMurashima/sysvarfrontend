@@ -99,8 +99,8 @@
             <input type="date" formControlName="contrato_data_fim" />
           </label>
           <label class="field span-2">
-            Licenças
-            <input type="number" min="0" formControlName="contrato_limite_usuarios" />
+            Acessos simultâneos
+            <input type="number" min="0" formControlName="contrato_limite_sessoes_simultaneas" />
           </label>
           <label class="field span-2">
             Plano completo
@@ -116,8 +116,8 @@
         </div>
 
         <div class="indicator-bar">
-          <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ indicadoresContrato().contratadas }}</strong><small>Contratadas</small></div></div>
-          <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ indicadoresContrato().usadas }}</strong><small>Utilizadas</small></div></div>
+          <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ indicadoresContrato().contratadas }}</strong><small>Simultâneas</small></div></div>
+          <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ indicadoresContrato().usadas }}</strong><small>Sessões ativas</small></div></div>
           <div class="indicator"><span class="indicator-icon cyan">−</span><div><strong>{{ indicadoresContrato().disponiveis }}</strong><small>Disponíveis</small></div></div>
           <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ indicadoresContrato().excedente }}</strong><small>{{ indicadoresContrato().situacao }}</small></div></div>
         </div>

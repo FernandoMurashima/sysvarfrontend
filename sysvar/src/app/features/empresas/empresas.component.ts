@@ -52,7 +52,7 @@ export class EmpresasComponent implements OnInit {
     contrato_status: ['ATIVO'],
     contrato_data_inicio: [this.today()],
     contrato_data_fim: [''],
-    contrato_limite_usuarios: [1, [Validators.required, Validators.min(0)]],
+    contrato_limite_sessoes_simultaneas: [1, [Validators.required, Validators.min(0)]],
     contrato_plano_completo: [false],
     contrato_observacoes: [''],
     licenca_master: [false],
@@ -145,7 +145,7 @@ export class EmpresasComponent implements OnInit {
       contrato_status: 'ATIVO',
       contrato_data_inicio: this.today(),
       contrato_data_fim: '',
-      contrato_limite_usuarios: 1,
+      contrato_limite_sessoes_simultaneas: 1,
       contrato_plano_completo: false,
       contrato_observacoes: '',
       licenca_master: false,
@@ -179,7 +179,7 @@ export class EmpresasComponent implements OnInit {
       contrato_status: 'ATIVO',
       contrato_data_inicio: this.today(),
       contrato_data_fim: '',
-      contrato_limite_usuarios: 1,
+      contrato_limite_sessoes_simultaneas: 1,
       contrato_plano_completo: row.plano_completo === true,
       contrato_observacoes: '',
       licenca_master: row.licenca_master === true,
@@ -215,7 +215,7 @@ export class EmpresasComponent implements OnInit {
       contrato_status: 'ATIVO',
       contrato_data_inicio: this.today(),
       contrato_data_fim: '',
-      contrato_limite_usuarios: 1,
+      contrato_limite_sessoes_simultaneas: 1,
       contrato_plano_completo: false,
       contrato_observacoes: '',
       licenca_master: false,
@@ -240,9 +240,9 @@ export class EmpresasComponent implements OnInit {
 
     const raw = this.form.getRawValue();
     const contratoPayload = this.contratoPayload(raw);
-    if (this.contratoAtual && Number(contratoPayload.limite_usuarios) < Number(this.contratoAtual.usuarios_ativos || 0)) {
-      const excedente = Number(this.contratoAtual.usuarios_ativos || 0) - Number(contratoPayload.limite_usuarios || 0);
-      const ok = window.confirm(`A empresa ficará com ${excedente} usuário(s) acima do limite contratado. Deseja salvar mesmo assim?`);
+    if (this.contratoAtual && Number(contratoPayload.limite_sessoes_simultaneas) < Number(this.contratoAtual.sessoes_ativas || 0)) {
+      const excedente = Number(this.contratoAtual.sessoes_ativas || 0) - Number(contratoPayload.limite_sessoes_simultaneas || 0);
+      const ok = window.confirm(`A empresa ficará com ${excedente} sessão(ões) acima do limite contratado. Deseja salvar mesmo assim?`);
       if (!ok) return;
     }
     const payload: Partial<Empresa> = {
@@ -300,8 +300,8 @@ export class EmpresasComponent implements OnInit {
     if (nome?.errors?.['maxlength']) errors.push('Razão social deve ter no máximo 120 caracteres.');
     if (fantasia?.errors?.['maxlength']) errors.push('Nome fantasia deve ter no máximo 120 caracteres.');
     if (documento?.errors?.['maxlength']) errors.push('Documento deve ter no máximo 18 caracteres.');
-    if (this.form.get('contrato_limite_usuarios')?.errors?.['required']) errors.push('Informe a quantidade de licenças.');
-    if (this.form.get('contrato_limite_usuarios')?.errors?.['min']) errors.push('Quantidade de licenças não pode ser negativa.');
+    if (this.form.get('contrato_limite_sessoes_simultaneas')?.errors?.['required']) errors.push('Informe a quantidade de acessos simultâneos.');
+    if (this.form.get('contrato_limite_sessoes_simultaneas')?.errors?.['min']) errors.push('Quantidade de acessos simultâneos não pode ser negativa.');
     return errors;
   }
 
@@ -351,8 +351,8 @@ export class EmpresasComponent implements OnInit {
 
   indicadoresContrato(): { contratadas: number; usadas: number; disponiveis: number; excedente: number; situacao: string } {
     const raw = this.form.getRawValue();
-    const contratadas = Number(raw.contrato_limite_usuarios || this.contratoAtual?.limite_usuarios || 0);
-    const usadas = Number(this.contratoAtual?.usuarios_ativos || 0);
+    const contratadas = Number(raw.contrato_limite_sessoes_simultaneas || this.contratoAtual?.limite_sessoes_simultaneas || this.contratoAtual?.limite_usuarios || 0);
+    const usadas = Number(this.contratoAtual?.sessoes_ativas || 0);
     const disponiveis = Math.max(0, contratadas - usadas);
     const excedente = Math.max(0, usadas - contratadas);
     return {
@@ -493,7 +493,7 @@ export class EmpresasComponent implements OnInit {
           contrato_status: contrato.status,
           contrato_data_inicio: contrato.data_inicio || this.today(),
           contrato_data_fim: contrato.data_fim || '',
-          contrato_limite_usuarios: contrato.limite_usuarios,
+          contrato_limite_sessoes_simultaneas: contrato.limite_sessoes_simultaneas || contrato.limite_usuarios,
           contrato_plano_completo: contrato.plano_completo === true,
           contrato_observacoes: contrato.observacoes || '',
           licenca_master: contrato.plano_completo === true,
@@ -519,7 +519,7 @@ export class EmpresasComponent implements OnInit {
       status: raw.contrato_status,
       data_inicio: raw.contrato_data_inicio || this.today(),
       data_fim: this.blankToNull(raw.contrato_data_fim),
-      limite_usuarios: Number(raw.contrato_limite_usuarios || 0),
+      limite_sessoes_simultaneas: Number(raw.contrato_limite_sessoes_simultaneas || 0),
       plano_completo: raw.contrato_plano_completo === true,
       observacoes: raw.contrato_observacoes || '',
     };

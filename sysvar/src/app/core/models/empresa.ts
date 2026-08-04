@@ -26,6 +26,7 @@ export interface EmpresaContrato {
   data_inicio: string | null;
   data_fim?: string | null;
   limite_usuarios: number;
+  limite_sessoes_simultaneas: number;
   plano_completo: boolean;
   usuario_master?: { id: number; username: string; nome: string; email?: string; is_active?: boolean } | number | null;
   usuario_master_id?: number | null;
@@ -34,6 +35,9 @@ export interface EmpresaContrato {
   usuarios_ativos?: number;
   licencas_disponiveis?: number;
   excedido?: boolean;
+  sessoes_ativas?: number;
+  sessoes_disponiveis?: number;
+  limite_excedido?: boolean;
   excedente?: number;
   warning?: string;
   modulos_contratados?: EmpresaModulo[];

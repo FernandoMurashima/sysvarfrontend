@@ -4,8 +4,10 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { DeviceService } from './services/device.service';
+import { SessionService } from './services/session.service';
 
-interface TokenResponse { token: string; user?: MeResponse; }
+interface TokenResponse { token: string; session_id?: string; user?: MeResponse; }
 interface MeResponse {
   id: number; username: string; first_name: string; last_name: string; email: string; type: string;
   Idempresa?: number | null;
@@ -35,12 +37,17 @@ interface MeResponse {
     data_inicio: string;
     data_fim?: string | null;
     limite_usuarios: number;
+    limite_sessoes_simultaneas: number;
     usuarios_ativos: number;
+    sessoes_ativas: number;
     licencas_disponiveis: number;
+    sessoes_disponiveis: number;
     excedido: boolean;
+    limite_excedido: boolean;
     plano_completo: boolean;
     permissions_version: number;
   } | null;
+  sessao_atual?: { session_id: string; dispositivo_id: string; iniciada_em: string; ultima_atividade_em: string } | null;
   modulos_disponiveis_empresa?: string[];
   permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
 }
@@ -64,25 +71,36 @@ export type ModuloEmpresa =
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private device = inject(DeviceService);
+  private sessions = inject(SessionService);
 
   private tokenKey = 'auth_token';
+  private sessionKey = 'access_session_id';
   private userTypeKey = 'user_type';
   private userNameKey = 'user_name';
   private currentUserKey = 'current_user';
+
+  constructor() {
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'sysvar_logout_event') this.handleUnauthorized();
+    });
+  }
 
   get api() { return environment.apiBaseUrl; }
   get apiBaseUrl() { return environment.apiBaseUrl; }
 
   login(username: string, password: string) {
-    return this.http.post<TokenResponse>(`${this.api}/auth/token/`, { username, password })
+    return this.http.post<TokenResponse>(`${this.api}/auth/token/`, { username, password, device_id: this.device.getDeviceId() })
       .pipe(
         tap(res => {
           this.setToken(res.token);
+          if (res.session_id) sessionStorage.setItem(this.sessionKey, res.session_id);
           if (res.user) {
             this.setUserType(res.user.type || 'Regular');
             this.setUserName(res.user.username || '');
             this.setCurrentUser(res.user);
           }
+          this.startHeartbeat();
         }),
         tap((res) => {
           if (res.user) return;
@@ -121,9 +139,12 @@ export class AuthService {
   getToken() { return sessionStorage.getItem(this.tokenKey); }
   clearToken() {
     sessionStorage.removeItem(this.tokenKey);
+    sessionStorage.removeItem(this.sessionKey);
     sessionStorage.removeItem(this.userTypeKey);
     sessionStorage.removeItem(this.userNameKey);
     sessionStorage.removeItem(this.currentUserKey);
+    this.sessions.stopHeartbeat();
+    localStorage.setItem('sysvar_logout_event', String(Date.now()));
   }
   isAuthenticated() { return !!this.getToken(); }
 
@@ -191,11 +212,17 @@ export class AuthService {
     this.router.navigateByUrl('/login');
   }
 
+  startHeartbeat(): void {
+    if (!this.getToken()) return;
+    this.sessions.startHeartbeat(() => this.handleUnauthorized());
+  }
+
   refreshMe() {
     return this.me().pipe(tap(me => {
       this.setUserType(me.type || 'Regular');
       this.setUserName(me.username || '');
       this.setCurrentUser(me);
+      this.startHeartbeat();
     }));
   }
 

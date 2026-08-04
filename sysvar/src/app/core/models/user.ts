@@ -23,12 +23,17 @@ export interface User {
   contrato?: {
     status: string;
     limite_usuarios: number;
+    limite_sessoes_simultaneas: number;
     usuarios_ativos: number;
+    sessoes_ativas: number;
     licencas_disponiveis: number;
+    sessoes_disponiveis: number;
     excedido: boolean;
+    limite_excedido: boolean;
     plano_completo: boolean;
     permissions_version: number;
   } | null;
+  sessao_atual?: { session_id: string; dispositivo_id: string; iniciada_em: string; ultima_atividade_em: string } | null;
   modulos_disponiveis_empresa?: string[];
   permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
   password?: string; // write-only no backend; só enviar em criação/alteração de senha
