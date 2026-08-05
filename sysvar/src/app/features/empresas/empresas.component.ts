@@ -18,10 +18,14 @@ type SessaoEmpresaRow = {
   loja_nome?: string;
   dispositivo_id?: string;
   navegador?: string;
+  sistema_operacional?: string;
   ip?: string;
   iniciada_em?: string;
   ultima_atividade_em?: string;
+  tempo_conectado_segundos?: number;
   status?: string;
+  token_valido?: boolean;
+  token_revogado?: boolean;
 };
 
 @Component({
@@ -54,6 +58,7 @@ export class EmpresasComponent implements OnInit {
   sessoesEmpresaModal: Empresa | null = null;
   sessoesEmpresa: SessaoEmpresaRow[] = [];
   sessoesEmpresaLoading = false;
+  empresaSessaoCountEsperado: number | null = null;
   suspensaoMotivo = 'INADIMPLENCIA';
   suspensaoObservacao = '';
   suspensaoConfirmacao = '';
@@ -521,6 +526,9 @@ export class EmpresasComponent implements OnInit {
   abrirSessoesEmpresa(row: Empresa): void {
     if (!row.id) return;
     this.sessoesEmpresaModal = row;
+    this.sessoesEmpresa = [];
+    this.empresaSessaoCountEsperado = null;
+    this.atualizarContratoSessaoEmpresa();
     this.carregarSessoesEmpresa();
   }
 
@@ -528,9 +536,10 @@ export class EmpresasComponent implements OnInit {
     const empresa = this.sessoesEmpresaModal;
     if (!empresa?.id) return;
     this.sessoesEmpresaLoading = true;
-    this.sessionsApi.listSessions({ empresa: empresa.id, ativa: 'true' }).subscribe({
-      next: (rows) => {
-        this.sessoesEmpresa = rows || [];
+    this.sessionsApi.listSessionsWithCount({ empresa: empresa.id, ativa: 'true' }).subscribe({
+      next: (response) => {
+        this.sessoesEmpresa = response.results || [];
+        this.empresaSessaoCountEsperado = response.count;
         this.sessoesEmpresaLoading = false;
       },
       error: () => {
@@ -544,6 +553,7 @@ export class EmpresasComponent implements OnInit {
   fecharSessoesEmpresa(): void {
     this.sessoesEmpresaModal = null;
     this.sessoesEmpresa = [];
+    this.empresaSessaoCountEsperado = null;
   }
 
   encerrarSessaoEmpresa(sessao: SessaoEmpresaRow): void {
@@ -551,14 +561,40 @@ export class EmpresasComponent implements OnInit {
     this.sessionsApi.terminateSession(sessao.id).subscribe({
       next: () => {
         this.carregarSessoesEmpresa();
-        if (this.editingId) this.loadContrato(this.editingId);
+        this.atualizarContratoSessaoEmpresa();
       },
       error: () => this.errorMsg = 'Falha ao encerrar sessão.'
     });
   }
 
   sessoesEmpresaEsperadas(): number {
-    return Number(this.contratoAtual?.sessoes_ativas || this.sessoesEmpresa.length || 0);
+    return Number(this.empresaSessaoCountEsperado ?? this.contratoAtual?.sessoes_ativas ?? this.sessoesEmpresa.length ?? 0);
+  }
+
+  sessoesEmpresaLinhas(): number {
+    return this.sessoesEmpresa.length;
+  }
+
+  sessoesEmpresaDivergente(): boolean {
+    return !this.sessoesEmpresaLoading && this.sessoesEmpresaEsperadas() !== this.sessoesEmpresaLinhas();
+  }
+
+  sessoesEmpresaVazia(): boolean {
+    return !this.sessoesEmpresaLoading && this.sessoesEmpresaLinhas() === 0;
+  }
+
+  tokenValidoLabel(sessao: SessaoEmpresaRow): string {
+    return sessao.token_valido === true ? 'Sim' : 'Não';
+  }
+
+  tempoConectadoEmpresa(sessao: SessaoEmpresaRow): string {
+    const total = Math.max(0, Number(sessao.tempo_conectado_segundos || 0));
+    const horas = Math.floor(total / 3600);
+    const minutos = Math.floor((total % 3600) / 60);
+    const segundos = total % 60;
+    if (horas > 0) return `${horas}h ${minutos}min`;
+    if (minutos > 0) return `${minutos}min ${segundos}s`;
+    return `${segundos}s`;
   }
 
   onPageSizeChange(size: string): void {
@@ -639,6 +675,26 @@ export class EmpresasComponent implements OnInit {
       error: () => {
         this.contratoAtual = null;
         this.empresaModulos = [];
+      }
+    });
+  }
+
+  private atualizarContratoSessaoEmpresa(): void {
+    const empresaId = this.sessoesEmpresaModal?.id;
+    if (!empresaId) return;
+    this.api.getContrato(empresaId).subscribe({
+      next: (contrato) => {
+        if (this.editingId === empresaId) {
+          this.contratoAtual = contrato;
+          this.empresaModulos = contrato.modulos_contratados || [];
+        }
+        const modalEmpresa = this.sessoesEmpresaModal;
+        if (modalEmpresa?.id === empresaId) {
+          this.sessoesEmpresaModal = { ...modalEmpresa };
+        }
+      },
+      error: () => {
+        this.empresaSessaoCountEsperado = null;
       }
     });
   }

@@ -233,13 +233,13 @@
       <div><h4>Sessões da empresa</h4><p>{{ empresa.nome }}</p></div>
       <button class="btn ghost" type="button" (click)="fecharSessoesEmpresa()">Fechar</button>
     </div>
-    <div class="alert error" *ngIf="sessoesEmpresa.length !== sessoesEmpresaEsperadas()">Contador e listagem divergem: contador {{ sessoesEmpresaEsperadas() }}, linhas {{ sessoesEmpresa.length }}.</div>
+    <div class="alert error" *ngIf="sessoesEmpresaDivergente()">Contador e listagem divergem: contador {{ sessoesEmpresaEsperadas() }}, linhas {{ sessoesEmpresaLinhas() }}.</div>
     <div class="overlay-actions session-actions">
       <button class="btn" type="button" (click)="carregarSessoesEmpresa()">Atualizar</button>
     </div>
     <div class="table-wrapper session-table">
-      <table class="table" *ngIf="sessoesEmpresa.length; else semSessoesEmpresa">
-        <thead><tr><th>Usuário</th><th>Perfil</th><th>Loja</th><th>Dispositivo</th><th>Navegador</th><th>IP</th><th>Início</th><th>Última atividade</th><th>Status</th><th>Ações</th></tr></thead>
+      <table class="table" *ngIf="sessoesEmpresaLinhas() > 0; else semSessoesEmpresa">
+        <thead><tr><th>Usuário</th><th>Perfil</th><th>Loja</th><th>Dispositivo</th><th>Navegador</th><th>Sistema operacional</th><th>IP</th><th>Início</th><th>Última atividade</th><th>Tempo conectado</th><th>Status</th><th>Token válido</th><th>Ação Encerrar</th></tr></thead>
         <tbody>
           <tr *ngFor="let s of sessoesEmpresa">
             <td>{{ s.usuario_nome || s.usuario_username || '-' }}</td>
@@ -247,10 +247,13 @@
             <td>{{ s.loja_nome || '-' }}</td>
             <td>{{ s.dispositivo_id || '-' }}</td>
             <td>{{ s.navegador || '-' }}</td>
+            <td>{{ s.sistema_operacional || '-' }}</td>
             <td>{{ s.ip || '-' }}</td>
             <td>{{ s.iniciada_em | date:'short' }}</td>
             <td>{{ s.ultima_atividade_em | date:'short' }}</td>
+            <td>{{ tempoConectadoEmpresa(s) }}</td>
             <td><span class="status-pill">{{ s.status || '-' }}</span></td>
+            <td>{{ tokenValidoLabel(s) }}</td>
             <td><button class="btn sm danger-soft" type="button" (click)="encerrarSessaoEmpresa(s)">Encerrar</button></td>
           </tr>
         </tbody>
