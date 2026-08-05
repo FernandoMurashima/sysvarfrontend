@@ -47,4 +47,12 @@ export class EmpresasService {
   updateContrato(empresaId: number, payload: Partial<EmpresaContrato>): Observable<EmpresaContrato> {
     return this.http.patch<EmpresaContrato>(`${this.base}${empresaId}/contrato/`, payload);
   }
+
+  suspender(empresaId: number, payload: { motivo: string; observacao?: string; confirmacao: string }): Observable<EmpresaContrato> {
+    return this.http.post<EmpresaContrato>(`${this.base}${empresaId}/suspender/`, payload);
+  }
+
+  reativar(empresaId: number): Observable<EmpresaContrato> {
+    return this.http.post<EmpresaContrato>(`${this.base}${empresaId}/reativar/`, {});
+  }
 }

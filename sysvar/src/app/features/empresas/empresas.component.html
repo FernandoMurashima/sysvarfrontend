@@ -47,6 +47,8 @@
       </div>
       <div class="form-title-actions">
         <button class="btn ghost" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn danger-soft" type="button" *ngIf="editingId && contratoAtual?.status !== 'SUSPENSO'" (click)="abrirSuspender({ id: editingId, nome: form.getRawValue().nome || '' })">Suspender acesso</button>
+        <button class="btn" type="button" *ngIf="editingId && contratoAtual?.status === 'SUSPENSO'" (click)="abrirReativar({ id: editingId, nome: form.getRawValue().nome || '' })">Reativar acesso</button>
         <button class="btn primary" type="button" *ngIf="!consultando" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
       </div>
     </div>
@@ -125,6 +127,10 @@
         <div class="module-tags">
           <strong>Usuário master:</strong>
           <span>{{ usuarioMasterLabel() }}</span>
+        </div>
+        <div class="alert error" *ngIf="contratoAtual?.status === 'SUSPENSO'">
+          Empresa suspensa. Esta ação bloqueia novos acessos e mantém as sessões antigas encerradas.
+          <span *ngIf="contratoAtual?.motivo_suspensao">Motivo: {{ contratoAtual?.motivo_suspensao }}</span>
         </div>
       </div>
 
@@ -217,6 +223,44 @@
       <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
     </div>
   </section>
+</div>
+
+<div class="overlay" *ngIf="suspenderModal as empresa">
+  <div class="overlay-card">
+    <h4>Suspender acesso</h4>
+    <p>Esta ação bloqueará o acesso da empresa e encerrará todas as sessões ativas.</p>
+    <label class="field">Motivo
+      <select [(ngModel)]="suspensaoMotivo">
+        <option value="INADIMPLENCIA">Inadimplência</option>
+        <option value="SOLICITACAO_CLIENTE">Solicitação do cliente</option>
+        <option value="RISCO_SEGURANCA">Risco de segurança</option>
+        <option value="ENCERRAMENTO_CONTRATO">Encerramento de contrato</option>
+        <option value="BLOQUEIO_ADMINISTRATIVO">Bloqueio administrativo</option>
+        <option value="OUTRO">Outro</option>
+      </select>
+    </label>
+    <label class="field">Observação
+      <textarea [(ngModel)]="suspensaoObservacao"></textarea>
+    </label>
+    <label class="field">Digite o nome, documento ou ID da empresa
+      <input [(ngModel)]="suspensaoConfirmacao" />
+    </label>
+    <div class="overlay-actions">
+      <button class="btn" type="button" (click)="suspenderModal = null">Voltar</button>
+      <button class="btn danger" type="button" (click)="confirmarSuspensao()">Suspender acesso</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" *ngIf="reativarModal as empresa">
+  <div class="overlay-card">
+    <h4>Reativar acesso</h4>
+    <p>Usuários precisarão fazer novo login. Sessões antigas não serão reativadas.</p>
+    <div class="overlay-actions">
+      <button class="btn" type="button" (click)="reativarModal = null">Voltar</button>
+      <button class="btn primary" type="button" (click)="confirmarReativacao()">Reativar acesso</button>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" *ngIf="excluirModal as empresa">

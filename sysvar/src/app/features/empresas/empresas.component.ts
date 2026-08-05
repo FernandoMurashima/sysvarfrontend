@@ -31,6 +31,11 @@ export class EmpresasComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   excluirModal: Empresa | null = null;
+  suspenderModal: Empresa | null = null;
+  reativarModal: Empresa | null = null;
+  suspensaoMotivo = 'INADIMPLENCIA';
+  suspensaoObservacao = '';
+  suspensaoConfirmacao = '';
   private successTimer: any = null;
 
   empresasAll: Empresa[] = [];
@@ -430,6 +435,47 @@ export class EmpresasComponent implements OnInit {
 
   fecharExclusao(): void {
     this.excluirModal = null;
+  }
+
+  abrirSuspender(row: Empresa): void {
+    this.suspenderModal = row;
+    this.suspensaoMotivo = 'INADIMPLENCIA';
+    this.suspensaoObservacao = '';
+    this.suspensaoConfirmacao = '';
+  }
+
+  confirmarSuspensao(): void {
+    const row = this.suspenderModal;
+    if (!row?.id) return;
+    this.api.suspender(row.id, {
+      motivo: this.suspensaoMotivo,
+      observacao: this.suspensaoObservacao,
+      confirmacao: this.suspensaoConfirmacao,
+    }).subscribe({
+      next: () => {
+        this.suspenderModal = null;
+        this.setSuccess('Acesso da empresa suspenso.');
+        this.load();
+      },
+      error: (err) => this.errorMsg = this.errorText(err),
+    });
+  }
+
+  abrirReativar(row: Empresa): void {
+    this.reativarModal = row;
+  }
+
+  confirmarReativacao(): void {
+    const row = this.reativarModal;
+    if (!row?.id) return;
+    this.api.reativar(row.id).subscribe({
+      next: () => {
+        this.reativarModal = null;
+        this.setSuccess('Acesso da empresa reativado.');
+        this.load();
+      },
+      error: (err) => this.errorMsg = this.errorText(err),
+    });
   }
 
   onPageSizeChange(size: string): void {

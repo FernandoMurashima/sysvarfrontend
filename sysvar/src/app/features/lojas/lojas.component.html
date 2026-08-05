@@ -65,6 +65,8 @@
     <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="editarSelecionado()">✎ Editar</button>
     <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="duplicarSelecionado()">⧉ Duplicar</button>
     <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo" (click)="alternarAtivoSelecionado()">{{ selectedLoja && isAtiva(selectedLoja) ? '⊘ Inativar' : '↻ Reativar' }}</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo || !isAtiva(selectedLoja)" (click)="selectedLoja && abrirEncerrar(selectedLoja)">■ Encerrar</button>
+    <button class="btn" type="button" [disabled]="!selectedLoja || !podeEditarModulo || isAtiva(selectedLoja) || !selectedLoja.DataEnceramento" (click)="selectedLoja && confirmarReabrir(selectedLoja)">↻ Reabrir</button>
     <button class="btn" type="button" [disabled]="!selectedLoja" (click)="historicoSelecionado()">↺ Histórico</button>
     <button class="btn danger-soft" type="button" [disabled]="!selectedLoja || !podeExcluirModulo" (click)="excluirSelecionado()">⌫ Excluir</button>
   </section>
@@ -178,6 +180,16 @@
     <h4>Reativar estabelecimento</h4>
     <p>Confirma a reativação do estabelecimento <strong>{{ loja.nome_loja }}</strong>?</p>
     <div class="overlay-actions"><button class="btn" type="button" (click)="reativarModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarReativar()">Reativar</button></div>
+  </div>
+</div>
+
+<div class="overlay" *ngIf="encerrarModal as loja">
+  <div class="overlay-card">
+    <h4>Encerrar estabelecimento</h4>
+    <p>Confirma o encerramento do estabelecimento <strong>{{ loja.nome_loja }}</strong>?</p>
+    <label class="input-item">Data<input type="date" [(ngModel)]="encerramentoData" /></label>
+    <label class="input-item">Motivo<textarea rows="3" [(ngModel)]="encerramentoMotivo"></textarea></label>
+    <div class="overlay-actions"><button class="btn" type="button" (click)="encerrarModal = null">Voltar</button><button class="btn primary" type="button" [disabled]="!encerramentoData || !encerramentoMotivo.trim()" (click)="confirmarEncerrar()">Encerrar</button></div>
   </div>
 </div>
 

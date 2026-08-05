@@ -41,6 +41,12 @@ export interface EmpresaContrato {
   excedente?: number;
   warning?: string;
   modulos_contratados?: EmpresaModulo[];
+  motivo_suspensao?: string | null;
+  observacao_suspensao?: string | null;
+  suspenso_em?: string | null;
+  suspenso_por?: number | null;
+  reativado_em?: string | null;
+  reativado_por?: number | null;
 }
 
 export interface ModuloSistema {

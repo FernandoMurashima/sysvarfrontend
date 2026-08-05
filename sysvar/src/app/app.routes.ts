@@ -87,7 +87,7 @@ export const routes: Routes = [
     children: [
       { path: 'home', component: HomeComponent },
 
-      { path: 'empresas', component: EmpresasComponent, data: { roles: ['Admin'], superOnly: true, moduloEmpresa: 'operacional' } },
+      { path: 'empresas', component: EmpresasComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'clientes', component: ClientesComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'], moduloEmpresa: 'cadastros' } },
       { path: 'lojas', component: LojasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
       { path: 'ajuda/lojas', component: LojasAjudaComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
@@ -153,8 +153,8 @@ export const routes: Routes = [
       { path: 'loja/pdv-offline', component: PdvDesktopComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'loja/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'vendas' } },
 
-      { path: 'config/usuarios', component: UsuariosComponent, data: { roles: ['Admin'], moduloEmpresa: 'operacional' } },
-      { path: 'config/perfis', component: PerfisAcessoComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
+      { path: 'config/usuarios', component: UsuariosComponent, data: { moduloEmpresa: 'operacional' } },
+      { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'configuracoes' } },
       { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
 
       // ⬇️ rota de coleções

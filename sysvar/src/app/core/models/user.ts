@@ -14,7 +14,7 @@ export interface User {
   loja?: { Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string } | null;
   Idlojas?: number[];
   lojas?: Array<{ Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string }>;
-  permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
+  permissoes_modulos?: Array<{ modulo: string; acesso: 'HERDAR' | 'NONE' | 'VIEW' | 'EDIT' }>;
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
   perfil_principal?: { id: number; nome: string; descricao?: string; ativo: boolean; padrao?: boolean } | null;
   perfil_principal_id?: number | null;

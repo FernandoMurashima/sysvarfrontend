@@ -71,6 +71,9 @@ export class LojasComponent implements OnInit {
   consultaModal: Loja | null = null;
   inativarModal: Loja | null = null;
   reativarModal: Loja | null = null;
+  encerrarModal: Loja | null = null;
+  encerramentoData = '';
+  encerramentoMotivo = '';
   historicoModal: Loja | null = null;
   errorOverlayOpen = false;
   advancedOpen = false;
@@ -147,6 +150,7 @@ export class LojasComponent implements OnInit {
   lojas: Loja[] = [];
   empresas: Empresa[] = [];
   usuarioAtual: User | null = null;
+  indicadoresApi = { total: 0, ativos: 0, inativos: 0, lojas: 0, matrizes: 0, fabricas: 0 };
 
   page = 1;
   pageSize = 20;
@@ -179,14 +183,13 @@ export class LojasComponent implements OnInit {
   }
 
   get indicadores() {
-    const base = this.lojasAll;
-    const total = base.length;
-    const count = (fn: (l: Loja) => boolean) => base.filter(fn).length;
-    const ativas = count(l => this.isAtiva(l));
-    const fabricas = count(l => (l.tipo_unidade || '').toUpperCase() === 'FABRICA');
-    const matrizes = count(l => (l.Matriz || '').toUpperCase() === 'SIM');
-    const filiais = count(l => ['LOJA', 'MATRIZ'].includes((l.tipo_unidade || '').toUpperCase()));
-    return { total, ativas, fabricas, matrizes, filiais };
+    return {
+      total: this.indicadoresApi.total,
+      ativas: this.indicadoresApi.ativos,
+      fabricas: this.indicadoresApi.fabricas,
+      matrizes: this.indicadoresApi.matrizes,
+      filiais: this.indicadoresApi.lojas,
+    };
   }
 
   ngOnInit(): void {
@@ -316,7 +319,19 @@ export class LojasComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000 }).subscribe({
+    const params: any = {
+      search: this.search,
+      page: this.page,
+      page_size: this.pageSize,
+      ordering: this.sortOrdering(),
+    };
+    if (this.filterEmpresa) params.empresa = this.filterEmpresa;
+    if (this.filterTipo) params.tipo_unidade = this.filterTipo;
+    if (this.filterCidade) params.cidade = this.filterCidade;
+    if (this.filterEstado) params.estado = this.filterEstado;
+    if (this.filterStatus) params.ativo = this.filterStatus === 'ATIVA';
+    if (this.filterCnpj) params.cnpj = this.filterCnpj;
+    this.api.list(params).subscribe({
       next: (res: any) => {
         const rawArr: Loja[] = Array.isArray(res) ? res : (res?.results ?? []);
         const arr = rawArr.map(item => ({
@@ -333,8 +348,12 @@ export class LojasComponent implements OnInit {
           ambiente_fiscal: (item as any).ambiente_fiscal ?? 'HOMOLOGACAO',
         })) as Loja[];
         this.lojasAll = arr;
-        this.page = 1;
-        this.applyPage();
+        this.lojas = arr;
+        this.total = Array.isArray(res) ? arr.length : (res?.count ?? arr.length);
+        if (this.selectedLoja && !arr.some(l => this.lojaId(l) === this.lojaId(this.selectedLoja))) {
+          this.selectedLoja = null;
+        }
+        this.loadIndicadores();
         this.loading = false;
         this.errorMsg = '';
       },
@@ -349,32 +368,24 @@ export class LojasComponent implements OnInit {
   }
 
   applyPage(): void {
-    const filtered = this.lojasFiltradas;
-    this.total = filtered.length;
-    if (this.page > this.totalPages) this.page = this.totalPages;
-    const start = (this.page - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.lojas = filtered.slice(start, end);
-    if (this.selectedLoja && !filtered.some(l => this.lojaId(l) === this.lojaId(this.selectedLoja))) {
-      this.selectedLoja = null;
-    }
+    this.load();
   }
   onPageSizeChange(size: number | string): void {
     this.pageSize = Number(size) || 20;
     localStorage.setItem('sysvar.list.lojas.pageSize', String(this.pageSize));
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
   onPageChange(page: number): void {
     this.page = Math.max(1, Math.min(page, this.totalPages));
-    this.applyPage();
+    this.load();
   }
-  firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
-  prevPage(): void  { if (this.page > 1) { this.page--; this.applyPage(); } }
-  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
-  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void  { if (this.page > 1) { this.page--; this.load(); } }
+  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.applyPage(); }
+  doSearch(): void { this.page = 1; this.load(); }
   clearSearch(): void {
     this.search = '';
     this.filterEmpresa = '';
@@ -384,7 +395,7 @@ export class LojasComponent implements OnInit {
     this.filterStatus = '';
     this.filterCnpj = '';
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
 
   lojaId(loja: Loja | null): number | string | null {
@@ -443,7 +454,7 @@ export class LojasComponent implements OnInit {
     this.pageSize = 20;
     this.columns = this.columns.map(c => ({ ...c, visible: true }));
     this.saveColumnsPreference();
-    this.applyPage();
+    this.load();
   }
 
   @HostListener('window:sysvar-lojas-toggle-indicators')
@@ -734,26 +745,63 @@ export class LojasComponent implements OnInit {
   confirmarInativar(): void {
     const id = this.inativarModal ? ((this.inativarModal as any).id ?? (this.inativarModal as any).Idloja) : null;
     if (!id) return;
-    this.api.patch(id, { ativo: false } as any).subscribe({
+    this.api.inativar(id).subscribe({
       next: () => {
         this.inativarModal = null;
         this.successMsg = 'Estabelecimento inativado com sucesso.';
         this.load();
       },
-      error: () => this.errorMsg = 'Não foi possível inativar o estabelecimento.'
+      error: (err) => {
+        const impedimentos = err?.error?.impedimentos;
+        this.errorMsg = Array.isArray(impedimentos) && impedimentos.length
+          ? `Não foi possível inativar: ${impedimentos.join(', ')}.`
+          : 'Não foi possível inativar o estabelecimento.';
+      }
     });
   }
 
   confirmarReativar(): void {
     const id = this.reativarModal ? ((this.reativarModal as any).id ?? (this.reativarModal as any).Idloja) : null;
     if (!id) return;
-    this.api.patch(id, { ativo: true } as any).subscribe({
+    this.api.ativar(id).subscribe({
       next: () => {
         this.reativarModal = null;
         this.successMsg = 'Estabelecimento reativado com sucesso.';
         this.load();
       },
       error: () => this.errorMsg = 'Não foi possível reativar o estabelecimento.'
+    });
+  }
+
+  abrirEncerrar(item: Loja): void {
+    if (!this.podeEditarModulo) return;
+    this.encerrarModal = item;
+    this.encerramentoData = new Date().toISOString().slice(0, 10);
+    this.encerramentoMotivo = '';
+  }
+
+  confirmarEncerrar(): void {
+    const id = this.encerrarModal ? ((this.encerrarModal as any).id ?? (this.encerrarModal as any).Idloja) : null;
+    if (!id) return;
+    this.api.encerrar(id, { data: this.encerramentoData, motivo: this.encerramentoMotivo }).subscribe({
+      next: () => {
+        this.encerrarModal = null;
+        this.successMsg = 'Estabelecimento encerrado com sucesso.';
+        this.load();
+      },
+      error: () => this.errorMsg = 'Não foi possível encerrar o estabelecimento.'
+    });
+  }
+
+  confirmarReabrir(item: Loja): void {
+    const id = (item as any).id ?? (item as any).Idloja;
+    if (!id || !this.podeEditarModulo) return;
+    this.api.reabrir(id).subscribe({
+      next: () => {
+        this.successMsg = 'Estabelecimento reaberto com sucesso.';
+        this.load();
+      },
+      error: () => this.errorMsg = 'Não foi possível reabrir o estabelecimento.'
     });
   }
 
@@ -764,6 +812,8 @@ export class LojasComponent implements OnInit {
     if (key === 'historico') this.historicoModal = loja;
     if (key === 'inativar') this.abrirInativar(loja);
     if (key === 'reativar') this.abrirReativar(loja);
+    if (key === 'encerrar') this.abrirEncerrar(loja);
+    if (key === 'reabrir') this.confirmarReabrir(loja);
     if (key === 'excluir') this.excluir(loja);
   }
 
@@ -774,6 +824,8 @@ export class LojasComponent implements OnInit {
       { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
       { key: 'duplicar', label: 'Duplicar', icon: '⧉', visible: this.podeEditarModulo },
       { key: ativa ? 'inativar' : 'reativar', label: ativa ? 'Inativar' : 'Reativar', icon: ativa ? '⊘' : '↻', visible: this.podeEditarModulo },
+      { key: 'encerrar', label: 'Encerrar', icon: '■', visible: ativa && this.podeEditarModulo },
+      { key: 'reabrir', label: 'Reabrir', icon: '↻', visible: !ativa && !!loja.DataEnceramento && this.podeEditarModulo },
       { key: 'historico', label: 'Histórico', icon: '↺' },
       { key: 'excluir', label: 'Excluir', icon: '×', danger: true, dividerBefore: true, visible: this.podeExcluirModulo },
     ];
@@ -786,7 +838,34 @@ export class LojasComponent implements OnInit {
       this.sortKey = key;
       this.sortDir = 'asc';
     }
-    this.applyPage();
+    this.load();
+  }
+
+  private sortOrdering(): string {
+    const map: Record<string, string> = {
+      nome: 'nome_loja',
+      empresa: 'empresa',
+      tipo: 'tipo_unidade',
+      cidade: 'cidade',
+      status: 'ativo',
+      data: 'data_cadastro',
+    };
+    const field = map[this.sortKey] || 'nome_loja';
+    return this.sortDir === 'desc' ? `-${field}` : field;
+  }
+
+  private loadIndicadores(): void {
+    this.api.indicadores().subscribe({
+      next: (data: any) => this.indicadoresApi = {
+        total: Number(data?.total || 0),
+        ativos: Number(data?.ativos || 0),
+        inativos: Number(data?.inativos || 0),
+        lojas: Number(data?.lojas || 0),
+        matrizes: Number(data?.matrizes || 0),
+        fabricas: Number(data?.fabricas || 0),
+      },
+      error: () => {}
+    });
   }
 
   sortIcon(key: typeof this.sortKey): string {

@@ -26,7 +26,9 @@ type Loja = {
 type ModuloPermissao = {
   key: string;
   label: string;
-  acesso: 'NONE' | 'VIEW' | 'EDIT';
+  perfil?: 'NONE' | 'VIEW' | 'EDIT';
+  acesso: 'HERDAR' | 'NONE' | 'VIEW' | 'EDIT';
+  efetivo?: 'NONE' | 'VIEW' | 'EDIT';
 };
 
 type CampoPermissao = {
@@ -93,6 +95,8 @@ export class UsuariosComponent implements OnInit {
   page = 1;
   pageSize = 20;
   pageSizeOptions = [10, 20, 50, 100];
+  total = 0;
+  indicadoresApi = { total: 0, ativos: 0, inativos: 0, masters: 0, com_sessao_ativa: 0 };
   private readonly columnsStorageKey = 'sysvar.list.usuarios.columns';
   private readonly viewPrefsKey = 'sysvar.ui.preferences.usuarios';
   columns = [
@@ -119,22 +123,7 @@ export class UsuariosComponent implements OnInit {
     'AssistentePagar'
   ];
 
-  modulosPermissao: ModuloPermissao[] = [
-    { key: 'operacional', label: 'Operacional', acesso: 'VIEW' },
-    { key: 'cadastros', label: 'Cadastros', acesso: 'EDIT' },
-    { key: 'produtos', label: 'Produtos', acesso: 'EDIT' },
-    { key: 'compras', label: 'Compras', acesso: 'EDIT' },
-    { key: 'estoque', label: 'Estoque', acesso: 'EDIT' },
-    { key: 'distribuicao', label: 'Distribuição', acesso: 'NONE' },
-    { key: 'producao', label: 'Produção', acesso: 'NONE' },
-    { key: 'vendas', label: 'Vendas', acesso: 'EDIT' },
-    { key: 'financeiro', label: 'Financeiro', acesso: 'NONE' },
-    { key: 'fiscal_contabil', label: 'Fiscal e Contábil', acesso: 'NONE' },
-    { key: 'fiscal', label: 'Fiscal legado', acesso: 'NONE' },
-    { key: 'relatorios', label: 'Relatórios legado', acesso: 'VIEW' },
-    { key: 'configuracoes', label: 'Configurações', acesso: 'VIEW' },
-    { key: 'auditoria', label: 'Auditoria', acesso: 'NONE' },
-  ];
+  modulosPermissao: ModuloPermissao[] = [];
 
   camposPermissao: CampoPermissao[] = [
     { key: 'funcionario.salario', label: 'Ver salário de funcionários', pode_ver: false },
@@ -184,6 +173,7 @@ export class UsuariosComponent implements OnInit {
     this.load();
     this.loadLojas();
     this.loadPerfis();
+    this.loadModulos();
   }
 
   get isSuperUsuario(): boolean { return this.usuarioAtual?.is_superuser === true; }
@@ -231,6 +221,7 @@ export class UsuariosComponent implements OnInit {
         this.auth.setCurrentUser(user as any);
         this.usuarioAtual = user as User;
         this.loadEmpresas();
+        this.loadModulos();
       },
       error: () => {
         if (!cached) this.loadEmpresas();
@@ -253,7 +244,7 @@ export class UsuariosComponent implements OnInit {
   }
 
   private loadLojas() {
-    this.lojasApi.list({ ordering: 'nome_loja', page_size: 2000 }).subscribe({
+    this.lojasApi.list({ ordering: 'nome_loja', page_size: 100 }).subscribe({
       next: (res: any) => {
         this.lojas = Array.isArray(res) ? res : (res?.results ?? []);
       },
@@ -272,14 +263,21 @@ export class UsuariosComponent implements OnInit {
   }
 
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.load(); }
-  doSearch() { this.page = 1; }
-  clearSearch() { this.search = ''; this.filterType = ''; this.filterStatus = ''; this.page = 1; }
+  doSearch() { this.page = 1; this.load(); }
+  clearSearch() { this.search = ''; this.filterType = ''; this.filterStatus = ''; this.page = 1; this.load(); }
 
   load() {
     this.loading = true;
     this.errorMsg = '';
-    this.api.list({ search: this.search, ordering: '-id' }).subscribe({
-      next: (data) => { this.usuarios = Array.isArray(data) ? data : (data as any).results ?? []; this.page = 1; },
+    const params: any = { search: this.search, ordering: '-id', page: this.page, page_size: this.pageSize };
+    if (this.filterType) params.type = this.filterType;
+    if (this.filterStatus) params.ativo = this.filterStatus === 'ativo';
+    this.api.list(params).subscribe({
+      next: (data) => {
+        this.usuarios = Array.isArray(data) ? data : (data as any).results ?? [];
+        this.total = Array.isArray(data) ? this.usuarios.length : ((data as any).count ?? this.usuarios.length);
+        this.loadIndicadores();
+      },
       error: (err) => { this.errorMsg = 'Falha ao carregar usuários.'; console.error(err); },
       complete: () => this.loading = false
     });
@@ -375,11 +373,7 @@ export class UsuariosComponent implements OnInit {
     }
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
-    const perfil = this.perfilSelecionado();
-    const modulosPermitidos = perfil?.permissoes_modulos?.length
-      ? new Set(perfil.permissoes_modulos.filter(p => p.acesso !== 'NONE').map(p => p.modulo_chave).filter((key): key is string => !!key))
-      : null;
-    payload.permissoes_modulos = this.modulosPermissao.filter(m => !modulosPermitidos || modulosPermitidos.has(m.key)).map(m => ({
+    payload.permissoes_modulos = this.modulosPermissao.map(m => ({
       modulo: m.key,
       acesso: m.acesso,
     }));
@@ -391,32 +385,19 @@ export class UsuariosComponent implements OnInit {
   }
 
   private resetPermissoes(): void {
-    const padrao: Record<string, 'NONE' | 'VIEW' | 'EDIT'> = {
-      operacional: 'VIEW',
-      cadastros: 'EDIT',
-      produtos: 'EDIT',
-      compras: 'EDIT',
-      estoque: 'EDIT',
-      distribuicao: 'NONE',
-      producao: 'NONE',
-      vendas: 'EDIT',
-      financeiro: 'NONE',
-      fiscal_contabil: 'NONE',
-      fiscal: 'NONE',
-      relatorios: 'VIEW',
-      configuracoes: 'VIEW',
-      auditoria: 'NONE',
-    };
-    this.modulosPermissao = this.modulosPermissao.map(m => ({ ...m, acesso: padrao[m.key] || 'NONE' }));
+    this.modulosPermissao = this.modulosPermissao.map(m => ({ ...m, acesso: 'HERDAR', perfil: 'NONE', efetivo: 'NONE' }));
     this.camposPermissao = this.camposPermissao.map(c => ({ ...c, pode_ver: false }));
     this.normalizarPermissoesPorTipo();
   }
 
   private aplicarPermissoesUsuario(item: User): void {
     const modulos = new Map((item.permissoes_modulos || []).map(p => [p.modulo, p.acesso]));
+    const detalhadas = new Map(((item as any).permissoes_efetivas_detalhadas || []).map((p: any) => [p.modulo, p]));
     this.modulosPermissao = this.modulosPermissao.map(m => ({
       ...m,
-      acesso: (modulos.get(m.key) as any) || m.acesso,
+      perfil: (detalhadas.get(m.key) as any)?.perfil || m.perfil || 'NONE',
+      acesso: (modulos.get(m.key) as any) || 'HERDAR',
+      efetivo: (detalhadas.get(m.key) as any)?.efetivo || (item.permissoes_efetivas?.[m.key] as any) || m.efetivo || 'NONE',
     }));
     const campos = new Map((item.permissoes_campos || []).map(p => [p.campo, p.pode_ver]));
     this.camposPermissao = this.camposPermissao.map(c => ({
@@ -427,16 +408,9 @@ export class UsuariosComponent implements OnInit {
 
   onTipoChange(): void {
     this.normalizarPermissoesPorTipo();
-    this.selecionarPerfilPadraoPorTipo();
-    this.aplicarPerfilSelecionado();
   }
 
   private normalizarPermissoesPorTipo(): void {
-    if (this.usuarioFormularioAdmin) return;
-    this.modulosPermissao = this.modulosPermissao.map(m => ({
-      ...m,
-      acesso: m.acesso === 'EDIT' ? 'VIEW' : m.acesso,
-    }));
   }
 
   private validatePasswordPair(): string | null {
@@ -644,22 +618,27 @@ export class UsuariosComponent implements OnInit {
   }
 
   get usuariosPaginados(): User[] {
-    return this.usuariosFiltrados.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
+    return this.usuarios;
   }
 
-  get totalFiltrado(): number { return this.usuariosFiltrados.length; }
+  get totalFiltrado(): number { return this.total; }
   get totalPages(): number { return Math.max(1, Math.ceil(this.totalFiltrado / this.pageSize)); }
   get pageStart(): number { return this.totalFiltrado ? (this.page - 1) * this.pageSize + 1 : 0; }
   get pageEnd(): number { return Math.min(this.page * this.pageSize, this.totalFiltrado); }
   get indicadores() {
-    const total = this.usuarios.length;
-    return { total, ativos: this.usuarios.filter(u => u.is_staff !== false).length, admins: this.usuarios.filter(u => u.type === 'Admin').length, lojas: this.usuarios.filter(u => !!u.Idloja || !!u.loja).length, filtrados: this.totalFiltrado };
+    return {
+      total: this.indicadoresApi.total,
+      ativos: this.indicadoresApi.ativos,
+      admins: this.indicadoresApi.masters,
+      lojas: this.indicadoresApi.com_sessao_ativa,
+      filtrados: this.totalFiltrado,
+    };
   }
-  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 20; localStorage.setItem('sysvar.list.usuarios.pageSize', String(this.pageSize)); this.page = 1; }
-  firstPage(): void { this.page = 1; }
-  prevPage(): void { if (this.page > 1) this.page--; }
-  nextPage(): void { if (this.page < this.totalPages) this.page++; }
-  lastPage(): void { this.page = this.totalPages; }
+  onPageSizeChange(v: string): void { this.pageSize = Number(v) || 20; localStorage.setItem('sysvar.list.usuarios.pageSize', String(this.pageSize)); this.page = 1; this.load(); }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void { if (this.page > 1) { this.page--; this.load(); } }
+  nextPage(): void { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
   visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
   toggleColumn(key: string, checked: boolean): void { const col = this.columns.find(c => c.key === key); if (!col || col.required) return; col.visible = checked; this.saveColumnsPreference(); }
   selecionarUsuario(u: User): void { this.selectedUser = this.selectedUser?.id === u.id ? null : u; }
@@ -669,7 +648,7 @@ export class UsuariosComponent implements OnInit {
   excluirSelecionado(): void { if (this.selectedUser && this.podeExcluirModulo) this.excluir(this.selectedUser); }
   toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
   toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
-  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.usuarios.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); }
+  restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.usuarios.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.load(); }
   @HostListener('window:sysvar-usuarios-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
   @HostListener('window:sysvar-usuarios-toggle-filters') onToggleFiltersEvent(): void { this.toggleFilters(); }
   @HostListener('window:sysvar-usuarios-restore-view') onRestoreViewEvent(): void { this.restoreViewPreference(); }
@@ -722,16 +701,7 @@ export class UsuariosComponent implements OnInit {
 
   private selecionarPerfilPadraoPorTipo(): void {
     if (!this.perfis.length || this.form.getRawValue().perfil_principal_id) return;
-    const tipo = this.form.getRawValue().type as User['type'];
-    const nomePreferido =
-      tipo === 'Admin' || tipo === 'Diretor' ? 'Administrador delegado' :
-      tipo === 'Gerente' ? 'Gerente' :
-      tipo === 'Vendedor' ? 'Vendedor' :
-      tipo === 'Caixa' ? 'Caixa' :
-      tipo === 'AssistenteReceber' ? 'Financeiro' :
-      tipo === 'AssistentePagar' ? 'Compras' :
-      'Regular';
-    const perfil = this.perfis.find(p => p.nome === nomePreferido) || this.perfis.find(p => p.padrao) || this.perfis[0];
+    const perfil = this.perfis.find(p => p.padrao) || this.perfis[0];
     if (perfil?.id) this.form.patchValue({ perfil_principal_id: perfil.id });
   }
 
@@ -741,9 +711,45 @@ export class UsuariosComponent implements OnInit {
     const perms = new Map(perfil.permissoes_modulos.map(p => [p.modulo_chave, p.acesso]));
     this.modulosPermissao = this.modulosPermissao.map(m => ({
       ...m,
-      acesso: (perms.get(m.key) as any) || 'NONE',
+      perfil: (perms.get(m.key) as any) || 'NONE',
+      efetivo: m.acesso === 'HERDAR' ? ((perms.get(m.key) as any) || 'NONE') : m.acesso,
     }));
     this.normalizarPermissoesPorTipo();
+  }
+
+  private loadModulos(): void {
+    this.accessApi.modulos().subscribe({
+      next: (res: any) => {
+        const disponiveis = new Set(this.usuarioAtual?.modulos_disponiveis_empresa || []);
+        const modulos = (Array.isArray(res) ? res : (res?.results ?? []))
+          .filter((m: any) => !disponiveis.size || disponiveis.has(m.chave));
+        const atuais = new Map(this.modulosPermissao.map(m => [m.key, m]));
+        this.modulosPermissao = modulos.map((m: any) => ({
+          key: m.chave,
+          label: m.nome,
+          perfil: atuais.get(m.chave)?.perfil || 'NONE',
+          acesso: atuais.get(m.chave)?.acesso || 'HERDAR',
+          efetivo: atuais.get(m.chave)?.efetivo || 'NONE',
+        }));
+        this.aplicarPerfilSelecionado();
+      },
+      error: () => {
+        this.modulosPermissao = [];
+      }
+    });
+  }
+
+  private loadIndicadores(): void {
+    this.api.indicadores().subscribe({
+      next: (data: any) => this.indicadoresApi = {
+        total: Number(data?.total || 0),
+        ativos: Number(data?.ativos || 0),
+        inativos: Number(data?.inativos || 0),
+        masters: Number(data?.masters || 0),
+        com_sessao_ativa: Number(data?.com_sessao_ativa || 0),
+      },
+      error: () => {}
+    });
   }
 
   onLojaPrincipalChange(): void {
