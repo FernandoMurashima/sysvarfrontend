@@ -26,6 +26,11 @@ describe('AuditoriaComponent', () => {
         { provide: AuthService, useValue: auth },
       ],
     }).compileComponents();
+    auditApi.list.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
+    auditApi.getIndicators.and.returnValue(of({ total: 0, success: 0, failure: 0, denied: 0, critical: 0 }));
+    auditApi.exportCsv.and.returnValue(of(new Blob()));
+    auth.getCurrentUser.and.returnValue({ is_superuser: false, is_company_master: false });
+    auth.podeAcessarModulo.and.callFake((_m: string, edit?: boolean) => edit ? false : true);
     fixture = TestBed.createComponent(AuditoriaComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -53,10 +58,31 @@ describe('AuditoriaComponent', () => {
     expect(component.canExport).toBeFalse();
   });
 
+  it('exibe exportacao para EDIT e master', () => {
+    auth.podeAcessarModulo.and.callFake((_m: string, edit?: boolean) => edit ? true : true);
+    expect(component.canExport).toBeTrue();
+    auth.podeAcessarModulo.and.returnValue(false);
+    auth.getCurrentUser.and.returnValue({ is_superuser: false, is_company_master: true });
+    expect(component.canExport).toBeTrue();
+  });
+
   it('trata erro 403', () => {
     auditApi.list.and.returnValue(throwError(() => ({ status: 403 })));
     component.load();
     expect(component.errorMsg).toContain('Sem permissão');
+  });
+
+  it('trata erro 403 de filtros de empresa ou loja', () => {
+    auditApi.list.and.returnValue(throwError(() => ({ status: 403, error: { detail: 'Sem permissão para consultar auditoria desta loja.' } })));
+    component.filters.loja = 2;
+    component.load();
+    expect(component.errorMsg).toContain('Sem permissão');
+  });
+
+  it('nao possui comandos de editar ou excluir', () => {
+    const text = fixture.nativeElement.textContent.toLowerCase();
+    expect(text).not.toContain('editar');
+    expect(text).not.toContain('excluir');
   });
 
   it('exibe antes e depois no detalhe', () => {

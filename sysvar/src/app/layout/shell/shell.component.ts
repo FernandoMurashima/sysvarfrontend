@@ -46,7 +46,7 @@ export class ShellComponent {
         { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', roles: this.cadastrosRoles, moduloEmpresa: 'operacional' },
         { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', roles: ['Admin'], moduloEmpresa: 'operacional' },
         { label: 'Perfis de acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', roles: ['Admin'], moduloEmpresa: 'configuracoes' },
-        { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', roles: ['Admin'], moduloEmpresa: 'auditoria' },
+        { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', moduloEmpresa: 'auditoria' },
       ]
     },
 

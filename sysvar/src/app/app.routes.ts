@@ -155,7 +155,7 @@ export const routes: Routes = [
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { roles: ['Admin'], moduloEmpresa: 'operacional' } },
       { path: 'config/perfis', component: PerfisAcessoComponent, data: { roles: ['Admin'], moduloEmpresa: 'configuracoes' } },
-      { path: 'config/auditoria', component: AuditoriaComponent, data: { roles: ['Admin'], moduloEmpresa: 'auditoria' } },
+      { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
 
       // ⬇️ rota de coleções
 
