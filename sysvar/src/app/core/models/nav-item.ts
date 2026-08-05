@@ -1,4 +1,6 @@
 // src/app/core/models/nav-item.ts
+import { ModuloEmpresa } from '../auth.service';
+
 export type UserRole =
   | 'Regular'
   | 'Vendedor'
@@ -18,18 +20,5 @@ export interface NavItem {
   children?: NavItem[]; // submenus
   roles?: UserRole[];   // <- agora usando o tipo exportado
   superOnly?: boolean;
-  moduloEmpresa?:
-    | 'operacional'
-    | 'cadastros'
-    | 'produtos'
-    | 'vendas'
-    | 'compras'
-    | 'estoque'
-    | 'distribuicao'
-    | 'financeiro'
-    | 'fiscal'
-    | 'fiscal_contabil'
-    | 'producao'
-    | 'relatorios'
-    | 'configuracoes';
+  moduloEmpresa?: ModuloEmpresa;
 }

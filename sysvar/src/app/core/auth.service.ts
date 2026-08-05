@@ -65,7 +65,8 @@ export type ModuloEmpresa =
   | 'fiscal_contabil'
   | 'producao'
   | 'relatorios'
-  | 'configuracoes';
+  | 'configuracoes'
+  | 'auditoria';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

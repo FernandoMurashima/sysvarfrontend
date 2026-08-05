@@ -133,6 +133,7 @@ export class UsuariosComponent implements OnInit {
     { key: 'fiscal', label: 'Fiscal legado', acesso: 'NONE' },
     { key: 'relatorios', label: 'Relatórios legado', acesso: 'VIEW' },
     { key: 'configuracoes', label: 'Configurações', acesso: 'VIEW' },
+    { key: 'auditoria', label: 'Auditoria', acesso: 'NONE' },
   ];
 
   camposPermissao: CampoPermissao[] = [
@@ -404,6 +405,7 @@ export class UsuariosComponent implements OnInit {
       fiscal: 'NONE',
       relatorios: 'VIEW',
       configuracoes: 'VIEW',
+      auditoria: 'NONE',
     };
     this.modulosPermissao = this.modulosPermissao.map(m => ({ ...m, acesso: padrao[m.key] || 'NONE' }));
     this.camposPermissao = this.camposPermissao.map(c => ({ ...c, pode_ver: false }));

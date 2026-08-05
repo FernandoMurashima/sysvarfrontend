@@ -1,0 +1,117 @@
+<section class="auditoria-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Auditoria do Sistema</h1>
+      <button class="info-button" type="button" title="Consulta central dos eventos auditados.">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button" (click)="limpar()" [disabled]="loading">Limpar filtros</button>
+      <button class="btn primary" type="button" (click)="load()" [disabled]="loading">{{ loading ? 'Atualizando...' : 'Atualizar' }}</button>
+    </div>
+  </section>
+
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">T</span><div><strong>{{ indicators.total }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon green">S</span><div><strong>{{ indicators.success }}</strong><small>Sucessos</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">F</span><div><strong>{{ indicators.failure }}</strong><small>Falhas</small></div></div>
+    <div class="indicator"><span class="indicator-icon slate">N</span><div><strong>{{ indicators.denied }}</strong><small>Negados</small></div></div>
+    <div class="indicator"><span class="indicator-icon red">C</span><div><strong>{{ indicators.critical }}</strong><small>Críticos</small></div></div>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <label class="inline-filter"><span>Início</span><input type="datetime-local" [(ngModel)]="filters.created_at_after"></label>
+    <label class="inline-filter"><span>Fim</span><input type="datetime-local" [(ngModel)]="filters.created_at_before"></label>
+    <label class="inline-filter" *ngIf="isSuperUsuario"><span>Empresa</span><input [(ngModel)]="filters.empresa" placeholder="ID"></label>
+    <label class="inline-filter"><span>Loja</span><input [(ngModel)]="filters.loja" placeholder="ID"></label>
+    <label class="inline-filter"><span>Usuário</span><input [(ngModel)]="filters.user" placeholder="ID"></label>
+    <label class="inline-filter"><span>Categoria</span><select [(ngModel)]="filters.category"><option value="">Todas</option><option *ngFor="let c of categories" [value]="c">{{ label(c) }}</option></select></label>
+    <label class="inline-filter"><span>Ação</span><input [(ngModel)]="filters.action"></label>
+    <label class="inline-filter"><span>Resultado</span><select [(ngModel)]="filters.result"><option value="">Todos</option><option *ngFor="let r of results" [value]="r">{{ label(r) }}</option></select></label>
+    <label class="inline-filter"><span>Severidade</span><select [(ngModel)]="filters.severity"><option value="">Todas</option><option *ngFor="let s of severities" [value]="s">{{ label(s) }}</option></select></label>
+    <label class="inline-filter"><span>Módulo</span><input [(ngModel)]="filters.app_label"></label>
+    <label class="inline-filter"><span>Entidade</span><input [(ngModel)]="filters.model"></label>
+    <label class="inline-filter"><span>Objeto</span><input [(ngModel)]="filters.object_id"></label>
+    <label class="inline-filter"><span>IP</span><input [(ngModel)]="filters.ip"></label>
+    <label class="inline-filter wide"><span>Request ID</span><input [(ngModel)]="filters.request_id"></label>
+    <label class="inline-filter wide"><span>Busca</span><input [(ngModel)]="filters.search" (keyup.enter)="consultar()"></label>
+  </section>
+
+  <section class="action-bar">
+    <button class="btn primary" type="button" (click)="consultar()" [disabled]="loading">Consultar</button>
+    <button class="btn" type="button" (click)="load()" [disabled]="loading">Atualizar</button>
+    <button class="btn" type="button" *ngIf="canExport" (click)="exportar()">Exportar CSV</button>
+    <button class="btn" type="button" (click)="limpar()">Limpar filtros</button>
+  </section>
+
+  <section class="results-area">
+    <div class="alert error" *ngIf="errorMsg">{{ errorMsg }}</div>
+    <div class="results-header">
+      <strong>Eventos</strong>
+      <span>Mostrando {{ pageStart }}-{{ pageEnd }} de {{ total }}</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="rows.length; else emptyTpl">
+        <thead>
+          <tr>
+            <th (click)="ordenar('created_at')">Data/hora</th>
+            <th>Usuário</th>
+            <th>Empresa</th>
+            <th>Loja</th>
+            <th (click)="ordenar('category')">Categoria</th>
+            <th (click)="ordenar('action')">Ação</th>
+            <th (click)="ordenar('result')">Resultado</th>
+            <th>Entidade</th>
+            <th>Objeto</th>
+            <th>IP</th>
+            <th (click)="ordenar('severity')">Severidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows" (click)="select(row)" [class.selected]="selected?.id === row.id">
+            <td>{{ row.created_at | date:'short' }}</td>
+            <td>{{ row.user_username || '-' }}</td>
+            <td>{{ row.empresa_nome || '-' }}</td>
+            <td>{{ row.loja_nome || '-' }}</td>
+            <td>{{ label(row.category) }}</td>
+            <td>{{ label(row.action) }}</td>
+            <td><span class="pill" [class.denied]="row.result === 'DENIED'" [class.failure]="row.result === 'FAILURE'">{{ label(row.result) }}</span></td>
+            <td>{{ row.entidade }}</td>
+            <td>{{ row.object_repr || row.object_id || '-' }}</td>
+            <td>{{ row.ip || '-' }}</td>
+            <td>{{ label(row.severity) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : emptyMsg }}</div></ng-template>
+    </div>
+
+    <div class="pager">
+      <div class="left">
+        <button class="btn" type="button" (click)="firstPage()" [disabled]="page <= 1">«</button>
+        <button class="btn" type="button" (click)="prevPage()" [disabled]="page <= 1">‹</button>
+      </div>
+      <div class="center">Página {{ page }} de {{ totalPages }}<span class="range">Mostrando {{ pageStart }}-{{ pageEnd }} de {{ total }}</span></div>
+      <div class="right">
+        <select [(ngModel)]="pageSize" (change)="pageSizeChanged()"><option [ngValue]="25">25</option><option [ngValue]="50">50</option><option [ngValue]="100">100</option></select>
+        <button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">›</button>
+        <button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">»</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="detail-panel" *ngIf="selected">
+    <div class="detail-header">
+      <div><strong>Detalhe do evento</strong><span>{{ selected.event_id }}</span></div>
+      <button class="btn" type="button" (click)="closeDetail()">Fechar</button>
+    </div>
+    <div class="empty-hint" *ngIf="detailLoading">Carregando detalhe...</div>
+    <ng-container *ngIf="detail">
+      <section><h2>Resumo</h2><p>{{ label(detail.action) }} · {{ label(detail.result) }} · {{ label(detail.severity) }} · {{ detail.created_at | date:'short' }}</p></section>
+      <section><h2>Contexto</h2><p>{{ detail.user_nome_snapshot || detail.username_snapshot || '-' }} · {{ detail.empresa_nome_snapshot || '-' }} · {{ detail.loja_nome_snapshot || '-' }}</p><p>{{ detail.session_id || '-' }} · {{ detail.device_id || '-' }} · {{ detail.ip || '-' }}</p><p class="muted">{{ detail.user_agent || '-' }}</p></section>
+      <section><h2>Objeto</h2><p>{{ detail.app_label }}.{{ detail.model }} · {{ detail.object_id || '-' }} · {{ detail.object_repr || '-' }}</p></section>
+      <section><h2>Alterações</h2><table class="changes-table"><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody><tr *ngFor="let row of diffRows(detail)"><td>{{ row.campo }}</td><td>{{ row.antes }}</td><td>{{ row.depois }}</td></tr></tbody></table></section>
+      <section><h2>Requisição</h2><p>{{ detail.request_id || '-' }} · {{ detail.correlation_id || '-' }}</p><p>{{ detail.http_method || '-' }} · {{ detail.endpoint || '-' }} · {{ detail.status_code || '-' }}</p></section>
+      <section *ngIf="detail.error_code || detail.error_message"><h2>Erro</h2><p>{{ detail.error_code || '-' }} · {{ detail.error_message }}</p></section>
+    </ng-container>
+  </aside>
+</section>
