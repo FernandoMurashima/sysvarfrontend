@@ -1,7 +1,7 @@
 <section class="page">
   <header class="titlebar">
     <h1>Perfis de acesso</h1>
-    <button type="button" (click)="novo()">Novo</button>
+    <button type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo</button>
   </header>
 
   <div class="message error" *ngIf="errorMsg">{{ errorMsg }}</div>
@@ -26,7 +26,7 @@
           <td>{{ perfil.ativo === false ? 'Não' : 'Sim' }}</td>
           <td>{{ perfil.padrao ? 'Sim' : 'Não' }}</td>
           <td>{{ perfil.usuarios_count || 0 }}</td>
-          <td><button type="button" (click)="editar(perfil)">Editar</button></td>
+          <td><button type="button" (click)="editar(perfil)">{{ podeEditarModulo ? 'Editar' : 'Consultar' }}</button></td>
         </tr>
       </tbody>
     </table>
@@ -43,15 +43,15 @@
       <tbody>
         <tr *ngFor="let perm of form.permissoes_modulos">
           <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" /></td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" /></td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" [disabled]="!podeEditarModulo" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" [disabled]="!podeEditarModulo" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" [disabled]="!podeEditarModulo" /></td>
         </tr>
       </tbody>
     </table>
 
     <div class="actions">
-      <button type="submit" [disabled]="saving">Salvar</button>
+      <button type="submit" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button>
       <button type="button" (click)="form = null">Cancelar</button>
     </div>
   </form>

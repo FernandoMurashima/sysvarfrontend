@@ -9,6 +9,7 @@ export interface User {
   empresa?: { id: number; nome: string; nome_fantasia?: string | null } | null;
   is_staff?: boolean;
   is_superuser?: boolean;
+  deve_trocar_senha?: boolean;
   Idloja?: number | null;
   loja_id?: number | null;
   loja?: { Idloja: number; empresa?: number | null; nome_loja?: string; apelido_loja?: string } | null;

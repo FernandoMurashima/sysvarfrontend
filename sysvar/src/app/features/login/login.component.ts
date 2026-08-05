@@ -37,8 +37,9 @@ export class LoginComponent {
     this.auth.login(username!, password!).subscribe({
       next: () => {
         this.successMsg = 'Login realizado com sucesso!';
+        const destino = this.auth.getCurrentUser()?.deve_trocar_senha ? '/change-password-required' : '/home';
         // pequeno delay só para o usuário ver o feedback
-        setTimeout(() => this.router.navigateByUrl('/home'), 400);
+        setTimeout(() => this.router.navigateByUrl(destino), 400);
       },
       error: (err) => {
         // tenta extrair mensagem vinda do backend; cai em genérica se não houver

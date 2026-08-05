@@ -71,6 +71,7 @@ import { DashboardEstoqueComponent } from './features/dashboard-estoque/dashboar
 import { DashboardFinanceiroComponent } from './features/dashboard-financeiro/dashboard-financeiro.component';
 import { PerfisAcessoComponent } from './features/perfis-acesso/perfis-acesso.component';
 import { AuditoriaComponent } from './features/auditoria/auditoria.component';
+import { ChangePasswordRequiredComponent } from './features/change-password-required/change-password-required.component';
 
 
 
@@ -86,11 +87,12 @@ export const routes: Routes = [
     canActivateChild: [authGuard],
     children: [
       { path: 'home', component: HomeComponent },
+      { path: 'change-password-required', component: ChangePasswordRequiredComponent, data: { allowPasswordChange: true } },
 
       { path: 'empresas', component: EmpresasComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'clientes', component: ClientesComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'Vendedor', 'AssistenteReceber'], moduloEmpresa: 'cadastros' } },
-      { path: 'lojas', component: LojasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
-      { path: 'ajuda/lojas', component: LojasAjudaComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
+      { path: 'lojas', component: LojasComponent, data: { moduloEmpresa: 'operacional' } },
+      { path: 'ajuda/lojas', component: LojasAjudaComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'cadastros' } },
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
@@ -154,7 +156,7 @@ export const routes: Routes = [
       { path: 'loja/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'vendas' } },
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { moduloEmpresa: 'operacional' } },
-      { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'configuracoes' } },
+      { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
 
       // ⬇️ rota de coleções

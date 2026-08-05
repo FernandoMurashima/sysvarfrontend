@@ -15,8 +15,19 @@ export const authGuard: CanActivateFn = (route) => {
     return false;
   }
 
+  const isPasswordRoute = route.routeConfig?.path === 'change-password-required' || route.data?.['allowPasswordChange'] === true;
+  const cached = auth.getCurrentUser();
+  if (cached?.deve_trocar_senha === true && !isPasswordRoute) {
+    router.navigateByUrl('/change-password-required');
+    return false;
+  }
+  if (cached?.deve_trocar_senha !== true && isPasswordRoute) {
+    router.navigateByUrl('/home');
+    return false;
+  }
+
   if (route.data?.['superOnly']) {
-    const cachedUser = auth.getCurrentUser();
+    const cachedUser = cached;
     if (cachedUser) {
       if (cachedUser.is_superuser === true) return true;
       router.navigateByUrl('/home');

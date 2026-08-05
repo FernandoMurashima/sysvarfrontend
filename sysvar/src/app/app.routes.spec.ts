@@ -8,3 +8,27 @@ describe('rotas de auditoria', () => {
     expect(auditRoute?.data?.['roles']).toBeUndefined();
   });
 });
+
+describe('rotas operacionais', () => {
+  const shell = routes.find(route => route.path === '');
+
+  it('estabelecimentos nao dependem de roles antigas', () => {
+    const lojas = shell?.children?.find(route => route.path === 'lojas');
+    const ajuda = shell?.children?.find(route => route.path === 'ajuda/lojas');
+    expect(lojas?.data?.['moduloEmpresa']).toBe('operacional');
+    expect(lojas?.data?.['roles']).toBeUndefined();
+    expect(ajuda?.data?.['moduloEmpresa']).toBe('operacional');
+    expect(ajuda?.data?.['roles']).toBeUndefined();
+  });
+
+  it('perfis de acesso usam permissao operacional', () => {
+    const perfis = shell?.children?.find(route => route.path === 'config/perfis');
+    expect(perfis?.data?.['moduloEmpresa']).toBe('operacional');
+    expect(perfis?.data?.['roles']).toBeUndefined();
+  });
+
+  it('possui rota protegida para troca obrigatoria de senha', () => {
+    const rota = shell?.children?.find(route => route.path === 'change-password-required');
+    expect(rota?.data?.['allowPasswordChange']).toBeTrue();
+  });
+});

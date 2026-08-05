@@ -8,7 +8,7 @@
       <button class="btn" type="button">Ajuda</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
       <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
-      <button class="btn primary" type="button" [disabled]="saving" (click)="novo()">+ Nova Empresa</button>
+      <button class="btn primary" type="button" *ngIf="podeAlterarEmpresa" [disabled]="saving" (click)="novo()">+ Nova Empresa</button>
     </div>
   </section>
 
@@ -47,9 +47,9 @@
       </div>
       <div class="form-title-actions">
         <button class="btn ghost" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
-        <button class="btn danger-soft" type="button" *ngIf="editingId && contratoAtual?.status !== 'SUSPENSO'" (click)="abrirSuspender({ id: editingId, nome: form.getRawValue().nome || '' })">Suspender acesso</button>
-        <button class="btn" type="button" *ngIf="editingId && contratoAtual?.status === 'SUSPENSO'" (click)="abrirReativar({ id: editingId, nome: form.getRawValue().nome || '' })">Reativar acesso</button>
-        <button class="btn primary" type="button" *ngIf="!consultando" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+        <button class="btn danger-soft" type="button" *ngIf="podeAlterarEmpresa && editingId && contratoAtual?.status !== 'SUSPENSO'" (click)="abrirSuspender({ id: editingId, nome: form.getRawValue().nome || '' })">Suspender acesso</button>
+        <button class="btn" type="button" *ngIf="podeAlterarEmpresa && editingId && contratoAtual?.status === 'SUSPENSO'" (click)="abrirReativar({ id: editingId, nome: form.getRawValue().nome || '' })">Reativar acesso</button>
+        <button class="btn primary" type="button" *ngIf="podeAlterarEmpresa && !consultando" [disabled]="saving || (form.invalid && submitted)" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
       </div>
     </div>
 
@@ -203,9 +203,9 @@
             </td>
             <td class="actions">
               <button class="btn sm" type="button" (click)="consultar(empresa)">Consultar</button>
-              <button class="btn sm" type="button" (click)="editar(empresa)">Editar</button>
-              <button class="btn sm" type="button" (click)="alternarAtivo(empresa)">{{ empresa.ativo === false ? 'Ativar' : 'Inativar' }}</button>
-              <button class="btn sm danger-soft" type="button" (click)="excluir(empresa)">Excluir</button>
+              <button class="btn sm" type="button" *ngIf="podeAlterarEmpresa" (click)="editar(empresa)">Editar</button>
+              <button class="btn sm" type="button" *ngIf="podeAlterarEmpresa" (click)="alternarAtivo(empresa)">{{ empresa.ativo === false ? 'Ativar' : 'Inativar' }}</button>
+              <button class="btn sm danger-soft" type="button" *ngIf="podeAlterarEmpresa" (click)="excluir(empresa)">Excluir</button>
             </td>
           </tr>
         </tbody>

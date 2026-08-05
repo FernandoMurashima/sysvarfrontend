@@ -24,6 +24,10 @@ export class PerfisAcessoComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
 
+  get podeEditarModulo(): boolean {
+    return this.auth.podeAcessarModulo('operacional', true) === true || this.auth.getCurrentUser()?.is_company_master === true || this.auth.getCurrentUser()?.is_superuser === true;
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -49,6 +53,7 @@ export class PerfisAcessoComponent implements OnInit {
   }
 
   novo(): void {
+    if (!this.podeEditarModulo) return;
     this.form = {
       nome: '',
       descricao: '',
@@ -70,7 +75,7 @@ export class PerfisAcessoComponent implements OnInit {
   }
 
   salvar(): void {
-    if (!this.form) return;
+    if (!this.form || !this.podeEditarModulo) return;
     this.saving = true;
     const req = this.form.id ? this.api.updatePerfil(this.form.id, this.form) : this.api.createPerfil(this.form);
     req.subscribe({

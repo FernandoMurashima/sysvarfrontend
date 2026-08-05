@@ -24,6 +24,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
       if (err?.status === 401) auth.handleUnauthorized();
+      if (err?.status === 403 && err?.error?.code === 'PASSWORD_CHANGE_REQUIRED') {
+        window.location.assign('/change-password-required');
+      }
       return throwError(() => err);
     })
   );

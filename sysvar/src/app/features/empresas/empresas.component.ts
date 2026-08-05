@@ -7,6 +7,7 @@ import { Empresa, EmpresaContrato, EmpresaModulo, ModuloSistema } from '../../co
 import { EmpresasService } from '../../core/services/empresas.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { AccessControlService } from '../../core/services/access-control.service';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-empresas',
@@ -19,6 +20,7 @@ export class EmpresasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(EmpresasService);
   private accessApi = inject(AccessControlService);
+  private auth = inject(AuthService);
 
   loading = false;
   saving = false;
@@ -94,6 +96,18 @@ export class EmpresasComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get usuarioAtual(): any {
+    return this.auth.getCurrentUser();
+  }
+
+  get isSuperUsuario(): boolean {
+    return this.usuarioAtual?.is_superuser === true;
+  }
+
+  get podeAlterarEmpresa(): boolean {
+    return this.isSuperUsuario;
+  }
+
   ngOnInit(): void {
     this.loadModulosCatalogo();
     this.load();
@@ -135,6 +149,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   novo(): void {
+    if (!this.podeAlterarEmpresa) return;
     this.showForm = true;
     this.editingId = null;
     this.consultando = false;
@@ -176,6 +191,7 @@ export class EmpresasComponent implements OnInit {
     this.successMsg = '';
     this.errorMsg = '';
     this.form.enable({ emitEvent: false });
+    if (!this.podeAlterarEmpresa) this.form.disable({ emitEvent: false });
     this.form.reset({
       nome: row.nome ?? '',
       nome_fantasia: row.nome_fantasia ?? '',
@@ -235,6 +251,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   salvar(): void {
+    if (!this.podeAlterarEmpresa) return;
     this.submitted = true;
     this.successMsg = '';
     this.errorMsg = '';
@@ -408,6 +425,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   alternarAtivo(row: Empresa): void {
+    if (!this.podeAlterarEmpresa) return;
     if (!row.id) return;
     this.api.patch(row.id, { ativo: row.ativo === false }).subscribe({
       next: () => this.load(),
@@ -416,6 +434,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   excluir(row: Empresa): void {
+    if (!this.podeAlterarEmpresa) return;
     if (!row.id) return;
     this.excluirModal = row;
   }
@@ -438,6 +457,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   abrirSuspender(row: Empresa): void {
+    if (!this.podeAlterarEmpresa) return;
     this.suspenderModal = row;
     this.suspensaoMotivo = 'INADIMPLENCIA';
     this.suspensaoObservacao = '';
@@ -462,6 +482,7 @@ export class EmpresasComponent implements OnInit {
   }
 
   abrirReativar(row: Empresa): void {
+    if (!this.podeAlterarEmpresa) return;
     this.reativarModal = row;
   }
 

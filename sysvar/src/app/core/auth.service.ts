@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
 import { DeviceService } from './services/device.service';
 import { SessionService } from './services/session.service';
 
-interface TokenResponse { token: string; session_id?: string; user?: MeResponse; }
+interface TokenResponse { token: string; session_id?: string; deve_trocar_senha?: boolean; user?: MeResponse; }
 interface MeResponse {
   id: number; username: string; first_name: string; last_name: string; email: string; type: string;
   Idempresa?: number | null;
@@ -28,6 +28,7 @@ interface MeResponse {
   } | null;
   is_staff?: boolean;
   is_superuser?: boolean;
+  deve_trocar_senha?: boolean;
   permissoes_modulos?: Array<{ modulo: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
   is_platform_superuser?: boolean;
@@ -133,6 +134,10 @@ export class AuthService {
 
   me() {
     return this.http.get<MeResponse>(`${this.api}/me/`);
+  }
+
+  changeRequiredPassword(payload: { senha_atual: string; nova_senha: string; confirmacao: string }) {
+    return this.http.post<{ deve_trocar_senha: boolean }>(`${this.api}/accounts/change-required-password/`, payload);
   }
 
   // --- token helpers (sessionStorage) ---

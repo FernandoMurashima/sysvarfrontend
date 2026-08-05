@@ -40,12 +40,12 @@ export class ShellComponent {
     { label: 'Home', link: '/home', icon: 'bi bi-house' },
 
     {
-      label: 'Operacional', icon: 'bi bi-building-gear', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional',
+      label: 'Operacional', icon: 'bi bi-building-gear', moduloEmpresa: 'operacional',
       children: [
         { label: 'Empresas', link: '/empresas', icon: 'bi bi-buildings', moduloEmpresa: 'operacional' },
-        { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', roles: this.cadastrosRoles, moduloEmpresa: 'operacional' },
+        { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', moduloEmpresa: 'operacional' },
         { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', moduloEmpresa: 'operacional' },
-        { label: 'Perfis de acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', moduloEmpresa: 'configuracoes' },
+        { label: 'Perfis de acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', moduloEmpresa: 'operacional' },
         { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', moduloEmpresa: 'auditoria' },
       ]
     },
