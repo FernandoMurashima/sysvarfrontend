@@ -2,7 +2,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs/operators';
+import { finalize, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { DeviceService } from './services/device.service';
 import { SessionService } from './services/session.service';
@@ -129,7 +129,7 @@ export class AuthService {
       return this.http.post(`${this.api}/auth/logout/`, {});
     }
     return this.http.post(`${this.api}/auth/logout/`, {}, { headers: { Authorization: `Token ${token}` } })
-      .pipe(tap(() => this.clearToken()));
+      .pipe(finalize(() => this.clearToken()));
   }
 
   me() {

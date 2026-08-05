@@ -292,8 +292,10 @@ export class ShellComponent {
   }
 
   sair() {
-    this.auth.clearToken();
-    this.router.navigateByUrl('/login');
+    this.auth.logout().subscribe({
+      next: () => this.router.navigateByUrl('/login'),
+      error: () => this.router.navigateByUrl('/login'),
+    });
   }
 
   // Getters únicos (NÃO declare outra propriedade/variável com o mesmo nome)
