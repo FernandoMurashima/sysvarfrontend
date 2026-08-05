@@ -15,4 +15,17 @@
 .permissions-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .sensitive-grid { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .fields-title { margin-top: 12px; }
+.session-modal { width: min(1180px, calc(100% - 24px)); max-height: calc(100vh - 36px); overflow: auto; }
+.modal-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.modal-title h4, .modal-title p { margin: 0; }
+.session-indicators { margin-bottom: 8px; }
+.session-actions { justify-content: flex-start; margin: 0 0 8px; }
+.session-table { max-height: 56vh; overflow: auto; }
+.session-table .table { min-width: 1500px; }
+.session-status { display: inline-flex; min-height: 22px; align-items: center; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.session-status.active { background: #dcfce7; color: #047857; }
+.session-status.closed { background: #e2e8f0; color: #475569; }
+.session-status.revoked { background: #fee2e2; color: #b91c1c; }
+.session-status.expired { background: #ffedd5; color: #c2410c; }
+.indicator-icon.gray { background: #e2e8f0; color: #475569; }
 @media (max-width: 900px) { .span-4,.span-6,.span-12 { grid-column: 1 / -1; } .permissions-grid { grid-template-columns: 1fr; } }

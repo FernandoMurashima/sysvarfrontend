@@ -8,6 +8,21 @@ import { EmpresasService } from '../../core/services/empresas.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { AccessControlService } from '../../core/services/access-control.service';
 import { AuthService } from '../../core/auth.service';
+import { SessionService } from '../../core/services/session.service';
+
+type SessaoEmpresaRow = {
+  id: number;
+  usuario_username?: string;
+  usuario_nome?: string;
+  usuario_perfil?: string;
+  loja_nome?: string;
+  dispositivo_id?: string;
+  navegador?: string;
+  ip?: string;
+  iniciada_em?: string;
+  ultima_atividade_em?: string;
+  status?: string;
+};
 
 @Component({
   selector: 'app-empresas',
@@ -21,6 +36,7 @@ export class EmpresasComponent implements OnInit {
   private api = inject(EmpresasService);
   private accessApi = inject(AccessControlService);
   private auth = inject(AuthService);
+  private sessionsApi = inject(SessionService);
 
   loading = false;
   saving = false;
@@ -35,6 +51,9 @@ export class EmpresasComponent implements OnInit {
   excluirModal: Empresa | null = null;
   suspenderModal: Empresa | null = null;
   reativarModal: Empresa | null = null;
+  sessoesEmpresaModal: Empresa | null = null;
+  sessoesEmpresa: SessaoEmpresaRow[] = [];
+  sessoesEmpresaLoading = false;
   suspensaoMotivo = 'INADIMPLENCIA';
   suspensaoObservacao = '';
   suspensaoConfirmacao = '';
@@ -497,6 +516,49 @@ export class EmpresasComponent implements OnInit {
       },
       error: (err) => this.errorMsg = this.errorText(err),
     });
+  }
+
+  abrirSessoesEmpresa(row: Empresa): void {
+    if (!row.id) return;
+    this.sessoesEmpresaModal = row;
+    this.carregarSessoesEmpresa();
+  }
+
+  carregarSessoesEmpresa(): void {
+    const empresa = this.sessoesEmpresaModal;
+    if (!empresa?.id) return;
+    this.sessoesEmpresaLoading = true;
+    this.sessionsApi.listSessions({ empresa: empresa.id, ativa: 'true' }).subscribe({
+      next: (rows) => {
+        this.sessoesEmpresa = rows || [];
+        this.sessoesEmpresaLoading = false;
+      },
+      error: () => {
+        this.sessoesEmpresa = [];
+        this.sessoesEmpresaLoading = false;
+        this.errorMsg = 'Falha ao carregar sessões da empresa.';
+      }
+    });
+  }
+
+  fecharSessoesEmpresa(): void {
+    this.sessoesEmpresaModal = null;
+    this.sessoesEmpresa = [];
+  }
+
+  encerrarSessaoEmpresa(sessao: SessaoEmpresaRow): void {
+    if (!sessao.id || !window.confirm('Encerrar esta sessão?')) return;
+    this.sessionsApi.terminateSession(sessao.id).subscribe({
+      next: () => {
+        this.carregarSessoesEmpresa();
+        if (this.editingId) this.loadContrato(this.editingId);
+      },
+      error: () => this.errorMsg = 'Falha ao encerrar sessão.'
+    });
+  }
+
+  sessoesEmpresaEsperadas(): number {
+    return Number(this.contratoAtual?.sessoes_ativas || this.sessoesEmpresa.length || 0);
   }
 
   onPageSizeChange(size: string): void {

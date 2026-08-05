@@ -9,6 +9,7 @@ import { User } from '../../core/models/user';
 import { LojasService } from '../../core/services/lojas.service';
 import { EmpresasService } from '../../core/services/empresas.service';
 import { Empresa } from '../../core/models/empresa';
+import { SessionService } from '../../core/services/session.service';
 
 import {Router} from "@angular/router";
 import { AuthService } from '../../core/auth.service';
@@ -37,6 +38,26 @@ type CampoPermissao = {
   pode_ver: boolean;
 };
 
+type SessaoUsuarioRow = {
+  id: number;
+  status: string;
+  empresa_nome?: string;
+  loja_nome?: string;
+  dispositivo_id: string;
+  navegador?: string;
+  sistema_operacional?: string;
+  ip?: string;
+  iniciada_em: string;
+  ultima_atividade_em: string;
+  heartbeat?: string;
+  token_valido?: boolean;
+  token_revogado?: boolean;
+  validade_motivo?: string;
+  motivo_encerramento?: string;
+  tempo_conectado_segundos?: number;
+  origem?: string;
+};
+
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -51,6 +72,7 @@ export class UsuariosComponent implements OnInit {
   private lojasApi = inject(LojasService);
   private empresasApi = inject(EmpresasService);
   private accessApi = inject(AccessControlService);
+  private sessionsApi = inject(SessionService);
   constructor(private router: Router) {}
 
   goHome() {
@@ -64,6 +86,9 @@ export class UsuariosComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   excluirModal: User | null = null;
+  sessoesModalUser: User | null = null;
+  sessoesUsuario: SessaoUsuarioRow[] = [];
+  sessoesLoading = false;
   private successTimer: any = null;
 
   showForm = false;
@@ -646,6 +671,7 @@ export class UsuariosComponent implements OnInit {
   consultarSelecionado(): void { if (this.selectedUser) this.consultar(this.selectedUser); }
   editarSelecionado(): void { if (this.selectedUser && this.podeEditarModulo) this.editar(this.selectedUser); }
   excluirSelecionado(): void { if (this.selectedUser && this.podeExcluirModulo) this.excluir(this.selectedUser); }
+  sessoesSelecionado(): void { if (this.selectedUser) this.abrirSessoes(this.selectedUser); }
   toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
   toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
   restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.usuarios.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.load(); }
@@ -811,4 +837,106 @@ export class UsuariosComponent implements OnInit {
     try { const pref = JSON.parse(raw) as { indicatorsVisible?: boolean; filtersVisible?: boolean }; this.indicatorsVisible = pref.indicatorsVisible !== false; this.filtersVisible = pref.filtersVisible !== false; } catch {}
   }
   private saveViewPreference(): void { localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible })); }
+
+  abrirSessoes(user: User): void {
+    if (!user.id) return;
+    this.sessoesModalUser = user;
+    this.carregarSessoesUsuario();
+  }
+
+  carregarSessoesUsuario(): void {
+    const user = this.sessoesModalUser;
+    if (!user?.id) return;
+    this.sessoesLoading = true;
+    this.api.sessoes(user.id).subscribe({
+      next: (rows) => {
+        this.sessoesUsuario = rows || [];
+        this.sessoesLoading = false;
+      },
+      error: () => {
+        this.sessoesUsuario = [];
+        this.sessoesLoading = false;
+        this.errorMsg = 'Falha ao carregar sessões do usuário.';
+      }
+    });
+  }
+
+  fecharSessoesUsuario(): void {
+    this.sessoesModalUser = null;
+    this.sessoesUsuario = [];
+  }
+
+  encerrarSessaoUsuario(sessao: SessaoUsuarioRow): void {
+    if (!sessao?.id || !window.confirm('Encerrar esta sessão?')) return;
+    this.sessionsApi.terminateSession(sessao.id).subscribe({
+      next: () => {
+        this.carregarSessoesUsuario();
+        this.load();
+        this.auth.refreshMe().subscribe({ error: () => {} });
+      },
+      error: () => this.errorMsg = 'Falha ao encerrar sessão.'
+    });
+  }
+
+  encerrarTodasSessoesUsuario(): void {
+    const user = this.sessoesModalUser;
+    if (!user?.id || !window.confirm('Encerrar todas as sessões ativas deste usuário?')) return;
+    this.api.encerrarSessoes(user.id).subscribe({
+      next: () => {
+        this.carregarSessoesUsuario();
+        this.load();
+        this.auth.refreshMe().subscribe({ error: () => {} });
+      },
+      error: () => this.errorMsg = 'Falha ao encerrar sessões.'
+    });
+  }
+
+  exportarSessoesUsuarioCsv(): void {
+    const header = ['Status', 'Empresa', 'Loja', 'Dispositivo', 'Device ID', 'Navegador', 'Sistema operacional', 'IP', 'Início', 'Última atividade', 'Heartbeat', 'Token válido', 'Token revogado', 'Motivo', 'Tempo conectado', 'Origem'];
+    const rows = this.sessoesUsuario.map(s => [
+      s.status, s.empresa_nome || '-', s.loja_nome || '-', s.dispositivo_id, s.dispositivo_id,
+      s.navegador || '-', s.sistema_operacional || '-', s.ip || '-', s.iniciada_em, s.ultima_atividade_em,
+      s.heartbeat || s.ultima_atividade_em, s.token_valido ? 'Sim' : 'Não', s.token_revogado ? 'Sim' : 'Não',
+      s.motivo_encerramento || '-', this.tempoConectado(s), s.origem || '-',
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sessoes-${this.sessoesModalUser?.username || 'usuario'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  abrirAuditoriaSessao(sessao?: SessaoUsuarioRow): void {
+    const query = sessao?.id ? { queryParams: { session_id: sessao.id } } : undefined;
+    this.router.navigate(['/config/auditoria'], query);
+  }
+
+  sessoesIndicadores() {
+    const ativas = this.sessoesUsuario.filter(s => s.status === 'ATIVA').length;
+    const encerradas = this.sessoesUsuario.length - ativas;
+    const dispositivos = new Set(this.sessoesUsuario.map(s => s.dispositivo_id).filter(Boolean)).size;
+    const tempos = this.sessoesUsuario.map(s => Number(s.tempo_conectado_segundos || 0)).filter(v => v > 0);
+    const medio = tempos.length ? Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length) : 0;
+    return { ativas, encerradas, dispositivos, tempoMedio: this.formatSeconds(medio) };
+  }
+
+  sessaoStatusClass(sessao: SessaoUsuarioRow): string {
+    if (sessao.status === 'ATIVA') return 'active';
+    if (sessao.status === 'REVOGADA') return 'revoked';
+    if (sessao.status === 'EXPIRADA') return 'expired';
+    return 'closed';
+  }
+
+  tempoConectado(sessao: SessaoUsuarioRow): string {
+    return this.formatSeconds(Number(sessao.tempo_conectado_segundos || 0));
+  }
+
+  private formatSeconds(total: number): string {
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    return `${h}h ${m}m`;
+  }
 }

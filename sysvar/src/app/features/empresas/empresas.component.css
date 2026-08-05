@@ -488,6 +488,38 @@ select {
   margin-top: 12px;
 }
 
+.session-modal {
+  width: min(1120px, calc(100% - 24px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+}
+
+.modal-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.modal-title h4,
+.modal-title p {
+  margin: 0;
+}
+
+.session-actions {
+  justify-content: flex-start;
+  margin: 8px 0;
+}
+
+.session-table {
+  max-height: 58vh;
+  overflow: auto;
+}
+
+.session-table .table {
+  min-width: 980px;
+}
+
 @media (max-width: 1100px) {
   .indicator-bar,
   .module-grid {

@@ -123,6 +123,7 @@
           <div class="indicator"><span class="indicator-icon cyan">−</span><div><strong>{{ indicadoresContrato().disponiveis }}</strong><small>Disponíveis</small></div></div>
           <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ indicadoresContrato().excedente }}</strong><small>{{ indicadoresContrato().situacao }}</small></div></div>
         </div>
+        <div class="module-tags" *ngIf="editingId"><button class="btn" type="button" (click)="abrirSessoesEmpresa({ id: editingId, nome: form.getRawValue().nome || '' })">Ver Sessões</button></div>
 
         <div class="module-tags">
           <strong>Usuário master:</strong>
@@ -203,6 +204,7 @@
             </td>
             <td class="actions">
               <button class="btn sm" type="button" (click)="consultar(empresa)">Consultar</button>
+              <button class="btn sm" type="button" (click)="abrirSessoesEmpresa(empresa)">Ver Sessões</button>
               <button class="btn sm" type="button" *ngIf="podeAlterarEmpresa" (click)="editar(empresa)">Editar</button>
               <button class="btn sm" type="button" *ngIf="podeAlterarEmpresa" (click)="alternarAtivo(empresa)">{{ empresa.ativo === false ? 'Ativar' : 'Inativar' }}</button>
               <button class="btn sm danger-soft" type="button" *ngIf="podeAlterarEmpresa" (click)="excluir(empresa)">Excluir</button>
@@ -223,6 +225,39 @@
       <div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
     </div>
   </section>
+</div>
+
+<div class="overlay" *ngIf="sessoesEmpresaModal as empresa">
+  <div class="overlay-card session-modal">
+    <div class="modal-title">
+      <div><h4>Sessões da empresa</h4><p>{{ empresa.nome }}</p></div>
+      <button class="btn ghost" type="button" (click)="fecharSessoesEmpresa()">Fechar</button>
+    </div>
+    <div class="alert error" *ngIf="sessoesEmpresa.length !== sessoesEmpresaEsperadas()">Contador e listagem divergem: contador {{ sessoesEmpresaEsperadas() }}, linhas {{ sessoesEmpresa.length }}.</div>
+    <div class="overlay-actions session-actions">
+      <button class="btn" type="button" (click)="carregarSessoesEmpresa()">Atualizar</button>
+    </div>
+    <div class="table-wrapper session-table">
+      <table class="table" *ngIf="sessoesEmpresa.length; else semSessoesEmpresa">
+        <thead><tr><th>Usuário</th><th>Perfil</th><th>Loja</th><th>Dispositivo</th><th>Navegador</th><th>IP</th><th>Início</th><th>Última atividade</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let s of sessoesEmpresa">
+            <td>{{ s.usuario_nome || s.usuario_username || '-' }}</td>
+            <td>{{ s.usuario_perfil || '-' }}</td>
+            <td>{{ s.loja_nome || '-' }}</td>
+            <td>{{ s.dispositivo_id || '-' }}</td>
+            <td>{{ s.navegador || '-' }}</td>
+            <td>{{ s.ip || '-' }}</td>
+            <td>{{ s.iniciada_em | date:'short' }}</td>
+            <td>{{ s.ultima_atividade_em | date:'short' }}</td>
+            <td><span class="status-pill">{{ s.status || '-' }}</span></td>
+            <td><button class="btn sm danger-soft" type="button" (click)="encerrarSessaoEmpresa(s)">Encerrar</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #semSessoesEmpresa><div class="empty-hint">{{ sessoesEmpresaLoading ? 'Carregando sessões...' : 'Nenhuma sessão ocupando licença.' }}</div></ng-template>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" *ngIf="suspenderModal as empresa">

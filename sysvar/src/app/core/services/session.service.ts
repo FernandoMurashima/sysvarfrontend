@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -14,6 +15,14 @@ export class SessionService {
 
   listActiveSessions() {
     return this.http.get<any>(`${this.base}/`, { params: { ativa: 'true' } });
+  }
+
+  listSessions(params?: { empresa?: number; usuario?: number; ativa?: boolean | string; [key: string]: any }) {
+    let httpParams = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') httpParams = httpParams.set(key, String(value));
+    });
+    return this.http.get<any[]>(`${this.base}/`, { params: httpParams });
   }
 
   terminateSession(id: number) {
