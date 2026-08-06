@@ -40,6 +40,7 @@ export interface Cliente {
   observacao_bloqueio?: string | null;
   bloqueado_em?: string | null;
   bloqueado_por?: number | null;
+  bloqueado_por_nome?: string | null;
   aniversario?: string | null;   // yyyy-MM-dd
   mala_direta?: boolean;
   aceita_email?: boolean;
@@ -93,3 +94,18 @@ export interface ClienteBloqueioPayload {
   motivo: string;
   observacao?: string | null;
 }
+
+export interface ClienteHistoricoItem {
+  id: number;
+  created_at: string;
+  acao: string;
+  acao_descricao: string;
+  usuario?: string | null;
+  origem?: string | null;
+  resultado?: string | null;
+  campos_alterados: string[];
+  motivo?: string | null;
+  observacao?: string | null;
+}
+
+export type ClienteHistoricoResponse = PaginatedResponse<ClienteHistoricoItem>;

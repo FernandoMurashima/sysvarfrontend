@@ -46,4 +46,18 @@ describe('ClientesService documento funcional', () => {
     expect(Object.prototype.hasOwnProperty.call(req.request.body, 'cpf')).toBeFalse();
     req.flush({ id: 8, nome_cliente: 'Cliente' });
   });
+
+  it('historico consulta endpoint paginado do cliente', () => {
+    service.historico(8, 2, 5).subscribe();
+
+    const req = http.expectOne(request =>
+      request.method === 'GET' &&
+      request.url.endsWith('/cadastros/clientes/8/historico/') &&
+      request.params.get('page') === '2' &&
+      request.params.get('page_size') === '5'
+    );
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('page_size')).toBe('5');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
+  });
 });

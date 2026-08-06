@@ -126,6 +126,10 @@
   <section class="action-bar">
     <button class="btn icon-btn" type="button" [disabled]="!selectedCliente" (click)="consultarSelecionado()"><span>⌕</span>Consultar</button>
     <button class="btn icon-btn" type="button" [disabled]="!selectedCliente || !podeEditarModulo" (click)="editarSelecionado()"><span>✎</span>Editar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!podeAtivarSelecionado()" (click)="ativarSelecionado()"><span>✓</span>Ativar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!podeInativarSelecionado()" (click)="inativarSelecionado()"><span>−</span>Inativar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!podeBloquearSelecionado()" (click)="bloquearSelecionado()"><span>!</span>Bloquear</button>
+    <button class="btn icon-btn" type="button" [disabled]="!podeDesbloquearSelecionado()" (click)="desbloquearSelecionado()"><span>✓</span>Desbloquear</button>
     <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedCliente || !podeExcluirModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir</button>
   </section>
 
@@ -139,6 +143,38 @@
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
         <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" *ngIf="bloqueioModal as cliente">
+    <div class="overlay-card">
+      <h4>Bloquear cliente</h4>
+      <p>Informe o motivo para bloquear <strong>{{ cliente.nome_cliente }}</strong>.</p>
+      <label>
+        Motivo*
+        <input type="text" maxlength="80" [(ngModel)]="bloqueioMotivo" />
+      </label>
+      <label>
+        Observação
+        <textarea rows="4" [(ngModel)]="bloqueioObservacao"></textarea>
+      </label>
+      <div *ngIf="bloqueioErro" class="alert error">{{ bloqueioErro }}</div>
+      <div class="overlay-actions">
+        <button class="btn" type="button" [disabled]="bloqueioSaving" (click)="fecharBloqueio()">Voltar</button>
+        <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="bloqueioSaving" (click)="confirmarBloqueio()">Bloquear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" *ngIf="confirmActionModal as modal">
+    <div class="overlay-card">
+      <h4>{{ confirmActionLabel(modal.action) }} cliente</h4>
+      <p>{{ confirmActionMessage(modal.action) }} <strong>{{ modal.cliente.nome_cliente }}</strong></p>
+      <div *ngIf="confirmErro" class="alert error">{{ confirmErro }}</div>
+      <div class="overlay-actions">
+        <button class="btn" type="button" [disabled]="confirmSaving" (click)="fecharConfirmAction()">Voltar</button>
+        <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="confirmSaving" (click)="confirmarAcaoCiclo()">{{ confirmActionLabel(modal.action) }}</button>
       </div>
     </div>
   </div>
@@ -286,21 +322,64 @@
           <span class="field-error" *ngIf="form.get('categoria')?.errors?.['server']">{{ form.get('categoria')?.errors?.['server'] }}</span>
         </label>
 
-        <label id="bloqueio-box" class="input-item checkbox-line">
-          <input type="checkbox" formControlName="bloqueio" />
-          Bloqueio
-        </label>
-
         <label id="mala-direta-box" class="input-item checkbox-line">
           <input type="checkbox" formControlName="mala_direta" />
           Mala direta
         </label>
-
-        <label id="ativo-box" class="input-item checkbox-line">
-          <input type="checkbox" formControlName="ativo" />
-          Ativo
-        </label>
       </div>
+
+      <div class="consulta-status" *ngIf="consultando && clienteConsulta as cliente">
+        <div>
+          <span>Status</span>
+          <strong>{{ cliente.ativo === false ? 'Inativo' : 'Ativo' }}</strong>
+        </div>
+        <div>
+          <span>Bloqueio</span>
+          <strong>{{ cliente.bloqueio ? 'Bloqueado' : 'Liberado' }}</strong>
+        </div>
+        <div *ngIf="cliente.bloqueio">
+          <span>Motivo atual</span>
+          <strong>{{ cliente.motivo_bloqueio || '-' }}</strong>
+        </div>
+        <div *ngIf="cliente.bloqueio">
+          <span>Observação atual</span>
+          <strong>{{ cliente.observacao_bloqueio || '-' }}</strong>
+        </div>
+        <div *ngIf="cliente.bloqueio">
+          <span>Bloqueado em</span>
+          <strong>{{ formatDate(cliente.bloqueado_em) }}</strong>
+        </div>
+        <div *ngIf="cliente.bloqueio">
+          <span>Bloqueado por</span>
+          <strong>{{ cliente.bloqueado_por_nome || cliente.bloqueado_por || '-' }}</strong>
+        </div>
+      </div>
+
+      <section class="history-panel" *ngIf="consultando">
+        <div class="history-title">
+          <strong>Histórico</strong>
+          <span>{{ historicoTotal }} evento(s)</span>
+        </div>
+        <div *ngIf="historicoLoading" class="loading">Carregando histórico...</div>
+        <div *ngIf="historicoError" class="alert error">{{ historicoError }}</div>
+        <div class="history-list" *ngIf="!historicoLoading && historico.length">
+          <article *ngFor="let h of historico" class="history-item">
+            <div>
+              <strong>{{ h.acao_descricao }}</strong>
+              <span>{{ formatDate(h.created_at) }} · {{ h.usuario || 'Sistema' }}</span>
+            </div>
+            <p *ngIf="h.campos_alterados?.length">Campos: {{ h.campos_alterados.join(', ') }}</p>
+            <p *ngIf="h.motivo">Motivo: {{ h.motivo }}</p>
+            <p *ngIf="h.observacao">Observação: {{ h.observacao }}</p>
+          </article>
+        </div>
+        <div *ngIf="!historicoLoading && !historico.length" class="empty-hint">Nenhum evento registrado.</div>
+        <div class="history-pager" *ngIf="historicoTotal > historicoPageSize">
+          <button class="btn" type="button" [disabled]="historicoPage <= 1" (click)="historicoPaginaAnterior()">Anterior</button>
+          <span>Página {{ historicoPage }}</span>
+          <button class="btn" type="button" [disabled]="historicoPage * historicoPageSize >= historicoTotal" (click)="historicoProximaPagina()">Próxima</button>
+        </div>
+      </section>
 
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>

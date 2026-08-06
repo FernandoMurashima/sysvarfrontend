@@ -328,7 +328,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 32px;
   padding: 5px 9px;
@@ -340,6 +341,7 @@ select {
 
 input:focus,
 select:focus,
+textarea:focus,
 .btn:focus-visible,
 .tool-btn:focus-visible {
   outline: 2px solid rgba(15, 98, 254, .35);
@@ -398,9 +400,7 @@ input[aria-invalid="true"] {
 #telefone2-box { grid-column: 3 / span 2; }
 #aniversario-box { grid-column: 5 / span 2; }
 #categoria-box { grid-column: 7 / span 3; }
-#bloqueio-box { grid-column: 1 / span 2; }
-#mala-direta-box { grid-column: 3 / span 2; }
-#ativo-box { grid-column: 5 / span 2; }
+#mala-direta-box { grid-column: 1 / span 2; }
 
 .btn {
   display: inline-flex;
@@ -544,6 +544,88 @@ input[aria-invalid="true"] {
 
 .overlay-card h4 {
   margin: 0 0 8px;
+}
+
+.overlay-card p {
+  margin: 0 0 12px;
+  color: #334155;
+}
+
+.overlay-card label + label {
+  margin-top: 10px;
+}
+
+.consulta-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.consulta-status div {
+  display: grid;
+  gap: 3px;
+}
+
+.consulta-status span,
+.history-title span,
+.history-item span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.consulta-status strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.history-panel {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.history-title,
+.history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.history-item {
+  padding: 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.history-item div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-item p {
+  margin: 5px 0 0;
+  color: #334155;
+  font-size: 12px;
+}
+
+.history-pager {
+  margin-top: 10px;
 }
 
 .form-pending {

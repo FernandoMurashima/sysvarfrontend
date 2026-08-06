@@ -28,11 +28,13 @@ describe('ClientesComponent documento funcional', () => {
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<ClientesService>('ClientesService', [
-      'list', 'indicadores', 'create', 'update', 'patch',
+      'list', 'indicadores', 'get', 'create', 'update', 'patch', 'historico',
       'ativar', 'inativar', 'bloquear', 'desbloquear', 'remove'
     ]);
     api.list.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
     api.indicadores.and.returnValue(of(indicadores));
+    api.get.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
+    api.historico.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
     api.create.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.update.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.patch.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
@@ -73,6 +75,11 @@ describe('ClientesComponent documento funcional', () => {
     expect(component.form.get('documento')).toBeTruthy();
   });
 
+  it('formulário não possui controles diretos de ativo e bloqueio', () => {
+    expect(component.form.get('ativo')).toBeNull();
+    expect(component.form.get('bloqueio')).toBeNull();
+  });
+
   it('novo cliente PF envia somente documento no payload', () => {
     preencherBase('PF', '529.982.247-25');
 
@@ -80,6 +87,8 @@ describe('ClientesComponent documento funcional', () => {
 
     expect(ultimoPayloadCreate().documento).toBe('52998224725');
     expect(Object.prototype.hasOwnProperty.call(ultimoPayloadCreate(), 'cpf')).toBeFalse();
+    expect(Object.prototype.hasOwnProperty.call(ultimoPayloadCreate(), 'ativo')).toBeFalse();
+    expect(Object.prototype.hasOwnProperty.call(ultimoPayloadCreate(), 'bloqueio')).toBeFalse();
   });
 
   it('novo cliente PJ envia somente documento no payload', () => {
@@ -165,12 +174,76 @@ describe('ClientesComponent documento funcional', () => {
     const payload = api.update.calls.mostRecent().args[1] as Cliente;
     expect(payload.documento).toBe('11222333000181');
     expect(Object.prototype.hasOwnProperty.call(payload, 'cpf')).toBeFalse();
+    expect(Object.prototype.hasOwnProperty.call(payload, 'ativo')).toBeFalse();
+    expect(Object.prototype.hasOwnProperty.call(payload, 'bloqueio')).toBeFalse();
   });
 
-  it('patch, quando usado pela tela, não envia cpf', () => {
+  it('ação de ciclo abre confirmação antes de chamar a API', () => {
     component.executarCiclo({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' }, 'ativar');
 
     expect(api.patch).not.toHaveBeenCalled();
+    expect(api.ativar).not.toHaveBeenCalled();
+    expect(component.confirmActionModal?.action).toBe('ativar');
+  });
+
+  it('confirmação de ciclo chama ação oficial e recarrega lista', () => {
+    component.executarCiclo({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' }, 'ativar');
+
+    component.confirmarAcaoCiclo();
+
     expect(api.ativar).toHaveBeenCalledWith(31);
+    expect(api.list).toHaveBeenCalled();
+  });
+
+  it('bloqueio abre modal sem prompt nativo', () => {
+    const promptSpy = spyOn(window, 'prompt');
+
+    component.bloquear({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    expect(promptSpy).not.toHaveBeenCalled();
+    expect(component.bloqueioModal?.id).toBe(31);
+    expect(api.bloquear).not.toHaveBeenCalled();
+  });
+
+  it('bloqueio exige motivo no modal', () => {
+    component.bloquear({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    component.confirmarBloqueio();
+
+    expect(component.bloqueioErro).toContain('motivo');
+    expect(api.bloquear).not.toHaveBeenCalled();
+  });
+
+  it('bloqueio envia motivo e observação pela ação oficial', () => {
+    component.bloquear({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' });
+    component.bloqueioMotivo = 'Inadimplência';
+    component.bloqueioObservacao = 'Parcela 2';
+
+    component.confirmarBloqueio();
+
+    expect(api.bloquear).toHaveBeenCalledWith(31, { motivo: 'Inadimplência', observacao: 'Parcela 2' });
+  });
+
+  it('consulta carrega histórico paginado', () => {
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    expect(api.historico).toHaveBeenCalledWith(44, 1, 10);
+    expect(component.consultando).toBeTrue();
+  });
+
+  it('barra principal habilita ações conforme cliente selecionado', () => {
+    component.selectedCliente = { id: 31, nome_cliente: 'Cliente', ativo: false, bloqueio: false };
+
+    expect(component.podeAtivarSelecionado()).toBeTrue();
+    expect(component.podeInativarSelecionado()).toBeFalse();
+    expect(component.podeBloquearSelecionado()).toBeTrue();
+    expect(component.podeDesbloquearSelecionado()).toBeFalse();
+  });
+
+  it('cliente padrão não habilita inativar, bloquear ou excluir pela seleção', () => {
+    component.selectedCliente = { id: 1, nome_cliente: 'Consumidor Final', ativo: true, bloqueio: false, cliente_padrao: true };
+
+    expect(component.podeInativarSelecionado()).toBeFalse();
+    expect(component.podeBloquearSelecionado()).toBeFalse();
   });
 });

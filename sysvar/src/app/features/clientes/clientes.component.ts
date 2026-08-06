@@ -12,7 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ClientesService } from '../../core/services/clientes.service';
-import { Cliente, ClienteIndicadores } from '../../core/models/clientes';
+import { Cliente, ClienteHistoricoItem, ClienteIndicadores } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -59,10 +59,25 @@ export class ClientesComponent implements OnInit, OnDestroy {
   successMsg = '';
   errorMsg = '';
   excluirModal: Cliente | null = null;
+  bloqueioModal: Cliente | null = null;
+  bloqueioMotivo = '';
+  bloqueioObservacao = '';
+  bloqueioErro = '';
+  bloqueioSaving = false;
+  confirmActionModal: { cliente: Cliente; action: 'ativar' | 'inativar' | 'desbloquear' } | null = null;
+  confirmSaving = false;
+  confirmErro = '';
   errorOverlayOpen = false;
   columnsOpen = false;
   exportOpen = false;
   selectedCliente: Cliente | null = null;
+  clienteConsulta: Cliente | null = null;
+  historico: ClienteHistoricoItem[] = [];
+  historicoLoading = false;
+  historicoError = '';
+  historicoPage = 1;
+  historicoPageSize = 10;
+  historicoTotal = 0;
   indicatorsVisible = true;
   filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.clientes.columns';
@@ -102,14 +117,12 @@ export class ClientesComponent implements OnInit, OnDestroy {
     categoria: [''],
     aniversario: [''],         // será convertido para null se vazio
 
-    bloqueio: [false],
     mala_direta: [false],
     aceita_email: [false],
     aceita_whatsapp: [false],
     aceita_sms: [false],
     origem_consentimento: [''],
     consentimento_observacao: [''],
-    ativo: [true],
   });
 
   logradouroOptions: string[] = [
@@ -423,15 +436,14 @@ export class ClientesComponent implements OnInit, OnDestroy {
       categoria: '',
       aniversario: '',
 
-      bloqueio: false,
       mala_direta: false,
       aceita_email: false,
       aceita_whatsapp: false,
       aceita_sms: false,
       origem_consentimento: '',
       consentimento_observacao: '',
-      ativo: true,
     });
+    this.limparHistorico();
   }
 
   editar(row: Cliente): void {
@@ -470,21 +482,24 @@ export class ClientesComponent implements OnInit, OnDestroy {
       categoria:      row.categoria ?? '',
       aniversario:    row.aniversario ?? '',
 
-      bloqueio:       !!row.bloqueio,
       mala_direta:    !!row.mala_direta,
       aceita_email:   !!row.aceita_email,
       aceita_whatsapp: !!row.aceita_whatsapp,
       aceita_sms:     !!row.aceita_sms,
       origem_consentimento: row.origem_consentimento ?? '',
       consentimento_observacao: row.consentimento_observacao ?? '',
-      ativo:          row.ativo ?? true,
     });
+    this.selectedCliente = row;
+    this.clienteConsulta = null;
+    this.limparHistorico();
   }
 
   consultar(row: Cliente): void {
     this.editar(row);
     this.consultando = true;
+    this.clienteConsulta = row;
     this.form.disable({ emitEvent: false });
+    if (row.id) this.carregarHistorico(row.id);
   }
 
   rowActions(row: Cliente): RowAction[] {
@@ -512,27 +527,17 @@ export class ClientesComponent implements OnInit, OnDestroy {
   executarCiclo(row: Cliente, action: 'ativar' | 'inativar' | 'desbloquear'): void {
     const id = row.id;
     if (!id || !this.podeEditarModulo) return;
-    this.api[action](id).subscribe({
-      next: () => {
-        this.successMsg = 'Cliente atualizado.';
-        this.load();
-      },
-      error: err => this.errorMsg = err?.error?.detail || 'Falha ao atualizar cliente.'
-    });
+    this.confirmActionModal = { cliente: row, action };
+    this.confirmErro = '';
   }
 
   bloquear(row: Cliente): void {
     const id = row.id;
     if (!id || !this.podeEditarModulo) return;
-    const motivo = window.prompt('Motivo do bloqueio');
-    if (!motivo) return;
-    this.api.bloquear(id, { motivo }).subscribe({
-      next: () => {
-        this.successMsg = 'Cliente bloqueado.';
-        this.load();
-      },
-      error: err => this.errorMsg = err?.error?.detail || 'Falha ao bloquear cliente.'
-    });
+    this.bloqueioModal = row;
+    this.bloqueioMotivo = '';
+    this.bloqueioObservacao = '';
+    this.bloqueioErro = '';
   }
 
   selecionarCliente(row: Cliente): void {
@@ -554,6 +559,153 @@ export class ClientesComponent implements OnInit, OnDestroy {
   excluirSelecionado(): void {
     if (this.selectedCliente && this.podeExcluirModulo && !this.selectedCliente.cliente_padrao) this.excluir(this.selectedCliente);
   }
+
+  podeAtivarSelecionado(): boolean {
+    return !!this.selectedCliente && this.podeEditarModulo && this.selectedCliente.ativo === false;
+  }
+
+  podeInativarSelecionado(): boolean {
+    return !!this.selectedCliente && this.podeEditarModulo && this.selectedCliente.ativo !== false && !this.selectedCliente.cliente_padrao;
+  }
+
+  podeBloquearSelecionado(): boolean {
+    return !!this.selectedCliente && this.podeEditarModulo && !this.selectedCliente.bloqueio && !this.selectedCliente.cliente_padrao;
+  }
+
+  podeDesbloquearSelecionado(): boolean {
+    return !!this.selectedCliente && this.podeEditarModulo && !!this.selectedCliente.bloqueio;
+  }
+
+  ativarSelecionado(): void {
+    if (this.selectedCliente) this.executarCiclo(this.selectedCliente, 'ativar');
+  }
+
+  inativarSelecionado(): void {
+    if (this.selectedCliente) this.executarCiclo(this.selectedCliente, 'inativar');
+  }
+
+  bloquearSelecionado(): void {
+    if (this.selectedCliente) this.bloquear(this.selectedCliente);
+  }
+
+  desbloquearSelecionado(): void {
+    if (this.selectedCliente) this.executarCiclo(this.selectedCliente, 'desbloquear');
+  }
+
+  fecharBloqueio(): void {
+    if (this.bloqueioSaving) return;
+    this.bloqueioModal = null;
+    this.bloqueioMotivo = '';
+    this.bloqueioObservacao = '';
+    this.bloqueioErro = '';
+  }
+
+  confirmarBloqueio(): void {
+    const cliente = this.bloqueioModal;
+    const id = cliente?.id;
+    const motivo = this.bloqueioMotivo.trim();
+    if (!id || !this.podeEditarModulo) return;
+    if (!motivo) {
+      this.bloqueioErro = 'Informe o motivo do bloqueio.';
+      return;
+    }
+    this.bloqueioSaving = true;
+    this.api.bloquear(id, { motivo, observacao: this.bloqueioObservacao.trim() || null }).subscribe({
+      next: updated => {
+        this.bloqueioSaving = false;
+        this.fecharBloqueio();
+        this.successMsg = 'Cliente bloqueado.';
+        this.atualizarClienteAposAcao(updated);
+      },
+      error: err => {
+        this.bloqueioSaving = false;
+        this.bloqueioErro = err?.error?.motivo || err?.error?.detail || 'Falha ao bloquear cliente.';
+      }
+    });
+  }
+
+  fecharConfirmAction(): void {
+    if (this.confirmSaving) return;
+    this.confirmActionModal = null;
+    this.confirmErro = '';
+  }
+
+  confirmarAcaoCiclo(): void {
+    const modal = this.confirmActionModal;
+    const id = modal?.cliente.id;
+    if (!modal || !id || !this.podeEditarModulo) return;
+    this.confirmSaving = true;
+    this.api[modal.action](id).subscribe({
+      next: updated => {
+        this.confirmSaving = false;
+        this.fecharConfirmAction();
+        this.successMsg = 'Cliente atualizado.';
+        this.atualizarClienteAposAcao(updated);
+      },
+      error: err => {
+        this.confirmSaving = false;
+        this.confirmErro = err?.error?.detail || 'Falha ao atualizar cliente.';
+      }
+    });
+  }
+
+  confirmActionLabel(action?: 'ativar' | 'inativar' | 'desbloquear'): string {
+    if (action === 'ativar') return 'Ativar';
+    if (action === 'inativar') return 'Inativar';
+    return 'Desbloquear';
+  }
+
+  confirmActionMessage(action?: 'ativar' | 'inativar' | 'desbloquear'): string {
+    if (action === 'ativar') return 'Confirma a ativação deste cliente?';
+    if (action === 'inativar') return 'Confirma a inativação deste cliente?';
+    return 'Confirma o desbloqueio deste cliente?';
+  }
+
+  carregarHistorico(id: number, page = 1): void {
+    this.historicoLoading = true;
+    this.historicoError = '';
+    this.historicoPage = page;
+    this.api.historico(id, this.historicoPage, this.historicoPageSize).subscribe({
+      next: res => {
+        this.historicoLoading = false;
+        this.historico = res.results || [];
+        this.historicoTotal = res.count || 0;
+      },
+      error: () => {
+        this.historicoLoading = false;
+        this.historicoError = 'Falha ao carregar histórico.';
+      }
+    });
+  }
+
+  historicoProximaPagina(): void {
+    if (!this.clienteConsulta?.id || this.historicoPage * this.historicoPageSize >= this.historicoTotal) return;
+    this.carregarHistorico(this.clienteConsulta.id, this.historicoPage + 1);
+  }
+
+  historicoPaginaAnterior(): void {
+    if (!this.clienteConsulta?.id || this.historicoPage <= 1) return;
+    this.carregarHistorico(this.clienteConsulta.id, this.historicoPage - 1);
+  }
+
+  private limparHistorico(): void {
+    this.historico = [];
+    this.historicoError = '';
+    this.historicoLoading = false;
+    this.historicoPage = 1;
+    this.historicoTotal = 0;
+    this.clienteConsulta = null;
+  }
+
+  private atualizarClienteAposAcao(updated: Cliente): void {
+    this.load();
+    if (updated.id && this.selectedCliente?.id === updated.id) this.selectedCliente = updated;
+    if (updated.id && this.clienteConsulta?.id === updated.id) {
+      this.clienteConsulta = updated;
+      this.consultar(updated);
+    }
+  }
+
 
   toggleIndicators(): void {
     this.indicatorsVisible = !this.indicatorsVisible;
@@ -699,6 +851,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.submitted = false;
     this.errorOverlayOpen = false;
     this.form.enable({ emitEvent: false });
+    this.limparHistorico();
   }
 
   salvar(): void {
@@ -718,6 +871,12 @@ export class ClientesComponent implements OnInit, OnDestroy {
       documento: this.digits(raw.documento || ''),
       aniversario: raw.aniversario ? raw.aniversario : null,
     };
+    delete (payload as any).ativo;
+    delete (payload as any).bloqueio;
+    delete (payload as any).motivo_bloqueio;
+    delete (payload as any).observacao_bloqueio;
+    delete (payload as any).bloqueado_em;
+    delete (payload as any).bloqueado_por;
 
     this.saving = true;
     const req$ = this.editingId
@@ -812,7 +971,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',
       'categoria','aniversario',
-      'bloqueio','mala_direta','aceita_email','aceita_whatsapp','aceita_sms','ativo',
+      'mala_direta','aceita_email','aceita_whatsapp','aceita_sms',
     ].forEach(field => {
       const err = f.get(field)?.errors?.['server'];
       if (err) msgs.push(`${field}: ${err}`);
