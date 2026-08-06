@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -10,6 +10,7 @@ import {
 } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ClientesService } from '../../core/services/clientes.service';
 import { Cliente, ClienteIndicadores } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
@@ -25,10 +26,11 @@ import { SummaryCardComponent } from '../../shared/components/summary-card/summa
   templateUrl: './clientes.component.html',
   styleUrls: ['./clientes.component.css']
 })
-export class ClientesComponent implements OnInit {
+export class ClientesComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private api = inject(ClientesService);
   private auth = inject(AuthService);
+  private tipoPessoaSub?: Subscription;
 
   // ======== Estado geral UI ========
   loading = false;
@@ -81,7 +83,6 @@ export class ClientesComponent implements OnInit {
     apelido: ['', [Validators.maxLength(18)]],
     tipo_pessoa: ['PF', [Validators.required]],
     documento: ['', [this.documentoValidator]],
-    cpf: ['', [this.cpfValidator]],
 
     email: ['', [Validators.email]],
 
@@ -180,10 +181,14 @@ export class ClientesComponent implements OnInit {
   ngOnInit(): void {
     this.loadColumnsPreference();
     this.loadViewPreference();
-    this.form.get('tipo_pessoa')?.valueChanges.subscribe(() => {
-      this.form.get('documento')?.updateValueAndValidity();
+    this.tipoPessoaSub = this.form.get('tipo_pessoa')?.valueChanges.subscribe(() => {
+      this.form.get('documento')?.updateValueAndValidity({ onlySelf: true });
     });
     this.load();
+  }
+
+  ngOnDestroy(): void {
+    this.tipoPessoaSub?.unsubscribe();
   }
 
   // ========= Helpers de telefone =========
@@ -241,8 +246,35 @@ export class ClientesComponent implements OnInit {
     const tipo = group?.get('tipo_pessoa')?.value || 'PF';
     const digits = String(ctrl.value || '').replace(/\D/g, '');
     if (!digits) return null;
-    if (tipo === 'PJ') return digits.length === 14 ? null : { documento: true };
-    return digits.length === 11 ? null : { documento: true };
+    if (tipo === 'PJ') return ClientesComponent.cnpjValido(digits) ? null : { documento: true };
+    return ClientesComponent.cpfValido(digits) ? null : { documento: true };
+  }
+
+  private static cpfValido(value: string): boolean {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+    const calc = (base: string, facIni: number) => {
+      let sum = 0;
+      for (let i = 0; i < base.length; i++) sum += parseInt(base[i], 10) * (facIni - i);
+      const mod = sum % 11;
+      return mod < 2 ? 0 : 11 - mod;
+    };
+    const d1 = calc(digits.substring(0, 9), 10);
+    const d2 = calc(digits.substring(0, 10), 11);
+    return digits === digits.substring(0, 9) + String(d1) + String(d2);
+  }
+
+  private static cnpjValido(value: string): boolean {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length !== 14 || /^(\d)\1{13}$/.test(digits)) return false;
+    const calc = (base: string, weights: number[]) => {
+      const sum = base.split('').reduce((acc, digit, idx) => acc + parseInt(digit, 10) * weights[idx], 0);
+      const mod = sum % 11;
+      return mod < 2 ? 0 : 11 - mod;
+    };
+    const d1 = calc(digits.substring(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    const d2 = calc(digits.substring(0, 13), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    return digits.endsWith(`${d1}${d2}`);
   }
 
   onPhoneInput(field: 'telefone1'|'telefone2'): void {
@@ -283,6 +315,30 @@ export class ClientesComponent implements OnInit {
     if (this.selectedCliente && !this.clientes.some(c => c.id === this.selectedCliente?.id)) {
       this.selectedCliente = null;
     }
+  }
+
+  onDocumentoInput(): void {
+    const ctrl = this.form.get('documento');
+    if (!ctrl) return;
+    const tipo = this.form.get('tipo_pessoa')?.value === 'PJ' ? 'PJ' : 'PF';
+    ctrl.setValue(this.formatDocumentoInput(ctrl.value, tipo), { emitEvent: false });
+    ctrl.updateValueAndValidity({ onlySelf: true });
+  }
+
+  formatDocumentoInput(value: string | null | undefined, tipo: 'PF' | 'PJ' = 'PF'): string {
+    const limit = tipo === 'PJ' ? 14 : 11;
+    const d = this.digits(value || '').slice(0, limit);
+    if (tipo === 'PJ') {
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+      if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+      if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+      return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+    }
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -349,7 +405,6 @@ export class ClientesComponent implements OnInit {
       apelido: '',
       tipo_pessoa: 'PF',
       documento: '',
-      cpf: '',
       email: '',
 
       logradouro: 'Rua',
@@ -397,7 +452,6 @@ export class ClientesComponent implements OnInit {
       apelido:        row.apelido ?? '',
       tipo_pessoa:    row.tipo_pessoa ?? 'PF',
       documento:      row.documento ?? row.cpf ?? '',
-      cpf:            row.cpf ?? '',
       email:          row.email ?? '',
 
       logradouro:     row.logradouro ?? 'Rua',
@@ -661,8 +715,7 @@ export class ClientesComponent implements OnInit {
       ...raw,
       telefone1: this.onlyDigits(raw.telefone1),
       telefone2: this.onlyDigits(raw.telefone2),
-      documento: this.digits(raw.documento || raw.cpf || ''),
-      cpf: this.digits(raw.documento || raw.cpf || ''),
+      documento: this.digits(raw.documento || ''),
       aniversario: raw.aniversario ? raw.aniversario : null,
     };
 
@@ -686,7 +739,7 @@ export class ClientesComponent implements OnInit {
         this.successMsg = '';
         if (err?.error && typeof err.error === 'object') {
           Object.keys(err.error).forEach(field => {
-            const ctrl = this.form.get(field);
+            const ctrl = this.form.get(field === 'cpf' ? 'documento' : field);
             if (ctrl) {
               ctrl.setErrors({
                 ...(ctrl.errors || {}),
@@ -754,7 +807,7 @@ export class ClientesComponent implements OnInit {
 
     // erros vindos do backend
     [
-      'nome_cliente','apelido','tipo_pessoa','documento','cpf','email',
+      'nome_cliente','apelido','tipo_pessoa','documento','email',
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',

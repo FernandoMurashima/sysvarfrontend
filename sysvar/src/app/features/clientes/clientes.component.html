@@ -187,7 +187,7 @@
 
         <label id="cpf-box" class="input-item" [class.invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted)">
           {{ form.get('tipo_pessoa')?.value === 'PJ' ? 'CNPJ' : 'CPF' }}
-          <input type="text" formControlName="documento" [placeholder]="form.get('tipo_pessoa')?.value === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'" [attr.aria-invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted) ? 'true' : null" />
+          <input type="text" formControlName="documento" (input)="onDocumentoInput()" [attr.maxlength]="form.get('tipo_pessoa')?.value === 'PJ' ? 18 : 14" [placeholder]="form.get('tipo_pessoa')?.value === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'" [attr.aria-invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted) ? 'true' : null" />
           <span class="field-error" *ngIf="form.get('documento')?.touched || submitted">
             <ng-container *ngIf="form.get('documento')?.errors?.['documento']">Documento inválido.</ng-container>
             <ng-container *ngIf="form.get('documento')?.errors?.['server']">{{ form.get('documento')?.errors?.['server'] }}</ng-container>

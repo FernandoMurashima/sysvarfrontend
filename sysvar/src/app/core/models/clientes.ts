@@ -12,6 +12,7 @@ export interface Cliente {
   empresa?: number;
   empresa_nome?: string;
   tipo_pessoa?: TipoPessoaCliente;
+  // documento é a fonte funcional atual; cpf permanece legado temporário só para leitura/compatibilidade.
   documento?: string;
   cliente_padrao?: boolean;
 
