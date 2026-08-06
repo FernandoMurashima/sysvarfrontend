@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cliente, ClienteBloqueioPayload, ClienteFiltros, ClienteHistoricoResponse, ClienteIndicadores, PaginatedResponse } from '../../core/models/clientes';
+import { Cliente, ClienteBloqueioPayload, ClienteComprasFiltros, ClienteComprasResponse, ClienteFiltros, ClienteHistoricoResponse, ClienteIndicadores, PaginatedResponse } from '../../core/models/clientes';
 
 @Injectable({ providedIn: 'root' })
 export class ClientesService {
@@ -66,6 +66,16 @@ export class ClientesService {
       .set('page', String(page))
       .set('page_size', String(pageSize));
     return this.http.get<ClienteHistoricoResponse>(`${this.base}${id}/historico/`, { params });
+  }
+
+  compras(id: number, filtros?: ClienteComprasFiltros): Observable<ClienteComprasResponse> {
+    let params = new HttpParams();
+    Object.entries(filtros || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && String(value) !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+    return this.http.get<ClienteComprasResponse>(`${this.base}${id}/compras/`, { params });
   }
 
   remove(id: number): Observable<any> {

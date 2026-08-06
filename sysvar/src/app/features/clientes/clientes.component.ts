@@ -12,7 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ClientesService } from '../../core/services/clientes.service';
-import { Cliente, ClienteHistoricoItem, ClienteIndicadores } from '../../core/models/clientes';
+import { Cliente, ClienteCompraItem, ClienteHistoricoItem, ClienteIndicadores } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -72,6 +72,18 @@ export class ClientesComponent implements OnInit, OnDestroy {
   exportOpen = false;
   selectedCliente: Cliente | null = null;
   clienteConsulta: Cliente | null = null;
+  consultaArea: 'dados' | 'compras' | 'historico' = 'dados';
+  compras: ClienteCompraItem[] = [];
+  comprasLoading = false;
+  comprasError = '';
+  comprasPage = 1;
+  comprasPageSize = 10;
+  comprasPageSizeOptions = [5, 10, 20, 50];
+  comprasTotal = 0;
+  comprasLoadedFor: number | null = null;
+  comprasStatus = '';
+  comprasDataInicio = '';
+  comprasDataFim = '';
   historico: ClienteHistoricoItem[] = [];
   historicoLoading = false;
   historicoError = '';
@@ -497,6 +509,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   consultar(row: Cliente): void {
     this.editar(row);
     this.consultando = true;
+    this.consultaArea = 'dados';
     this.clienteConsulta = row;
     this.form.disable({ emitEvent: false });
     if (row.id) this.carregarHistorico(row.id);
@@ -678,6 +691,71 @@ export class ClientesComponent implements OnInit, OnDestroy {
     });
   }
 
+  selecionarAreaConsulta(area: 'dados' | 'compras' | 'historico'): void {
+    this.consultaArea = area;
+    if (area === 'compras' && this.clienteConsulta?.id && this.comprasLoadedFor !== this.clienteConsulta.id) {
+      this.carregarCompras(this.clienteConsulta.id, 1);
+    }
+  }
+
+  carregarCompras(id = this.clienteConsulta?.id || 0, page = this.comprasPage): void {
+    if (!id) return;
+    this.comprasLoading = true;
+    this.comprasError = '';
+    this.comprasPage = page;
+    this.api.compras(id, {
+      page: this.comprasPage,
+      page_size: this.comprasPageSize,
+      status: this.comprasStatus,
+      data_inicio: this.comprasDataInicio,
+      data_fim: this.comprasDataFim,
+    }).subscribe({
+      next: res => {
+        this.comprasLoading = false;
+        this.compras = res.results || [];
+        this.comprasTotal = res.count || 0;
+        this.comprasLoadedFor = id;
+      },
+      error: () => {
+        this.comprasLoading = false;
+        this.comprasError = 'Falha ao carregar compras.';
+      }
+    });
+  }
+
+  aplicarFiltrosCompras(): void {
+    if (!this.clienteConsulta?.id) return;
+    this.carregarCompras(this.clienteConsulta.id, 1);
+  }
+
+  onComprasPageSizeChange(value: number | string): void {
+    this.comprasPageSize = Number(value) || 10;
+    this.aplicarFiltrosCompras();
+  }
+
+  comprasPaginaAnterior(): void {
+    if (!this.clienteConsulta?.id || this.comprasPage <= 1) return;
+    this.carregarCompras(this.clienteConsulta.id, this.comprasPage - 1);
+  }
+
+  comprasProximaPagina(): void {
+    if (!this.clienteConsulta?.id || this.comprasPage * this.comprasPageSize >= this.comprasTotal) return;
+    this.carregarCompras(this.clienteConsulta.id, this.comprasPage + 1);
+  }
+
+  atualizarCompras(): void {
+    if (this.clienteConsulta?.id) this.carregarCompras(this.clienteConsulta.id, this.comprasPage);
+  }
+
+  get comprasStart(): number {
+    if (!this.comprasTotal) return 0;
+    return (this.comprasPage - 1) * this.comprasPageSize + 1;
+  }
+
+  get comprasEnd(): number {
+    return Math.min(this.comprasPage * this.comprasPageSize, this.comprasTotal);
+  }
+
   historicoProximaPagina(): void {
     if (!this.clienteConsulta?.id || this.historicoPage * this.historicoPageSize >= this.historicoTotal) return;
     this.carregarHistorico(this.clienteConsulta.id, this.historicoPage + 1);
@@ -695,6 +773,16 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.historicoPage = 1;
     this.historicoTotal = 0;
     this.clienteConsulta = null;
+    this.limparCompras();
+  }
+
+  private limparCompras(): void {
+    this.compras = [];
+    this.comprasError = '';
+    this.comprasLoading = false;
+    this.comprasPage = 1;
+    this.comprasTotal = 0;
+    this.comprasLoadedFor = null;
   }
 
   private atualizarClienteAposAcao(updated: Cliente): void {
@@ -838,6 +926,15 @@ export class ClientesComponent implements OnInit, OnDestroy {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+  }
+
+  formatMoney(value?: string | number | null): string {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(amount) ? amount : 0);
+  }
+
+  formatUltimaCompra(value?: string | null): string {
+    return value ? this.formatDate(value) : 'Nenhuma compra';
   }
 
   trackCliente(_: number, cliente: Cliente): number | string {

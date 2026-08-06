@@ -28,13 +28,14 @@ describe('ClientesComponent documento funcional', () => {
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<ClientesService>('ClientesService', [
-      'list', 'indicadores', 'get', 'create', 'update', 'patch', 'historico',
+      'list', 'indicadores', 'get', 'create', 'update', 'patch', 'historico', 'compras',
       'ativar', 'inativar', 'bloquear', 'desbloquear', 'remove'
     ]);
     api.list.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
     api.indicadores.and.returnValue(of(indicadores));
     api.get.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.historico.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
+    api.compras.and.returnValue(of({ count: 0, next: null, previous: null, results: [] }));
     api.create.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.update.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.patch.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
@@ -245,5 +246,87 @@ describe('ClientesComponent documento funcional', () => {
 
     expect(component.podeInativarSelecionado()).toBeFalse();
     expect(component.podeBloquearSelecionado()).toBeFalse();
+  });
+
+  it('consulta inicia em dados cadastrais com histórico separado', () => {
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    expect(component.consultaArea).toBe('dados');
+    expect(api.historico).toHaveBeenCalledWith(44, 1, 10);
+    expect(api.compras).not.toHaveBeenCalled();
+  });
+
+  it('aba compras carrega endpoint sob demanda', () => {
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    component.selecionarAreaConsulta('compras');
+
+    expect(api.compras).toHaveBeenCalledWith(44, jasmine.objectContaining({ page: 1, page_size: 10 }));
+  });
+
+  it('compras mostra retorno paginado e não altera paginação principal nem histórico', () => {
+    api.compras.and.returnValue(of({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 1,
+        data_venda: '2026-08-06T10:00:00Z',
+        numero_venda: '1',
+        numero_documento: '1',
+        loja_id: 1,
+        loja_nome: 'Loja',
+        vendedor_id: 2,
+        vendedor_nome: 'Vendedor',
+        quantidade_itens: 2,
+        valor_bruto: '100.00',
+        desconto: '10.00',
+        valor_final: '90.00',
+        valor_devolvido: '0.00',
+        forma_pagamento: 'DINHEIRO',
+        status: 'FINALIZADA',
+        status_descricao: 'Finalizada',
+        cancelada: false,
+        devolvida: false,
+        pode_consultar_venda: false,
+      }]
+    }));
+    component.page = 3;
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+    component.historicoPage = 2;
+
+    component.selecionarAreaConsulta('compras');
+
+    expect(component.comprasTotal).toBe(1);
+    expect(component.compras[0].numero_venda).toBe('1');
+    expect(component.page).toBe(3);
+    expect(component.historicoPage).toBe(2);
+  });
+
+  it('page size de compras reinicia página sem afetar histórico', () => {
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+    component.selecionarAreaConsulta('compras');
+    component.historicoPage = 3;
+
+    component.onComprasPageSizeChange(20);
+
+    expect(component.comprasPageSize).toBe(20);
+    expect(api.compras).toHaveBeenCalledWith(44, jasmine.objectContaining({ page: 1, page_size: 20 }));
+    expect(component.historicoPage).toBe(3);
+  });
+
+  it('erro de compras é exibido separado de lista vazia', () => {
+    api.compras.and.returnValue(throwError(() => ({ error: { detail: 'falha' } })));
+    component.consultar({ id: 44, nome_cliente: 'Cliente', documento: '52998224725' });
+
+    component.selecionarAreaConsulta('compras');
+
+    expect(component.comprasError).toContain('Falha');
+    expect(component.compras.length).toBe(0);
+  });
+
+  it('formatadores comerciais usam moeda e texto de cliente sem compras', () => {
+    expect(component.formatMoney('12.5')).toContain('R$');
+    expect(component.formatUltimaCompra(null)).toBe('Nenhuma compra');
   });
 });

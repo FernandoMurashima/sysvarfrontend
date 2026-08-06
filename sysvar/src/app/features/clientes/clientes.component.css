@@ -566,6 +566,39 @@ input[aria-invalid="true"] {
   background: #f8fafc;
 }
 
+.consulta-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.commercial-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.commercial-cards div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.commercial-cards span {
+  color: #475569;
+  font-size: 12px;
+}
+
+.commercial-cards strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
 .consulta-status div {
   display: grid;
   gap: 3px;
@@ -583,12 +616,37 @@ input[aria-invalid="true"] {
   font-size: 13px;
 }
 
-.history-panel {
+.history-panel,
+.purchases-panel {
   margin-top: 12px;
   padding: 10px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #fff;
+}
+
+.purchase-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  align-items: end;
+}
+
+.purchases-table {
+  margin-top: 10px;
+}
+
+.purchases-table .table {
+  min-width: 1120px;
+}
+
+.cancelled-row {
+  background: #fff7f7;
+}
+
+.returned-row {
+  background: #fffaf0;
 }
 
 .history-title,

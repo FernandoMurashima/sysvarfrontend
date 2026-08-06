@@ -328,7 +328,32 @@
         </label>
       </div>
 
-      <div class="consulta-status" *ngIf="consultando && clienteConsulta as cliente">
+      <div class="consulta-tabs" *ngIf="consultando">
+        <button type="button" class="btn" [class.primary]="consultaArea === 'dados'" (click)="selecionarAreaConsulta('dados')">Dados cadastrais</button>
+        <button type="button" class="btn" [class.primary]="consultaArea === 'compras'" (click)="selecionarAreaConsulta('compras')">Compras</button>
+        <button type="button" class="btn" [class.primary]="consultaArea === 'historico'" (click)="selecionarAreaConsulta('historico')">Histórico</button>
+      </div>
+
+      <div class="commercial-cards" *ngIf="consultando && consultaArea === 'dados' && clienteConsulta as cliente">
+        <div>
+          <span>Última compra</span>
+          <strong>{{ formatUltimaCompra(cliente.ultima_compra) }}</strong>
+        </div>
+        <div>
+          <span>Total comprado</span>
+          <strong>{{ formatMoney(cliente.total_comprado) }}</strong>
+        </div>
+        <div>
+          <span>Quantidade de compras</span>
+          <strong>{{ cliente.quantidade_compras || 0 }}</strong>
+        </div>
+        <div>
+          <span>Ticket médio</span>
+          <strong>{{ formatMoney(cliente.ticket_medio) }}</strong>
+        </div>
+      </div>
+
+      <div class="consulta-status" *ngIf="consultando && consultaArea === 'dados' && clienteConsulta as cliente">
         <div>
           <span>Status</span>
           <strong>{{ cliente.ativo === false ? 'Inativo' : 'Ativo' }}</strong>
@@ -355,7 +380,80 @@
         </div>
       </div>
 
-      <section class="history-panel" *ngIf="consultando">
+      <section class="purchases-panel" *ngIf="consultando && consultaArea === 'compras'">
+        <div class="history-title">
+          <strong>Compras</strong>
+          <span>{{ comprasTotal }} venda(s)</span>
+        </div>
+        <div class="purchase-filters">
+          <label>Status
+            <select [(ngModel)]="comprasStatus" (ngModelChange)="aplicarFiltrosCompras()">
+              <option value="">Todos</option>
+              <option value="FINALIZADA">Finalizada</option>
+              <option value="CANCELADA">Cancelada</option>
+              <option value="ABERTA">Aberta</option>
+            </select>
+          </label>
+          <label>Data inicial
+            <input type="date" [(ngModel)]="comprasDataInicio" (change)="aplicarFiltrosCompras()" />
+          </label>
+          <label>Data final
+            <input type="date" [(ngModel)]="comprasDataFim" (change)="aplicarFiltrosCompras()" />
+          </label>
+          <label>Itens por página
+            <select [ngModel]="comprasPageSize" (ngModelChange)="onComprasPageSizeChange($event)">
+              <option *ngFor="let opt of comprasPageSizeOptions" [value]="opt">{{ opt }}</option>
+            </select>
+          </label>
+          <button class="btn" type="button" (click)="atualizarCompras()">Atualizar</button>
+        </div>
+        <div *ngIf="comprasLoading" class="loading">Carregando compras...</div>
+        <div *ngIf="comprasError" class="alert error">{{ comprasError }}</div>
+        <div class="table-wrapper purchases-table" *ngIf="!comprasLoading && compras.length">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Venda</th>
+                <th>Documento</th>
+                <th>Loja</th>
+                <th>Vendedor</th>
+                <th>Itens</th>
+                <th>Valor bruto</th>
+                <th>Desconto</th>
+                <th>Valor final</th>
+                <th>Pagamento</th>
+                <th>Situação</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let compra of compras" [class.cancelled-row]="compra.cancelada" [class.returned-row]="compra.devolvida">
+                <td>{{ formatDate(compra.data_venda) }}</td>
+                <td>{{ compra.numero_venda }}</td>
+                <td>{{ compra.numero_documento || '-' }}</td>
+                <td>{{ compra.loja_nome || compra.loja_id }}</td>
+                <td>{{ compra.vendedor_nome || compra.vendedor_id }}</td>
+                <td>{{ compra.quantidade_itens }}</td>
+                <td>{{ formatMoney(compra.valor_bruto) }}</td>
+                <td>{{ formatMoney(compra.desconto) }}</td>
+                <td>{{ formatMoney(compra.valor_final) }}</td>
+                <td>{{ compra.forma_pagamento || '-' }}</td>
+                <td><span class="status-pill" [class.inactive]="compra.cancelada">{{ compra.status_descricao }}</span></td>
+                <td><button class="btn" type="button" [disabled]="!compra.pode_consultar_venda">Consultar venda</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="!comprasLoading && !compras.length && !comprasError" class="empty-hint">Nenhuma compra encontrada para este cliente.</div>
+        <div class="history-pager" *ngIf="comprasTotal > 0">
+          <button class="btn" type="button" [disabled]="comprasPage <= 1" (click)="comprasPaginaAnterior()">Anterior</button>
+          <span>Mostrando {{ comprasStart }}–{{ comprasEnd }} de {{ comprasTotal }}</span>
+          <button class="btn" type="button" [disabled]="comprasPage * comprasPageSize >= comprasTotal" (click)="comprasProximaPagina()">Próxima</button>
+        </div>
+      </section>
+
+      <section class="history-panel" *ngIf="consultando && consultaArea === 'historico'">
         <div class="history-title">
           <strong>Histórico</strong>
           <span>{{ historicoTotal }} evento(s)</span>

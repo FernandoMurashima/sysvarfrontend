@@ -60,4 +60,20 @@ describe('ClientesService documento funcional', () => {
     expect(req.request.params.get('page_size')).toBe('5');
     req.flush({ count: 0, next: null, previous: null, results: [] });
   });
+
+  it('compras consulta endpoint paginado do cliente enviando apenas filtros preenchidos', () => {
+    service.compras(8, { page: 2, page_size: 5, status: 'FINALIZADA', data_inicio: '', ordering: undefined }).subscribe();
+
+    const req = http.expectOne(request =>
+      request.method === 'GET' &&
+      request.url.endsWith('/cadastros/clientes/8/compras/') &&
+      request.params.get('page') === '2' &&
+      request.params.get('page_size') === '5' &&
+      request.params.get('status') === 'FINALIZADA' &&
+      !request.params.has('data_inicio') &&
+      !request.params.has('ordering')
+    );
+    expect(req.request.params.get('status')).toBe('FINALIZADA');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
+  });
 });

@@ -109,3 +109,38 @@ export interface ClienteHistoricoItem {
 }
 
 export type ClienteHistoricoResponse = PaginatedResponse<ClienteHistoricoItem>;
+
+export interface ClienteCompraItem {
+  id: number;
+  data_venda: string;
+  numero_venda: string;
+  numero_documento: string;
+  loja_id: number;
+  loja_nome?: string | null;
+  vendedor_id: number;
+  vendedor_nome?: string | null;
+  quantidade_itens: number;
+  valor_bruto: string;
+  desconto: string;
+  valor_final: string;
+  valor_devolvido: string;
+  forma_pagamento: string;
+  status: string;
+  status_descricao: string;
+  cancelada: boolean;
+  devolvida: boolean;
+  pode_consultar_venda: boolean;
+  detalhe_venda_url?: string | null;
+}
+
+export interface ClienteComprasFiltros {
+  page?: number;
+  page_size?: number;
+  data_inicio?: string;
+  data_fim?: string;
+  status?: string;
+  loja?: number | string;
+  ordering?: string;
+}
+
+export type ClienteComprasResponse = PaginatedResponse<ClienteCompraItem>;
