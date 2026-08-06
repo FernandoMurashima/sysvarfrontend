@@ -11,7 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ClientesService } from '../../core/services/clientes.service';
-import { Cliente } from '../../core/models/clientes';
+import { Cliente, ClienteIndicadores } from '../../core/models/clientes';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -67,7 +67,7 @@ export class ClientesComponent implements OnInit {
   private readonly viewPrefsKey = 'sysvar.ui.preferences.clientes';
   columns = [
     { key: 'apelido', label: 'Apelido', visible: true, required: false },
-    { key: 'cpf', label: 'CPF', visible: true, required: false },
+    { key: 'documento', label: 'Documento', visible: true, required: false },
     { key: 'cidade', label: 'Cidade/UF', visible: true, required: false },
     { key: 'email', label: 'E-mail', visible: true, required: false },
     { key: 'telefone', label: 'Telefone', visible: true, required: false },
@@ -79,6 +79,8 @@ export class ClientesComponent implements OnInit {
   form: FormGroup = this.fb.group({
     nome_cliente: ['', [Validators.required, Validators.maxLength(50)]],
     apelido: ['', [Validators.maxLength(18)]],
+    tipo_pessoa: ['PF', [Validators.required]],
+    documento: ['', [this.documentoValidator]],
     cpf: ['', [this.cpfValidator]],
 
     email: ['', [Validators.email]],
@@ -101,6 +103,11 @@ export class ClientesComponent implements OnInit {
 
     bloqueio: [false],
     mala_direta: [false],
+    aceita_email: [false],
+    aceita_whatsapp: [false],
+    aceita_sms: [false],
+    origem_consentimento: [''],
+    consentimento_observacao: [''],
     ativo: [true],
   });
 
@@ -108,9 +115,20 @@ export class ClientesComponent implements OnInit {
     'Rua','Avenida','Travessa','Alameda','Praça','Rodovia','Estrada','Largo','Viela'
   ];
 
-  // ======== Lista + ListView (client-side) ========
-  clientesAll: Cliente[] = [];
   clientes: Cliente[] = [];
+  indicadoresData: ClienteIndicadores = {
+    total: 0,
+    ativos: 0,
+    inativos: 0,
+    bloqueados: 0,
+    pessoas_fisicas: 0,
+    pessoas_juridicas: 0,
+    clientes_identificados: 0,
+    cliente_padrao: 0,
+    com_consentimento: 0,
+    clientes_com_compras: 0,
+    clientes_sem_compras: 0,
+  };
 
   page = 1;
   pageSize = 20;
@@ -128,10 +146,10 @@ export class ClientesComponent implements OnInit {
     return Math.min(this.page * this.pageSize, this.total);
   }
   get searchSuggestions(): string[] {
-    return this.clientesAll.flatMap(c => [
+    return this.clientes.flatMap(c => [
       c.nome_cliente,
       c.apelido,
-      c.cpf,
+      c.documento || c.cpf,
       c.email,
       c.cidade,
       c.estado,
@@ -140,61 +158,31 @@ export class ClientesComponent implements OnInit {
   }
 
   get indicadores() {
-    const total = this.clientesAll.length;
-    const ativos = this.clientesAll.filter(c => c.ativo !== false).length;
-    const bloqueados = this.clientesAll.filter(c => !!c.bloqueio).length;
-    const malaDireta = this.clientesAll.filter(c => !!c.mala_direta).length;
-    const comCidade = this.clientesAll.filter(c => !!(c.cidade || '').trim()).length;
-    return { total, ativos, bloqueados, malaDireta, comCidade };
+    return {
+      total: this.indicadoresData.total || 0,
+      ativos: this.indicadoresData.ativos || 0,
+      bloqueados: this.indicadoresData.bloqueados || 0,
+      malaDireta: this.indicadoresData.com_consentimento || 0,
+      comCidade: this.clientes.filter(c => !!(c.cidade || '').trim()).length,
+    };
   }
 
   get cidadesOptions(): string[] {
     return Array.from(new Set(
-      this.clientesAll
+      this.clientes
         .map(c => (c.cidade || '').trim())
         .filter(Boolean)
     )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 
-  get clientesFiltrados(): Cliente[] {
-    const term = this.normalize(this.search);
-    const tipo = this.filterTipo;
-    const cidade = this.normalize(this.filterCidade);
-    const status = this.filterStatus;
-    const estado = this.normalize(this.filterEstado);
-    const cpf = this.digits(this.filterCpf);
-    const email = this.normalize(this.filterEmail);
-
-    return this.clientesAll.filter(c => {
-      const haystack = this.normalize([
-        c.nome_cliente,
-        c.apelido,
-        c.cpf,
-        c.email,
-        c.cidade,
-        c.estado,
-        c.telefone1,
-        c.telefone2,
-      ].filter(Boolean).join(' '));
-      const cpfCliente = this.digits(c.cpf || '');
-      const tipoCliente = this.tipoCliente(c);
-
-      if (term && !haystack.includes(term)) return false;
-      if (tipo && tipoCliente !== tipo) return false;
-      if (cidade && this.normalize(c.cidade || '') !== cidade) return false;
-      if (status === 'ATIVO' && c.ativo === false) return false;
-      if (status === 'INATIVO' && c.ativo !== false) return false;
-      if (status === 'BLOQUEADO' && !c.bloqueio) return false;
-      if (estado && this.normalize(c.estado || '') !== estado) return false;
-      if (cpf && !cpfCliente.includes(cpf)) return false;
-      if (email && !this.normalize(c.email || '').includes(email)) return false;
-      return true;
-    });
-  }
+  get clientesFiltrados(): Cliente[] { return this.clientes; }
 
   ngOnInit(): void {
     this.loadColumnsPreference();
     this.loadViewPreference();
+    this.form.get('tipo_pessoa')?.valueChanges.subscribe(() => {
+      this.form.get('documento')?.updateValueAndValidity();
+    });
     this.load();
   }
 
@@ -248,6 +236,15 @@ export class ClientesComponent implements OnInit {
     return ok ? null : { phone: true };
   }
 
+  documentoValidator(ctrl: AbstractControl): ValidationErrors | null {
+    const group = ctrl.parent;
+    const tipo = group?.get('tipo_pessoa')?.value || 'PF';
+    const digits = String(ctrl.value || '').replace(/\D/g, '');
+    if (!digits) return null;
+    if (tipo === 'PJ') return digits.length === 14 ? null : { documento: true };
+    return digits.length === 11 ? null : { documento: true };
+  }
+
   onPhoneInput(field: 'telefone1'|'telefone2'): void {
     const ctrl = this.form.get(field);
     if (!ctrl) return;
@@ -259,18 +256,20 @@ export class ClientesComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.list({ page_size: 2000 }).subscribe({
-      next: (res: any) => {
-        const arr: Cliente[] = Array.isArray(res) ? res : (res?.results ?? []);
-        this.clientesAll = arr;
-        this.page = 1;
-        this.applyPage();
+    const params = this.currentParams();
+    this.api.indicadores(params).subscribe({
+      next: indicadores => this.indicadoresData = indicadores,
+      error: () => this.indicadoresData = { ...this.indicadoresData, total: 0 }
+    });
+    this.api.list(params).subscribe({
+      next: (res) => {
+        this.clientes = res.results ?? [];
+        this.total = res.count ?? 0;
         this.loading = false;
         this.errorMsg = '';
       },
       error: (err) => {
         console.error(err);
-        this.clientesAll = [];
         this.clientes = [];
         this.total = 0;
         this.loading = false;
@@ -280,13 +279,8 @@ export class ClientesComponent implements OnInit {
   }
 
   applyPage(): void {
-    const filtered = this.clientesFiltrados;
-    this.total = filtered.length;
     if (this.page > this.totalPages) this.page = this.totalPages;
-    const start = (this.page - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.clientes = filtered.slice(start, end);
-    if (this.selectedCliente && !filtered.some(c => c.id === this.selectedCliente?.id)) {
+    if (this.selectedCliente && !this.clientes.some(c => c.id === this.selectedCliente?.id)) {
       this.selectedCliente = null;
     }
   }
@@ -296,12 +290,12 @@ export class ClientesComponent implements OnInit {
     this.pageSize = size;
     localStorage.setItem('sysvar.list.clientes.pageSize', String(size));
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
-  firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
-  prevPage(): void  { if (this.page > 1) { this.page--; this.applyPage(); } }
-  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
-  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void  { if (this.page > 1) { this.page--; this.load(); } }
+  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
 
   // Buscar / limpar
   onSearchKeyup(ev: KeyboardEvent): void {
@@ -309,7 +303,7 @@ export class ClientesComponent implements OnInit {
   }
   doSearch(): void {
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
   clearSearch(): void {
     this.search = '';
@@ -320,7 +314,24 @@ export class ClientesComponent implements OnInit {
     this.filterCpf = '';
     this.filterEmail = '';
     this.page = 1;
-    this.applyPage();
+    this.load();
+  }
+
+  private currentParams() {
+    const ativo = this.filterStatus === 'ATIVO' ? 'true' : this.filterStatus === 'INATIVO' ? 'false' : '';
+    const bloqueio = this.filterStatus === 'BLOQUEADO' ? 'true' : '';
+    return {
+      search: this.search,
+      page: this.page,
+      page_size: this.pageSize,
+      tipo_pessoa: this.filterTipo,
+      cidade: this.filterCidade,
+      ativo,
+      bloqueio,
+      estado: this.filterEstado.trim().toUpperCase(),
+      documento: this.digits(this.filterCpf),
+      email: this.filterEmail.trim().toLowerCase(),
+    };
   }
 
   // Novo / Editar
@@ -336,6 +347,8 @@ export class ClientesComponent implements OnInit {
     this.form.reset({
       nome_cliente: '',
       apelido: '',
+      tipo_pessoa: 'PF',
+      documento: '',
       cpf: '',
       email: '',
 
@@ -357,6 +370,11 @@ export class ClientesComponent implements OnInit {
 
       bloqueio: false,
       mala_direta: false,
+      aceita_email: false,
+      aceita_whatsapp: false,
+      aceita_sms: false,
+      origem_consentimento: '',
+      consentimento_observacao: '',
       ativo: true,
     });
   }
@@ -377,6 +395,8 @@ export class ClientesComponent implements OnInit {
     this.form.reset({
       nome_cliente:   row.nome_cliente ?? '',
       apelido:        row.apelido ?? '',
+      tipo_pessoa:    row.tipo_pessoa ?? 'PF',
+      documento:      row.documento ?? row.cpf ?? '',
       cpf:            row.cpf ?? '',
       email:          row.email ?? '',
 
@@ -398,6 +418,11 @@ export class ClientesComponent implements OnInit {
 
       bloqueio:       !!row.bloqueio,
       mala_direta:    !!row.mala_direta,
+      aceita_email:   !!row.aceita_email,
+      aceita_whatsapp: !!row.aceita_whatsapp,
+      aceita_sms:     !!row.aceita_sms,
+      origem_consentimento: row.origem_consentimento ?? '',
+      consentimento_observacao: row.consentimento_observacao ?? '',
       ativo:          row.ativo ?? true,
     });
   }
@@ -412,14 +437,48 @@ export class ClientesComponent implements OnInit {
     return [
       { key: 'consultar', label: 'Consultar', icon: '⌕' },
       { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
+      { key: 'ativar', label: 'Ativar', icon: '✓', visible: this.podeEditarModulo && row.ativo === false },
+      { key: 'inativar', label: 'Inativar', icon: '−', visible: this.podeEditarModulo && row.ativo !== false && !row.cliente_padrao },
+      { key: 'bloquear', label: 'Bloquear', icon: '!', visible: this.podeEditarModulo && !row.bloqueio && !row.cliente_padrao },
+      { key: 'desbloquear', label: 'Desbloquear', icon: '✓', visible: this.podeEditarModulo && !!row.bloqueio },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo && !row.cliente_padrao, danger: true, dividerBefore: true },
     ];
   }
 
   executarAcao(action: string, row: Cliente): void {
     if (action === 'consultar') this.consultar(row);
     if (action === 'editar') this.editar(row);
+    if (action === 'ativar') this.executarCiclo(row, 'ativar');
+    if (action === 'inativar') this.executarCiclo(row, 'inativar');
+    if (action === 'bloquear') this.bloquear(row);
+    if (action === 'desbloquear') this.executarCiclo(row, 'desbloquear');
     if (action === 'excluir') this.excluir(row);
+  }
+
+  executarCiclo(row: Cliente, action: 'ativar' | 'inativar' | 'desbloquear'): void {
+    const id = row.id;
+    if (!id || !this.podeEditarModulo) return;
+    this.api[action](id).subscribe({
+      next: () => {
+        this.successMsg = 'Cliente atualizado.';
+        this.load();
+      },
+      error: err => this.errorMsg = err?.error?.detail || 'Falha ao atualizar cliente.'
+    });
+  }
+
+  bloquear(row: Cliente): void {
+    const id = row.id;
+    if (!id || !this.podeEditarModulo) return;
+    const motivo = window.prompt('Motivo do bloqueio');
+    if (!motivo) return;
+    this.api.bloquear(id, { motivo }).subscribe({
+      next: () => {
+        this.successMsg = 'Cliente bloqueado.';
+        this.load();
+      },
+      error: err => this.errorMsg = err?.error?.detail || 'Falha ao bloquear cliente.'
+    });
   }
 
   selecionarCliente(row: Cliente): void {
@@ -439,7 +498,7 @@ export class ClientesComponent implements OnInit {
   }
 
   excluirSelecionado(): void {
-    if (this.selectedCliente && this.podeExcluirModulo) this.excluir(this.selectedCliente);
+    if (this.selectedCliente && this.podeExcluirModulo && !this.selectedCliente.cliente_padrao) this.excluir(this.selectedCliente);
   }
 
   toggleIndicators(): void {
@@ -460,7 +519,7 @@ export class ClientesComponent implements OnInit {
     this.pageSize = 20;
     this.columns = this.columns.map(c => ({ ...c, visible: true }));
     this.saveColumnsPreference();
-    this.applyPage();
+    this.load();
   }
 
   @HostListener('window:sysvar-clientes-toggle-indicators')
@@ -490,11 +549,11 @@ export class ClientesComponent implements OnInit {
   }
 
   exportarCsv(): void {
-    const headers = ['Cliente', 'Apelido', 'CPF', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
+    const headers = ['Cliente', 'Apelido', 'Documento', 'Cidade/UF', 'Email', 'Telefone', 'Status', 'Cadastro'];
     const body = this.clientesFiltrados.map(c => [
       c.nome_cliente,
       c.apelido || '',
-      this.formatCpf(c.cpf),
+      this.formatDocumento(c),
       this.cidadeUf(c),
       c.email || '',
       this.formatPhone(c.telefone1 || ''),
@@ -528,9 +587,8 @@ export class ClientesComponent implements OnInit {
   }
 
   tipoCliente(cliente: Cliente): 'CONSUMIDOR' | 'PJ' | 'PF' {
-    const nome = this.normalize(`${cliente.nome_cliente || ''} ${cliente.apelido || ''}`);
-    if (nome.includes('consumidor')) return 'CONSUMIDOR';
-    return this.digits(cliente.cpf || '').length > 11 ? 'PJ' : 'PF';
+    if (cliente.cliente_padrao) return 'CONSUMIDOR';
+    return cliente.tipo_pessoa === 'PJ' ? 'PJ' : 'PF';
   }
 
   tipoClienteLabel(cliente: Cliente): string {
@@ -558,6 +616,17 @@ export class ClientesComponent implements OnInit {
     return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
   }
 
+  formatCnpj(value?: string | null): string {
+    const d = (value || '').replace(/\D/g, '').slice(0, 14);
+    if (d.length !== 14) return value || '-';
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}`;
+  }
+
+  formatDocumento(cliente: Cliente): string {
+    const value = cliente.documento || cliente.cpf || '';
+    return cliente.tipo_pessoa === 'PJ' ? this.formatCnpj(value) : this.formatCpf(value);
+  }
+
   formatDate(value?: string | null): string {
     if (!value) return '-';
     const date = new Date(value);
@@ -566,7 +635,7 @@ export class ClientesComponent implements OnInit {
   }
 
   trackCliente(_: number, cliente: Cliente): number | string {
-    return cliente.id ?? cliente.cpf ?? cliente.nome_cliente;
+    return cliente.id ?? cliente.documento ?? cliente.cpf ?? cliente.nome_cliente;
   }
 
   cancelarEdicao(): void {
@@ -592,6 +661,8 @@ export class ClientesComponent implements OnInit {
       ...raw,
       telefone1: this.onlyDigits(raw.telefone1),
       telefone2: this.onlyDigits(raw.telefone2),
+      documento: this.digits(raw.documento || raw.cpf || ''),
+      cpf: this.digits(raw.documento || raw.cpf || ''),
       aniversario: raw.aniversario ? raw.aniversario : null,
     };
 
@@ -673,7 +744,7 @@ export class ClientesComponent implements OnInit {
 
     P(f.get('apelido')?.hasError('maxlength') || false, 'Apelido: máx. 18 caracteres.');
 
-    P(f.get('cpf')?.hasError('cpf') || false, 'CPF inválido.');
+    P(f.get('documento')?.hasError('documento') || false, 'Documento inválido.');
     P(f.get('email')?.hasError('email') || false, 'Email inválido.');
 
     P(f.get('numero')?.hasError('maxlength') || false, 'Número: máx. 10 caracteres.');
@@ -683,12 +754,12 @@ export class ClientesComponent implements OnInit {
 
     // erros vindos do backend
     [
-      'nome_cliente','apelido','cpf','email',
+      'nome_cliente','apelido','tipo_pessoa','documento','cpf','email',
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',
       'categoria','aniversario',
-      'bloqueio','mala_direta','ativo',
+      'bloqueio','mala_direta','aceita_email','aceita_whatsapp','aceita_sms','ativo',
     ].forEach(field => {
       const err = f.get(field)?.errors?.['server'];
       if (err) msgs.push(`${field}: ${err}`);

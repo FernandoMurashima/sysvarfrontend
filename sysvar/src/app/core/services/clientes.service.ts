@@ -2,27 +2,31 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cliente } from '../../core/models/clientes';
+import { Cliente, ClienteBloqueioPayload, ClienteFiltros, ClienteIndicadores, PaginatedResponse } from '../../core/models/clientes';
 
 @Injectable({ providedIn: 'root' })
 export class ClientesService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/cadastros/clientes/`;
 
-  list(params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    page_size?: number;
-    ativo?: string;    // "true"/"false"/""
-  }): Observable<Cliente[]> {
+  list(params?: ClienteFiltros): Observable<PaginatedResponse<Cliente>> {
     let httpParams = new HttpParams();
-    if (params?.search)    httpParams = httpParams.set('search', params.search);
-    if (params?.ordering)  httpParams = httpParams.set('ordering', params.ordering);
-    if (params?.page)      httpParams = httpParams.set('page', String(params.page));
-    if (params?.page_size) httpParams = httpParams.set('page_size', String(params.page_size));
-    if (params?.ativo)     httpParams = httpParams.set('ativo', params.ativo);
-    return this.http.get<Cliente[]>(this.base, { params: httpParams });
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && String(value) !== '') {
+        httpParams = httpParams.set(key, String(value));
+      }
+    });
+    return this.http.get<PaginatedResponse<Cliente>>(this.base, { params: httpParams });
+  }
+
+  indicadores(params?: ClienteFiltros): Observable<ClienteIndicadores> {
+    let httpParams = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && String(value) !== '') {
+        httpParams = httpParams.set(key, String(value));
+      }
+    });
+    return this.http.get<ClienteIndicadores>(`${this.base}indicadores/`, { params: httpParams });
   }
 
   get(id: number): Observable<Cliente> {
@@ -39,6 +43,22 @@ export class ClientesService {
 
   patch(id: number, payload: Partial<Cliente>): Observable<Cliente> {
     return this.http.patch<Cliente>(`${this.base}${id}/`, payload);
+  }
+
+  ativar(id: number): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.base}${id}/ativar/`, {});
+  }
+
+  inativar(id: number): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.base}${id}/inativar/`, {});
+  }
+
+  bloquear(id: number, payload: ClienteBloqueioPayload): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.base}${id}/bloquear/`, payload);
+  }
+
+  desbloquear(id: number): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.base}${id}/desbloquear/`, {});
   }
 
   remove(id: number): Observable<any> {

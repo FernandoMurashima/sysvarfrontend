@@ -54,7 +54,7 @@
       [(value)]="search"
       [suggestions]="searchSuggestions"
       [showActions]="false"
-      placeholder="Buscar por nome, apelido, CPF, cidade, e-mail ou telefone..."
+      placeholder="Buscar por nome, apelido, CPF, CNPJ, cidade, e-mail ou telefone..."
       (search)="doSearch()"
       (cleared)="clearSearch()"
     />
@@ -112,7 +112,7 @@
         <input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" />
       </label>
       <label>
-        CPF
+        Documento
         <input type="text" [(ngModel)]="filterCpf" (keyup.enter)="doSearch()" />
       </label>
       <label>
@@ -177,12 +177,20 @@
           </span>
         </label>
 
-        <label id="cpf-box" class="input-item" [class.invalid]="form.get('cpf')?.invalid && (form.get('cpf')?.touched || submitted)">
-          CPF
-          <input type="text" formControlName="cpf" placeholder="000.000.000-00" [attr.aria-invalid]="form.get('cpf')?.invalid && (form.get('cpf')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('cpf')?.touched || submitted">
-            <ng-container *ngIf="form.get('cpf')?.errors?.['cpf']">CPF inválido.</ng-container>
-            <ng-container *ngIf="form.get('cpf')?.errors?.['server']">{{ form.get('cpf')?.errors?.['server'] }}</ng-container>
+        <label id="tipo-pessoa-box" class="input-item">
+          Tipo de pessoa*
+          <select formControlName="tipo_pessoa">
+            <option value="PF">Pessoa física</option>
+            <option value="PJ">Pessoa jurídica</option>
+          </select>
+        </label>
+
+        <label id="cpf-box" class="input-item" [class.invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted)">
+          {{ form.get('tipo_pessoa')?.value === 'PJ' ? 'CNPJ' : 'CPF' }}
+          <input type="text" formControlName="documento" [placeholder]="form.get('tipo_pessoa')?.value === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'" [attr.aria-invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted) ? 'true' : null" />
+          <span class="field-error" *ngIf="form.get('documento')?.touched || submitted">
+            <ng-container *ngIf="form.get('documento')?.errors?.['documento']">Documento inválido.</ng-container>
+            <ng-container *ngIf="form.get('documento')?.errors?.['server']">{{ form.get('documento')?.errors?.['server'] }}</ng-container>
           </span>
         </label>
 
@@ -331,7 +339,7 @@
             <th class="select-col"><input type="checkbox" aria-label="Selecionar todos" disabled /></th>
             <th>Nome</th>
             <th *ngIf="visibleColumn('apelido')">Apelido</th>
-            <th *ngIf="visibleColumn('cpf')">CPF</th>
+            <th *ngIf="visibleColumn('documento')">Documento</th>
             <th>Tipo</th>
             <th *ngIf="visibleColumn('cidade')">Cidade / UF</th>
             <th *ngIf="visibleColumn('email')">E-mail</th>
@@ -347,7 +355,7 @@
             </td>
             <td>{{ c.nome_cliente }}</td>
             <td *ngIf="visibleColumn('apelido')">{{ c.apelido || '-' }}</td>
-            <td *ngIf="visibleColumn('cpf')">{{ formatCpf(c.cpf) }}</td>
+            <td *ngIf="visibleColumn('documento')">{{ formatDocumento(c) }}</td>
             <td>{{ tipoClienteLabel(c) }}</td>
             <td *ngIf="visibleColumn('cidade')">{{ cidadeUf(c) }}</td>
             <td *ngIf="visibleColumn('email')" class="email">{{ c.email || '-' }}</td>
