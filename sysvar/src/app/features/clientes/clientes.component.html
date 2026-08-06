@@ -141,8 +141,8 @@
       <h4>Excluir cliente</h4>
       <p>Confirma a exclusão do cliente <strong>{{ cliente.nome_cliente }}</strong>?</p>
       <div class="overlay-actions">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
+        <button class="btn" type="button" [disabled]="exclusaoSaving" (click)="fecharExclusao()">Voltar</button>
+        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" [disabled]="exclusaoSaving" (click)="confirmarExclusao()">Excluir</button>
       </div>
     </div>
   </div>

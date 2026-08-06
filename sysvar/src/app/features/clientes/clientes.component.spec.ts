@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { ClientesComponent } from './clientes.component';
 import { ClientesService } from '../../core/services/clientes.service';
@@ -39,6 +39,7 @@ describe('ClientesComponent documento funcional', () => {
     api.create.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.update.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
     api.patch.and.returnValue(of({ id: 1, nome_cliente: 'Cliente' }));
+    api.remove.and.returnValue(of({}));
     api.ativar.and.returnValue(of({ id: 31, nome_cliente: 'Cliente', ativo: true }));
     api.inativar.and.returnValue(of({ id: 31, nome_cliente: 'Cliente', ativo: false }));
     api.bloquear.and.returnValue(of({ id: 31, nome_cliente: 'Cliente', bloqueio: true }));
@@ -246,6 +247,93 @@ describe('ClientesComponent documento funcional', () => {
 
     expect(component.podeInativarSelecionado()).toBeFalse();
     expect(component.podeBloquearSelecionado()).toBeFalse();
+  });
+
+  it('exclusão permitida fecha modal, atualiza dados e limpa seleção', () => {
+    component.clientes = [{ id: 31, nome_cliente: 'Cliente', documento: '52998224725' }];
+    component.selectedCliente = component.clientes[0];
+    component.excluir(component.clientes[0]);
+
+    component.confirmarExclusao();
+
+    expect(api.remove).toHaveBeenCalledWith(31);
+    expect(component.excluirModal).toBeNull();
+    expect(component.selectedCliente).toBeNull();
+    expect(api.list).toHaveBeenCalled();
+    expect(api.indicadores).toHaveBeenCalled();
+    expect(component.successMsg).toBe('Cliente excluído.');
+  });
+
+  it('exibe detail da exclusão negada sem remover seleção', () => {
+    const cliente = { id: 31, nome_cliente: 'Cliente', documento: '52998224725', ativo: true };
+    api.remove.and.returnValue(throwError(() => ({ error: { detail: 'Este cliente possui vendas ou outros registros vinculados e não pode ser excluído. Utilize a inativação.' } })));
+    component.selectedCliente = cliente;
+    component.excluir(cliente);
+
+    component.confirmarExclusao();
+
+    expect(component.errorMsg).toContain('Utilize a inativação');
+    expect(component.excluirModal).toBeNull();
+    expect(component.selectedCliente).toBe(cliente);
+    expect(component.exclusaoSaving).toBeFalse();
+    expect(component.podeInativarSelecionado()).toBeTrue();
+  });
+
+  it('exibe message, non_field_errors, erro de campo e fallback na exclusão', () => {
+    const cliente = { id: 31, nome_cliente: 'Cliente', documento: '52998224725' };
+    const cenarios = [
+      [{ error: { message: 'Mensagem direta.' } }, 'Mensagem direta.'],
+      [{ error: { non_field_errors: ['Erro geral.'] } }, 'Erro geral.'],
+      [{ error: { cliente: ['Erro de campo.'] } }, 'Erro de campo.'],
+      [{ error: {} }, 'Não foi possível excluir o cliente. Verifique se existem vendas ou outros registros vinculados. Nesse caso, utilize a inativação.'],
+    ] as const;
+
+    cenarios.forEach(([erro, esperado]) => {
+      api.remove.and.returnValue(throwError(() => erro));
+      component.excluir(cliente);
+      component.confirmarExclusao();
+      expect(component.errorMsg).toBe(esperado);
+    });
+  });
+
+  it('não duplica chamada de exclusão enquanto a requisição está em andamento', () => {
+    const pending = new Subject<any>();
+    const cliente = { id: 31, nome_cliente: 'Cliente', documento: '52998224725' };
+    api.remove.and.returnValue(pending.asObservable());
+    component.excluir(cliente);
+
+    component.confirmarExclusao();
+    component.confirmarExclusao();
+
+    expect(api.remove).toHaveBeenCalledTimes(1);
+    expect(component.exclusaoSaving).toBeTrue();
+    pending.error({ error: { detail: 'Negada.' } });
+    expect(component.exclusaoSaving).toBeFalse();
+  });
+
+  it('histórico recarregado pode exibir evento de exclusão negada', () => {
+    api.historico.and.returnValue(of({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 1,
+        created_at: '2026-08-06T10:00:00Z',
+        acao: 'CLIENT_DELETE_DENIED',
+        acao_descricao: 'Exclusão negada',
+        usuario: 'edit',
+        origem: 'API',
+        resultado: 'DENIED',
+        campos_alterados: [],
+        motivo: 'Este cliente possui vendas ou outros registros vinculados e não pode ser excluído. Utilize a inativação.',
+      }]
+    }));
+
+    component.consultar({ id: 31, nome_cliente: 'Cliente', documento: '52998224725' });
+    component.selecionarAreaConsulta('historico');
+
+    expect(component.historico[0].acao).toBe('CLIENT_DELETE_DENIED');
+    expect(component.historico[0].motivo).toContain('Utilize a inativação');
   });
 
   it('consulta inicia em dados cadastrais com histórico separado', () => {

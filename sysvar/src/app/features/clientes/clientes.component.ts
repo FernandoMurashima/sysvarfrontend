@@ -59,6 +59,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   successMsg = '';
   errorMsg = '';
   excluirModal: Cliente | null = null;
+  exclusaoSaving = false;
   bloqueioModal: Cliente | null = null;
   bloqueioMotivo = '';
   bloqueioObservacao = '';
@@ -1017,13 +1018,17 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   confirmarExclusao(): void {
-    if (!this.podeExcluirModulo) return;
+    if (!this.podeExcluirModulo || this.exclusaoSaving) return;
     const item = this.excluirModal;
     const id = item?.id;
     if (!id) return;
+    this.exclusaoSaving = true;
+    this.errorMsg = '';
     this.api.remove(id).subscribe({
       next: () => {
+        this.exclusaoSaving = false;
         this.excluirModal = null;
+        this.selectedCliente = null;
         this.successMsg = 'Cliente excluído.';
         const eraUltimo = this.clientes.length === 1 && this.page > 1;
         if (eraUltimo) this.page--;
@@ -1031,14 +1036,33 @@ export class ClientesComponent implements OnInit, OnDestroy {
         if (this.editingId === id) this.cancelarEdicao();
       },
       error: (err) => {
-        console.error(err);
-        this.errorMsg = 'Falha ao excluir.';
+        this.exclusaoSaving = false;
+        this.excluirModal = null;
+        this.errorMsg = this.extractApiErrorMessage(err, 'Não foi possível excluir o cliente. Verifique se existem vendas ou outros registros vinculados. Nesse caso, utilize a inativação.');
       }
     });
   }
 
   fecharExclusao(): void {
+    if (this.exclusaoSaving) return;
     this.excluirModal = null;
+  }
+
+  private extractApiErrorMessage(err: any, fallback: string): string {
+    const error = err?.error;
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error && typeof error === 'object') {
+      const direct = error.detail || error.message;
+      if (direct) return Array.isArray(direct) ? direct.join(' ') : String(direct);
+      if (error.non_field_errors) {
+        return Array.isArray(error.non_field_errors) ? error.non_field_errors.join(' ') : String(error.non_field_errors);
+      }
+      for (const value of Object.values(error)) {
+        if (value === undefined || value === null) continue;
+        return Array.isArray(value) ? value.join(' ') : String(value);
+      }
+    }
+    return err?.message ? String(err.message) : fallback;
   }
 
   // ========= Overlay de erros =========
