@@ -123,6 +123,10 @@
   <section class="action-bar">
     <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor" (click)="consultarSelecionado()"><span>⌕</span>Consultar</button>
     <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo" (click)="editarSelecionado()"><span>✎</span>Editar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.ativo !== false" (click)="ativarSelecionado()"><span>✓</span>Ativar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.ativo === false" (click)="inativarSelecionado()"><span>−</span>Inativar</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.bloqueio" (click)="bloquearSelecionado()"><span>!</span>Bloquear</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || !selectedFornecedor.bloqueio" (click)="desbloquearSelecionado()"><span>↺</span>Desbloquear</button>
     <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedFornecedor || !podeExcluirModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir</button>
   </section>
 
@@ -165,6 +169,15 @@
           </span>
         </label>
 
+        <label id="tipo-pessoa-box" class="input-item">
+          Tipo de pessoa
+          <select formControlName="tipo_pessoa">
+            <option value="PJ">Pessoa jurídica</option>
+            <option value="PF">Pessoa física</option>
+          </select>
+          <span class="field-error" *ngIf="form.get('tipo_pessoa')?.errors?.['server']">{{ form.get('tipo_pessoa')?.errors?.['server'] }}</span>
+        </label>
+
         <label id="apelido-box" class="input-item" [class.invalid]="form.get('apelido')?.invalid && (form.get('apelido')?.touched || submitted)">
           Apelido
           <input type="text" formControlName="apelido" [attr.aria-invalid]="form.get('apelido')?.invalid && (form.get('apelido')?.touched || submitted) ? 'true' : null" />
@@ -174,13 +187,13 @@
           </span>
         </label>
 
-        <label id="cnpj-box" class="input-item" [class.invalid]="form.get('cnpj')?.invalid && (form.get('cnpj')?.touched || submitted)">
-          CNPJ*
-          <input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" [attr.aria-invalid]="form.get('cnpj')?.invalid && (form.get('cnpj')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('cnpj')?.touched || submitted">
-            <ng-container *ngIf="form.get('cnpj')?.errors?.['required']">CNPJ é obrigatório.</ng-container>
-            <ng-container *ngIf="form.get('cnpj')?.errors?.['cnpj']">CNPJ inválido.</ng-container>
-            <ng-container *ngIf="form.get('cnpj')?.errors?.['server']">{{ form.get('cnpj')?.errors?.['server'] }}</ng-container>
+        <label id="documento-box" class="input-item" [class.invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted)">
+          CPF/CNPJ
+          <input type="text" formControlName="documento" placeholder="Opcional" [attr.aria-invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted) ? 'true' : null" />
+          <span class="field-error" *ngIf="form.get('documento')?.touched || submitted">
+            <ng-container *ngIf="form.get('documento')?.errors?.['cpf']">CPF inválido.</ng-container>
+            <ng-container *ngIf="form.get('documento')?.errors?.['cnpj']">CNPJ inválido.</ng-container>
+            <ng-container *ngIf="form.get('documento')?.errors?.['server']">{{ form.get('documento')?.errors?.['server'] }}</ng-container>
           </span>
         </label>
 
@@ -273,19 +286,9 @@
           <span class="field-error" *ngIf="form.get('categoria')?.errors?.['server']">{{ form.get('categoria')?.errors?.['server'] }}</span>
         </label>
 
-        <label id="bloqueio-box" class="input-item checkbox-line">
-          <input type="checkbox" formControlName="bloqueio" />
-          Bloqueio
-        </label>
-
         <label id="mala-box" class="input-item checkbox-line">
           <input type="checkbox" formControlName="mala_direta" />
           Mala direta
-        </label>
-
-        <label id="ativo-box" class="input-item checkbox-line">
-          <input type="checkbox" formControlName="ativo" />
-          Ativo
         </label>
       </div>
 
@@ -327,7 +330,7 @@
             <th>Nome</th>
             <th *ngIf="visibleColumn('apelido')">Apelido</th>
             <th *ngIf="visibleColumn('categoria')">Categoria</th>
-            <th *ngIf="visibleColumn('cnpj')">CNPJ</th>
+            <th *ngIf="visibleColumn('cnpj')">Documento</th>
             <th *ngIf="visibleColumn('cidade')">Cidade / UF</th>
             <th *ngIf="visibleColumn('email')">E-mail</th>
             <th *ngIf="visibleColumn('telefone')">Telefone</th>
@@ -341,13 +344,13 @@
             </td>
             <td>{{ f.nome_fornecedor }}</td>
             <td *ngIf="visibleColumn('apelido')">{{ f.apelido || '-' }}</td>
-            <td *ngIf="visibleColumn('categoria')">{{ categoriaLabel(f.categoria) || '-' }}</td>
-            <td *ngIf="visibleColumn('cnpj')">{{ formatCnpj(f.cnpj) }}</td>
+            <td *ngIf="visibleColumn('categoria')">{{ categoriasLabel(f) || '-' }}</td>
+            <td *ngIf="visibleColumn('cnpj')">{{ formatDocumento(f.documento || f.cnpj, f.tipo_pessoa) }}</td>
             <td *ngIf="visibleColumn('cidade')">{{ cidadeUf(f) }}</td>
             <td *ngIf="visibleColumn('email')" class="email">{{ f.email || '-' }}</td>
             <td *ngIf="visibleColumn('telefone')">{{ formatPhone(f.telefone1 || '') || '-' }}</td>
             <td *ngIf="visibleColumn('status')">
-              <span class="status-pill" [class.inactive]="f.ativo === false">• {{ f.ativo === false ? 'Inativo' : 'Ativo' }}</span>
+              <span class="status-pill" [class.inactive]="f.ativo === false || f.bloqueio">• {{ f.bloqueio ? 'Bloqueado' : (f.ativo === false ? 'Inativo' : 'Ativo') }}</span>
             </td>
           </tr>
         </tbody>

@@ -77,9 +77,11 @@ export class FornecedoresComponent implements OnInit {
 
   // ======== Form ========
   form: FormGroup = this.fb.group({
+    tipo_pessoa: ['PJ'],
+    documento: ['', [this.documentoValidator.bind(this)]],
     nome_fornecedor: ['', [Validators.required, Validators.maxLength(50)]],
     apelido: ['', [Validators.maxLength(18)]],
-    cnpj: ['', [Validators.required, this.cnpjValidator]],
+    cnpj: [''],
     email: ['', [Validators.email]],
 
     logradouro: ['Rua'],
@@ -121,6 +123,14 @@ export class FornecedoresComponent implements OnInit {
     return this.categoriaOptions.find(opt => opt.value === value)?.label || value;
   }
 
+  categoriasFornecedor(f: Fornecedor): string[] {
+    return (f.categorias_lista?.length ? f.categorias_lista : (f.categorias?.length ? f.categorias : (f.categoria ? [String(f.categoria)] : []))) as string[];
+  }
+
+  categoriasLabel(f: Fornecedor): string {
+    return this.categoriasFornecedor(f).map(categoria => this.categoriaLabel(categoria)).filter(Boolean).join(', ');
+  }
+
   // ======== Lista + paginação client-side ========
   fornecedoresAll: Fornecedor[] = [];
   fornecedores: Fornecedor[] = [];
@@ -144,11 +154,11 @@ export class FornecedoresComponent implements OnInit {
     return this.fornecedoresAll.flatMap(f => [
       f.nome_fornecedor,
       f.apelido,
-      f.cnpj,
+      f.documento || f.cnpj,
       f.email,
       f.cidade,
       f.estado,
-      this.categoriaLabel(f.categoria),
+      ...this.categoriasFornecedor(f).map(c => this.categoriaLabel(c)),
     ].filter((v): v is string => !!v));
   }
 
@@ -175,30 +185,30 @@ export class FornecedoresComponent implements OnInit {
     const cidade = this.normalize(this.filterCidade);
     const status = this.filterStatus;
     const estado = this.normalize(this.filterEstado);
-    const cnpj = this.onlyDigits(this.filterCnpj);
+    const documento = this.onlyDigits(this.filterCnpj);
     const email = this.normalize(this.filterEmail);
 
     return this.fornecedoresAll.filter(f => {
       const haystack = this.normalize([
         f.nome_fornecedor,
         f.apelido,
-        f.cnpj,
+        f.documento || f.cnpj,
         f.email,
         f.cidade,
         f.estado,
         f.telefone1,
         f.telefone2,
-        this.categoriaLabel(f.categoria),
+        ...this.categoriasFornecedor(f).map(c => this.categoriaLabel(c)),
       ].filter(Boolean).join(' '));
 
       if (term && !haystack.includes(term)) return false;
-      if (categoria && f.categoria !== categoria) return false;
+      if (categoria && !this.categoriasFornecedor(f).includes(categoria)) return false;
       if (cidade && this.normalize(f.cidade || '') !== cidade) return false;
       if (status === 'ATIVO' && f.ativo === false) return false;
       if (status === 'INATIVO' && f.ativo !== false) return false;
       if (status === 'BLOQUEADO' && !f.bloqueio) return false;
       if (estado && this.normalize(f.estado || '') !== estado) return false;
-      if (cnpj && !this.onlyDigits(f.cnpj || '').includes(cnpj)) return false;
+      if (documento && !this.onlyDigits(f.documento || f.cnpj || '').includes(documento)) return false;
       if (email && !this.normalize(f.email || '').includes(email)) return false;
       return true;
     });
@@ -296,6 +306,23 @@ export class FornecedoresComponent implements OnInit {
     }
   }
 
+  documentoValidator(ctrl: AbstractControl): ValidationErrors | null {
+    const digits = this.onlyDigits(ctrl.value);
+    if (!digits) return null;
+    const tipo = this.form?.get('tipo_pessoa')?.value || 'PJ';
+    if (tipo === 'PF') {
+      if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return { cpf: true };
+      const calc = (base: string, factor: number) => {
+        let total = 0;
+        for (let i = 0; i < base.length; i++) total += Number(base[i]) * (factor - i);
+        const rest = (total * 10) % 11;
+        return rest === 10 ? 0 : rest;
+      };
+      return calc(digits.slice(0, 9), 10) === Number(digits[9]) && calc(digits.slice(0, 10), 11) === Number(digits[10]) ? null : { cpf: true };
+    }
+    return this.cnpjValidator(ctrl);
+  }
+
   onPageSizeChange(sizeStr: string): void {
     const size = Number(sizeStr) || 10;
     this.pageSize = size;
@@ -337,6 +364,8 @@ export class FornecedoresComponent implements OnInit {
     this.form.enable({ emitEvent: false });
 
     this.form.reset({
+      tipo_pessoa: 'PJ',
+      documento: '',
       nome_fornecedor: '',
       apelido: '',
       cnpj: '',
@@ -376,6 +405,8 @@ export class FornecedoresComponent implements OnInit {
     const t2 = this.formatPhone(row.telefone2 ?? '');
 
     this.form.reset({
+      tipo_pessoa:    row.tipo_pessoa ?? 'PJ',
+      documento:      row.documento ?? row.cnpj ?? '',
       nome_fornecedor: row.nome_fornecedor ?? '',
       apelido:        row.apelido ?? '',
       cnpj:           row.cnpj ?? '',
@@ -394,7 +425,7 @@ export class FornecedoresComponent implements OnInit {
       telefone1:      t1,
       telefone2:      t2,
 
-      categoria:      row.categoria ?? '',
+      categoria:      this.categoriasFornecedor(row)[0] ?? row.categoria ?? '',
       bloqueio:       !!row.bloqueio,
       mala_direta:    !!row.mala_direta,
 
@@ -440,6 +471,39 @@ export class FornecedoresComponent implements OnInit {
 
   excluirSelecionado(): void {
     if (this.selectedFornecedor && this.podeExcluirModulo) this.excluir(this.selectedFornecedor);
+  }
+
+  ativarSelecionado(): void {
+    const id = this.selectedFornecedor?.id;
+    if (!id || !this.podeEditarModulo) return;
+    this.api.ativar(id).subscribe({ next: f => this.afterLifecycle(f, 'Fornecedor ativado.'), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao ativar fornecedor.') });
+  }
+
+  inativarSelecionado(): void {
+    const id = this.selectedFornecedor?.id;
+    if (!id || !this.podeEditarModulo) return;
+    this.api.inativar(id).subscribe({ next: f => this.afterLifecycle(f, 'Fornecedor inativado.'), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao inativar fornecedor.') });
+  }
+
+  bloquearSelecionado(): void {
+    const id = this.selectedFornecedor?.id;
+    if (!id || !this.podeEditarModulo) return;
+    const motivo = window.prompt('Motivo do bloqueio');
+    if (!motivo?.trim()) return;
+    this.api.bloquear(id, { motivo: motivo.trim() }).subscribe({ next: f => this.afterLifecycle(f, 'Fornecedor bloqueado.'), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao bloquear fornecedor.') });
+  }
+
+  desbloquearSelecionado(): void {
+    const id = this.selectedFornecedor?.id;
+    if (!id || !this.podeEditarModulo) return;
+    this.api.desbloquear(id).subscribe({ next: f => this.afterLifecycle(f, 'Fornecedor desbloqueado.'), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao desbloquear fornecedor.') });
+  }
+
+  private afterLifecycle(fornecedor: Fornecedor, message: string): void {
+    this.successMsg = message;
+    this.errorMsg = '';
+    this.selectedFornecedor = fornecedor;
+    this.load();
   }
 
   toggleIndicators(): void {
@@ -490,12 +554,12 @@ export class FornecedoresComponent implements OnInit {
   }
 
   exportarCsv(): void {
-    const headers = ['Fornecedor', 'Apelido', 'Categoria', 'CNPJ', 'Cidade/UF', 'Email', 'Telefone', 'Status'];
+    const headers = ['Fornecedor', 'Apelido', 'Categorias', 'Documento', 'Cidade/UF', 'Email', 'Telefone', 'Status'];
     const body = this.fornecedoresFiltrados.map(f => [
       f.nome_fornecedor,
       f.apelido || '',
-      this.categoriaLabel(f.categoria),
-      this.formatCnpj(f.cnpj),
+      this.categoriasFornecedor(f).map(c => this.categoriaLabel(c)).join(', '),
+      this.formatDocumento(f.documento || f.cnpj, f.tipo_pessoa),
       this.cidadeUf(f),
       f.email || '',
       this.formatPhone(f.telefone1 || ''),
@@ -525,6 +589,13 @@ export class FornecedoresComponent implements OnInit {
     const d = (value || '').replace(/\D/g, '').slice(0, 14);
     if (d.length !== 14) return value || '-';
     return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}`;
+  }
+
+  formatDocumento(value?: string | null, tipo?: string | null): string {
+    const d = (value || '').replace(/\D/g, '');
+    if (!d) return '-';
+    if (tipo === 'PF' || d.length === 11) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
+    return this.formatCnpj(d);
   }
 
   percentual(valor: number): string {
@@ -566,10 +637,14 @@ export class FornecedoresComponent implements OnInit {
 
     const payload: Fornecedor = {
       ...raw,
-      cnpj: this.onlyDigits(raw.cnpj),
+      documento: this.onlyDigits(raw.documento),
+      cnpj: raw.tipo_pessoa === 'PJ' ? this.onlyDigits(raw.documento) : null,
+      categorias: raw.categoria ? [raw.categoria] : [],
       telefone1: this.onlyDigits(raw.telefone1),
       telefone2: this.onlyDigits(raw.telefone2),
     };
+    delete (payload as any).ativo;
+    delete (payload as any).bloqueio;
 
     this.saving = true;
     const req$ = this.editingId
@@ -628,7 +703,8 @@ export class FornecedoresComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
-        this.errorMsg = 'Falha ao excluir.';
+        this.errorMsg = this.extractApiMessage(err, 'Falha ao excluir.');
+        this.excluirModal = null;
       }
     });
   }
@@ -648,8 +724,8 @@ export class FornecedoresComponent implements OnInit {
 
     P(f.get('apelido')?.hasError('maxlength') || false, 'Apelido: máx. 18 caracteres.');
 
-    P(f.get('cnpj')?.hasError('required') || false, 'CNPJ é obrigatório.');
-    P(f.get('cnpj')?.hasError('cnpj') || false, 'CNPJ inválido.');
+    P(f.get('documento')?.hasError('cpf') || false, 'CPF inválido.');
+    P(f.get('documento')?.hasError('cnpj') || false, 'CNPJ inválido.');
 
     P(f.get('email')?.hasError('email') || false, 'Email inválido.');
     P(f.get('numero')?.hasError('maxlength') || false, 'Número: máx. 10 caracteres.');
@@ -659,7 +735,7 @@ export class FornecedoresComponent implements OnInit {
 
     // erros do backend
     [
-      'nome_fornecedor','apelido','cnpj','email',
+      'tipo_pessoa','documento','nome_fornecedor','apelido','cnpj','email',
       'logradouro','endereco','numero','complemento',
       'cep','bairro','cidade','estado',
       'telefone1','telefone2',
@@ -679,6 +755,20 @@ export class FornecedoresComponent implements OnInit {
   }
   closeErrorOverlay(): void {
     this.errorOverlayOpen = false;
+  }
+
+  private extractApiMessage(err: any, fallback: string): string {
+    const error = err?.error;
+    if (typeof error === 'string') return error;
+    if (error?.detail) return Array.isArray(error.detail) ? error.detail.join(' ') : String(error.detail);
+    if (error?.message) return String(error.message);
+    if (error && typeof error === 'object') {
+      const firstKey = Object.keys(error)[0];
+      const value = firstKey ? error[firstKey] : null;
+      if (Array.isArray(value)) return value.join(' ');
+      if (value) return String(value);
+    }
+    return fallback;
   }
 
   private loadColumnsPreference(): void {
