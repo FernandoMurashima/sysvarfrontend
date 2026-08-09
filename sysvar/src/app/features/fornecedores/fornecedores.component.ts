@@ -510,7 +510,12 @@ export class FornecedoresComponent implements OnInit {
 
   salvarContato(): void {
     const fornecedorId = this.editingId;
-    if (!fornecedorId || this.contatoForm.invalid || this.consultando) return;
+    if (!fornecedorId || this.consultando) return;
+    if (this.contatoForm.invalid) {
+      this.contatoForm.markAllAsTouched();
+      this.errorMsg = this.getContatoFormErrors().join(' ');
+      return;
+    }
     const raw = this.contatoForm.value;
     const payload: FornecedorContato = {
       ...raw,
@@ -749,13 +754,20 @@ export class FornecedoresComponent implements OnInit {
 
   formatPhone(value?: string | null): string {
     const d = this.onlyDigits(value).slice(0, 11);
-    if (d.length < 10) return d;
+    if (d.length <= 2) return d;
     const ddd = d.slice(0, 2);
-    return d.length === 10 ? `(${ddd})-${d.slice(2, 6)}-${d.slice(6)}` : `(${ddd})-${d.slice(2, 7)}-${d.slice(7)}`;
+    const number = d.slice(2);
+    if (d.length < 10) return `(${ddd}) ${number}`;
+    return d.length === 10 ? `(${ddd}) ${d.slice(2, 6)}-${d.slice(6)}` : `(${ddd}) ${d.slice(2, 7)}-${d.slice(7)}`;
   }
 
   onPhoneInput(field: 'telefone1' | 'telefone2'): void {
     const ctrl = this.form.get(field);
+    ctrl?.setValue(this.formatPhone(ctrl.value), { emitEvent: false });
+  }
+
+  onContatoPhoneInput(field: 'telefone' | 'whatsapp'): void {
+    const ctrl = this.contatoForm.get(field);
     ctrl?.setValue(this.formatPhone(ctrl.value), { emitEvent: false });
   }
 
@@ -809,9 +821,17 @@ export class FornecedoresComponent implements OnInit {
   }
 
   phoneValidator(ctrl: AbstractControl): ValidationErrors | null {
-    const value = (ctrl.value || '').toString().trim();
-    if (!value) return null;
-    return /^\(\d{2}\)-\d{4,5}-\d{4}$/.test(value) ? null : { phone: true };
+    const digits = (ctrl.value ?? '').toString().replace(/\D/g, '');
+    if (!digits) return null;
+    return digits.length === 10 || digits.length === 11 ? null : { phone: true };
+  }
+
+  getContatoFormErrors(): string[] {
+    const msgs: string[] = [];
+    if (this.contatoForm.get('nome')?.hasError('required')) msgs.push('Nome do contato é obrigatório.');
+    if (this.contatoForm.get('telefone')?.hasError('phone')) msgs.push('Telefone inválido. Informe DDD + telefone com 10 ou 11 dígitos.');
+    if (this.contatoForm.get('whatsapp')?.hasError('phone')) msgs.push('WhatsApp inválido. Informe DDD + telefone com 10 ou 11 dígitos.');
+    return msgs;
   }
 
   getFormErrors(): string[] {

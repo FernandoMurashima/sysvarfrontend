@@ -196,8 +196,8 @@
           <label>Nome<input type="text" formControlName="nome" /></label>
           <label>Função<input type="text" formControlName="cargo_funcao" /></label>
           <label>Tipo<select formControlName="tipo"><option *ngFor="let opt of contatoTipoOptions" [value]="opt[0]">{{ opt[1] }}</option></select></label>
-          <label>Telefone<input type="text" formControlName="telefone" /></label>
-          <label>WhatsApp<input type="text" formControlName="whatsapp" /></label>
+          <label>Telefone<input type="text" formControlName="telefone" (input)="onContatoPhoneInput('telefone')" /></label>
+          <label>WhatsApp<input type="text" formControlName="whatsapp" (input)="onContatoPhoneInput('whatsapp')" /></label>
           <label>Email<input type="email" formControlName="email" /></label>
           <label>Observação<input type="text" formControlName="observacao" /></label>
           <label class="checkbox-line"><input type="checkbox" formControlName="principal" />Principal</label>

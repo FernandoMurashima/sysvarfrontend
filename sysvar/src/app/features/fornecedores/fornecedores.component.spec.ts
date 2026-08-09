@@ -179,9 +179,9 @@ describe('FornecedoresComponent', () => {
   it('salva contatos e respeita principal no payload', () => {
     api.contatos.calls.reset();
     component.editar(fornecedor);
-    component.contatoForm.patchValue({ nome: 'Bruno', tipo: 'COMERCIAL', principal: true });
+    component.contatoForm.patchValue({ nome: 'Bruno', tipo: 'COMERCIAL', telefone: '(21) 99008-7565', whatsapp: '21 3324-4000', principal: true });
     component.salvarContato();
-    expect(api.criarContato).toHaveBeenCalledWith(1, jasmine.objectContaining({ tipo: 'COMERCIAL', principal: true }));
+    expect(api.criarContato).toHaveBeenCalledWith(1, jasmine.objectContaining({ tipo: 'COMERCIAL', telefone: '21990087565', whatsapp: '2133244000', principal: true }));
     expect(api.contatos).toHaveBeenCalledWith(1);
     expect(component.successMsg).toBe('Contato salvo com sucesso.');
     expect(component.contatoForm.value.nome).toBeNull();
@@ -226,8 +226,10 @@ describe('FornecedoresComponent', () => {
 
   it('edita, inativa e reativa contato atualizando lista', () => {
     component.editar(fornecedor);
-    component.editarContato({ id: 3, nome: 'Ana', tipo: 'COMERCIAL', principal: true, ativo: true });
+    component.editarContato({ id: 3, nome: 'Ana', tipo: 'COMERCIAL', telefone: '21990087565', whatsapp: '2133244000', principal: true, ativo: true });
     expect(component.contatoEditingId).toBe(3);
+    expect(component.contatoForm.value.telefone).toBe('(21) 99008-7565');
+    expect(component.contatoForm.value.whatsapp).toBe('(21) 3324-4000');
     component.contatoForm.patchValue({ nome: 'Ana Maria' });
     component.salvarContato();
     component.toggleContato({ id: 3, nome: 'Ana', ativo: true });
@@ -248,6 +250,60 @@ describe('FornecedoresComponent', () => {
     expect(api.atualizarEndereco).toHaveBeenCalledWith(1, 4, jasmine.objectContaining({ endereco: 'Rua Nova' }));
     expect(api.inativarEndereco).toHaveBeenCalledWith(1, 4);
     expect(api.reativarEndereco).toHaveBeenCalledWith(1, 4);
+  });
+
+  it('valida telefone e whatsapp por quantidade de digitos', () => {
+    const telefone = component.contatoForm.get('telefone')!;
+    const whatsapp = component.contatoForm.get('whatsapp')!;
+
+    telefone.setValue('');
+    whatsapp.setValue('');
+    expect(telefone.valid).toBeTrue();
+    expect(whatsapp.valid).toBeTrue();
+
+    telefone.setValue('2133244000');
+    whatsapp.setValue('21990087565');
+    expect(telefone.valid).toBeTrue();
+    expect(whatsapp.valid).toBeTrue();
+
+    telefone.setValue('213324400');
+    whatsapp.setValue('219900875650');
+    expect(telefone.hasError('phone')).toBeTrue();
+    expect(whatsapp.hasError('phone')).toBeTrue();
+  });
+
+  it('formata telefone celular e fixo sem hifen apos DDD', () => {
+    expect(component.formatPhone('21990087565')).toBe('(21) 99008-7565');
+    expect(component.formatPhone('2133244000')).toBe('(21) 3324-4000');
+
+    component.contatoForm.get('telefone')?.setValue('21990087565');
+    component.onContatoPhoneInput('telefone');
+    component.contatoForm.get('whatsapp')?.setValue('2133244000');
+    component.onContatoPhoneInput('whatsapp');
+    expect(component.contatoForm.value.telefone).toBe('(21) 99008-7565');
+    expect(component.contatoForm.value.whatsapp).toBe('(21) 3324-4000');
+  });
+
+  it('nao chama API e mostra mensagem quando contato esta invalido', () => {
+    api.criarContato.calls.reset();
+    component.editar(fornecedor);
+    component.contatoForm.patchValue({ nome: '', telefone: '123', whatsapp: '123456789012' });
+    component.salvarContato();
+    expect(api.criarContato).not.toHaveBeenCalled();
+    expect(component.errorMsg).toContain('Nome do contato é obrigatório.');
+    expect(component.errorMsg).toContain('Telefone inválido');
+    expect(component.errorMsg).toContain('WhatsApp inválido');
+  });
+
+  it('telefone1 e telefone2 do fornecedor aceitam 10 e 11 digitos naturais', () => {
+    component.form.get('telefone1')?.setValue('2133244000');
+    component.form.get('telefone2')?.setValue('21990087565');
+    expect(component.form.get('telefone1')?.valid).toBeTrue();
+    expect(component.form.get('telefone2')?.valid).toBeTrue();
+    component.onPhoneInput('telefone1');
+    component.onPhoneInput('telefone2');
+    expect(component.form.value.telefone1).toBe('(21) 3324-4000');
+    expect(component.form.value.telefone2).toBe('(21) 99008-7565');
   });
 
   it('protege dados bancarios quando backend indica ocultacao', () => {
