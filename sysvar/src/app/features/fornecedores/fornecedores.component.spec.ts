@@ -61,8 +61,8 @@ describe('FornecedoresComponent', () => {
     api.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [fornecedor] }));
     api.indicadores.and.returnValue(of({ total: 10, ativos: 8, bloqueados: 1, saldo_a_pagar: '70.00' }));
     api.get.and.returnValue(of(fornecedor));
-    api.contatos.and.returnValue(of([{ id: 3, nome: 'Ana', tipo: 'COMERCIAL', principal: true, ativo: true }]));
-    api.enderecos.and.returnValue(of([{ id: 4, tipo: 'FISCAL', endereco: 'Rua A', principal: true, ativo: true }]));
+    api.contatos.and.returnValue(of([{ id: 3, nome: 'Ana', cargo_funcao: 'Vendedora', tipo: 'COMERCIAL', telefone: '21990087565', whatsapp: '21990087565', email: 'ana@teste.com', principal: true, ativo: true }]));
+    api.enderecos.and.returnValue(of([{ id: 4, tipo: 'FISCAL', logradouro: 'Rua', endereco: 'Rua A', numero: '10', bairro: 'Centro', cidade: 'Rio', estado: 'RJ', cep: '20000000', principal: true, ativo: true }]));
     api.compras.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 1, data: '2026-01-01', total: '100.00' }] }));
     api.financeiro.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 1, titulo: 'T1', saldo: '70.00' }] }));
     api.historico.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 1, created_at: '', acao: 'SUPPLIER_UPDATED', acao_descricao: 'Fornecedor atualizado' }] }));
@@ -177,17 +177,77 @@ describe('FornecedoresComponent', () => {
   });
 
   it('salva contatos e respeita principal no payload', () => {
+    api.contatos.calls.reset();
     component.editar(fornecedor);
     component.contatoForm.patchValue({ nome: 'Bruno', tipo: 'COMERCIAL', principal: true });
     component.salvarContato();
     expect(api.criarContato).toHaveBeenCalledWith(1, jasmine.objectContaining({ tipo: 'COMERCIAL', principal: true }));
+    expect(api.contatos).toHaveBeenCalledWith(1);
+    expect(component.successMsg).toBe('Contato salvo com sucesso.');
+    expect(component.contatoForm.value.nome).toBeNull();
+    expect(component.contatoEditingId).toBeNull();
   });
 
   it('salva enderecos e respeita principal no payload', () => {
+    api.enderecos.calls.reset();
     component.editar(fornecedor);
     component.enderecoForm.patchValue({ endereco: 'Rua B', tipo: 'FISCAL', principal: true });
     component.salvarEndereco();
     expect(api.criarEndereco).toHaveBeenCalledWith(1, jasmine.objectContaining({ tipo: 'FISCAL', principal: true }));
+    expect(api.enderecos).toHaveBeenCalledWith(1);
+    expect(component.successMsg).toBe('Endereço salvo com sucesso.');
+    expect(component.enderecoForm.value.endereco).toBeNull();
+    expect(component.enderecoEditingId).toBeNull();
+  });
+
+  it('renderiza contatos cadastrados na consulta sem acoes de alteracao', () => {
+    component.consultar(fornecedor);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.querySelector('.child-section')?.textContent || '';
+    expect(text).toContain('Contatos cadastrados');
+    expect(text).toContain('Ana');
+    expect(text).toContain('Vendedora');
+    expect(text).toContain('Comercial');
+    expect(text).toContain('Principal');
+    expect(text).toContain('Ativo');
+    expect(text).not.toContain('Salvar contato');
+  });
+
+  it('renderiza enderecos cadastrados na consulta sem formulario', () => {
+    component.consultar(fornecedor);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Endereços cadastrados');
+    expect(text).toContain('Rua A');
+    expect(text).toContain('Centro');
+    expect(text).toContain('Rio/RJ');
+    expect(text).not.toContain('Salvar endereço');
+  });
+
+  it('edita, inativa e reativa contato atualizando lista', () => {
+    component.editar(fornecedor);
+    component.editarContato({ id: 3, nome: 'Ana', tipo: 'COMERCIAL', principal: true, ativo: true });
+    expect(component.contatoEditingId).toBe(3);
+    component.contatoForm.patchValue({ nome: 'Ana Maria' });
+    component.salvarContato();
+    component.toggleContato({ id: 3, nome: 'Ana', ativo: true });
+    component.toggleContato({ id: 3, nome: 'Ana', ativo: false });
+    expect(api.atualizarContato).toHaveBeenCalledWith(1, 3, jasmine.objectContaining({ nome: 'Ana Maria' }));
+    expect(api.inativarContato).toHaveBeenCalledWith(1, 3);
+    expect(api.reativarContato).toHaveBeenCalledWith(1, 3);
+  });
+
+  it('edita, inativa e reativa endereco atualizando lista', () => {
+    component.editar(fornecedor);
+    component.editarEndereco({ id: 4, tipo: 'FISCAL', endereco: 'Rua A', principal: true, ativo: true });
+    expect(component.enderecoEditingId).toBe(4);
+    component.enderecoForm.patchValue({ endereco: 'Rua Nova' });
+    component.salvarEndereco();
+    component.toggleEndereco({ id: 4, endereco: 'Rua A', ativo: true });
+    component.toggleEndereco({ id: 4, endereco: 'Rua A', ativo: false });
+    expect(api.atualizarEndereco).toHaveBeenCalledWith(1, 4, jasmine.objectContaining({ endereco: 'Rua Nova' }));
+    expect(api.inativarEndereco).toHaveBeenCalledWith(1, 4);
+    expect(api.reativarEndereco).toHaveBeenCalledWith(1, 4);
   });
 
   it('protege dados bancarios quando backend indica ocultacao', () => {

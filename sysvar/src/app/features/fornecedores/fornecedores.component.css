@@ -503,9 +503,17 @@ input[aria-invalid="true"] {
   gap: 6px;
 }
 
+.registered-title {
+  margin: 10px 0 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .child-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto auto;
+  grid-template-columns: repeat(6, minmax(90px, 1fr)) auto auto auto auto;
   gap: 8px;
   align-items: center;
   padding: 7px 8px;
@@ -515,9 +523,39 @@ input[aria-invalid="true"] {
   font-size: 12px;
 }
 
+.address-row {
+  grid-template-columns: repeat(8, minmax(80px, 1fr)) auto auto auto auto;
+}
+
+.child-row div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.child-row small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.child-row span,
+.child-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.empty-hint.compact {
+  padding: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
 .child-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
   gap: 8px;
   align-items: end;
   margin-top: 8px;

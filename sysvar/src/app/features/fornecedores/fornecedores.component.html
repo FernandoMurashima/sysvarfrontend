@@ -174,14 +174,23 @@
 
       <section class="form-section child-section" *ngIf="editingId">
         <div class="section-title"><h4>Contatos</h4><span>Um principal ativo por tipo.</span></div>
+        <div class="registered-title">Contatos cadastrados</div>
         <div class="child-list">
-          <div class="child-row" *ngFor="let c of consultaFornecedor?.contatos || []; trackBy: trackById">
-            <strong>{{ c.nome }}</strong><span>{{ tipoContatoLabel(c.tipo) }}</span><span>{{ c.email || '-' }}</span><span>{{ formatPhone(c.telefone) || '-' }}</span>
-            <span class="status-pill" [class.inactive]="c.ativo === false">{{ c.principal ? 'Principal' : (c.ativo === false ? 'Inativo' : 'Ativo') }}</span>
+          <div class="empty-hint compact" *ngIf="!(consultaFornecedor?.contatos?.length)">Nenhum contato cadastrado.</div>
+          <div class="child-row contact-row" *ngFor="let c of consultaFornecedor?.contatos || []; trackBy: trackById">
+            <div><small>Nome</small><strong>{{ c.nome }}</strong></div>
+            <div><small>Função</small><span>{{ c.cargo_funcao || '-' }}</span></div>
+            <div><small>Tipo</small><span>{{ tipoContatoLabel(c.tipo) }}</span></div>
+            <div><small>Telefone</small><span>{{ formatPhone(c.telefone) || '-' }}</span></div>
+            <div><small>WhatsApp</small><span>{{ formatPhone(c.whatsapp) || '-' }}</span></div>
+            <div><small>E-mail</small><span>{{ c.email || '-' }}</span></div>
+            <span class="status-pill" [class.inactive]="!c.principal">{{ c.principal ? 'Principal' : 'Não principal' }}</span>
+            <span class="status-pill" [class.inactive]="c.ativo === false">{{ c.ativo === false ? 'Inativo' : 'Ativo' }}</span>
             <button class="btn" type="button" *ngIf="!consultando" (click)="editarContato(c)">Editar</button>
             <button class="btn" type="button" *ngIf="!consultando" (click)="toggleContato(c)">{{ c.ativo === false ? 'Reativar' : 'Inativar' }}</button>
           </div>
         </div>
+        <div class="registered-title" *ngIf="!consultando">{{ contatoEditingId ? 'Editar contato' : 'Novo contato' }}</div>
         <div class="child-form" [formGroup]="contatoForm" *ngIf="!consultando">
           <input type="hidden" formControlName="id" />
           <label>Nome<input type="text" formControlName="nome" /></label>
@@ -192,20 +201,32 @@
           <label>Email<input type="email" formControlName="email" /></label>
           <label>Observação<input type="text" formControlName="observacao" /></label>
           <label class="checkbox-line"><input type="checkbox" formControlName="principal" />Principal</label>
-          <button class="btn primary" type="button" (click)="salvarContato()">Salvar contato</button>
+          <button class="btn primary" type="button" (click)="salvarContato()">{{ contatoEditingId ? 'Salvar alterações' : 'Salvar contato' }}</button>
+          <button class="btn" type="button" *ngIf="contatoEditingId" (click)="limparContatoForm()">Cancelar edição</button>
         </div>
       </section>
 
       <section class="form-section child-section" *ngIf="editingId">
         <div class="section-title"><h4>Endereços</h4><span>Um principal ativo por tipo.</span></div>
+        <div class="registered-title">Endereços cadastrados</div>
         <div class="child-list">
-          <div class="child-row" *ngFor="let e of consultaFornecedor?.enderecos || []; trackBy: trackById">
-            <strong>{{ tipoEnderecoLabel(e.tipo) }}</strong><span>{{ e.logradouro || '' }} {{ e.endereco }}, {{ e.numero || 's/n' }}</span><span>{{ e.cidade || '-' }}/{{ e.estado || '-' }}</span>
-            <span class="status-pill" [class.inactive]="e.ativo === false">{{ e.principal ? 'Principal' : (e.ativo === false ? 'Inativo' : 'Ativo') }}</span>
+          <div class="empty-hint compact" *ngIf="!(consultaFornecedor?.enderecos?.length)">Nenhum endereço cadastrado.</div>
+          <div class="child-row address-row" *ngFor="let e of consultaFornecedor?.enderecos || []; trackBy: trackById">
+            <div><small>Tipo</small><strong>{{ tipoEnderecoLabel(e.tipo) }}</strong></div>
+            <div><small>Logradouro</small><span>{{ e.logradouro || '-' }}</span></div>
+            <div><small>Endereço</small><span>{{ e.endereco }}</span></div>
+            <div><small>Número</small><span>{{ e.numero || '-' }}</span></div>
+            <div><small>Complemento</small><span>{{ e.complemento || '-' }}</span></div>
+            <div><small>Bairro</small><span>{{ e.bairro || '-' }}</span></div>
+            <div><small>Cidade/UF</small><span>{{ e.cidade || '-' }}/{{ e.estado || '-' }}</span></div>
+            <div><small>CEP</small><span>{{ e.cep || '-' }}</span></div>
+            <span class="status-pill" [class.inactive]="!e.principal">{{ e.principal ? 'Principal' : 'Não principal' }}</span>
+            <span class="status-pill" [class.inactive]="e.ativo === false">{{ e.ativo === false ? 'Inativo' : 'Ativo' }}</span>
             <button class="btn" type="button" *ngIf="!consultando" (click)="editarEndereco(e)">Editar</button>
             <button class="btn" type="button" *ngIf="!consultando" (click)="toggleEndereco(e)">{{ e.ativo === false ? 'Reativar' : 'Inativar' }}</button>
           </div>
         </div>
+        <div class="registered-title" *ngIf="!consultando">{{ enderecoEditingId ? 'Editar endereço' : 'Novo endereço' }}</div>
         <div class="child-form address-form" [formGroup]="enderecoForm" *ngIf="!consultando">
           <input type="hidden" formControlName="id" />
           <label>Tipo<select formControlName="tipo"><option *ngFor="let opt of enderecoTipoOptions" [value]="opt[0]">{{ opt[1] }}</option></select></label>
@@ -219,7 +240,8 @@
           <label>UF<input type="text" maxlength="2" formControlName="estado" /></label>
           <label>Observação<input type="text" formControlName="observacao" /></label>
           <label class="checkbox-line"><input type="checkbox" formControlName="principal" />Principal</label>
-          <button class="btn primary" type="button" (click)="salvarEndereco()">Salvar endereço</button>
+          <button class="btn primary" type="button" (click)="salvarEndereco()">{{ enderecoEditingId ? 'Salvar alterações' : 'Salvar endereço' }}</button>
+          <button class="btn" type="button" *ngIf="enderecoEditingId" (click)="limparEnderecoForm()">Cancelar edição</button>
         </div>
       </section>
 

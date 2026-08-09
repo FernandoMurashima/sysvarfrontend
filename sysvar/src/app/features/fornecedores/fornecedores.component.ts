@@ -100,6 +100,8 @@ export class FornecedoresComponent implements OnInit {
   historicoPage = 1;
   historicoTotal = 0;
   detailPageSize = 10;
+  contatoEditingId: number | null = null;
+  enderecoEditingId: number | null = null;
 
   readonly columnsStorageKey = 'sysvar.list.fornecedores.columns';
   readonly viewPrefsKey = 'sysvar.ui.preferences.fornecedores';
@@ -519,7 +521,9 @@ export class FornecedoresComponent implements OnInit {
     const req$ = id ? this.api.atualizarContato(fornecedorId, id, payload) : this.api.criarContato(fornecedorId, payload);
     req$.subscribe({
       next: () => {
-        this.contatoForm.reset({ tipo: 'COMERCIAL', principal: false });
+        this.successMsg = 'Contato salvo com sucesso.';
+        this.errorMsg = '';
+        this.limparContatoForm();
         this.carregarFornecedor(fornecedorId);
       },
       error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao salvar contato.'),
@@ -528,14 +532,27 @@ export class FornecedoresComponent implements OnInit {
 
   editarContato(contato: FornecedorContato): void {
     if (this.consultando) return;
+    this.contatoEditingId = contato.id ?? null;
     this.contatoForm.reset({ ...contato, telefone: this.formatPhone(contato.telefone || ''), whatsapp: this.formatPhone(contato.whatsapp || '') });
+  }
+
+  limparContatoForm(): void {
+    this.contatoEditingId = null;
+    this.contatoForm.reset({ tipo: 'COMERCIAL', principal: false });
   }
 
   toggleContato(contato: FornecedorContato): void {
     const fornecedorId = this.editingId;
     if (!fornecedorId || !contato.id || this.consultando) return;
     const req$ = contato.ativo === false ? this.api.reativarContato(fornecedorId, contato.id) : this.api.inativarContato(fornecedorId, contato.id);
-    req$.subscribe({ next: () => this.carregarFornecedor(fornecedorId), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao alterar contato.') });
+    req$.subscribe({
+      next: () => {
+        this.successMsg = contato.ativo === false ? 'Contato reativado.' : 'Contato inativado.';
+        this.errorMsg = '';
+        this.carregarFornecedor(fornecedorId);
+      },
+      error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao alterar contato.')
+    });
   }
 
   salvarEndereco(): void {
@@ -547,7 +564,9 @@ export class FornecedoresComponent implements OnInit {
     const req$ = id ? this.api.atualizarEndereco(fornecedorId, id, payload) : this.api.criarEndereco(fornecedorId, payload);
     req$.subscribe({
       next: () => {
-        this.enderecoForm.reset({ tipo: 'FISCAL', logradouro: 'Rua', principal: false });
+        this.successMsg = 'Endereço salvo com sucesso.';
+        this.errorMsg = '';
+        this.limparEnderecoForm();
         this.carregarFornecedor(fornecedorId);
       },
       error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao salvar endereço.'),
@@ -556,14 +575,27 @@ export class FornecedoresComponent implements OnInit {
 
   editarEndereco(endereco: FornecedorEndereco): void {
     if (this.consultando) return;
+    this.enderecoEditingId = endereco.id ?? null;
     this.enderecoForm.reset(endereco);
+  }
+
+  limparEnderecoForm(): void {
+    this.enderecoEditingId = null;
+    this.enderecoForm.reset({ tipo: 'FISCAL', logradouro: 'Rua', principal: false });
   }
 
   toggleEndereco(endereco: FornecedorEndereco): void {
     const fornecedorId = this.editingId;
     if (!fornecedorId || !endereco.id || this.consultando) return;
     const req$ = endereco.ativo === false ? this.api.reativarEndereco(fornecedorId, endereco.id) : this.api.inativarEndereco(fornecedorId, endereco.id);
-    req$.subscribe({ next: () => this.carregarFornecedor(fornecedorId), error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao alterar endereço.') });
+    req$.subscribe({
+      next: () => {
+        this.successMsg = endereco.ativo === false ? 'Endereço reativado.' : 'Endereço inativado.';
+        this.errorMsg = '';
+        this.carregarFornecedor(fornecedorId);
+      },
+      error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao alterar endereço.')
+    });
   }
 
   selecionarTab(tab: ConsultaTab): void {
