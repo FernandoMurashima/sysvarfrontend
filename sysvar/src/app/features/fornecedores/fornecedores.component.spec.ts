@@ -3,7 +3,10 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { Fornecedor } from '../../core/models/fornecedor';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
+import { PlanoContabilService } from '../../core/services/plano-contabil.service';
 import { FornecedoresComponent } from './fornecedores.component';
 
 describe('FornecedoresComponent', () => {
@@ -56,6 +59,9 @@ describe('FornecedoresComponent', () => {
     podeAcessarModulo: jasmine.createSpy('podeAcessarModulo').and.returnValue(true),
     podeExcluirModulo: jasmine.createSpy('podeExcluirModulo').and.returnValue(true),
   };
+  const prazosApi = { listPrazos: jasmine.createSpy('listPrazos') };
+  const planoApi = { list: jasmine.createSpy('planoList') };
+  const naturezaApi = { list: jasmine.createSpy('naturezaList') };
 
   beforeEach(async () => {
     api.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [fornecedor] }));
@@ -82,6 +88,9 @@ describe('FornecedoresComponent', () => {
     api.inativar.and.returnValue(of({ ...fornecedor, ativo: false }));
     api.bloquear.and.returnValue(of({ ...fornecedor, bloqueio: true }));
     api.desbloquear.and.returnValue(of({ ...fornecedor, bloqueio: false }));
+    prazosApi.listPrazos.and.returnValue(of({ count: 1, results: [{ Idprazo: 7, codigo: '30', descricao: '30 dias', num_parcelas: 1, intervalo_dias: 30, ativo: true }] }));
+    planoApi.list.and.returnValue(of({ count: 1, results: [{ id: 8, codigo: '2.1.01.001', descricao: 'Fornecedores Nacionais', classe: 'PASSIVO', natureza: 'CREDITO', analitica: true, ativa: true }] }));
+    naturezaApi.list.and.returnValue(of({ count: 1, results: [{ idnatureza: 9, codigo: 'FORN', descricao: 'Pagamento fornecedor', categoria_principal: 'Financeiro', subcategoria: 'Fornecedores', tipo: 'DESPESA', status: 'ATIVO', tipo_natureza: 'DEBITO', ativo: true }] }));
 
     await TestBed.configureTestingModule({
       imports: [FornecedoresComponent],
@@ -89,6 +98,9 @@ describe('FornecedoresComponent', () => {
         provideRouter([]),
         { provide: FornecedoresService, useValue: api },
         { provide: AuthService, useValue: auth },
+        { provide: FormasPagamentoService, useValue: prazosApi },
+        { provide: PlanoContabilService, useValue: planoApi },
+        { provide: NatLancamentosService, useValue: naturezaApi },
       ],
     }).compileComponents();
 
@@ -100,8 +112,81 @@ describe('FornecedoresComponent', () => {
   it('carrega lista paginada e indicadores do backend', () => {
     expect(api.list).toHaveBeenCalledWith(jasmine.objectContaining({ page: 1, page_size: 20 }));
     expect(api.indicadores).toHaveBeenCalled();
+    expect(prazosApi.listPrazos).toHaveBeenCalledWith({ ativo: true });
+    expect(planoApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ ativa: true, analitica: true }));
+    expect(naturezaApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ ativo: true }));
     expect(component.fornecedores.length).toBe(1);
     expect(component.indicadores.total).toBe(10);
+  });
+
+  it('usa selects para campos fiscais, financeiros e bancarios estruturados', () => {
+    component.novo();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('#icms-box select')).toBeTruthy();
+    expect(el.querySelector('#prazo-box select')).toBeTruthy();
+    expect(el.querySelector('#conta-contabil-box select')).toBeTruthy();
+    expect(el.querySelector('#natureza-box select')).toBeTruthy();
+    expect(el.querySelector('#tipo-conta-box select')).toBeTruthy();
+    expect(el.textContent).toContain('Sim');
+    expect(el.textContent).toContain('Não');
+    expect(el.textContent).toContain('Isento');
+    expect(el.textContent).toContain('Conta corrente');
+    expect(el.textContent).toContain('Conta poupança');
+    expect(el.textContent).toContain('Conta de pagamento');
+    expect(el.textContent).toContain('Outra');
+  });
+
+  it('seleciona padroes estruturados e envia IDs corretos', () => {
+    component.novo();
+    component.form.patchValue({
+      nome_fornecedor: 'Fornecedor Padroes',
+      tipo_pessoa: 'PJ',
+      contribuinte_icms: 'SIM',
+      prazo_padrao_pagamento_ref: 7,
+      conta_contabil_padrao: 8,
+      natureza_padrao: 9,
+      tipo_conta: 'CORRENTE',
+    });
+    component.salvar();
+    expect(api.create).toHaveBeenCalledWith(jasmine.objectContaining({
+      contribuinte_icms: 'SIM',
+      prazo_padrao_pagamento_ref: 7,
+      conta_contabil_padrao: 8,
+      natureza_padrao: 9,
+      tipo_conta: 'CORRENTE',
+    }));
+    expect(api.create.calls.mostRecent().args[0].prazo_padrao_pagamento).toBeUndefined();
+    expect(api.create.calls.mostRecent().args[0].conta_contabil).toBeUndefined();
+  });
+
+  it('editar recupera valores persistidos e labels amigaveis de consulta', () => {
+    api.get.and.returnValue(of({
+      ...fornecedor,
+      contribuinte_icms: 'ISENTO',
+      contribuinte_icms_descricao: 'Isento',
+      prazo_padrao_pagamento_ref: 7,
+      prazo_padrao_descricao: '30 dias',
+      conta_contabil_padrao: 8,
+      conta_contabil_codigo: '2.1.01.001',
+      conta_contabil_descricao: 'Fornecedores Nacionais',
+      natureza_padrao: 9,
+      natureza_padrao_codigo: 'FORN',
+      natureza_padrao_descricao: 'Pagamento fornecedor',
+      tipo_conta: 'POUPANCA',
+      tipo_conta_descricao: 'Conta poupança',
+    }));
+    component.editar(fornecedor);
+    expect(component.form.value.contribuinte_icms).toBe('ISENTO');
+    expect(component.form.value.prazo_padrao_pagamento_ref).toBe(7);
+    expect(component.form.value.conta_contabil_padrao).toBe(8);
+    expect(component.form.value.natureza_padrao).toBe(9);
+    expect(component.form.value.tipo_conta).toBe('POUPANCA');
+    expect(component.contribuinteIcmsLabel(component.consultaFornecedor?.contribuinte_icms)).toBe('Isento');
+    expect(component.fornecedorPrazoLabel(component.consultaFornecedor!)).toBe('30 dias');
+    expect(component.fornecedorContaContabilLabel(component.consultaFornecedor!)).toBe('2.1.01.001 - Fornecedores Nacionais');
+    expect(component.fornecedorNaturezaLabel(component.consultaFornecedor!)).toBe('FORN - Pagamento fornecedor');
+    expect(component.tipoContaLabel(component.consultaFornecedor?.tipo_conta)).toBe('Conta poupança');
   });
 
   it('mudanca de pagina e page_size chamam backend', () => {

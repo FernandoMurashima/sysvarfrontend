@@ -19,7 +19,13 @@ import {
   FornecedorEndereco,
   FornecedorHistoricoItem,
 } from '../../core/models/fornecedor';
+import { PrazoPagamento } from '../../core/models/forma-pagamento';
+import { NatLancamento } from '../../core/models/natureza-lancamento';
+import { PlanoContabil } from '../../core/models/plano-contabil';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
+import { PlanoContabilService } from '../../core/services/plano-contabil.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type ConsultaTab = 'dados' | 'compras' | 'financeiro' | 'historico';
@@ -35,6 +41,9 @@ export class FornecedoresComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FornecedoresService);
   private auth = inject(AuthService);
+  private prazosApi = inject(FormasPagamentoService);
+  private planoApi = inject(PlanoContabilService);
+  private naturezaApi = inject(NatLancamentosService);
 
   loading = false;
   saving = false;
@@ -129,8 +138,10 @@ export class FornecedoresComponent implements OnInit {
     contribuinte_icms: [''],
     site: [''],
     prazo_padrao_pagamento: [null],
+    prazo_padrao_pagamento_ref: [null],
     observacoes_comerciais: [''],
     conta_contabil: [''],
+    conta_contabil_padrao: [null],
     natureza_padrao: [null],
     banco: [''],
     agencia: [''],
@@ -202,6 +213,22 @@ export class FornecedoresComponent implements OnInit {
     ['OUTRO', 'Outro'],
   ];
   logradouroOptions = ['Rua', 'Avenida', 'Travessa', 'Alameda', 'Praça', 'Rodovia', 'Estrada', 'Largo', 'Viela'];
+  contribuinteIcmsOptions = [
+    { value: '', label: 'Não informado' },
+    { value: 'SIM', label: 'Sim' },
+    { value: 'NAO', label: 'Não' },
+    { value: 'ISENTO', label: 'Isento' },
+  ];
+  tipoContaOptions = [
+    { value: '', label: 'Não informado' },
+    { value: 'CORRENTE', label: 'Conta corrente' },
+    { value: 'POUPANCA', label: 'Conta poupança' },
+    { value: 'PAGAMENTO', label: 'Conta de pagamento' },
+    { value: 'OUTRA', label: 'Outra' },
+  ];
+  prazosPagamento: PrazoPagamento[] = [];
+  planoContabil: PlanoContabil[] = [];
+  naturezas: NatLancamento[] = [];
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('cadastros', true) !== false;
@@ -226,8 +253,32 @@ export class FornecedoresComponent implements OnInit {
   ngOnInit(): void {
     this.loadColumnsPreference();
     this.loadViewPreference();
+    this.loadLookups();
     this.load();
     this.loadIndicadores();
+  }
+
+  loadLookups(): void {
+    forkJoin({
+      prazos: this.prazosApi.listPrazos({ ativo: true }),
+      plano: this.planoApi.list({ ativa: true, analitica: true, page_size: 50 }),
+      naturezas: this.naturezaApi.list({ ativo: true, movimenta_financeiro: true, page_size: 50 }),
+    }).subscribe({
+      next: res => {
+        this.prazosPagamento = this.unwrap<PrazoPagamento>(res.prazos)
+          .filter(p => p.ativo !== false)
+          .sort((a, b) => this.prazoLabel(a).localeCompare(this.prazoLabel(b), 'pt-BR'));
+        this.planoContabil = this.unwrap<PlanoContabil>(res.plano)
+          .filter(conta => conta.ativa !== false && conta.analitica !== false)
+          .sort((a, b) => `${a.codigo || ''}`.localeCompare(`${b.codigo || ''}`, 'pt-BR'));
+        this.naturezas = this.unwrap<NatLancamento>(res.naturezas)
+          .filter(n => n.ativo !== false)
+          .sort((a, b) => this.naturezaLabel(a).localeCompare(this.naturezaLabel(b), 'pt-BR'));
+      },
+      error: () => {
+        this.errorMsg = 'Falha ao carregar prazos, contas contábeis ou naturezas.';
+      }
+    });
   }
 
   load(): void {
@@ -397,8 +448,10 @@ export class FornecedoresComponent implements OnInit {
       contribuinte_icms: row.contribuinte_icms ?? '',
       site: row.site ?? '',
       prazo_padrao_pagamento: row.prazo_padrao_pagamento ?? null,
+      prazo_padrao_pagamento_ref: row.prazo_padrao_pagamento_ref ?? row.prazo_padrao_pagamento ?? null,
       observacoes_comerciais: row.observacoes_comerciais ?? '',
       conta_contabil: row.conta_contabil ?? '',
+      conta_contabil_padrao: row.conta_contabil_padrao ?? null,
       natureza_padrao: row.natureza_padrao ?? null,
       banco: row.banco ?? '',
       agencia: row.agencia ?? '',
@@ -425,7 +478,13 @@ export class FornecedoresComponent implements OnInit {
       telefone1: '',
       telefone2: '',
       mala_direta: false,
+      contribuinte_icms: '',
       prazo_padrao_pagamento: null,
+      prazo_padrao_pagamento_ref: null,
+      conta_contabil: '',
+      conta_contabil_padrao: null,
+      natureza_padrao: null,
+      tipo_conta: '',
     });
     this.form.enable({ emitEvent: false });
     this.categoriasSelecionadas.clear();
@@ -501,7 +560,14 @@ export class FornecedoresComponent implements OnInit {
       categorias,
       telefone1: this.onlyDigits(raw.telefone1),
       telefone2: this.onlyDigits(raw.telefone2),
+      contribuinte_icms: raw.contribuinte_icms || null,
+      prazo_padrao_pagamento_ref: raw.prazo_padrao_pagamento_ref || null,
+      conta_contabil_padrao: raw.conta_contabil_padrao || null,
+      natureza_padrao: raw.natureza_padrao || null,
+      tipo_conta: raw.tipo_conta || null,
     };
+    delete payload.prazo_padrao_pagamento;
+    delete payload.conta_contabil;
     if (this.consultaFornecedor?.dados_bancarios_ocultos) {
       ['banco', 'agencia', 'conta', 'tipo_conta', 'chave_pix', 'favorecido', 'documento_favorecido', 'observacao_bancaria'].forEach(field => delete payload[field]);
     }
@@ -746,11 +812,30 @@ export class FornecedoresComponent implements OnInit {
 
   tipoContatoLabel(value?: string | null): string { return this.contatoTipoOptions.find(opt => opt[0] === value)?.[1] || value || ''; }
   tipoEnderecoLabel(value?: string | null): string { return this.enderecoTipoOptions.find(opt => opt[0] === value)?.[1] || value || ''; }
+  contribuinteIcmsLabel(value?: string | null): string { return this.contribuinteIcmsOptions.find(opt => opt.value === (value || ''))?.label || value || 'Não informado'; }
+  tipoContaLabel(value?: string | null): string { return this.tipoContaOptions.find(opt => opt.value === (value || ''))?.label || value || 'Não informado'; }
+  prazoId(prazo: PrazoPagamento | null | undefined): number | null { return prazo ? (prazo.Idprazo ?? prazo.id ?? null) : null; }
+  prazoLabel(prazo: PrazoPagamento): string { return [prazo.codigo, prazo.descricao].filter(Boolean).join(' - '); }
+  contaContabilLabel(conta: PlanoContabil): string { return [conta.codigo, conta.descricao].filter(Boolean).join(' - '); }
+  naturezaLabel(natureza: NatLancamento): string { return [natureza.codigo, natureza.descricao].filter(Boolean).join(' - '); }
+  fornecedorPrazoLabel(f: Fornecedor): string { return f.prazo_padrao_descricao || this.prazosPagamento.find(p => this.prazoId(p) === f.prazo_padrao_pagamento_ref)?.descricao || '-'; }
+  fornecedorContaContabilLabel(f: Fornecedor): string {
+    if (f.conta_contabil_codigo || f.conta_contabil_descricao) return [f.conta_contabil_codigo, f.conta_contabil_descricao].filter(Boolean).join(' - ');
+    return this.planoContabil.find(c => c.id === f.conta_contabil_padrao) ? this.contaContabilLabel(this.planoContabil.find(c => c.id === f.conta_contabil_padrao)!) : '-';
+  }
+  fornecedorNaturezaLabel(f: Fornecedor): string {
+    if (f.natureza_padrao_codigo || f.natureza_padrao_descricao) return [f.natureza_padrao_codigo, f.natureza_padrao_descricao].filter(Boolean).join(' - ');
+    return this.naturezas.find(n => n.idnatureza === f.natureza_padrao) ? this.naturezaLabel(this.naturezas.find(n => n.idnatureza === f.natureza_padrao)!) : '-';
+  }
   cidadeUf(f: Fornecedor): string { return [f.cidade, f.estado?.toUpperCase()].filter(Boolean).join('/') || '-'; }
   statusLabel(f: Fornecedor): string { return f.bloqueio ? 'Bloqueado' : (f.ativo === false ? 'Inativo' : 'Ativo'); }
   visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
   trackFornecedor(_: number, f: Fornecedor): number | string { return f.id ?? f.documento ?? f.nome_fornecedor; }
   trackById(_: number, row: any): number | string { return row.id ?? row.Idpagaritem ?? row.titulo_id ?? row.nome ?? row.endereco; }
+
+  private unwrap<T>(res: T[] | { results?: T[] } | any): T[] {
+    return Array.isArray(res) ? res : (res?.results ?? []);
+  }
 
   formatPhone(value?: string | null): string {
     const d = this.onlyDigits(value).slice(0, 11);

@@ -148,12 +148,12 @@
         <div class="grid-10">
           <label id="ie-box" class="input-item">Inscrição estadual<input type="text" formControlName="inscricao_estadual" /></label>
           <label id="im-box" class="input-item">Inscrição municipal<input type="text" formControlName="inscricao_municipal" /></label>
-          <label id="icms-box" class="input-item">Contribuinte ICMS<input type="text" formControlName="contribuinte_icms" /></label>
+          <label id="icms-box" class="input-item">Contribuinte ICMS<select formControlName="contribuinte_icms"><option *ngFor="let opt of contribuinteIcmsOptions" [value]="opt.value">{{ opt.label }}</option></select></label>
           <label id="site-box" class="input-item">Site<input type="text" formControlName="site" /></label>
-          <label id="prazo-box" class="input-item">Prazo padrão<input type="number" formControlName="prazo_padrao_pagamento" /></label>
+          <label id="prazo-box" class="input-item">Prazo padrão<select formControlName="prazo_padrao_pagamento_ref"><option [ngValue]="null">Não informado</option><option *ngFor="let prazo of prazosPagamento" [ngValue]="prazoId(prazo)">{{ prazoLabel(prazo) }}</option></select></label>
           <label id="obs-comercial-box" class="input-item">Observações comerciais<textarea formControlName="observacoes_comerciais"></textarea></label>
-          <label id="conta-contabil-box" class="input-item">Conta contábil padrão<input type="text" formControlName="conta_contabil" /></label>
-          <label id="natureza-box" class="input-item">Natureza financeira padrão<input type="number" formControlName="natureza_padrao" /></label>
+          <label id="conta-contabil-box" class="input-item">Conta contábil padrão<select formControlName="conta_contabil_padrao"><option [ngValue]="null">Não informado</option><option *ngFor="let conta of planoContabil" [ngValue]="conta.id">{{ contaContabilLabel(conta) }}</option></select></label>
+          <label id="natureza-box" class="input-item">Natureza financeira padrão<select formControlName="natureza_padrao"><option [ngValue]="null">Não informado</option><option *ngFor="let natureza of naturezas" [ngValue]="natureza.idnatureza">{{ naturezaLabel(natureza) }}</option></select></label>
         </div>
       </section>
 
@@ -164,7 +164,7 @@
           <label id="banco-box" class="input-item">Banco<input type="text" formControlName="banco" /></label>
           <label id="agencia-box" class="input-item">Agência<input type="text" formControlName="agencia" /></label>
           <label id="conta-box" class="input-item">Conta<input type="text" formControlName="conta" /></label>
-          <label id="tipo-conta-box" class="input-item">Tipo de conta<input type="text" formControlName="tipo_conta" /></label>
+          <label id="tipo-conta-box" class="input-item">Tipo de conta<select formControlName="tipo_conta"><option *ngFor="let opt of tipoContaOptions" [value]="opt.value">{{ opt.label }}</option></select></label>
           <label id="pix-box" class="input-item">Chave PIX<input type="text" formControlName="chave_pix" /></label>
           <label id="favorecido-box" class="input-item">Favorecido<input type="text" formControlName="favorecido" /></label>
           <label id="doc-favorecido-box" class="input-item">Documento favorecido<input type="text" formControlName="documento_favorecido" /></label>
