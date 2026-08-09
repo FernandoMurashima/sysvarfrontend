@@ -332,7 +332,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 30px;
   padding: 5px 9px;
@@ -340,6 +341,11 @@ select {
   border-radius: 6px;
   outline: none;
   font: inherit;
+}
+
+textarea {
+  min-height: 58px;
+  resize: vertical;
 }
 
 input:focus,
@@ -386,9 +392,10 @@ input[aria-invalid="true"] {
 }
 
 #nome-box { grid-column: 1 / span 6; }
-#apelido-box { grid-column: 7 / span 4; }
-#cnpj-box { grid-column: 1 / span 4; }
-#email-box { grid-column: 5 / span 6; }
+#tipo-pessoa-box { grid-column: 7 / span 2; }
+#apelido-box { grid-column: 9 / span 2; }
+#documento-box { grid-column: 1 / span 3; }
+#email-box { grid-column: 4 / span 4; }
 #tipo-box { grid-column: 1 / span 1; }
 #endereco-box { grid-column: 2 / span 7; }
 #numero-box { grid-column: 9 / span 2; }
@@ -403,6 +410,148 @@ input[aria-invalid="true"] {
 #bloqueio-box { grid-column: 1 / span 2; }
 #mala-box { grid-column: 3 / span 2; }
 #ativo-box { grid-column: 5 / span 2; }
+#ie-box,
+#im-box,
+#icms-box,
+#site-box,
+#prazo-box,
+#banco-box,
+#agencia-box,
+#conta-box,
+#tipo-conta-box,
+#pix-box,
+#favorecido-box,
+#doc-favorecido-box,
+#conta-contabil-box,
+#natureza-box { grid-column: span 2; }
+#obs-comercial-box,
+#obs-banco-box { grid-column: 1 / span 10; }
+
+.form-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.form-section h4,
+.section-title h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.category-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.category-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.commercial-indicators {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.commercial-indicators div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.commercial-indicators small,
+.section-title span,
+.bank-locked {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tabs button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.tabs button.active {
+  border-color: #0f62fe;
+  color: #0f62fe;
+}
+
+.child-list {
+  display: grid;
+  gap: 6px;
+}
+
+.child-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.child-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.address-form {
+  grid-template-columns: repeat(5, minmax(110px, 1fr)) auto;
+}
+
+.tab-panel {
+  margin-top: 10px;
+  overflow: auto;
+}
+
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.mini-table th,
+.mini-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.mini-table th {
+  background: #f8fafc;
+}
 
 .btn {
   display: inline-flex;
@@ -601,7 +750,8 @@ input[aria-invalid="true"] {
 
   #nome-box,
   #apelido-box,
-  #cnpj-box,
+  #documento-box,
+  #tipo-pessoa-box,
   #email-box,
   #tipo-box,
   #endereco-box,
@@ -616,7 +766,23 @@ input[aria-invalid="true"] {
   #categoria-box,
   #bloqueio-box,
   #mala-box,
-  #ativo-box {
+  #ativo-box,
+  #ie-box,
+  #im-box,
+  #icms-box,
+  #site-box,
+  #prazo-box,
+  #obs-comercial-box,
+  #banco-box,
+  #agencia-box,
+  #conta-box,
+  #tipo-conta-box,
+  #pix-box,
+  #favorecido-box,
+  #doc-favorecido-box,
+  #obs-banco-box,
+  #conta-contabil-box,
+  #natureza-box {
     grid-column: 1 / -1;
   }
 
@@ -634,5 +800,12 @@ input[aria-invalid="true"] {
     top: 62px;
     width: calc(100vw - 20px);
     max-height: calc(100vh - 74px);
+  }
+
+  .commercial-indicators,
+  .child-row,
+  .child-form,
+  .address-form {
+    grid-template-columns: 1fr;
   }
 }

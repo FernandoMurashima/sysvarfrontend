@@ -2,7 +2,7 @@
   <section class="title-bar">
     <div class="title-left">
       <h1>Cadastro de Fornecedores</h1>
-      <button class="info-button" type="button" aria-label="Informações da tela" title="Gerencie fornecedores, facções e parceiros comerciais">i</button>
+      <button class="info-button" type="button" title="Gerencie fornecedores, facções e parceiros comerciais">i</button>
     </div>
     <div class="title-actions">
       <button class="btn icon-btn" type="button" [routerLink]="['/ajuda/fornecedores']"><span>?</span>Ajuda</button>
@@ -11,41 +11,19 @@
       <div class="menu-holder">
         <button class="btn icon-btn" type="button" (click)="exportOpen = !exportOpen"><span>⇩</span>Exportar</button>
         <div class="floating-menu export-menu" *ngIf="exportOpen">
-          <button type="button" (click)="exportarCsv()">CSV</button>
-          <button type="button" disabled>Excel</button>
-          <button type="button" disabled>PDF</button>
+          <button type="button" (click)="exportarCsv()">CSV da página</button>
         </div>
       </div>
       <button class="btn primary icon-btn" type="button" *ngIf="podeEditarModulo" [disabled]="saving" (click)="novo()"><span>+</span>Novo Fornecedor</button>
     </div>
   </section>
 
-  <section class="indicator-bar" *ngIf="indicatorsVisible" aria-label="Resumo dos fornecedores">
-    <div class="indicator">
-      <span class="indicator-icon blue">▣</span>
-      <strong>{{ indicadores.total }}</strong>
-      <small>Total</small>
-    </div>
-    <div class="indicator">
-      <span class="indicator-icon green">✓</span>
-      <strong>{{ indicadores.ativos }}</strong>
-      <small>Ativos</small>
-    </div>
-    <div class="indicator">
-      <span class="indicator-icon orange">⌂</span>
-      <strong>{{ indicadores.faccoes }}</strong>
-      <small>Facções</small>
-    </div>
-    <div class="indicator">
-      <span class="indicator-icon purple">!</span>
-      <strong>{{ indicadores.bloqueados }}</strong>
-      <small>Bloqueados</small>
-    </div>
-    <div class="indicator">
-      <span class="indicator-icon cyan">▧</span>
-      <strong>{{ indicadores.comCidade }}</strong>
-      <small>Com cidade</small>
-    </div>
+  <section class="indicator-bar" *ngIf="indicatorsVisible">
+    <div class="indicator"><span class="indicator-icon blue">▣</span><strong>{{ indicadores.total }}</strong><small>Total</small></div>
+    <div class="indicator"><span class="indicator-icon green">✓</span><strong>{{ indicadores.ativos }}</strong><small>Ativos</small></div>
+    <div class="indicator"><span class="indicator-icon purple">!</span><strong>{{ indicadores.bloqueados }}</strong><small>Bloqueados</small></div>
+    <div class="indicator"><span class="indicator-icon orange">PJ</span><strong>{{ indicadores.pessoas_juridicas }}</strong><small>Pessoa jurídica</small></div>
+    <div class="indicator"><span class="indicator-icon cyan">R$</span><strong>{{ money(indicadores.saldo_a_pagar) }}</strong><small>Saldo a pagar</small></div>
   </section>
 
   <section class="filter-bar" *ngIf="filtersVisible">
@@ -54,11 +32,18 @@
       [(value)]="search"
       [suggestions]="searchSuggestions"
       [showActions]="false"
-      placeholder="Buscar por nome, apelido, CNPJ, cidade, e-mail ou telefone..."
+      placeholder="Buscar por nome, apelido, documento, cidade, e-mail ou telefone..."
       (search)="doSearch()"
       (cleared)="clearSearch()"
     />
-
+    <label class="inline-filter">
+      <span>PF/PJ</span>
+      <select [(ngModel)]="filterTipoPessoa" (ngModelChange)="doSearch()">
+        <option value="">Todas</option>
+        <option value="PF">PF</option>
+        <option value="PJ">PJ</option>
+      </select>
+    </label>
     <label class="inline-filter">
       <span>Categoria</span>
       <select [(ngModel)]="filterCategoria" (ngModelChange)="doSearch()">
@@ -66,15 +51,6 @@
         <option *ngFor="let opt of categoriaOptions" [value]="opt.value">{{ opt.label }}</option>
       </select>
     </label>
-
-    <label class="inline-filter">
-      <span>Cidade</span>
-      <select [(ngModel)]="filterCidade" (ngModelChange)="doSearch()">
-        <option value="">Todas</option>
-        <option *ngFor="let cidade of cidadesOptions" [value]="cidade">{{ cidade }}</option>
-      </select>
-    </label>
-
     <label class="inline-filter">
       <span>Status</span>
       <select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()">
@@ -84,38 +60,21 @@
         <option value="BLOQUEADO">Bloqueados</option>
       </select>
     </label>
-
     <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
-    <button class="btn icon-btn" type="button" (click)="advancedOpen = !advancedOpen"><span>▽</span>Filtros avançados</button>
-
+    <button class="btn icon-btn" type="button" (click)="advancedOpen = !advancedOpen"><span>▽</span>Filtros</button>
     <div class="menu-holder">
       <button class="btn icon-btn" type="button" (click)="columnsOpen = !columnsOpen"><span>▦</span>Colunas</button>
       <div class="floating-menu columns-menu" *ngIf="columnsOpen">
         <label class="column-option" *ngFor="let col of columns">
-          <input
-            type="checkbox"
-            [checked]="col.visible"
-            [disabled]="col.required"
-            (change)="toggleColumn(col.key, $any($event.target).checked)"
-          />
+          <input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" />
           {{ col.label }}
         </label>
       </div>
     </div>
-
     <div class="advanced-filters" *ngIf="advancedOpen">
-      <label>
-        Estado
-        <input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" />
-      </label>
-      <label>
-        CNPJ
-        <input type="text" [(ngModel)]="filterCnpj" (keyup.enter)="doSearch()" />
-      </label>
-      <label>
-        E-mail
-        <input type="text" [(ngModel)]="filterEmail" (keyup.enter)="doSearch()" />
-      </label>
+      <label>Documento<input type="text" [(ngModel)]="filterDocumento" (keyup.enter)="doSearch()" /></label>
+      <label>Cidade<input type="text" [(ngModel)]="filterCidade" (keyup.enter)="doSearch()" /></label>
+      <label>UF<input type="text" maxlength="2" [(ngModel)]="filterEstado" (keyup.enter)="doSearch()" /></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
     </div>
   </section>
@@ -125,30 +84,19 @@
     <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo" (click)="editarSelecionado()"><span>✎</span>Editar</button>
     <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.ativo !== false" (click)="ativarSelecionado()"><span>✓</span>Ativar</button>
     <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.ativo === false" (click)="inativarSelecionado()"><span>−</span>Inativar</button>
-    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.bloqueio" (click)="bloquearSelecionado()"><span>!</span>Bloquear</button>
-    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || !selectedFornecedor.bloqueio" (click)="desbloquearSelecionado()"><span>↺</span>Desbloquear</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || selectedFornecedor.bloqueio" (click)="abrirBloqueio()"><span>!</span>Bloquear</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedFornecedor || !podeEditarModulo || !selectedFornecedor.bloqueio" (click)="abrirDesbloqueio()"><span>↺</span>Desbloquear</button>
     <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedFornecedor || !podeExcluirModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir</button>
   </section>
 
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
 
-  <div class="overlay" *ngIf="excluirModal as fornecedor">
-    <div class="overlay-card">
-      <h4>Excluir fornecedor</h4>
-      <p>Confirma a exclusão do fornecedor <strong>{{ fornecedor.nome_fornecedor }}</strong>?</p>
-      <div class="overlay-actions">
-        <button class="btn" type="button" (click)="fecharExclusao()">Voltar</button>
-        <button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button>
-      </div>
-    </div>
-  </div>
-
   <section class="card form form-panel" *ngIf="showForm">
     <div class="form-title">
       <div>
         <h3>{{ consultando ? 'Consultar Fornecedor' : (editingId ? 'Editar Fornecedor' : 'Novo Fornecedor') }}</h3>
-        <p>{{ consultando ? 'Visualização dos dados cadastrados.' : 'Preencha as informações do fornecedor.' }}</p>
+        <p>{{ consultando ? 'Dados cadastrais, compras, financeiro e histórico.' : 'Cadastro fiscal, comercial, bancário, contatos e endereços.' }}</p>
       </div>
       <div class="form-title-actions">
         <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
@@ -157,223 +105,185 @@
         </button>
       </div>
     </div>
-    <form [formGroup]="form" (ngSubmit)="salvar()">
-      <div class="grid-10">
-        <label id="nome-box" class="input-item" [class.invalid]="form.get('nome_fornecedor')?.invalid && (form.get('nome_fornecedor')?.touched || submitted)">
-          Nome do Fornecedor*
-          <input type="text" formControlName="nome_fornecedor" [attr.aria-invalid]="form.get('nome_fornecedor')?.invalid && (form.get('nome_fornecedor')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('nome_fornecedor')?.touched || submitted">
-            <ng-container *ngIf="form.get('nome_fornecedor')?.errors?.['required']">Informe o nome.</ng-container>
-            <ng-container *ngIf="form.get('nome_fornecedor')?.errors?.['maxlength']">Máx. 50 caracteres.</ng-container>
-            <ng-container *ngIf="form.get('nome_fornecedor')?.errors?.['server']">{{ form.get('nome_fornecedor')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
 
-        <label id="tipo-pessoa-box" class="input-item">
-          Tipo de pessoa
-          <select formControlName="tipo_pessoa">
-            <option value="PJ">Pessoa jurídica</option>
-            <option value="PF">Pessoa física</option>
-          </select>
-          <span class="field-error" *ngIf="form.get('tipo_pessoa')?.errors?.['server']">{{ form.get('tipo_pessoa')?.errors?.['server'] }}</span>
-        </label>
+    <div class="commercial-indicators" *ngIf="consultaFornecedor">
+      <div><small>Última compra</small><strong>{{ consultaFornecedor.ultima_compra || '-' }}</strong></div>
+      <div><small>Total comprado</small><strong>{{ money(consultaFornecedor.total_comprado) }}</strong></div>
+      <div><small>Qtd. compras</small><strong>{{ consultaFornecedor.quantidade_compras || 0 }}</strong></div>
+      <div><small>Ticket médio</small><strong>{{ money(consultaFornecedor.ticket_medio) }}</strong></div>
+      <div><small>Saldo a pagar</small><strong>{{ money(consultaFornecedor.saldo_a_pagar) }}</strong></div>
+    </div>
 
-        <label id="apelido-box" class="input-item" [class.invalid]="form.get('apelido')?.invalid && (form.get('apelido')?.touched || submitted)">
-          Apelido
-          <input type="text" formControlName="apelido" [attr.aria-invalid]="form.get('apelido')?.invalid && (form.get('apelido')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('apelido')?.touched || submitted">
-            <ng-container *ngIf="form.get('apelido')?.errors?.['maxlength']">Máx. 18 caracteres.</ng-container>
-            <ng-container *ngIf="form.get('apelido')?.errors?.['server']">{{ form.get('apelido')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
+    <div class="tabs" *ngIf="consultando">
+      <button type="button" [class.active]="activeTab === 'dados'" (click)="selecionarTab('dados')">Dados cadastrais</button>
+      <button type="button" [class.active]="activeTab === 'compras'" (click)="selecionarTab('compras')">Compras</button>
+      <button type="button" [class.active]="activeTab === 'financeiro'" (click)="selecionarTab('financeiro')">Financeiro</button>
+      <button type="button" [class.active]="activeTab === 'historico'" (click)="selecionarTab('historico')">Histórico</button>
+    </div>
 
-        <label id="documento-box" class="input-item" [class.invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted)">
-          CPF/CNPJ
-          <input type="text" formControlName="documento" placeholder="Opcional" [attr.aria-invalid]="form.get('documento')?.invalid && (form.get('documento')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('documento')?.touched || submitted">
-            <ng-container *ngIf="form.get('documento')?.errors?.['cpf']">CPF inválido.</ng-container>
-            <ng-container *ngIf="form.get('documento')?.errors?.['cnpj']">CNPJ inválido.</ng-container>
-            <ng-container *ngIf="form.get('documento')?.errors?.['server']">{{ form.get('documento')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
+    <form [formGroup]="form" (ngSubmit)="salvar()" *ngIf="!consultando || activeTab === 'dados'">
+      <section class="form-section">
+        <h4>Dados cadastrais</h4>
+        <div class="grid-10">
+          <label id="nome-box" class="input-item">Nome do Fornecedor*<input type="text" formControlName="nome_fornecedor" /></label>
+          <label id="tipo-pessoa-box" class="input-item">Tipo de pessoa<select formControlName="tipo_pessoa"><option value="PJ">Pessoa jurídica</option><option value="PF">Pessoa física</option></select></label>
+          <label id="apelido-box" class="input-item">Apelido<input type="text" formControlName="apelido" /></label>
+          <label id="documento-box" class="input-item">CPF/CNPJ<input type="text" formControlName="documento" placeholder="Opcional" /></label>
+          <label id="email-box" class="input-item">Email<input type="email" formControlName="email" /></label>
+          <label id="telefone1-box" class="input-item">Telefone 1<input type="text" formControlName="telefone1" (input)="onPhoneInput('telefone1')" /></label>
+          <label id="telefone2-box" class="input-item">Telefone 2<input type="text" formControlName="telefone2" (input)="onPhoneInput('telefone2')" /></label>
+          <label id="mala-box" class="input-item checkbox-line"><input type="checkbox" formControlName="mala_direta" />Mala direta</label>
+        </div>
+        <div class="category-picker">
+          <strong>Categorias</strong>
+          <label *ngFor="let opt of categoriaOptions">
+            <input type="checkbox" [checked]="categoriaSelecionada(opt.value)" (change)="toggleCategoria(opt.value, $any($event.target).checked)" [disabled]="consultando" />
+            {{ opt.label }}
+          </label>
+        </div>
+      </section>
 
-        <label id="email-box" class="input-item" [class.invalid]="form.get('email')?.invalid && (form.get('email')?.touched || submitted)">
-          Email
-          <input type="email" formControlName="email" placeholder="exemplo@email.com" [attr.aria-invalid]="form.get('email')?.invalid && (form.get('email')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('email')?.touched || submitted">
-            <ng-container *ngIf="form.get('email')?.errors?.['email']">Email inválido.</ng-container>
-            <ng-container *ngIf="form.get('email')?.errors?.['server']">{{ form.get('email')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
+      <section class="form-section">
+        <h4>Dados fiscais e comerciais</h4>
+        <div class="grid-10">
+          <label id="ie-box" class="input-item">Inscrição estadual<input type="text" formControlName="inscricao_estadual" /></label>
+          <label id="im-box" class="input-item">Inscrição municipal<input type="text" formControlName="inscricao_municipal" /></label>
+          <label id="icms-box" class="input-item">Contribuinte ICMS<input type="text" formControlName="contribuinte_icms" /></label>
+          <label id="site-box" class="input-item">Site<input type="text" formControlName="site" /></label>
+          <label id="prazo-box" class="input-item">Prazo padrão<input type="number" formControlName="prazo_padrao_pagamento" /></label>
+          <label id="obs-comercial-box" class="input-item">Observações comerciais<textarea formControlName="observacoes_comerciais"></textarea></label>
+          <label id="conta-contabil-box" class="input-item">Conta contábil padrão<input type="text" formControlName="conta_contabil" /></label>
+          <label id="natureza-box" class="input-item">Natureza financeira padrão<input type="number" formControlName="natureza_padrao" /></label>
+        </div>
+      </section>
 
-        <label id="tipo-box" class="input-item">
-          Logradouro
-          <select formControlName="logradouro">
-            <option *ngFor="let op of logradouroOptions" [value]="op">{{ op }}</option>
-          </select>
-          <span class="field-error" *ngIf="form.get('logradouro')?.errors?.['server']">{{ form.get('logradouro')?.errors?.['server'] }}</span>
-        </label>
+      <section class="form-section">
+        <h4>Dados bancários</h4>
+        <div class="bank-locked" *ngIf="consultaFornecedor?.dados_bancarios_ocultos">Dados bancários protegidos pela permissão fornecedor.dados_bancarios.</div>
+        <div class="grid-10">
+          <label id="banco-box" class="input-item">Banco<input type="text" formControlName="banco" /></label>
+          <label id="agencia-box" class="input-item">Agência<input type="text" formControlName="agencia" /></label>
+          <label id="conta-box" class="input-item">Conta<input type="text" formControlName="conta" /></label>
+          <label id="tipo-conta-box" class="input-item">Tipo de conta<input type="text" formControlName="tipo_conta" /></label>
+          <label id="pix-box" class="input-item">Chave PIX<input type="text" formControlName="chave_pix" /></label>
+          <label id="favorecido-box" class="input-item">Favorecido<input type="text" formControlName="favorecido" /></label>
+          <label id="doc-favorecido-box" class="input-item">Documento favorecido<input type="text" formControlName="documento_favorecido" /></label>
+          <label id="obs-banco-box" class="input-item">Observação bancária<textarea formControlName="observacao_bancaria"></textarea></label>
+        </div>
+      </section>
 
-        <label id="endereco-box" class="input-item">
-          Endereço
-          <input type="text" formControlName="endereco" />
-          <span class="field-error" *ngIf="form.get('endereco')?.errors?.['server']">{{ form.get('endereco')?.errors?.['server'] }}</span>
-        </label>
+      <section class="form-section child-section" *ngIf="editingId">
+        <div class="section-title"><h4>Contatos</h4><span>Um principal ativo por tipo.</span></div>
+        <div class="child-list">
+          <div class="child-row" *ngFor="let c of consultaFornecedor?.contatos || []; trackBy: trackById">
+            <strong>{{ c.nome }}</strong><span>{{ tipoContatoLabel(c.tipo) }}</span><span>{{ c.email || '-' }}</span><span>{{ formatPhone(c.telefone) || '-' }}</span>
+            <span class="status-pill" [class.inactive]="c.ativo === false">{{ c.principal ? 'Principal' : (c.ativo === false ? 'Inativo' : 'Ativo') }}</span>
+            <button class="btn" type="button" *ngIf="!consultando" (click)="editarContato(c)">Editar</button>
+            <button class="btn" type="button" *ngIf="!consultando" (click)="toggleContato(c)">{{ c.ativo === false ? 'Reativar' : 'Inativar' }}</button>
+          </div>
+        </div>
+        <div class="child-form" [formGroup]="contatoForm" *ngIf="!consultando">
+          <input type="hidden" formControlName="id" />
+          <label>Nome<input type="text" formControlName="nome" /></label>
+          <label>Função<input type="text" formControlName="cargo_funcao" /></label>
+          <label>Tipo<select formControlName="tipo"><option *ngFor="let opt of contatoTipoOptions" [value]="opt[0]">{{ opt[1] }}</option></select></label>
+          <label>Telefone<input type="text" formControlName="telefone" /></label>
+          <label>WhatsApp<input type="text" formControlName="whatsapp" /></label>
+          <label>Email<input type="email" formControlName="email" /></label>
+          <label>Observação<input type="text" formControlName="observacao" /></label>
+          <label class="checkbox-line"><input type="checkbox" formControlName="principal" />Principal</label>
+          <button class="btn primary" type="button" (click)="salvarContato()">Salvar contato</button>
+        </div>
+      </section>
 
-        <label id="numero-box" class="input-item" [class.invalid]="form.get('numero')?.invalid && (form.get('numero')?.touched || submitted)">
-          Número
-          <input type="text" formControlName="numero" maxlength="10" [attr.aria-invalid]="form.get('numero')?.invalid && (form.get('numero')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('numero')?.touched || submitted">
-            <ng-container *ngIf="form.get('numero')?.errors?.['maxlength']">Máx. 10 caracteres.</ng-container>
-            <ng-container *ngIf="form.get('numero')?.errors?.['server']">{{ form.get('numero')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
-
-        <label id="complemento-box" class="input-item">
-          Complemento
-          <input type="text" formControlName="complemento" />
-          <span class="field-error" *ngIf="form.get('complemento')?.errors?.['server']">{{ form.get('complemento')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="cep-box" class="input-item">
-          CEP
-          <input type="text" formControlName="cep" />
-          <span class="field-error" *ngIf="form.get('cep')?.errors?.['server']">{{ form.get('cep')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="bairro-box" class="input-item">
-          Bairro
-          <input type="text" formControlName="bairro" />
-          <span class="field-error" *ngIf="form.get('bairro')?.errors?.['server']">{{ form.get('bairro')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="cidade-box" class="input-item">
-          Cidade
-          <input type="text" formControlName="cidade" />
-          <span class="field-error" *ngIf="form.get('cidade')?.errors?.['server']">{{ form.get('cidade')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="estado-box" class="input-item">
-          UF
-          <input type="text" formControlName="estado" maxlength="2" />
-          <span class="field-error" *ngIf="form.get('estado')?.errors?.['server']">{{ form.get('estado')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="telefone1-box" class="input-item" [class.invalid]="form.get('telefone1')?.invalid && (form.get('telefone1')?.touched || submitted)">
-          Telefone 1
-          <input type="text" formControlName="telefone1" placeholder="(99)-9999-9999 ou (99)-99999-9999" (input)="onPhoneInput('telefone1')" [attr.aria-invalid]="form.get('telefone1')?.invalid && (form.get('telefone1')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('telefone1')?.touched || submitted">
-            <ng-container *ngIf="form.get('telefone1')?.errors?.['phone']">Formato: (99)-9999-9999 ou (99)-99999-9999</ng-container>
-            <ng-container *ngIf="form.get('telefone1')?.errors?.['server']">{{ form.get('telefone1')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
-
-        <label id="telefone2-box" class="input-item" [class.invalid]="form.get('telefone2')?.invalid && (form.get('telefone2')?.touched || submitted)">
-          Telefone 2
-          <input type="text" formControlName="telefone2" placeholder="(99)-9999-9999 ou (99)-99999-9999" (input)="onPhoneInput('telefone2')" [attr.aria-invalid]="form.get('telefone2')?.invalid && (form.get('telefone2')?.touched || submitted) ? 'true' : null" />
-          <span class="field-error" *ngIf="form.get('telefone2')?.touched || submitted">
-            <ng-container *ngIf="form.get('telefone2')?.errors?.['phone']">Formato: (99)-9999-9999 ou (99)-99999-9999</ng-container>
-            <ng-container *ngIf="form.get('telefone2')?.errors?.['server']">{{ form.get('telefone2')?.errors?.['server'] }}</ng-container>
-          </span>
-        </label>
-
-        <label id="categoria-box" class="input-item">
-          Categoria
-          <select formControlName="categoria">
-            <option value="">Selecione</option>
-            <option *ngFor="let opt of categoriaOptions" [value]="opt.value">{{ opt.label }}</option>
-          </select>
-          <span class="field-error" *ngIf="form.get('categoria')?.errors?.['server']">{{ form.get('categoria')?.errors?.['server'] }}</span>
-        </label>
-
-        <label id="mala-box" class="input-item checkbox-line">
-          <input type="checkbox" formControlName="mala_direta" />
-          Mala direta
-        </label>
-      </div>
+      <section class="form-section child-section" *ngIf="editingId">
+        <div class="section-title"><h4>Endereços</h4><span>Um principal ativo por tipo.</span></div>
+        <div class="child-list">
+          <div class="child-row" *ngFor="let e of consultaFornecedor?.enderecos || []; trackBy: trackById">
+            <strong>{{ tipoEnderecoLabel(e.tipo) }}</strong><span>{{ e.logradouro || '' }} {{ e.endereco }}, {{ e.numero || 's/n' }}</span><span>{{ e.cidade || '-' }}/{{ e.estado || '-' }}</span>
+            <span class="status-pill" [class.inactive]="e.ativo === false">{{ e.principal ? 'Principal' : (e.ativo === false ? 'Inativo' : 'Ativo') }}</span>
+            <button class="btn" type="button" *ngIf="!consultando" (click)="editarEndereco(e)">Editar</button>
+            <button class="btn" type="button" *ngIf="!consultando" (click)="toggleEndereco(e)">{{ e.ativo === false ? 'Reativar' : 'Inativar' }}</button>
+          </div>
+        </div>
+        <div class="child-form address-form" [formGroup]="enderecoForm" *ngIf="!consultando">
+          <input type="hidden" formControlName="id" />
+          <label>Tipo<select formControlName="tipo"><option *ngFor="let opt of enderecoTipoOptions" [value]="opt[0]">{{ opt[1] }}</option></select></label>
+          <label>Logradouro<select formControlName="logradouro"><option *ngFor="let opt of logradouroOptions" [value]="opt">{{ opt }}</option></select></label>
+          <label>Endereço<input type="text" formControlName="endereco" /></label>
+          <label>Número<input type="text" formControlName="numero" /></label>
+          <label>Complemento<input type="text" formControlName="complemento" /></label>
+          <label>CEP<input type="text" formControlName="cep" /></label>
+          <label>Bairro<input type="text" formControlName="bairro" /></label>
+          <label>Cidade<input type="text" formControlName="cidade" /></label>
+          <label>UF<input type="text" maxlength="2" formControlName="estado" /></label>
+          <label>Observação<input type="text" formControlName="observacao" /></label>
+          <label class="checkbox-line"><input type="checkbox" formControlName="principal" />Principal</label>
+          <button class="btn primary" type="button" (click)="salvarEndereco()">Salvar endereço</button>
+        </div>
+      </section>
 
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>
-        <ul>
-          <li *ngFor="let m of getFormErrors()">{{ m }}</li>
-        </ul>
-      </div>
-
-      <div class="actions-form bottom-actions">
-        <button class="btn primary" type="submit" *ngIf="!consultando && podeEditarModulo" [disabled]="saving || (form.invalid && submitted)">
-          {{ editingId ? 'Salvar alterações' : 'Salvar' }}
-        </button>
-        <button class="btn ghost" type="button" (click)="cancelarEdicao()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul>
       </div>
     </form>
+
+    <section class="tab-panel" *ngIf="consultando && activeTab === 'compras'">
+      <table class="mini-table"><thead><tr><th>Data</th><th>Tipo</th><th>Loja</th><th>Status</th><th>Total</th></tr></thead><tbody><tr *ngFor="let row of comprasRows"><td>{{ row.data }}</td><td>{{ row.tipo_descricao || row.tipo }}</td><td>{{ row.loja_nome || '-' }}</td><td>{{ row.status_descricao || row.status }}</td><td>{{ money(row.total) }}</td></tr></tbody></table>
+    </section>
+    <section class="tab-panel" *ngIf="consultando && activeTab === 'financeiro'">
+      <table class="mini-table"><thead><tr><th>Título</th><th>Documento</th><th>Loja</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago</th><th>Saldo</th><th>Status</th><th>Natureza</th></tr></thead><tbody><tr *ngFor="let row of financeiroRows"><td>{{ row.titulo }}</td><td>{{ row.documento || '-' }}</td><td>{{ row.loja_nome || '-' }}</td><td>{{ row.parcela_n }}</td><td>{{ row.vencimento }}</td><td>{{ money(row.valor) }}</td><td>{{ money(row.valor_baixa) }}</td><td>{{ money(row.saldo) }}</td><td>{{ row.status }}</td><td>{{ row.natureza || '-' }}</td></tr></tbody></table>
+    </section>
+    <section class="tab-panel" *ngIf="consultando && activeTab === 'historico'">
+      <table class="mini-table"><thead><tr><th>Data/hora</th><th>Ação</th><th>Usuário</th><th>Resultado</th><th>Campos</th><th>Motivo</th></tr></thead><tbody><tr *ngFor="let row of historicoRows"><td>{{ row.created_at | date:'short' }}</td><td>{{ row.acao_descricao || row.acao }}</td><td>{{ row.usuario || '-' }}</td><td>{{ row.resultado || '-' }}</td><td>{{ (row.campos_alterados || []).join(', ') || '-' }}</td><td>{{ row.motivo || row.observacao || '-' }}</td></tr></tbody></table>
+    </section>
   </section>
 
   <section class="results-area">
     <div class="results-header">
-      <div>
-        <strong>Fornecedores cadastrados</strong>
-        <span>{{ total }} registro(s) encontrado(s)</span>
-      </div>
+      <div><strong>Fornecedores cadastrados</strong><span>{{ total }} registro(s) encontrado(s)</span></div>
       <div class="list-controls">
         <label for="pageSize">Itens por página:</label>
-        <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
-          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-        </select>
+        <select id="pageSize" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select>
       </div>
     </div>
-
     <div class="table-wrapper">
       <table class="table" *ngIf="fornecedores.length > 0; else emptyTpl">
-        <thead>
-          <tr>
-            <th class="select-col"><input type="checkbox" aria-label="Selecionar todos" disabled /></th>
-            <th>Nome</th>
-            <th *ngIf="visibleColumn('apelido')">Apelido</th>
-            <th *ngIf="visibleColumn('categoria')">Categoria</th>
-            <th *ngIf="visibleColumn('cnpj')">Documento</th>
-            <th *ngIf="visibleColumn('cidade')">Cidade / UF</th>
-            <th *ngIf="visibleColumn('email')">E-mail</th>
-            <th *ngIf="visibleColumn('telefone')">Telefone</th>
-            <th *ngIf="visibleColumn('status')">Status</th>
-          </tr>
-        </thead>
+        <thead><tr><th class="select-col"></th><th>Nome</th><th *ngIf="visibleColumn('apelido')">Apelido</th><th *ngIf="visibleColumn('categoria')">Categorias</th><th *ngIf="visibleColumn('documento')">Documento</th><th *ngIf="visibleColumn('cidade')">Cidade / UF</th><th *ngIf="visibleColumn('email')">E-mail</th><th *ngIf="visibleColumn('telefone')">Telefone</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
         <tbody>
           <tr *ngFor="let f of fornecedores; trackBy: trackFornecedor" [class.selected]="isSelected(f)" (click)="selecionarFornecedor(f)" tabindex="0" (keyup.enter)="selecionarFornecedor(f)">
-            <td class="select-col" (click)="$event.stopPropagation()">
-              <input type="checkbox" [checked]="isSelected(f)" (change)="selecionarFornecedor(f)" [attr.aria-label]="'Selecionar fornecedor ' + f.nome_fornecedor" />
-            </td>
+            <td class="select-col"><input type="checkbox" [checked]="isSelected(f)" (click)="$event.stopPropagation()" (change)="selecionarFornecedor(f)" /></td>
             <td>{{ f.nome_fornecedor }}</td>
             <td *ngIf="visibleColumn('apelido')">{{ f.apelido || '-' }}</td>
             <td *ngIf="visibleColumn('categoria')">{{ categoriasLabel(f) || '-' }}</td>
-            <td *ngIf="visibleColumn('cnpj')">{{ formatDocumento(f.documento || f.cnpj, f.tipo_pessoa) }}</td>
+            <td *ngIf="visibleColumn('documento')">{{ formatDocumento(f.documento || f.cnpj, f.tipo_pessoa) }}</td>
             <td *ngIf="visibleColumn('cidade')">{{ cidadeUf(f) }}</td>
             <td *ngIf="visibleColumn('email')" class="email">{{ f.email || '-' }}</td>
             <td *ngIf="visibleColumn('telefone')">{{ formatPhone(f.telefone1 || '') || '-' }}</td>
-            <td *ngIf="visibleColumn('status')">
-              <span class="status-pill" [class.inactive]="f.ativo === false || f.bloqueio">• {{ f.bloqueio ? 'Bloqueado' : (f.ativo === false ? 'Inativo' : 'Ativo') }}</span>
-            </td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="f.ativo === false || f.bloqueio">• {{ statusLabel(f) }}</span></td>
           </tr>
         </tbody>
       </table>
-      <ng-template #emptyTpl>
-        <div class="empty-hint" *ngIf="!loading">Nenhum fornecedor encontrado.</div>
-        <div class="loading" *ngIf="loading">Carregando...</div>
-      </ng-template>
+      <ng-template #emptyTpl><div class="empty-hint" *ngIf="!loading">Nenhum fornecedor encontrado.</div><div class="loading" *ngIf="loading">Carregando...</div></ng-template>
     </div>
-
     <div class="pager" *ngIf="total > 0">
-      <div class="left">
-        <button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button>
-        <button class="btn" (click)="prevPage()"  [disabled]="page === 1">‹ Anterior</button>
-      </div>
-      <div class="center">
-        Página {{ page }} de {{ totalPages }}
-        <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span>
-      </div>
-      <div class="right">
-        <button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button>
-        <button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button>
-      </div>
+      <div class="left"><button class="btn" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div>
+      <div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ total }}</span></div>
+      <div class="right"><button class="btn" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div>
     </div>
   </section>
+
+  <div class="overlay" *ngIf="excluirModal as fornecedor">
+    <div class="overlay-card"><h4>Excluir fornecedor</h4><p>Confirma a exclusão de <strong>{{ fornecedor.nome_fornecedor }}</strong>?</p><div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" type="button" (click)="confirmarExclusao()">Excluir</button></div></div>
+  </div>
+  <div class="overlay" *ngIf="bloqueioModal">
+    <div class="overlay-card" [formGroup]="bloqueioForm"><h4>Bloquear fornecedor</h4><label>Motivo obrigatório<input type="text" formControlName="motivo" /></label><label>Observação<input type="text" formControlName="observacao" /></label><div class="overlay-actions"><button class="btn" type="button" (click)="bloqueioModal = false">Cancelar</button><button class="btn danger" type="button" [disabled]="bloqueioForm.invalid" (click)="confirmarBloqueio()">Bloquear</button></div></div>
+  </div>
+  <div class="overlay" *ngIf="desbloqueioModal">
+    <div class="overlay-card"><h4>Desbloquear fornecedor</h4><p>Confirma o desbloqueio do fornecedor selecionado?</p><div class="overlay-actions"><button class="btn" type="button" (click)="desbloqueioModal = false">Cancelar</button><button class="btn primary" type="button" (click)="confirmarDesbloqueio()">Confirmar</button></div></div>
+  </div>
+  <div class="overlay" *ngIf="duplicateModal">
+    <div class="overlay-card"><h4>Possível duplicidade</h4><p>Já existe um fornecedor com nome semelhante nesta empresa.</p><ul><li *ngFor="let f of duplicateCandidates">{{ f.nome_fornecedor }} — {{ formatDocumento(f.documento || f.cnpj, f.tipo_pessoa) }}</li></ul><div class="overlay-actions"><button class="btn" type="button" (click)="cancelarDuplicidade()">Cancelar</button><button class="btn primary" type="button" (click)="continuarMesmoDuplicado()">Continuar mesmo assim</button></div></div>
+  </div>
 </div>

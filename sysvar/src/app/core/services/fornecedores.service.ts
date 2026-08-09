@@ -16,7 +16,20 @@ export class FornecedoresService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/cadastros/fornecedores/`;
 
-  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number; categoria?: string; utilizavel?: boolean }): Observable<PaginatedResponse<Fornecedor> | Fornecedor[]> {
+  list(params?: {
+    search?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+    categoria?: string;
+    utilizavel?: boolean;
+    tipo_pessoa?: string;
+    documento?: string;
+    cidade?: string;
+    estado?: string;
+    ativo?: boolean;
+    bloqueio?: boolean;
+  }): Observable<PaginatedResponse<Fornecedor>> {
     let httpParams = new HttpParams();
     if (params?.search)    httpParams = httpParams.set('search', params.search);
     if (params?.ordering)  httpParams = httpParams.set('ordering', params.ordering);
@@ -24,7 +37,13 @@ export class FornecedoresService {
     if (params?.page_size) httpParams = httpParams.set('page_size', String(params.page_size));
     if (params?.categoria) httpParams = httpParams.set('categoria', params.categoria);
     if (params?.utilizavel !== undefined) httpParams = httpParams.set('utilizavel', String(params.utilizavel));
-    return this.http.get<PaginatedResponse<Fornecedor> | Fornecedor[]>(this.base, { params: httpParams });
+    if (params?.tipo_pessoa) httpParams = httpParams.set('tipo_pessoa', params.tipo_pessoa);
+    if (params?.documento) httpParams = httpParams.set('documento', params.documento);
+    if (params?.cidade) httpParams = httpParams.set('cidade', params.cidade);
+    if (params?.estado) httpParams = httpParams.set('estado', params.estado);
+    if (params?.ativo !== undefined) httpParams = httpParams.set('ativo', String(params.ativo));
+    if (params?.bloqueio !== undefined) httpParams = httpParams.set('bloqueio', String(params.bloqueio));
+    return this.http.get<PaginatedResponse<Fornecedor>>(this.base, { params: httpParams });
   }
 
   get(id: number): Observable<Fornecedor> {
@@ -49,6 +68,12 @@ export class FornecedoresService {
 
   indicadores(): Observable<Record<string, number | string>> {
     return this.http.get<Record<string, number | string>>(`${this.base}indicadores/`);
+  }
+
+  possiveisDuplicados(params: { nome: string; id?: number }): Observable<Fornecedor[]> {
+    let httpParams = new HttpParams().set('nome', params.nome);
+    if (params.id) httpParams = httpParams.set('id', String(params.id));
+    return this.http.get<Fornecedor[]>(`${this.base}possiveis-duplicados/`, { params: httpParams });
   }
 
   historico(id: number, params?: { page?: number; page_size?: number }): Observable<PaginatedResponse<FornecedorHistoricoItem>> {
@@ -102,6 +127,14 @@ export class FornecedoresService {
     return this.http.patch<FornecedorContato>(`${this.base}${id}/contatos/${contatoId}/`, payload);
   }
 
+  inativarContato(id: number, contatoId: number): Observable<FornecedorContato> {
+    return this.http.post<FornecedorContato>(`${this.base}${id}/contatos/${contatoId}/inativar/`, {});
+  }
+
+  reativarContato(id: number, contatoId: number): Observable<FornecedorContato> {
+    return this.http.post<FornecedorContato>(`${this.base}${id}/contatos/${contatoId}/reativar/`, {});
+  }
+
   enderecos(id: number): Observable<FornecedorEndereco[]> {
     return this.http.get<FornecedorEndereco[]>(`${this.base}${id}/enderecos/`);
   }
@@ -112,5 +145,13 @@ export class FornecedoresService {
 
   atualizarEndereco(id: number, enderecoId: number, payload: Partial<FornecedorEndereco>): Observable<FornecedorEndereco> {
     return this.http.patch<FornecedorEndereco>(`${this.base}${id}/enderecos/${enderecoId}/`, payload);
+  }
+
+  inativarEndereco(id: number, enderecoId: number): Observable<FornecedorEndereco> {
+    return this.http.post<FornecedorEndereco>(`${this.base}${id}/enderecos/${enderecoId}/inativar/`, {});
+  }
+
+  reativarEndereco(id: number, enderecoId: number): Observable<FornecedorEndereco> {
+    return this.http.post<FornecedorEndereco>(`${this.base}${id}/enderecos/${enderecoId}/reativar/`, {});
   }
 }
