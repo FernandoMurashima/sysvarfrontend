@@ -4,7 +4,7 @@
     <div class="title-actions">
       <input type="search" [(ngModel)]="search" (keyup.enter)="page = 1; load()" placeholder="Buscar código ou descrição" />
       <button class="btn primary" type="button" (click)="page = 1; load()">Pesquisar</button>
-      <button class="btn" type="button" *ngIf="podeEditar" (click)="novo()">Novo</button>
+      <button class="btn" type="button" *ngIf="podeEditar" (click)="novo()">Novo Cargo</button>
     </div>
   </section>
 
@@ -12,6 +12,7 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
 
   <section class="form-panel" *ngIf="podeEditar">
+    <p class="hint">Cadastre livremente os cargos usados pela empresa.</p>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <label>Código*<input formControlName="codigo" /></label>
       <label>Descrição*<input formControlName="descricao" /></label>
