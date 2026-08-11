@@ -7,9 +7,11 @@ import { RouterLink } from '@angular/router';
 import { FuncionariosService } from '../../core/services/funcionarios.service';
 import { CargosService } from '../../core/services/cargos.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { UsersService } from '../../core/services/users.service';
 import { Funcionario } from '../../core/models/funcionario';
 import { Cargo } from '../../core/models/cargo';
 import { Loja } from '../../core/models/loja';
+import { User } from '../../core/models/user';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -28,6 +30,7 @@ export class FuncionariosComponent implements OnInit {
   private api = inject(FuncionariosService);
   private cargosApi = inject(CargosService);
   private lojasApi = inject(LojasService);
+  private usersApi = inject(UsersService);
   private auth = inject(AuthService);
 
   loading = false;
@@ -77,6 +80,7 @@ export class FuncionariosComponent implements OnInit {
 
   lojasOptions: { id: number; nome: string }[] = [];
   cargosOptions: Cargo[] = [];
+  usuariosOptions: User[] = [];
   historicoAtual: any[] = [];
 
   get podeVerSalario(): boolean {
@@ -156,6 +160,7 @@ export class FuncionariosComponent implements OnInit {
     this.load();
     this.loadLojas();
     this.loadCargos();
+    this.loadUsuarios();
   }
 
   loadLojas(): void {
@@ -204,6 +209,13 @@ export class FuncionariosComponent implements OnInit {
     this.cargosApi.list({ page_size: 500, ordering: 'descricao' }).subscribe({
       next: (res: any) => { this.cargosOptions = Array.isArray(res) ? res : (res?.results ?? []); },
       error: () => { this.cargosOptions = []; }
+    });
+  }
+
+  loadUsuarios(): void {
+    this.usersApi.list({ page_size: 500, ordering: 'username', is_active: 'true' }).subscribe({
+      next: (res: any) => { this.usuariosOptions = Array.isArray(res) ? res : (res?.results ?? []); },
+      error: () => { this.usuariosOptions = []; }
     });
   }
 
@@ -327,6 +339,32 @@ export class FuncionariosComponent implements OnInit {
   lojaNome(id: number | null | undefined): string {
     if (!id) return '';
     return this.lojasOptions.find(l => l.id === id)?.nome || '';
+  }
+
+  usuarioLabel(user: User | null | undefined): string {
+    if (!user) return '';
+    const nome = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+    if (nome && user.username) return `${nome} (${user.username})`;
+    return nome || user.username || `Usuário ${user.id}`;
+  }
+
+  usuarioNome(id: number | null | undefined): string {
+    if (!id) return 'Nenhum';
+    const user = this.usuariosOptions.find(u => Number(u.id) === Number(id));
+    return user ? this.usuarioLabel(user) : 'Usuário vinculado';
+  }
+
+  usuariosDisponiveis(): User[] {
+    const atual = Number(this.form.get('usuario')?.value || 0) || null;
+    const vinculados = new Set(
+      this.funcionarios
+        .filter(f => Number(f.usuario || 0) && (!this.editingId || f.id !== this.editingId))
+        .map(f => Number(f.usuario))
+    );
+    return this.usuariosOptions.filter(user => {
+      const id = Number(user.id || 0);
+      return !!id && (id === atual || !vinculados.has(id));
+    });
   }
 
   novo(): void {
@@ -534,6 +572,7 @@ export class FuncionariosComponent implements OnInit {
       fim: raw.fim ? raw.fim : null as any,
       cpf: raw.cpf ? String(raw.cpf) : null as any,
       data_nascimento: raw.data_nascimento || null,
+      usuario: raw.usuario === '' ? null : raw.usuario,
     };
     if (!this.podeVerSalario) {
       delete payload.salario;

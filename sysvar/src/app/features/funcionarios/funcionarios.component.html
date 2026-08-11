@@ -106,8 +106,13 @@
         <label id="whatsapp-box" class="input-item">WhatsApp<input type="text" formControlName="whatsapp" /></label>
         <label id="email-box" class="input-item">E-mail<input type="email" formControlName="email" /></label>
         <label id="nascimento-box" class="input-item">Nascimento<input type="date" formControlName="data_nascimento" /></label>
+        <label id="usuario-box" class="input-item">Usuário vinculado<select formControlName="usuario"><option [ngValue]="null">Nenhum</option><option *ngFor="let user of usuariosDisponiveis()" [ngValue]="user.id">{{ usuarioLabel(user) }}</option></select></label>
         <label id="endereco-box" class="input-item">Endereço<input type="text" formControlName="endereco" /></label>
         <label id="observacoes-box" class="input-item">Observações<textarea formControlName="observacoes"></textarea></label>
+      </div>
+      <div class="linked-user-panel" *ngIf="consultando">
+        <strong>Usuário vinculado</strong>
+        <span>{{ usuarioNome(form.get('usuario')?.value) }}</span>
       </div>
       <div class="history-panel" *ngIf="consultando">
         <strong>Histórico</strong>
