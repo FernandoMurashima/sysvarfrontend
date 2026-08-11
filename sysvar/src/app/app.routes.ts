@@ -12,6 +12,7 @@ import { LojasComponent } from './features/lojas/lojas.component';
 import { LojasAjudaComponent } from './features/ajuda/lojas-ajuda/lojas-ajuda.component';
 import { FornecedoresComponent } from './features/fornecedores/fornecedores.component';
 import { FuncionariosComponent } from './features/funcionarios/funcionarios.component';
+import { CargosComponent } from './features/cargos/cargos.component';
 import { NatLancamentosComponent } from './features/natureza-lancamento/natureza-lancamento.component';
 import { PlanoContabilComponent } from './features/plano-contabil/plano-contabil.component';
 import { CoresComponent } from './features/cores/cores.component';
@@ -95,6 +96,7 @@ export const routes: Routes = [
       { path: 'ajuda/lojas', component: LojasAjudaComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'cadastros' } },
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
+      { path: 'cargos', component: CargosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
       { path: 'plano-contabil', component: PlanoContabilComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'cores', component: CoresComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },

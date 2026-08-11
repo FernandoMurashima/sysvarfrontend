@@ -9,12 +9,11 @@ export class FuncionariosService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/cadastros/funcionarios/`;
 
-  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number }): Observable<any> {
+  list(params?: Record<string, string | number | boolean | null | undefined>): Observable<any> {
     let httpParams = new HttpParams();
-    if (params?.search)    httpParams = httpParams.set('search', params.search);
-    if (params?.ordering)  httpParams = httpParams.set('ordering', params.ordering);
-    if (params?.page)      httpParams = httpParams.set('page', String(params.page));
-    if (params?.page_size) httpParams = httpParams.set('page_size', String(params.page_size));
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') httpParams = httpParams.set(key, String(value));
+    });
     return this.http.get(this.base, { params: httpParams });
   }
 
@@ -36,5 +35,21 @@ export class FuncionariosService {
 
   remove(id: number): Observable<any> {
     return this.http.delete(`${this.base}${id}/`);
+  }
+
+  indicadores(params?: Record<string, string | number | boolean | null | undefined>): Observable<any> {
+    let httpParams = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') httpParams = httpParams.set(key, String(value));
+    });
+    return this.http.get(`${this.base}indicadores/`, { params: httpParams });
+  }
+
+  historico(id: number): Observable<any> {
+    return this.http.get(`${this.base}${id}/historico/`);
+  }
+
+  acao(id: number, action: 'afastar' | 'retornar' | 'desligar' | 'recontratar', payload: Record<string, unknown> = {}): Observable<Funcionario> {
+    return this.http.post<Funcionario>(`${this.base}${id}/${action}/`, payload);
   }
 }

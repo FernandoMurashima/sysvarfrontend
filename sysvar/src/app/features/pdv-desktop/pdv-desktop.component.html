@@ -310,7 +310,7 @@
       <div class="modal-list" *ngIf="modalAtalho === 'vendedor'">
         <button type="button" *ngFor="let v of vendedoresAtalho()" (click)="selecionarVendedorModal(v)">
           <strong>{{ v.nomefuncionario }}</strong>
-          <span>{{ v.categoria }}</span>
+          <span>{{ v.cargo_nome || v.categoria }}</span>
           <span>{{ v.idloja }}</span>
         </button>
         <p *ngIf="!vendedoresAtalho().length">Nenhum vendedor encontrado para esta loja.</p>

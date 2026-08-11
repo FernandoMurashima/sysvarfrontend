@@ -23,9 +23,9 @@
   <section class="indicator-bar" *ngIf="indicatorsVisible">
     <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores.total }}</strong><small>Total</small></div></div>
     <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ indicadores.ativos }}</strong><small>Ativos</small></div></div>
-    <div class="indicator"><span class="indicator-icon orange">⌂</span><div><strong>{{ indicadores.vendedores }}</strong><small>Vendedores</small></div></div>
-    <div class="indicator"><span class="indicator-icon purple">▥</span><div><strong>{{ indicadores.caixas }}</strong><small>Caixas</small></div></div>
-    <div class="indicator"><span class="indicator-icon cyan">▧</span><div><strong>{{ indicadores.gerentes }}</strong><small>Gerentes</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">⌂</span><div><strong>{{ indicadores.afastados }}</strong><small>Afastados</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">▥</span><div><strong>{{ indicadores.desligados }}</strong><small>Desligados</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">▧</span><div><strong>{{ indicadores.participantes_vendas }}</strong><small>Vendas</small></div></div>
   </section>
 
   <section class="filter-bar" *ngIf="filtersVisible">
@@ -34,13 +34,13 @@
       [(value)]="search"
       [suggestions]="searchSuggestions"
       [showActions]="false"
-      placeholder="Buscar por nome, apelido, CPF, categoria ou loja..."
+      placeholder="Buscar por matrícula, nome, apelido ou CPF..."
       (search)="doSearch()"
       (cleared)="clearSearch()"
     />
     <label class="inline-filter"><span>Loja</span><select [(ngModel)]="filterLoja" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option></select></label>
-    <label class="inline-filter"><span>Categoria</span><select [(ngModel)]="filterCategoria" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let categoria of categoriasOptions" [value]="categoria">{{ categoria }}</option></select></label>
-    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option></select></label>
+    <label class="inline-filter"><span>Cargo</span><select [(ngModel)]="filterCargo" (ngModelChange)="doSearch()"><option value="">Todos</option><option *ngFor="let cargo of cargosOptions" [ngValue]="cargo.id">{{ cargo.descricao }}</option></select></label>
+    <label class="inline-filter"><span>Situação</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todas</option><option value="ATIVO">Ativo</option><option value="AFASTADO">Afastado</option><option value="DESLIGADO">Desligado</option></select></label>
     <button class="btn primary" type="button" [disabled]="loading" (click)="doSearch()">Pesquisar</button>
     <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
     <div class="menu-holder">
@@ -53,9 +53,8 @@
       </div>
     </div>
     <div class="advanced-filters" *ngIf="advancedOpen">
-      <label><span>CPF</span><input type="text" [(ngModel)]="filterCpf" (keyup.enter)="doSearch()" /></label>
-      <label><span>Início de</span><input type="date" [(ngModel)]="filterInicio" (change)="doSearch()" /></label>
-      <label><span>Início até</span><input type="date" [(ngModel)]="filterFim" (change)="doSearch()" /></label>
+      <label><span>Participa vendas</span><select [(ngModel)]="filterParticipaVendas" (change)="doSearch()"><option value="">Todos</option><option value="true">Sim</option><option value="false">Não</option></select></label>
+      <label><span>Comissionado</span><select [(ngModel)]="filterComissionado" (change)="doSearch()"><option value="">Todos</option><option value="true">Sim</option><option value="false">Não</option></select></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
     </div>
   </section>
@@ -63,6 +62,10 @@
   <section class="action-bar">
     <button class="btn" type="button" [disabled]="!selectedFuncionario" (click)="consultarSelecionado()">⌕ Consultar</button>
     <button class="btn" type="button" [disabled]="!selectedFuncionario || !podeEditarModulo" (click)="editarSelecionado()">✎ Editar</button>
+    <button class="btn" type="button" [disabled]="!selectedFuncionario || !podeEditarModulo || selectedFuncionario.situacao !== 'ATIVO'" (click)="executarCicloSelecionado('afastar')">Afastar</button>
+    <button class="btn" type="button" [disabled]="!selectedFuncionario || !podeEditarModulo || selectedFuncionario.situacao !== 'AFASTADO'" (click)="executarCicloSelecionado('retornar')">Retornar</button>
+    <button class="btn" type="button" [disabled]="!selectedFuncionario || !podeEditarModulo || selectedFuncionario.situacao === 'DESLIGADO'" (click)="executarCicloSelecionado('desligar')">Desligar</button>
+    <button class="btn" type="button" [disabled]="!selectedFuncionario || !podeEditarModulo || selectedFuncionario.situacao !== 'DESLIGADO'" (click)="executarCicloSelecionado('recontratar')">Recontratar</button>
     <button class="btn danger-soft" type="button" [disabled]="!selectedFuncionario || !podeExcluirModulo" (click)="excluirSelecionado()">⌫ Excluir</button>
   </section>
 
@@ -85,16 +88,31 @@
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-10">
         <label id="nome-box" class="input-item" [class.invalid]="form.get('nomefuncionario')?.invalid && (form.get('nomefuncionario')?.touched || submitted)">Nome*<input type="text" formControlName="nomefuncionario" /></label>
+        <label id="matricula-box" class="input-item">Matrícula<input type="text" formControlName="matricula" placeholder="Automática" /></label>
         <label id="apelido-box" class="input-item" [class.invalid]="form.get('apelido')?.invalid && (form.get('apelido')?.touched || submitted)">Apelido<input type="text" formControlName="apelido" /></label>
-        <label id="cpf-box" class="input-item" [class.invalid]="form.get('cpf')?.invalid && (form.get('cpf')?.touched || submitted)">CPF<input type="text" formControlName="cpf" placeholder="000.000.000-00" (input)="onCpfInput()" /></label>
-        <label id="loja-box" class="input-item">Loja / matriz<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option></select></label>
-        <label id="inicio-box" class="input-item">Início<input type="date" formControlName="inicio" /></label>
-        <label id="fim-box" class="input-item">Fim<input type="date" formControlName="fim" /></label>
-        <label id="categoria-box" class="input-item">Categoria<input type="text" formControlName="categoria" /></label>
-        <label id="meta-box" class="input-item">Meta<input type="number" step="0.01" formControlName="meta" /></label>
+        <label id="cpf-box" class="input-item" [class.invalid]="form.get('cpf')?.invalid && (form.get('cpf')?.touched || submitted)">CPF*<input type="text" formControlName="cpf" placeholder="000.000.000-00" (input)="onCpfInput()" /></label>
+        <label id="cargo-box" class="input-item">Cargo*<select formControlName="cargo"><option [ngValue]="null">Selecione</option><option *ngFor="let cargo of cargosOptions" [ngValue]="cargo.id">{{ cargo.descricao }}</option></select></label>
+        <label id="loja-box" class="input-item">Loja principal<select formControlName="idloja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option></select></label>
+        <label id="inicio-box" class="input-item">Admissão<input type="date" formControlName="inicio" /></label>
+        <label id="fim-box" class="input-item">Desligamento<input type="date" formControlName="fim" /></label>
+        <label id="situacao-box" class="input-item">Situação<select formControlName="situacao"><option value="ATIVO">Ativo</option><option value="AFASTADO">Afastado</option><option value="DESLIGADO">Desligado</option></select></label>
+        <label id="vendas-box" class="input-item checkbox-line"><input type="checkbox" formControlName="participa_vendas" />Participa de vendas</label>
+        <label id="comissionado-box" class="input-item checkbox-line"><input type="checkbox" formControlName="comissionado" />Comissionado</label>
         <label id="comissao-box" class="input-item">Comissão %<input type="number" step="0.01" formControlName="comissao_percentual" /></label>
         <label id="salario-box" class="input-item">Salário<input *ngIf="podeVerSalario" type="number" step="0.01" formControlName="salario" /><input *ngIf="!podeVerSalario" type="text" value="Restrito" disabled /></label>
-        <label id="ativo-box" class="input-item checkbox-line"><input type="checkbox" formControlName="ativo" />Ativo</label>
+        <label id="todas-lojas-box" class="input-item checkbox-line" *ngIf="showAbrangencia()"><input type="checkbox" formControlName="todas_lojas_da_empresa" />Todas as lojas</label>
+        <label id="lojas-supervisionadas-box" class="input-item" *ngIf="showAbrangencia()">Lojas de abrangência<select multiple formControlName="lojas_supervisionadas"><option *ngFor="let l of lojasOptions" [ngValue]="l.id">{{ l.nome }}</option></select></label>
+        <label id="telefone-box" class="input-item">Telefone<input type="text" formControlName="telefone" /></label>
+        <label id="whatsapp-box" class="input-item">WhatsApp<input type="text" formControlName="whatsapp" /></label>
+        <label id="email-box" class="input-item">E-mail<input type="email" formControlName="email" /></label>
+        <label id="nascimento-box" class="input-item">Nascimento<input type="date" formControlName="data_nascimento" /></label>
+        <label id="endereco-box" class="input-item">Endereço<input type="text" formControlName="endereco" /></label>
+        <label id="observacoes-box" class="input-item">Observações<textarea formControlName="observacoes"></textarea></label>
+      </div>
+      <div class="history-panel" *ngIf="consultando">
+        <strong>Histórico</strong>
+        <div *ngFor="let h of historicoAtual">{{ h.data_hora | date:'short' }} - {{ h.tipo_descricao || h.tipo }}</div>
+        <span *ngIf="!historicoAtual.length">Sem eventos operacionais.</span>
       </div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
         <strong>Pendências</strong>
@@ -110,19 +128,19 @@
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="funcionarios.length > 0; else emptyTpl">
-        <thead><tr><th class="select-col"></th><th>Nome</th><th *ngIf="visibleColumn('apelido')">Apelido</th><th *ngIf="visibleColumn('cpf')">CPF</th><th *ngIf="visibleColumn('loja')">Loja</th><th *ngIf="visibleColumn('categoria')">Categoria</th><th *ngIf="visibleColumn('meta')">Meta</th><th *ngIf="visibleColumn('comissao')">Comissão %</th><th *ngIf="visibleColumn('salario')">Salário</th><th *ngIf="visibleColumn('status')">Status</th><th *ngIf="visibleColumn('cadastro')">Cadastro</th></tr></thead>
+        <thead><tr><th class="select-col"></th><th *ngIf="visibleColumn('matricula')">Matrícula</th><th>Nome</th><th *ngIf="visibleColumn('apelido')">Apelido</th><th *ngIf="visibleColumn('cpf')">CPF</th><th *ngIf="visibleColumn('loja')">Loja</th><th *ngIf="visibleColumn('cargo')">Cargo</th><th *ngIf="visibleColumn('comissao')">Comissão %</th><th *ngIf="visibleColumn('salario')">Salário</th><th *ngIf="visibleColumn('situacao')">Situação</th><th *ngIf="visibleColumn('cadastro')">Cadastro</th></tr></thead>
         <tbody>
           <tr *ngFor="let f of funcionarios; trackBy: trackFuncionario" [class.selected]="isSelected(f)" (click)="selecionarFuncionario(f)" tabindex="0" (keyup.enter)="selecionarFuncionario(f)">
             <td class="select-col"><input type="checkbox" [checked]="isSelected(f)" (click)="$event.stopPropagation(); selecionarFuncionario(f)" /></td>
+            <td *ngIf="visibleColumn('matricula')">{{ f.matricula || '-' }}</td>
             <td>{{ f.nomefuncionario }}</td>
             <td *ngIf="visibleColumn('apelido')">{{ f.apelido || '-' }}</td>
             <td *ngIf="visibleColumn('cpf')">{{ formatCpf(f.cpf) }}</td>
-            <td *ngIf="visibleColumn('loja')">{{ lojaNome(f.idloja) || '-' }}</td>
-            <td *ngIf="visibleColumn('categoria')">{{ f.categoria || '-' }}</td>
-            <td *ngIf="visibleColumn('meta')">{{ formatMoney(f.meta || 0) }}</td>
+            <td *ngIf="visibleColumn('loja')">{{ f.loja_nome || lojaNome(f.idloja) || '-' }}</td>
+            <td *ngIf="visibleColumn('cargo')">{{ f.cargo_nome || '-' }}</td>
             <td *ngIf="visibleColumn('comissao')">{{ f.comissao_percentual || 0 }}</td>
             <td *ngIf="visibleColumn('salario')">{{ f.salario_oculto ? 'Restrito' : formatMoney(f.salario || 0) }}</td>
-            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="f.ativo === false">• {{ f.ativo === false ? 'Inativo' : 'Ativo' }}</span></td>
+            <td *ngIf="visibleColumn('situacao')"><span class="status-pill" [class.inactive]="f.situacao !== 'ATIVO'">• {{ f.situacao_descricao || f.situacao }}</span></td>
             <td *ngIf="visibleColumn('cadastro')">{{ formatDate(f.data_cadastro) }}</td>
           </tr>
         </tbody>

@@ -51,22 +51,34 @@
 .form-title p { margin: 2px 0 0; color: #64748b; font-size: 12px; }
 .grid-10 { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px 10px; grid-auto-flow: dense; }
 label { display: grid; gap: 6px; min-width: 0; color: #334155; font-size: 13px; }
-input, select { width: 100%; min-height: 32px; padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font: inherit; }
-input:focus, select:focus, .btn:focus-visible { outline: 2px solid rgba(15, 98, 254, .35); outline-offset: 2px; }
+input, select, textarea { width: 100%; min-height: 32px; padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font: inherit; }
+textarea { min-height: 70px; resize: vertical; }
+input:focus, select:focus, textarea:focus, .btn:focus-visible { outline: 2px solid rgba(15, 98, 254, .35); outline-offset: 2px; }
 input[type="checkbox"] { width: 16px; min-width: 16px; height: 16px; min-height: 16px; padding: 0; accent-color: #0f62fe; }
 .input-item.invalid input, .input-item.invalid select { border-color: #ef4444; background: #fef2f2; }
 .checkbox-line { align-items: center; grid-auto-flow: column; grid-template-columns: auto 1fr; }
 #nome-box { grid-column: 1 / span 6; }
-#apelido-box { grid-column: 7 / span 4; }
+#matricula-box { grid-column: 7 / span 2; }
+#apelido-box { grid-column: 9 / span 2; }
 #cpf-box { grid-column: 1 / span 3; }
-#loja-box { grid-column: 4 / span 4; }
+#cargo-box { grid-column: 4 / span 3; }
+#loja-box { grid-column: 7 / span 4; }
 #inicio-box { grid-column: 1 / span 2; }
 #fim-box { grid-column: 3 / span 2; }
-#categoria-box { grid-column: 5 / span 2; }
-#meta-box { grid-column: 7 / span 1; }
-#comissao-box { grid-column: 8 / span 1; }
-#salario-box { grid-column: 9 / span 2; }
-#ativo-box { grid-column: 1 / span 2; }
+#situacao-box { grid-column: 5 / span 2; }
+#vendas-box { grid-column: 7 / span 2; }
+#comissionado-box { grid-column: 9 / span 2; }
+#comissao-box { grid-column: 1 / span 2; }
+#salario-box { grid-column: 3 / span 2; }
+#todas-lojas-box { grid-column: 5 / span 2; }
+#lojas-supervisionadas-box { grid-column: 7 / span 4; }
+#telefone-box { grid-column: 1 / span 2; }
+#whatsapp-box { grid-column: 3 / span 2; }
+#email-box { grid-column: 5 / span 3; }
+#nascimento-box { grid-column: 8 / span 3; }
+#endereco-box { grid-column: 1 / span 5; }
+#observacoes-box { grid-column: 6 / span 5; }
+.history-panel { display: grid; gap: 6px; margin-top: 12px; padding: 10px 12px; border: 1px solid #dbe4ef; border-radius: 8px; background: #f8fafc; color: #334155; font-size: 13px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; cursor: pointer; font-weight: 700; white-space: nowrap; }
 .btn:hover:not(:disabled) { background: #f8fafc; }
 .btn.primary { border-color: #0f62fe; background: #0f62fe; color: #fff; }
@@ -95,7 +107,7 @@ input[type="checkbox"] { width: 16px; min-width: 16px; height: 16px; min-height:
   .title-bar, .results-header, .form-title { align-items: stretch; flex-direction: column; }
   .title-actions, .form-title-actions { justify-content: flex-start; flex-wrap: wrap; }
   .indicator-bar, .filter-bar, .advanced-filters, .grid-10 { grid-template-columns: 1fr; }
-  #nome-box, #apelido-box, #cpf-box, #loja-box, #inicio-box, #fim-box, #categoria-box, #meta-box, #comissao-box, #salario-box, #ativo-box { grid-column: 1 / -1; }
+  #nome-box, #matricula-box, #apelido-box, #cpf-box, #cargo-box, #loja-box, #inicio-box, #fim-box, #situacao-box, #vendas-box, #comissionado-box, #comissao-box, #salario-box, #todas-lojas-box, #lojas-supervisionadas-box, #telefone-box, #whatsapp-box, #email-box, #nascimento-box, #endereco-box, #observacoes-box { grid-column: 1 / -1; }
   .pager { grid-template-columns: 1fr; }
   .pager .left, .pager .center, .pager .right { justify-self: start; }
   .form-panel { top: 62px; width: calc(100vw - 20px); max-height: calc(100vh - 74px); }

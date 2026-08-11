@@ -5,8 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { FuncionariosService } from '../../core/services/funcionarios.service';
+import { CargosService } from '../../core/services/cargos.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { Funcionario } from '../../core/models/funcionario';
+import { Cargo } from '../../core/models/cargo';
 import { Loja } from '../../core/models/loja';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
@@ -24,6 +26,7 @@ import { SummaryCardComponent } from '../../shared/components/summary-card/summa
 export class FuncionariosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FuncionariosService);
+  private cargosApi = inject(CargosService);
   private lojasApi = inject(LojasService);
   private auth = inject(AuthService);
 
@@ -44,11 +47,10 @@ export class FuncionariosComponent implements OnInit {
 
   search = '';
   filterLoja: number | '' = '';
-  filterCategoria = '';
+  filterCargo: number | '' = '';
   filterStatus = '';
-  filterCpf = '';
-  filterInicio = '';
-  filterFim = '';
+  filterParticipaVendas: '' | 'true' | 'false' = '';
+  filterComissionado: '' | 'true' | 'false' = '';
   advancedOpen = false;
   successMsg = '';
   errorMsg = '';
@@ -63,17 +65,19 @@ export class FuncionariosComponent implements OnInit {
   private readonly viewPrefsKey = 'sysvar.ui.preferences.funcionarios';
   columns = [
     { key: 'apelido', label: 'Apelido', visible: true, required: false },
+    { key: 'matricula', label: 'Matrícula', visible: true, required: true },
     { key: 'cpf', label: 'CPF', visible: true, required: false },
     { key: 'loja', label: 'Loja', visible: true, required: false },
-    { key: 'categoria', label: 'Categoria', visible: true, required: false },
-    { key: 'meta', label: 'Meta', visible: true, required: false },
+    { key: 'cargo', label: 'Cargo', visible: true, required: false },
     { key: 'comissao', label: 'Comissão %', visible: true, required: false },
     { key: 'salario', label: 'Salário', visible: true, required: false },
-    { key: 'status', label: 'Status', visible: true, required: false },
+    { key: 'situacao', label: 'Situação', visible: true, required: false },
     { key: 'cadastro', label: 'Cadastro', visible: true, required: false },
   ];
 
   lojasOptions: { id: number; nome: string }[] = [];
+  cargosOptions: Cargo[] = [];
+  historicoAtual: any[] = [];
 
   get podeVerSalario(): boolean {
     const user = this.auth.getCurrentUser();
@@ -84,35 +88,34 @@ export class FuncionariosComponent implements OnInit {
   }
 
   form: FormGroup = this.fb.group({
+    matricula: [''],
     nomefuncionario: ['', [Validators.required, Validators.maxLength(50)]],
     apelido: ['',[Validators.maxLength(20)]],
-    cpf: ['', [this.cpfValidator]],
+    cpf: ['', [Validators.required, this.cpfValidator]],
 
     inicio: [''],
     fim: [''],
 
-    categoria: ['', [Validators.maxLength(15)]],
-    meta: [0, []],
+    cargo: [null, [Validators.required]],
+    situacao: ['ATIVO'],
+    participa_vendas: [false],
+    comissionado: [false],
     comissao_percentual: [0, []],
     salario: [0, []],
 
     idloja: [null],
+    todas_lojas_da_empresa: [false],
+    lojas_supervisionadas: [[]],
+    usuario: [null],
+    telefone: [''],
+    whatsapp: [''],
+    email: [''],
+    data_nascimento: [''],
+    endereco: [''],
+    observacoes: [''],
     ativo: [true],
   });
 
-  private categoriasExigemLoja = new Set([
-    'vendedor',
-    'caixa',
-    'gerente',
-    'assistente',
-    'assistentereceber',
-    'assistentepagar',
-    'assistentecontasareceber',
-    'assistentecontasapagar'
-  ]);
-
-  // Lista + paginação client-side
-  funcionariosAll: Funcionario[] = [];
   funcionarios: Funcionario[] = [];
 
   page = 1;
@@ -131,60 +134,20 @@ export class FuncionariosComponent implements OnInit {
     return Math.min(this.page * this.pageSize, this.total);
   }
   get searchSuggestions(): string[] {
-    return this.funcionariosAll.flatMap(f => [
+    return this.funcionarios.flatMap(f => [
+      f.matricula,
       f.nomefuncionario,
       f.apelido,
       f.cpf,
-      f.categoria,
-      this.lojaNome((f as any).idloja),
+      f.cargo_nome,
+      f.loja_nome,
     ].filter((v): v is string => !!v));
   }
 
-  get indicadores() {
-    const total = this.funcionariosAll.length;
-    const ativos = this.funcionariosAll.filter(f => f.ativo !== false).length;
-    const vendedores = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('vendedor')).length;
-    const caixas = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('caixa')).length;
-    const gerentes = this.funcionariosAll.filter(f => this.normalize(f.categoria || '').includes('gerente')).length;
-    return { total, ativos, vendedores, caixas, gerentes };
-  }
-
-  get categoriasOptions(): string[] {
-    return Array.from(new Set(
-      this.funcionariosAll
-        .map(f => (f.categoria || '').trim())
-        .filter(Boolean)
-    )).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }
+  indicadores = { total: 0, ativos: 0, afastados: 0, desligados: 0, participantes_vendas: 0 };
 
   get funcionariosFiltrados(): Funcionario[] {
-    const term = this.normalize(this.search);
-    const categoria = this.normalize(this.filterCategoria);
-    const status = this.filterStatus;
-    const cpf = this.onlyDigits(this.filterCpf);
-    const inicio = this.filterInicio;
-    const fim = this.filterFim;
-
-    return this.funcionariosAll.filter(f => {
-      const loja = this.lojaNome((f as any).idloja);
-      const haystack = this.normalize([
-        f.nomefuncionario,
-        f.apelido,
-        f.cpf,
-        f.categoria,
-        loja,
-      ].filter(Boolean).join(' '));
-
-      if (term && !haystack.includes(term)) return false;
-      if (this.filterLoja !== '' && Number((f as any).idloja || 0) !== Number(this.filterLoja)) return false;
-      if (categoria && this.normalize(f.categoria || '') !== categoria) return false;
-      if (status === 'ATIVO' && f.ativo === false) return false;
-      if (status === 'INATIVO' && f.ativo !== false) return false;
-      if (cpf && !this.onlyDigits(f.cpf || '').includes(cpf)) return false;
-      if (inicio && (f.inicio || '') < inicio) return false;
-      if (fim && (f.inicio || '') > fim) return false;
-      return true;
-    });
+    return this.funcionarios;
   }
 
   ngOnInit(): void {
@@ -192,6 +155,7 @@ export class FuncionariosComponent implements OnInit {
     this.loadViewPreference();
     this.load();
     this.loadLojas();
+    this.loadCargos();
   }
 
   loadLojas(): void {
@@ -236,6 +200,13 @@ export class FuncionariosComponent implements OnInit {
     ctrl.setValue(out, { emitEvent: false });
   }
 
+  loadCargos(): void {
+    this.cargosApi.list({ page_size: 500, ordering: 'descricao' }).subscribe({
+      next: (res: any) => { this.cargosOptions = Array.isArray(res) ? res : (res?.results ?? []); },
+      error: () => { this.cargosOptions = []; }
+    });
+  }
+
   private onlyDigits(value: string): string {
     return (value || '').replace(/\D/g, '');
   }
@@ -243,17 +214,23 @@ export class FuncionariosComponent implements OnInit {
   // ========= Ações =========
   load(): void {
     this.loading = true;
-    this.api.list({ page_size: 2000, ordering: 'nomefuncionario' }).subscribe({
+    const params: Record<string, string | number> = { page: this.page, page_size: this.pageSize, ordering: 'matricula,nomefuncionario' };
+    if (this.search) params['search'] = this.search;
+    if (this.filterLoja !== '') params['idloja'] = this.filterLoja;
+    if (this.filterCargo !== '') params['cargo'] = this.filterCargo;
+    if (this.filterStatus) params['situacao'] = this.filterStatus;
+    if (this.filterParticipaVendas) params['participa_vendas'] = this.filterParticipaVendas;
+    if (this.filterComissionado) params['comissionado'] = this.filterComissionado;
+    this.api.list(params).subscribe({
       next: (res: any) => {
-        const arr: Funcionario[] = Array.isArray(res) ? res : (res?.results ?? []);
-        this.funcionariosAll = arr;
-        this.page = 1;
-        this.applyPage();
+        this.funcionarios = Array.isArray(res) ? res : (res?.results ?? []);
+        this.total = Array.isArray(res) ? this.funcionarios.length : (res?.count ?? 0);
         this.loading = false;
         this.errorMsg = '';
+        if (this.selectedFuncionario && !this.funcionarios.some(f => f.id === this.selectedFuncionario?.id)) this.selectedFuncionario = null;
+        this.loadIndicadores();
       },
       error: () => {
-        this.funcionariosAll = [];
         this.funcionarios = [];
         this.total = 0;
         this.loading = false;
@@ -263,15 +240,8 @@ export class FuncionariosComponent implements OnInit {
   }
 
   applyPage(): void {
-    const filtered = this.funcionariosFiltrados;
-    this.total = filtered.length;
     if (this.page > this.totalPages) this.page = this.totalPages;
-    const start = (this.page - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.funcionarios = filtered.slice(start, end);
-    if (this.selectedFuncionario && !filtered.some(f => f.id === this.selectedFuncionario?.id)) {
-      this.selectedFuncionario = null;
-    }
+    this.load();
   }
 
   onPageSizeChange(sizeStr: string): void {
@@ -280,23 +250,22 @@ export class FuncionariosComponent implements OnInit {
     this.page = 1;
     this.applyPage();
   }
-  firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
-  prevPage(): void  { if (this.page > 1) { this.page--; this.applyPage(); } }
-  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
-  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void  { if (this.page > 1) { this.page--; this.load(); } }
+  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.applyPage(); }
+  doSearch(): void { this.page = 1; this.load(); }
   clearSearch(): void {
     this.search = '';
     this.filterLoja = '';
-    this.filterCategoria = '';
+    this.filterCargo = '';
     this.filterStatus = '';
-    this.filterCpf = '';
-    this.filterInicio = '';
-    this.filterFim = '';
+    this.filterParticipaVendas = '';
+    this.filterComissionado = '';
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
 
   selecionarFuncionario(row: Funcionario): void {
@@ -337,7 +306,7 @@ export class FuncionariosComponent implements OnInit {
     this.pageSize = 20;
     this.columns = this.columns.map(c => ({ ...c, visible: true }));
     this.saveColumnsPreference();
-    this.applyPage();
+    this.load();
   }
 
   @HostListener('window:sysvar-funcionarios-toggle-indicators')
@@ -371,15 +340,27 @@ export class FuncionariosComponent implements OnInit {
 
     this.form.reset({
       nomefuncionario: '',
+      matricula: '',
       apelido: '',
       cpf: '',
       inicio: '',
       fim: '',
-      categoria: '',
-      meta: 0,
+      cargo: null,
+      situacao: 'ATIVO',
+      participa_vendas: false,
+      comissionado: false,
       comissao_percentual: 0,
       salario: this.podeVerSalario ? 0 : null,
       idloja: null,
+      todas_lojas_da_empresa: false,
+      lojas_supervisionadas: [],
+      usuario: null,
+      telefone: '',
+      whatsapp: '',
+      email: '',
+      data_nascimento: '',
+      endereco: '',
+      observacoes: '',
       ativo: true,
     });
     if (!this.podeVerSalario) this.form.get('salario')?.disable({ emitEvent: false });
@@ -395,16 +376,28 @@ export class FuncionariosComponent implements OnInit {
     this.form.enable({ emitEvent: false });
 
     this.form.reset({
+      matricula: row.matricula ?? '',
       nomefuncionario: row.nomefuncionario ?? '',
       apelido: row.apelido ?? '',
       cpf: row.cpf ?? '',
       inicio: row.inicio ?? '',
       fim: row.fim ?? '',
-      categoria: row.categoria ?? '',
-      meta: row.meta ?? 0,
+      cargo: row.cargo ?? null,
+      situacao: row.situacao ?? 'ATIVO',
+      participa_vendas: row.participa_vendas ?? false,
+      comissionado: row.comissionado ?? false,
       comissao_percentual: row.comissao_percentual ?? 0,
       salario: row.salario_oculto ? null : (row.salario ?? 0),
       idloja: (row as any).idloja ?? null,
+      todas_lojas_da_empresa: row.todas_lojas_da_empresa ?? false,
+      lojas_supervisionadas: row.lojas_supervisionadas ?? [],
+      usuario: row.usuario ?? null,
+      telefone: row.telefone ?? '',
+      whatsapp: row.whatsapp ?? '',
+      email: row.email ?? '',
+      data_nascimento: row.data_nascimento ?? '',
+      endereco: row.endereco ?? '',
+      observacoes: row.observacoes ?? '',
       ativo: row.ativo ?? true,
     });
     if (!this.podeVerSalario || row.salario_oculto) this.form.get('salario')?.disable({ emitEvent: false });
@@ -414,12 +407,17 @@ export class FuncionariosComponent implements OnInit {
     this.editar(row);
     this.consultando = true;
     this.form.disable({ emitEvent: false });
+    if (row.id) this.api.historico(row.id).subscribe({ next: (res: any) => this.historicoAtual = res?.results ?? res ?? [], error: () => this.historicoAtual = [] });
   }
 
   rowActions(row: Funcionario): RowAction[] {
     return [
       { key: 'consultar', label: 'Consultar', icon: '⌕' },
       { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'afastar', label: 'Afastar', icon: '⏸', visible: this.podeEditarModulo && row.situacao === 'ATIVO' },
+      { key: 'retornar', label: 'Retornar', icon: '↩', visible: this.podeEditarModulo && row.situacao === 'AFASTADO' },
+      { key: 'desligar', label: 'Desligar', icon: '⏹', visible: this.podeEditarModulo && row.situacao !== 'DESLIGADO' },
+      { key: 'recontratar', label: 'Recontratar', icon: '↻', visible: this.podeEditarModulo && row.situacao === 'DESLIGADO' },
       { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
     ];
   }
@@ -428,6 +426,7 @@ export class FuncionariosComponent implements OnInit {
     if (action === 'consultar') this.consultar(row);
     if (action === 'editar') this.editar(row);
     if (action === 'excluir') this.excluir(row);
+    if (['afastar', 'retornar', 'desligar', 'recontratar'].includes(action) && row.id) this.executarCiclo(row.id, action as any);
   }
 
   visibleColumn(key: string): boolean {
@@ -442,17 +441,16 @@ export class FuncionariosComponent implements OnInit {
   }
 
   exportarCsv(): void {
-    const headers = ['Funcionário', 'Apelido', 'CPF', 'Loja', 'Categoria', 'Meta', 'Comissão %', 'Salário', 'Status', 'Cadastro'];
+    const headers = ['Matrícula', 'Funcionário', 'Apelido', 'CPF', 'Loja', 'Cargo', 'Comissão %', 'Situação', 'Cadastro'];
     const body = this.funcionariosFiltrados.map(f => [
+      f.matricula || '',
       f.nomefuncionario,
       f.apelido || '',
       this.formatCpf(f.cpf),
-      this.lojaNome((f as any).idloja) || '',
-      f.categoria || '',
-      this.formatMoney(f.meta || 0),
+      f.loja_nome || this.lojaNome((f as any).idloja) || '',
+      f.cargo_nome || '',
       f.comissao_percentual || 0,
-      f.salario_oculto ? 'Restrito' : this.formatMoney(f.salario || 0),
-      f.ativo === false ? 'Inativo' : 'Ativo',
+      f.situacao_descricao || f.situacao || '',
       this.formatDate(f.data_cadastro),
     ]);
     const csv = [headers, ...body]
@@ -515,8 +513,8 @@ export class FuncionariosComponent implements OnInit {
 
   salvar(): void {
     this.submitted = true;
-    const categoria = String(this.form.value.categoria || '').toLowerCase().replace(/[\s_-]/g, '');
-    if (this.categoriasExigemLoja.has(categoria) && !this.form.value.idloja) {
+    const cargo = this.cargoSelecionado();
+    if (cargo?.autoridade_operacional_loja && !this.form.value.idloja) {
       const current = this.form.get('idloja')?.errors || {};
       this.form.get('idloja')?.setErrors({ ...current, required: true });
     }
@@ -529,16 +527,21 @@ export class FuncionariosComponent implements OnInit {
     const raw = this.form.getRawValue();
     const payload: Funcionario = {
       ...raw,
-      meta: raw.meta === '' || raw.meta === null ? 0 : Number(raw.meta),
       comissao_percentual: raw.comissao_percentual === '' || raw.comissao_percentual === null ? 0 : Number(raw.comissao_percentual),
       salario: raw.salario === '' || raw.salario === null ? 0 : Number(raw.salario),
       idloja: raw.idloja === '' ? null : raw.idloja,
       inicio: raw.inicio ? raw.inicio : null as any,
       fim: raw.fim ? raw.fim : null as any,
       cpf: raw.cpf ? String(raw.cpf) : null as any,
+      data_nascimento: raw.data_nascimento || null,
     };
     if (!this.podeVerSalario) {
       delete payload.salario;
+    }
+    if (this.editingId) {
+      delete payload.situacao;
+      delete payload.ativo;
+      delete payload.fim;
     }
 
     this.saving = true;
@@ -594,7 +597,7 @@ export class FuncionariosComponent implements OnInit {
         this.load();
         if (this.editingId === id) this.cancelarEdicao();
       },
-      error: () => { this.errorMsg = 'Falha ao excluir.'; }
+      error: (err) => { this.errorMsg = err?.error?.detail || 'Falha ao excluir.'; }
     });
   }
 
@@ -611,11 +614,12 @@ export class FuncionariosComponent implements OnInit {
     P(f.get('nomefuncionario')?.hasError('required') || false, 'Nome é obrigatório.');
     P(f.get('nomefuncionario')?.hasError('maxlength') || false, 'Nome: máx. 50 caracteres.');
     P(f.get('apelido')?.hasError('maxlength') || false, 'Apelido: máx. 20 caracteres.');
+    P(f.get('cpf')?.hasError('required') || false, 'CPF é obrigatório.');
     P(f.get('cpf')?.hasError('cpf') || false, 'CPF inválido.');
-    P(f.get('categoria')?.hasError('maxlength') || false, 'Categoria: máx. 15 caracteres.');
+    P(f.get('cargo')?.hasError('required') || false, 'Cargo é obrigatório.');
     P(f.get('idloja')?.hasError('required') || false, 'Loja é obrigatória para este cargo.');
 
-    ['nomefuncionario','apelido','cpf','inicio','fim','categoria','meta','comissao_percentual','salario','idloja','ativo']
+    ['matricula','nomefuncionario','apelido','cpf','inicio','fim','cargo','situacao','participa_vendas','comissionado','comissao_percentual','salario','idloja','lojas_supervisionadas','usuario','telefone','whatsapp','email','data_nascimento','endereco','observacoes']
       .forEach(field => {
         const err = f.get(field)?.errors?.['server'];
         if (err) msgs.push(`${field}: ${err}`);
@@ -664,5 +668,39 @@ export class FuncionariosComponent implements OnInit {
       indicatorsVisible: this.indicatorsVisible,
       filtersVisible: this.filtersVisible,
     }));
+  }
+
+  cargoSelecionado(): Cargo | undefined {
+    return this.cargosOptions.find(c => Number(c.id) === Number(this.form.get('cargo')?.value));
+  }
+
+  showAbrangencia(): boolean {
+    return !!this.cargoSelecionado()?.permite_multiplas_lojas;
+  }
+
+  executarCiclo(id: number, action: 'afastar' | 'retornar' | 'desligar' | 'recontratar'): void {
+    this.api.acao(id, action).subscribe({
+      next: () => { this.successMsg = 'Situação atualizada.'; this.load(); },
+      error: (err) => { this.errorMsg = err?.error?.detail || 'Falha ao atualizar situação.'; }
+    });
+  }
+
+  executarCicloSelecionado(action: 'afastar' | 'retornar' | 'desligar' | 'recontratar'): void {
+    const id = this.selectedFuncionario?.id;
+    if (!id) return;
+    this.executarCiclo(id, action);
+  }
+
+  private loadIndicadores(): void {
+    this.api.indicadores().subscribe({
+      next: (res: any) => this.indicadores = {
+        total: res?.total ?? 0,
+        ativos: res?.ativos ?? 0,
+        afastados: res?.afastados ?? 0,
+        desligados: res?.desligados ?? 0,
+        participantes_vendas: res?.participantes_vendas ?? 0,
+      },
+      error: () => this.indicadores = { total: 0, ativos: 0, afastados: 0, desligados: 0, participantes_vendas: 0 },
+    });
   }
 }

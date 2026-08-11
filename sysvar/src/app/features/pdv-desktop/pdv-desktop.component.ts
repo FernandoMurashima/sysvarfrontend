@@ -247,7 +247,7 @@ export class PdvDesktopComponent implements OnInit {
         this.clientes = this.unwrap<Cliente>(data.clientes);
         this.vendedores = this.unwrap<Funcionario>(data.vendedores).filter(f => {
           const cat = String(f.categoria || '').toLowerCase();
-          return f.ativo !== false && cat.includes('vendedor');
+          return f.ativo !== false && (f.situacao || 'ATIVO') === 'ATIVO' && (f.participa_vendas === true || cat.includes('vendedor'));
         });
 
         const user: any = this.auth.getCurrentUser();
@@ -1274,7 +1274,7 @@ export class PdvDesktopComponent implements OnInit {
     const termo = this.buscaModal.trim().toLowerCase();
     const lista = this.vendedoresDaLoja();
     if (!termo) return lista;
-    return lista.filter(v => [v.nomefuncionario, v.categoria, v.apelido].join(' ').toLowerCase().includes(termo));
+    return lista.filter(v => [v.nomefuncionario, v.cargo_nome, v.categoria, v.apelido].join(' ').toLowerCase().includes(termo));
   }
 
   vendasOfflinePendentes(): any[] {

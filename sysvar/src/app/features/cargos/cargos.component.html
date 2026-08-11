@@ -1,0 +1,45 @@
+<div class="cargos-page">
+  <section class="title-bar">
+    <h1>Cargos</h1>
+    <div class="title-actions">
+      <input type="search" [(ngModel)]="search" (keyup.enter)="page = 1; load()" placeholder="Buscar código ou descrição" />
+      <button class="btn primary" type="button" (click)="page = 1; load()">Pesquisar</button>
+      <button class="btn" type="button" *ngIf="podeEditar" (click)="novo()">Novo</button>
+    </div>
+  </section>
+
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="form-panel" *ngIf="podeEditar">
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <label>Código*<input formControlName="codigo" /></label>
+      <label>Descrição*<input formControlName="descricao" /></label>
+      <label><input type="checkbox" formControlName="ativo" />Ativo</label>
+      <label><input type="checkbox" formControlName="participa_vendas" />Participa de vendas</label>
+      <label><input type="checkbox" formControlName="permite_comissao" />Permite comissão</label>
+      <label><input type="checkbox" formControlName="autoridade_operacional_loja" />Exige loja principal</label>
+      <label><input type="checkbox" formControlName="permite_multiplas_lojas" />Permite múltiplas lojas</label>
+      <label><input type="checkbox" formControlName="gerencial" />Gerencial</label>
+      <button class="btn primary" type="submit" [disabled]="saving || form.invalid">Salvar</button>
+    </form>
+  </section>
+
+  <section class="results-area">
+    <table>
+      <thead><tr><th>Código</th><th>Descrição</th><th>Vendas</th><th>Comissão</th><th>Multi-loja</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let cargo of cargos">
+          <td>{{ cargo.codigo }}</td>
+          <td>{{ cargo.descricao }}</td>
+          <td>{{ cargo.participa_vendas ? 'Sim' : 'Não' }}</td>
+          <td>{{ cargo.permite_comissao ? 'Sim' : 'Não' }}</td>
+          <td>{{ cargo.permite_multiplas_lojas ? 'Sim' : 'Não' }}</td>
+          <td>{{ cargo.ativo === false ? 'Inativo' : 'Ativo' }}</td>
+          <td><button class="btn" type="button" (click)="editar(cargo)">Editar</button><button class="btn danger-soft" type="button" (click)="excluir(cargo)">Excluir</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="pager"><button class="btn" [disabled]="page === 1" (click)="page = page - 1; load()">Anterior</button><span>Página {{ page }} de {{ totalPages }}</span><button class="btn" [disabled]="page >= totalPages" (click)="page = page + 1; load()">Próxima</button></div>
+  </section>
+</div>

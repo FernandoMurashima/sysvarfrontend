@@ -312,7 +312,9 @@ export class PdvComponent implements OnInit {
   get vendedoresDaLoja(): Funcionario[] {
     return this.funcionarios.filter(func => {
       const categoria = (func.categoria || '').toLowerCase().trim();
-      return func.ativo !== false && categoria === 'vendedor' && (!this.lojaId || func.idloja === this.lojaId);
+      const participa = func.participa_vendas === true || categoria === 'vendedor';
+      const ativoOperacional = (func.situacao || 'ATIVO') === 'ATIVO' && func.ativo !== false;
+      return ativoOperacional && participa && (!this.lojaId || func.idloja === this.lojaId);
     });
   }
 
