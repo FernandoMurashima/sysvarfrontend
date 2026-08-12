@@ -136,6 +136,9 @@ export class ProdutosComponent {
   // lista/pager
   produtos = signal<Produto[]>([]);
   produtoSkus = signal<ProdutoSku[]>([]);
+  totalRegistros = signal(0);
+  produtoHistorico = signal<any[]>([]);
+  produtoImagens = signal<any[]>([]);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
@@ -166,46 +169,14 @@ export class ProdutosComponent {
     this.fecharModalCores();
   }
 
-  produtosFiltrados = computed(() => {
-    const term = this.normalize(this.search);
-    const grupo = this.normalize(this.filterGrupo);
-    const colecao = this.normalize(this.filterColecao);
-    const status = this.filterStatus;
-    const tipo = this.filterTipo;
-    const referencia = this.normalize(this.filterReferencia);
-    const codigo = this.normalize(this.filterCodigo);
+  produtosFiltrados = computed(() => this.produtos());
 
-    return this.produtos().filter(p => {
-      const haystack = this.normalize([
-        p.descricao,
-        p.descricao_reduzida,
-        p.referencia,
-        this.colecaoLabel(p.colecao ?? null),
-        this.grupoLabel(p.grupo ?? null),
-        this.tipoProdutoLabel(p.tipo_produto),
-      ].filter(Boolean).join(' '));
-      if (term && !haystack.includes(term)) return false;
-      if (grupo && this.normalize(this.grupoLabel(p.grupo ?? null)) !== grupo) return false;
-      if (colecao && this.normalize(this.colecaoLabel(p.colecao ?? null)) !== colecao) return false;
-      if (status === 'ATIVO' && p.ativo === false) return false;
-      if (status === 'INATIVO' && p.ativo !== false) return false;
-      if (status === 'BLOQUEADO' && !p.bloqueado_venda) return false;
-      if (tipo && p.tipo_produto !== tipo) return false;
-      if (referencia && !this.normalize(p.referencia || '').includes(referencia)) return false;
-      if (codigo && !this.normalize(p.descricao_reduzida || '').includes(codigo)) return false;
-      return true;
-    });
-  });
-
-  total = computed(() => this.produtosFiltrados().length);
+  total = computed(() => this.totalRegistros());
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
-  paged = computed(() => {
-    const start = (this.page() - 1) * this.pageSize();
-    return this.produtosFiltrados().slice(start, start + this.pageSize());
-  });
+  paged = computed(() => this.produtos());
   searchSuggestions = computed(() => this.produtos().flatMap(p => [
     p.descricao,
     p.descricao_reduzida,
@@ -233,11 +204,11 @@ export class ProdutosComponent {
     // produto
     tipo_produto: ['1', [Validators.required]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
-    descricao_reduzida: [null, [Validators.maxLength(60)]],
+    descricao_reduzida: ['', [Validators.required, Validators.maxLength(60)]],
 
     unidade: [null, [Validators.required]],
     grupo: [null, [Validators.required]],
-    subgrupo: [null],
+    subgrupo: [null, [Validators.required]],
     colecao: [null, [Validators.required]],
     material: [null],
     grade: [null, [Validators.required]],
@@ -436,22 +407,36 @@ export class ProdutosComponent {
   // lista/pager
   load() {
     this.loading.set(true);
-    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '1,3', page_size: 2000 }).subscribe({
+    const params: any = {
+      ordering: '-data_cadastro',
+      tipo_produto: this.filterTipo || '1,3',
+      page: this.page(),
+      page_size: this.pageSize(),
+    };
+    const termo = [this.search, this.filterReferencia, this.filterCodigo].filter(Boolean).join(' ').trim();
+    if (termo) params.search = termo;
+    if (this.filterGrupo) params.grupo = this.filterGrupo;
+    if (this.filterColecao) params.colecao = this.filterColecao;
+    if (this.filterStatus === 'ATIVO') params.ativo = 'true';
+    if (this.filterStatus === 'INATIVO') params.ativo = 'false';
+    if (this.filterStatus === 'BLOQUEADO') params.bloqueado_venda = 'true';
+    this.api.list(params).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
           .filter(p => p.tipo_produto === '1' || p.tipo_produto === '3');
         this.produtos.set(rows);
-        this.page.set(1);
+        this.totalRegistros.set(typeof data?.count === 'number' ? data.count : rows.length);
       },
       error: () => {
         this.produtos.set([]);
+        this.totalRegistros.set(0);
         this.openErrorOverlay();
         this.loading.set(false);
       },
       complete: () => this.loading.set(false),
     });
   }
-  doSearch() { this.page.set(1); }
+  doSearch() { this.page.set(1); this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   clearSearch() {
     this.search = '';
@@ -462,12 +447,13 @@ export class ProdutosComponent {
     this.filterReferencia = '';
     this.filterCodigo = '';
     this.page.set(1);
+    this.load();
   }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.produtos-revenda.pageSize', String(this.pageSize())); this.page.set(1); }
-  firstPage() { this.page.set(1); }
-  prevPage() { this.page.update(p => Math.max(1, p - 1)); }
-  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
-  lastPage() { this.page.set(this.totalPages()); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.produtos-revenda.pageSize', String(this.pageSize())); this.page.set(1); this.load(); }
+  firstPage() { this.page.set(1); this.load(); }
+  prevPage() { this.page.update(p => Math.max(1, p - 1)); this.load(); }
+  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); this.load(); }
+  lastPage() { this.page.set(this.totalPages()); this.load(); }
 
   // helpers
   colecaoLabel(id?: number | null) {
@@ -668,11 +654,13 @@ export class ProdutosComponent {
     this.consultando = false;
     this.submitted = false;
     this.produtoSkus.set([]);
+    this.produtoHistorico.set([]);
+    this.produtoImagens.set([]);
     this.form.enable({ emitEvent: false });
     this.form.reset({
       tipo_produto: '1',
       descricao: '',
-      descricao_reduzida: null,
+      descricao_reduzida: '',
       unidade: null,
       grupo: null,
       subgrupo: null,
@@ -702,7 +690,7 @@ export class ProdutosComponent {
     this.form.reset({
       tipo_produto: row.tipo_produto ?? '1',
       descricao: row.descricao ?? '',
-      descricao_reduzida: row.descricao_reduzida ?? null,
+      descricao_reduzida: row.descricao_reduzida ?? '',
       unidade: row.unidade ?? null,
       grupo: row.grupo ?? null,
       subgrupo: row.subgrupo ?? null,
@@ -715,6 +703,7 @@ export class ProdutosComponent {
     });
 
     this.loadSubgrupos(row.grupo ?? null);
+    this.form.get('tipo_produto')?.disable({ emitEvent: false });
 
     if (row.Idproduto) {
       this.prodPrecoApi.list({ produto: row.Idproduto, ordering: '-DataInicio', page_size: 1 }).subscribe({
@@ -772,7 +761,7 @@ export class ProdutosComponent {
 
   private executarSalvar() {
     const body: Partial<Produto> = {
-      ...this.form.value,
+      ...this.form.getRawValue(),
       tabela_preco: undefined,
       preco: undefined
     };
@@ -860,6 +849,8 @@ export class ProdutosComponent {
     this.coresSelecionadasIds.set([]);
     this.coresOriginaisIds.set([]);
     this.produtoSkus.set([]);
+    this.produtoHistorico.set([]);
+    this.produtoImagens.set([]);
     if (!prodId) return;
 
     this.skusApi.list({ produto: prodId, page_size: 5000 }).subscribe({
@@ -874,11 +865,15 @@ export class ProdutosComponent {
         );
         const cores = Array.from(new Set(
           skus
+            .filter(sku => sku.ativo !== false)
             .map(sku => Number(sku.idcor || 0))
             .filter(id => id > 0)
         ));
         this.coresSelecionadasIds.set(cores);
         this.coresOriginaisIds.set(cores);
+        if (skus.length > 0) {
+          this.form.get('grade')?.disable({ emitEvent: false });
+        }
 
         const eans = new Set(skus.map(sku => sku.ean13).filter(Boolean));
         if (!eans.size) return;
@@ -903,6 +898,16 @@ export class ProdutosComponent {
         this.lojasSelecionadasIds.set([]);
         this.produtoSkus.set([]);
       }
+    });
+
+    this.api.historico(prodId, { page_size: 50 }).subscribe({
+      next: (res: any) => this.produtoHistorico.set(this.arrayOrResults<any>(res)),
+      error: () => this.produtoHistorico.set([])
+    });
+
+    this.api.imagens(prodId).subscribe({
+      next: (res: any) => this.produtoImagens.set(this.arrayOrResults<any>(res)),
+      error: () => this.produtoImagens.set([])
     });
   }
 
@@ -1100,9 +1105,11 @@ export class ProdutosComponent {
       if (f['descricao'].errors?.['required']) msgs.push('Descrição: obrigatório.');
       if (f['descricao'].errors?.['maxlength']) msgs.push('Descrição: máx. 120 caracteres.');
     }
+    if (f['descricao_reduzida']?.invalid && f['descricao_reduzida'].errors?.['required'])
+      msgs.push('Descrição reduzida: obrigatório.');
     if (f['descricao_reduzida']?.invalid && f['descricao_reduzida'].errors?.['maxlength'])
       msgs.push('Descrição reduzida: máx. 60 caracteres.');
-    for (const k of ['unidade','grupo','colecao','grade'])
+    for (const k of ['unidade','grupo','subgrupo','colecao','grade'])
       if (f[k]?.invalid) msgs.push(`${k.charAt(0).toUpperCase()+k.slice(1)}: obrigatório.`);
 
     if (f['ncm']?.invalid) {

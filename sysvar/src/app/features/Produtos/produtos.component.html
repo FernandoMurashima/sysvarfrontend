@@ -30,8 +30,8 @@
 
   <section class="filter-bar" *ngIf="filtersVisible">
     <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions()" [showActions]="false" placeholder="Buscar por descrição, referência, código, grupo ou coleção..." (search)="doSearch()" (cleared)="clearSearch()" />
-    <label class="inline-filter"><span>Grupo</span><select [(ngModel)]="filterGrupo" (ngModelChange)="doSearch()"><option value="">Todos</option><option *ngFor="let g of grupos" [value]="g.label">{{ g.label }}</option></select></label>
-    <label class="inline-filter"><span>Coleção</span><select [(ngModel)]="filterColecao" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let c of colecoes" [value]="c.label">{{ c.label }}</option></select></label>
+    <label class="inline-filter"><span>Grupo</span><select [(ngModel)]="filterGrupo" (ngModelChange)="doSearch()"><option value="">Todos</option><option *ngFor="let g of grupos" [value]="g.id">{{ g.label }}</option></select></label>
+    <label class="inline-filter"><span>Coleção</span><select [(ngModel)]="filterColecao" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let c of colecoes" [value]="c.id">{{ c.label }}</option></select></label>
     <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="BLOQUEADO">Bloqueados</option></select></label>
     <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
     <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
@@ -99,10 +99,10 @@
       <div class="grid-12">
         <label class="input-item col-span-2">Tipo<select formControlName="tipo_produto"><option value="1">Revenda</option><option value="3">Produto Próprio</option></select></label>
         <label class="input-item col-span-4" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
-        <label class="input-item col-span-3" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida<input type="text" formControlName="descricao_reduzida" /></label>
+        <label class="input-item col-span-3" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida*<input type="text" formControlName="descricao_reduzida" maxlength="60" /></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('colecao')?.invalid && (form.get('colecao')?.touched || submitted)">Coleção*<select formControlName="colecao"><option [ngValue]="null">— selecione —</option><option *ngFor="let c of colecoes" [ngValue]="c.id">{{ c.label }}</option></select></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('grupo')?.invalid && (form.get('grupo')?.touched || submitted)">Grupo*<select formControlName="grupo"><option [ngValue]="null">— selecione —</option><option *ngFor="let g of grupos" [ngValue]="g.id">{{ g.label }}</option></select></label>
-        <label class="input-item col-span-3">Subgrupo<select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value"><option [ngValue]="null">— selecione —</option><option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option></select></label>
+        <label class="input-item col-span-3" [class.invalid]="form.get('subgrupo')?.invalid && (form.get('subgrupo')?.touched || submitted)">Subgrupo*<select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value"><option [ngValue]="null">— selecione —</option><option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option></select></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">Unidade*<select formControlName="unidade"><option [ngValue]="null">— selecione —</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">NCM*<select formControlName="ncm"><option [ngValue]="null">— selecione —</option><ng-container *ngFor="let n of (ncms$ | async) ?? []"><option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">{{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}</option></ng-container></select></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('grade')?.invalid && (form.get('grade')?.touched || submitted)">Grade*<select formControlName="grade"><option [ngValue]="null">— selecione —</option><option *ngFor="let g of grades" [ngValue]="g.id">{{ g.label }}</option></select></label>
@@ -115,6 +115,14 @@
         <section class="col-span-12 sku-cost-box" *ngIf="editingId && produtoSkus().length">
           <div class="sku-cost-head"><div><strong>SKUs e custos</strong><small>{{ produtoSkus().length }} variação(ões)</small></div></div>
           <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Cor</th><th>Tamanho</th><th>Código de barras</th><th class="num">Estoque</th><th class="num">Custo original</th><th class="num">Última compra</th><th class="num">Custo médio</th><th class="num">Preço venda</th><th class="num">Margem</th><th class="num">Margem %</th></tr></thead><tbody><tr *ngFor="let sku of produtoSkus()"><td>{{ sku.cor_descricao || sku.idcor }}</td><td>{{ sku.tamanho_descricao || sku.idtamanho }}</td><td>{{ sku.ean13 }}</td><td class="num">{{ sku.estoque_total || 0 }}</td><td class="num">{{ money(sku.custo_original) }}</td><td class="num">{{ money(sku.custo_ultima_compra) }}</td><td class="num">{{ money(sku.custo_medio) }}</td><td class="num">{{ money(sku.preco_venda) }}</td><td class="num">{{ money(sku.margem_valor) }}</td><td class="num">{{ percent(sku.margem_percentual) }}</td></tr></tbody></table></div>
+        </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando && produtoImagens().length">
+          <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ produtoImagens().length }} imagem(ns)</small></div></div>
+          <div class="chips"><span class="chip" *ngFor="let img of produtoImagens()">{{ img.principal ? 'Principal · ' : '' }}Imagem {{ img.id }}</span></div>
+        </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando && produtoHistorico().length">
+          <div class="sku-cost-head"><div><strong>Histórico funcional</strong><small>{{ produtoHistorico().length }} evento(s)</small></div></div>
+          <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Data/hora</th><th>Evento</th><th>Usuário</th><th>Descrição</th></tr></thead><tbody><tr *ngFor="let h of produtoHistorico()"><td>{{ h.data_evento | date:'short' }}</td><td>{{ h.tipo_evento }}</td><td>{{ h.usuario_nome || '—' }}</td><td>{{ h.descricao }}</td></tr></tbody></table></div>
         </section>
       </div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length"><strong>Pendências</strong><ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul></div>
