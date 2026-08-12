@@ -116,9 +116,27 @@
           <div class="sku-cost-head"><div><strong>SKUs e custos</strong><small>{{ produtoSkus().length }} variação(ões)</small></div></div>
           <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Cor</th><th>Tamanho</th><th>Código de barras</th><th class="num">Estoque</th><th class="num">Custo original</th><th class="num">Última compra</th><th class="num">Custo médio</th><th class="num">Preço venda</th><th class="num">Margem</th><th class="num">Margem %</th></tr></thead><tbody><tr *ngFor="let sku of produtoSkus()"><td>{{ sku.cor_descricao || sku.idcor }}</td><td>{{ sku.tamanho_descricao || sku.idtamanho }}</td><td>{{ sku.ean13 }}</td><td class="num">{{ sku.estoque_total || 0 }}</td><td class="num">{{ money(sku.custo_original) }}</td><td class="num">{{ money(sku.custo_ultima_compra) }}</td><td class="num">{{ money(sku.custo_medio) }}</td><td class="num">{{ money(sku.preco_venda) }}</td><td class="num">{{ money(sku.margem_valor) }}</td><td class="num">{{ percent(sku.margem_percentual) }}</td></tr></tbody></table></div>
         </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando && consultaProduto() as p">
+          <div class="sku-cost-head"><div><strong>Fiscal</strong><small>Dados fiscais do produto</small></div></div>
+          <div class="sku-cost-table-wrap"><table class="sku-cost-table"><tbody>
+            <tr><th>NCM</th><td>{{ p.ncm || '—' }}</td><th>Origem mercadoria</th><td>{{ p.origem_mercadoria ?? '—' }}</td><th>CST/CSOSN ICMS</th><td>{{ p.csosn_ou_cst_icms || '—' }}</td></tr>
+            <tr><th>Alíquota ICMS</th><td>{{ p.aliquota_icms ?? '—' }}</td><th>CFOP dentro</th><td>{{ p.cfop_venda_dentro || '—' }}</td><th>CFOP fora</th><td>{{ p.cfop_venda_fora || '—' }}</td></tr>
+            <tr><th>CST PIS</th><td>{{ p.cst_pis || '—' }}</td><th>Alíquota PIS</th><td>{{ p.aliq_pis ?? '—' }}</td><th>CST COFINS</th><td>{{ p.cst_cofins || '—' }}</td></tr>
+            <tr><th>Alíquota COFINS</th><td>{{ p.aliq_cofins ?? '—' }}</td><th>Situação IPI</th><td>{{ p.ipi_situacao || '—' }}</td><th>Alíquota IPI</th><td>{{ p.aliq_ipi ?? '—' }}</td></tr>
+          </tbody></table></div>
+        </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando && estoqueConsultaRows().length">
+          <div class="sku-cost-head"><div><strong>Estoque por loja × SKU</strong><small>{{ estoqueConsultaRows().length }} posição(ões)</small></div></div>
+          <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Loja</th><th>Cor</th><th>Tamanho</th><th>EAN</th><th class="num">Físico</th><th class="num">Reserva</th><th class="num">Disponível</th></tr></thead><tbody><tr *ngFor="let row of estoqueConsultaRows()"><td>{{ row.loja }}</td><td>{{ row.cor }}</td><td>{{ row.tamanho }}</td><td>{{ row.ean }}</td><td class="num">{{ row.estoque }}</td><td class="num">{{ row.reserva }}</td><td class="num">{{ row.disponivel }}</td></tr></tbody></table></div>
+        </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando && produtoImagens().length">
           <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ produtoImagens().length }} imagem(ns)</small></div></div>
-          <div class="chips"><span class="chip" *ngFor="let img of produtoImagens()">{{ img.principal ? 'Principal · ' : '' }}Imagem {{ img.id }}</span></div>
+          <div class="chips"><figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption></figure></div>
+        </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando && consultaProduto()?.tipo_produto === '3' && (produtoFichasTecnicas().length || produtoOrdensProducao().length)">
+          <div class="sku-cost-head"><div><strong>Fabricação própria</strong><small>Ficha Técnica e Ordem de Produção</small></div></div>
+          <div class="sku-cost-table-wrap" *ngIf="produtoFichasTecnicas().length"><table class="sku-cost-table"><thead><tr><th>Ficha</th><th>Versão</th><th>Status</th><th>Ativa</th></tr></thead><tbody><tr *ngFor="let ficha of produtoFichasTecnicas()"><td>{{ ficha.descricao || ficha.id }}</td><td>{{ ficha.versao || '—' }}</td><td>{{ ficha.status || '—' }}</td><td>{{ ficha.ativa ? 'Sim' : 'Não' }}</td></tr></tbody></table></div>
+          <div class="sku-cost-table-wrap" *ngIf="produtoOrdensProducao().length"><table class="sku-cost-table"><thead><tr><th>OP</th><th>Status</th><th>Quantidade</th><th>Custo previsto</th><th>Custo real</th></tr></thead><tbody><tr *ngFor="let op of produtoOrdensProducao()"><td>{{ op.numero || op.id }}</td><td>{{ op.status || '—' }}</td><td>{{ op.quantidade || 0 }}</td><td>{{ money(op.custo_previsto) }}</td><td>{{ money(op.custo_real) }}</td></tr></tbody></table></div>
         </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando && produtoHistorico().length">
           <div class="sku-cost-head"><div><strong>Histórico funcional</strong><small>{{ produtoHistorico().length }} evento(s)</small></div></div>

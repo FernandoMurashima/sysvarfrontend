@@ -18,6 +18,7 @@ import { GradesService } from '../../core/services/grades.service';
 import { NcmsService } from '../../core/services/ncms.service';
 import { MateriaisService } from '../../core/services/material.service';
 import { TabelaprecoService } from '../../core/services/tabelapreco.service';
+import { FichaTecnicaService } from '../../core/services/ficha-tecnica.service';
 
 import { LojasSelectorComponent } from '../../shared/lojas-selector/lojas-selector.component';
 
@@ -30,6 +31,7 @@ import { TabelaprecoProdutoService, TabelaPrecoProduto } from '../../core/servic
 import { EstoqueService } from '../../core/services/estoque.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { ProdutoDetalheService, ProdutoSku } from '../../core/services/produto-detalhe.service';
+import { OrdemProducaoService } from '../../core/services/ordem-producao.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -69,6 +71,7 @@ export class ProdutosComponent {
   private ncmsApi = inject(NcmsService);
   private materiaisApi = inject(MateriaisService);
   private tabelasApi = inject(TabelaprecoService);
+  private fichaTecnicaApi = inject(FichaTecnicaService);
 
   // cores
   private coresApi = inject(CoresService);
@@ -78,6 +81,7 @@ export class ProdutosComponent {
   private estoqueApi = inject(EstoqueService);
   private lojasApi = inject(LojasService);
   private skusApi = inject(ProdutoDetalheService);
+  private ordemProducaoApi = inject(OrdemProducaoService);
   private auth = inject(AuthService);
 
   get podeEditarModulo(): boolean {
@@ -120,6 +124,7 @@ export class ProdutosComponent {
   columnsOpen = false;
   exportOpen = false;
   selectedProduto = signal<Produto | null>(null);
+  consultaProduto = signal<Produto | null>(null);
   indicatorsVisible = true;
   filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.produtos-revenda.columns';
@@ -139,6 +144,9 @@ export class ProdutosComponent {
   totalRegistros = signal(0);
   produtoHistorico = signal<any[]>([]);
   produtoImagens = signal<any[]>([]);
+  produtoEstoques = signal<Estoque[]>([]);
+  produtoFichasTecnicas = signal<any[]>([]);
+  produtoOrdensProducao = signal<any[]>([]);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
@@ -413,8 +421,9 @@ export class ProdutosComponent {
       page: this.page(),
       page_size: this.pageSize(),
     };
-    const termo = [this.search, this.filterReferencia, this.filterCodigo].filter(Boolean).join(' ').trim();
-    if (termo) params.search = termo;
+    if (this.search.trim()) params.search = this.search.trim();
+    if (this.filterReferencia.trim()) params.referencia = this.filterReferencia.trim();
+    if (this.filterCodigo.trim()) params.codigo = this.filterCodigo.trim();
     if (this.filterGrupo) params.grupo = this.filterGrupo;
     if (this.filterColecao) params.colecao = this.filterColecao;
     if (this.filterStatus === 'ATIVO') params.ativo = 'true';
@@ -656,6 +665,10 @@ export class ProdutosComponent {
     this.produtoSkus.set([]);
     this.produtoHistorico.set([]);
     this.produtoImagens.set([]);
+    this.produtoEstoques.set([]);
+    this.produtoFichasTecnicas.set([]);
+    this.produtoOrdensProducao.set([]);
+    this.consultaProduto.set(null);
     this.form.enable({ emitEvent: false });
     this.form.reset({
       tipo_produto: '1',
@@ -701,6 +714,7 @@ export class ProdutosComponent {
       tabela_preco: null,
       preco: null,
     });
+    this.consultaProduto.set(row);
 
     this.loadSubgrupos(row.grupo ?? null);
     this.form.get('tipo_produto')?.disable({ emitEvent: false });
@@ -733,6 +747,7 @@ export class ProdutosComponent {
     this.editingId = null;
     this.consultando = false;
     this.produtoSkus.set([]);
+    this.consultaProduto.set(null);
     this.form.enable({ emitEvent: false });
     this.form.reset();
   }
@@ -814,7 +829,7 @@ export class ProdutosComponent {
     const cores = this.coresSelecionadasIds();
     const lojas = this.lojasSelecionadasIds();
 
-    if (!['1', '3'].includes(tipo) || !cores.length) {
+    if (!['1', '3'].includes(tipo) || (!this.editingId && !cores.length)) {
       this.finishSave();
       return;
     }
@@ -851,6 +866,9 @@ export class ProdutosComponent {
     this.produtoSkus.set([]);
     this.produtoHistorico.set([]);
     this.produtoImagens.set([]);
+    this.produtoEstoques.set([]);
+    this.produtoFichasTecnicas.set([]);
+    this.produtoOrdensProducao.set([]);
     if (!prodId) return;
 
     this.skusApi.list({ produto: prodId, page_size: 5000 }).subscribe({
@@ -881,6 +899,7 @@ export class ProdutosComponent {
         this.estoqueApi.list({ page_size: 5000 }).subscribe({
           next: (estoqueRes: any) => {
             const estoques = this.arrayOrResults<Estoque>(estoqueRes);
+            this.produtoEstoques.set(estoques.filter(e => eans.has(e.CodigodeBarra)));
             const lojas = Array.from(new Set(
               estoques
                 .filter(e => eans.has(e.CodigodeBarra))
@@ -909,6 +928,18 @@ export class ProdutosComponent {
       next: (res: any) => this.produtoImagens.set(this.arrayOrResults<any>(res)),
       error: () => this.produtoImagens.set([])
     });
+
+    const tipo = this.form.getRawValue()?.tipo_produto;
+    if (tipo === '3') {
+      this.fichaTecnicaApi.list({ produto_final: prodId, page_size: 20 }).subscribe({
+        next: (res: any) => this.produtoFichasTecnicas.set(this.arrayOrResults<any>(res)),
+        error: () => this.produtoFichasTecnicas.set([])
+      });
+      this.ordemProducaoApi.list({ produto_final: prodId, page_size: 20 }).subscribe({
+        next: (res: any) => this.produtoOrdensProducao.set(this.arrayOrResults<any>(res)),
+        error: () => this.produtoOrdensProducao.set([])
+      });
+    }
   }
 
   private finishSave() {
@@ -934,7 +965,7 @@ export class ProdutosComponent {
         this.showSuccess('Produto excluído.');
         this.load();
       },
-      error: () => this.showError('Falha ao excluir produto.')
+      error: (err) => this.showError(String(err?.error?.detail || 'Falha ao excluir produto.'))
     });
   }
 
@@ -1048,6 +1079,25 @@ export class ProdutosComponent {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}%`;
+  }
+
+  estoqueConsultaRows(): Array<{ loja: string; cor: string; tamanho: string; ean: string; estoque: number; reserva: number; disponivel: number }> {
+    const lojas = new Map(this.lojasDisponiveis.map(loja => [this.lojaId(loja), this.lojaLabel(loja)]));
+    const skus = new Map(this.produtoSkus().map(sku => [sku.ean13, sku]));
+    return this.produtoEstoques().map(est => {
+      const sku = skus.get(est.CodigodeBarra);
+      const estoque = this.toNumber(est.Estoque);
+      const reserva = this.toNumber(est.reserva);
+      return {
+        loja: lojas.get(Number(est.Idloja)) || `Loja ${est.Idloja}`,
+        cor: String(sku?.cor_descricao || sku?.idcor || ''),
+        tamanho: String(sku?.tamanho_descricao || sku?.idtamanho || ''),
+        ean: est.CodigodeBarra,
+        estoque,
+        reserva,
+        disponivel: estoque - reserva,
+      };
+    });
   }
 
   private normalize(value: string): string {

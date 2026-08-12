@@ -69,6 +69,9 @@ input[type="checkbox"] { width: 16px; min-width: 16px; height: 16px; min-height:
 .vinculo-title { display: block; color: #111827; font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; }
 .chip { display: inline-flex; align-items: center; min-height: 26px; padding: 4px 9px; border: 1px solid #bae6fd; border-radius: 999px; background: #e0f2fe; color: #0f172a; font-size: 12px; }
+.product-image-preview { width: 148px; margin: 0; border: 1px solid #dbe4ef; border-radius: 8px; background: #fff; overflow: hidden; }
+.product-image-preview img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #f1f5f9; }
+.product-image-preview figcaption { padding: 6px 8px; color: #334155; font-size: 12px; font-weight: 700; text-align: center; }
 .empty-inline, .loading, .empty-hint { color: #64748b; font-size: 13px; }
 .sku-cost-table-wrap { max-height: 260px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
 .sku-cost-table { width: 100%; min-width: 1080px; border-collapse: collapse; table-layout: fixed; font-size: 13px; }

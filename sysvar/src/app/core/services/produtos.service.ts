@@ -12,9 +12,11 @@ export class ProdutosService {
   private base = `${environment.apiBaseUrl}/produto/produto/`;
   private imagensBase = `${environment.apiBaseUrl}/produto/produto-imagem/`;
 
-  list(params?: { search?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; bloqueado_venda?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
+  list(params?: { search?: string; referencia?: string; codigo?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; bloqueado_venda?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
     let hp = new HttpParams();
     if (params?.search)    hp = hp.set('search', params.search);
+    if (params?.referencia) hp = hp.set('referencia', params.referencia);
+    if (params?.codigo)    hp = hp.set('codigo', params.codigo);
     if (params?.ordering)  hp = hp.set('ordering', params.ordering);
     if (params?.page)      hp = hp.set('page', String(params.page));
     if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
