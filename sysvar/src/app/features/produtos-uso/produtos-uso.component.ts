@@ -92,6 +92,25 @@ export class ProdutosUsoComponent {
   consultaProduto = signal<Produto | null>(null);
   consultaHistorico = signal<any[]>([]);
   consultaMovimentacoes = signal<any[]>([]);
+  readonly historicoFieldLabels: Record<string, string> = {
+    descricao: 'Descrição',
+    descricao_reduzida: 'Descrição reduzida',
+    unidade: 'Unidade',
+    ncm: 'NCM',
+    origem_mercadoria: 'Origem',
+    csosn_ou_cst_icms: 'CST/CSOSN',
+    aliquota_icms: 'ICMS',
+    cfop_venda_dentro: 'CFOP dentro',
+    cfop_venda_fora: 'CFOP fora',
+    cst_pis: 'CST PIS',
+    aliq_pis: 'PIS',
+    cst_cofins: 'CST COFINS',
+    aliq_cofins: 'COFINS',
+    ipi_situacao: 'Situação IPI',
+    aliq_ipi: 'IPI',
+    observacoes: 'Observações',
+    ativo: 'Status',
+  };
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
@@ -385,10 +404,6 @@ export class ProdutosUsoComponent {
     this.exportOpen = false;
   }
 
-  isInsumoProducao(): boolean {
-    return this.form.get('tipo_produto')?.value === '4';
-  }
-
   // form
   novo() {
     this.setViewForm();
@@ -420,13 +435,25 @@ export class ProdutosUsoComponent {
   }
 
   editar(row: Produto) {
+    if (!row.Idproduto) return;
     this.setViewForm();
     this.showForm = true;
     this.editingId = row.Idproduto ?? null;
     this.consultando = false;
     this.submitted = false;
     this.form.enable({ emitEvent: false });
+    this.loading.set(true);
+    this.api.get(row.Idproduto).subscribe({
+      next: (produtoAtual) => this.preencherFormulario(produtoAtual),
+      error: () => {
+        this.showError('Falha ao carregar produto atualizado.');
+        this.setViewList();
+      },
+      complete: () => this.loading.set(false),
+    });
+  }
 
+  private preencherFormulario(row: Produto): void {
     this.form.reset({
       tipo_produto: row.tipo_produto ?? '2',
       referencia: row.referencia ?? '',
@@ -450,13 +477,22 @@ export class ProdutosUsoComponent {
   }
 
   consultar(row: Produto) {
+    if (!row.Idproduto) return;
     this.view.set('consulta');
     this.showForm = false;
     this.consultando = true;
-    this.consultaProduto.set(row);
+    this.loading.set(true);
+    this.consultaProduto.set(null);
     this.consultaHistorico.set([]);
     this.consultaMovimentacoes.set([]);
-    if (!row.Idproduto) return;
+    this.api.get(row.Idproduto).subscribe({
+      next: (produtoAtual) => this.consultaProduto.set(produtoAtual),
+      error: () => {
+        this.showError('Falha ao carregar produto atualizado.');
+        this.setViewList();
+      },
+      complete: () => this.loading.set(false),
+    });
     this.api.historico(row.Idproduto, { page_size: 20 }).subscribe({
       next: (resp: any) => this.consultaHistorico.set(this.arrayOrResults<any>(resp)),
       error: () => this.consultaHistorico.set([]),
@@ -519,9 +555,46 @@ export class ProdutosUsoComponent {
   private finishSave() {
     const isEdit = !!this.editingId;
     this.saving = false;
-    this.cancelarEdicao();
-    this.setViewList();
+    this.showForm = false;
+    this.editingId = null;
+    this.consultando = false;
+    this.form.reset();
+    this.view.set('list');
+    this.load();
     this.showSuccess(isEdit ? 'Alterações salvas.' : 'Produto de uso/consumo criado.');
+  }
+
+  historicoTitulo(evento: string): string {
+    const labels: Record<string, string> = {
+      CRIACAO: 'Criação',
+      ALTERACAO_CADASTRAL: 'Alteração cadastral',
+      ALTERACAO_FISCAL: 'Alteração fiscal',
+      ATIVACAO: 'Ativação',
+      INATIVACAO: 'Inativação',
+      EXCLUSAO: 'Exclusão',
+      ENTRADA_ESTOQUE: 'Entrada de estoque',
+      CONSUMO_INTERNO: 'Consumo interno',
+      AJUSTE_ESTOQUE: 'Ajuste de estoque',
+    };
+    return labels[evento] || evento || 'Evento';
+  }
+
+  historicoDiferencas(h: any): Array<{ campo: string; anterior: string; novo: string }> {
+    const anteriores = h?.dados_anteriores || {};
+    const novos = h?.dados_novos || {};
+    const keys = Array.from(new Set([...Object.keys(anteriores), ...Object.keys(novos)]));
+    return keys.map(key => ({
+      campo: this.historicoFieldLabels[key] || key,
+      anterior: this.valorHistorico(key, anteriores[key]),
+      novo: this.valorHistorico(key, novos[key]),
+    }));
+  }
+
+  private valorHistorico(key: string, value: any): string {
+    if (value === null || value === undefined || value === '') return '—';
+    if (key === 'unidade') return this.unidadeLabel(Number(value));
+    if (key === 'ativo') return value === true || value === 'True' || value === 'true' ? 'Ativo' : 'Inativo';
+    return String(value);
   }
 
   excluir(row: Produto) {
