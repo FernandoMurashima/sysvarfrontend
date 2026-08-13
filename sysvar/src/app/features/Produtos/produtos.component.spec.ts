@@ -33,12 +33,16 @@ describe('ProdutosComponent Produto Venda', () => {
   beforeEach(async () => {
     produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', [
       'list', 'get', 'create', 'update', 'patch', 'remove', 'ativarProduto', 'inativarProduto',
-      'bloquearVenda', 'desbloquearVenda', 'gerarSkus', 'inicializarEstoque', 'historico', 'imagens'
+      'bloquearVenda', 'desbloquearVenda', 'gerarSkus', 'inicializarEstoque', 'historico', 'imagens',
+      'criarImagem', 'marcarImagemPrincipal', 'removerImagem'
     ]);
     produtosApi.list.and.returnValue(of({ count: 0, results: [], next: null, previous: null }));
     produtosApi.gerarSkus.and.returnValue(of({ counts: {} }));
     produtosApi.historico.and.returnValue(of({ count: 0, results: [] }));
     produtosApi.imagens.and.returnValue(of({ count: 0, results: [] }));
+    produtosApi.criarImagem.and.returnValue(of({ id: 1 }));
+    produtosApi.marcarImagemPrincipal.and.returnValue(of({ id: 1, principal: true }));
+    produtosApi.removerImagem.and.returnValue(of({}));
 
     skusApi = jasmine.createSpyObj<ProdutoDetalheService>('ProdutoDetalheService', ['list']);
     skusApi.list.and.returnValue(of({ count: 0, results: [] }));
@@ -149,5 +153,140 @@ describe('ProdutosComponent Produto Venda', () => {
     expect(fixture.nativeElement.querySelector('.product-image-preview img')?.getAttribute('src')).toBe('http://img/produto.jpg');
     expect(fixture.nativeElement.textContent).toContain('Fiscal');
     expect(fixture.nativeElement.textContent).toContain('Estoque por loja');
+  });
+
+  it('exibe Produto Venda, tipo Fabricação Própria e status dos SKUs', () => {
+    skusApi.list.and.returnValue(of({ count: 2, results: [
+      { produto: 1, idcor: 1, idtamanho: 1, ean13: '7891', cor_descricao: 'Azul', tamanho_descricao: 'P', ativo: true },
+      { produto: 1, idcor: 1, idtamanho: 2, ean13: '7892', cor_descricao: 'Azul', tamanho_descricao: 'M', ativo: false },
+    ] }));
+
+    component.editar({
+      Idproduto: 1,
+      tipo_produto: '3',
+      descricao: 'Produto',
+      unidade: 1,
+      grupo: 1,
+      subgrupo: 1,
+      colecao: 1,
+      grade: 1,
+      ncm: '6109.10.00',
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Produto Venda');
+    expect(component.tipoProdutoLabel('3')).toBe('Fabricação Própria');
+    expect(text).toContain('Ativo');
+    expect(text).toContain('Inativo');
+    expect(text).toContain('Margem %');
+    expect(text).not.toContain('Margem</th>');
+  });
+
+  it('envia campos fiscais no payload de edição', () => {
+    produtosApi.update.and.returnValue(of({ Idproduto: 1, tipo_produto: '1' } as any));
+    component.editingId = 1;
+    component.coresSelecionadasIds.set([]);
+    component.form.patchValue({
+      tipo_produto: '1',
+      descricao: 'Produto',
+      descricao_reduzida: 'PV',
+      unidade: 1,
+      grupo: 1,
+      subgrupo: 1,
+      colecao: 1,
+      grade: 1,
+      ncm: '6109.10.00',
+      origem_mercadoria: 1,
+      csosn_ou_cst_icms: '102',
+      aliquota_icms: 18,
+      cfop_venda_dentro: '5102',
+      cfop_venda_fora: '6102',
+      cst_pis: '01',
+      aliq_pis: 1.65,
+      cst_cofins: '01',
+      aliq_cofins: 7.6,
+      ipi_situacao: '50',
+      aliq_ipi: 5,
+    });
+
+    component.salvar();
+
+    expect(produtosApi.update).toHaveBeenCalledWith(1, jasmine.objectContaining({
+      origem_mercadoria: 1,
+      csosn_ou_cst_icms: '102',
+      aliquota_icms: 18,
+      cfop_venda_dentro: '5102',
+      cfop_venda_fora: '6102',
+      cst_pis: '01',
+      aliq_pis: 1.65,
+      cst_cofins: '01',
+      aliq_cofins: 7.6,
+      ipi_situacao: '50',
+      aliq_ipi: 5,
+    }));
+  });
+
+  it('ação Todas seleciona todas as lojas e permite desmarcar depois', () => {
+    component.lojasDisponiveis = [
+      { Idloja: 1, nome_loja: 'Loja 1' } as any,
+      { Idloja: 2, nome_loja: 'Loja 2' } as any,
+    ];
+
+    component.selecionarTodasLojas();
+    expect(component.lojasSelecionadasIds()).toEqual([1, 2]);
+
+    component.confirmarLojas([1]);
+    expect(component.lojasSelecionadasIds()).toEqual([1]);
+  });
+
+  it('galeria permite adicionar, remover, marcar principal e bloqueia quarta imagem', () => {
+    component.produtoImagens.set([{ id: 7, imagem_url: 'http://img/1.jpg', principal: true }]);
+    component.imagensPendentes.set([
+      { file: new File(['1'], '1.jpg'), preview: 'blob:1', principal: false },
+      { file: new File(['2'], '2.jpg'), preview: 'blob:2', principal: false },
+    ]);
+
+    component.onImagemSelecionada({ target: { files: [new File(['3'], '3.jpg')], value: '' } } as any);
+    expect(component.totalImagensSelecionadas()).toBe(3);
+    expect(component.errorMsg()).toBe('Limite de 3 imagens por produto.');
+
+    component.marcarPendentePrincipal(1);
+    expect(component.imagensPendentes()[1].principal).toBeTrue();
+    component.removerImagemPendente(0);
+    expect(component.imagensPendentes().length).toBe(1);
+  });
+
+  it('consulta sem imagem mostra estado vazio', () => {
+    component.consultar({
+      Idproduto: 1,
+      tipo_produto: '1',
+      descricao: 'Produto',
+      unidade: 1,
+      grupo: 1,
+      subgrupo: 1,
+      colecao: 1,
+      grade: 1,
+      ncm: '6109.10.00',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhuma imagem cadastrada');
+  });
+
+  it('mantém fluxo de motivo/senha e mostra erro do backend', () => {
+    produtosApi.inativarProduto.and.returnValue(throwError(() => ({ error: { detail: 'Usuário sem permissão.' } })));
+    component.segurancaModal = {
+      action: 'inativar',
+      produto: { Idproduto: 1, tipo_produto: '1', descricao: 'Produto', unidade: 1, grupo: 1, colecao: 1 },
+      title: 'Inativar produto',
+      motivo: 'Homologacao',
+      senha: '123',
+    };
+
+    component.confirmarSeguranca();
+
+    expect(produtosApi.inativarProduto).toHaveBeenCalledWith(1, 'Homologacao', '123');
+    expect(component.errorMsg()).toBe('Usuário sem permissão.');
   });
 });

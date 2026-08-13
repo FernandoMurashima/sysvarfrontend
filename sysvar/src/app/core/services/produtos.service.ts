@@ -69,4 +69,21 @@ export class ProdutosService {
     const params = new HttpParams().set('produto', String(id));
     return this.http.get(`${this.imagensBase}`, { params });
   }
+
+  criarImagem(produtoId: number, arquivo: File, principal: boolean, ordem: number) {
+    const body = new FormData();
+    body.append('produto', String(produtoId));
+    body.append('imagem', arquivo);
+    body.append('principal', String(principal));
+    body.append('ordem', String(ordem));
+    return this.http.post(`${this.imagensBase}`, body);
+  }
+
+  marcarImagemPrincipal(id: number) {
+    return this.http.post(`${this.imagensBase}${id}/marcar-principal/`, {});
+  }
+
+  removerImagem(id: number) {
+    return this.http.delete(`${this.imagensBase}${id}/`);
+  }
 }

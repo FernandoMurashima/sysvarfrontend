@@ -1,7 +1,7 @@
 <div class="produtos-page">
   <section class="title-bar">
     <div class="title-left">
-      <h1>Produtos Revenda</h1>
+      <h1>Produto Venda</h1>
       <button class="info-button" type="button" title="Gerencie produtos de revenda e produtos próprios.">i</button>
     </div>
     <div class="title-actions">
@@ -42,7 +42,7 @@
       </div>
     </div>
     <div class="advanced-filters" *ngIf="advancedOpen">
-      <label><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="1">Revenda</option><option value="3">Produto Próprio</option></select></label>
+      <label><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="1">Revenda</option><option value="3">Fabricação Própria</option></select></label>
       <label><span>Referência</span><input type="text" [(ngModel)]="filterReferencia" (keyup.enter)="doSearch()" /></label>
       <label><span>Código reduzido</span><input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="doSearch()" /></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
@@ -97,7 +97,7 @@
     </div>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
-        <label class="input-item col-span-2">Tipo<select formControlName="tipo_produto"><option value="1">Revenda</option><option value="3">Produto Próprio</option></select></label>
+        <label class="input-item col-span-2">Tipo<select formControlName="tipo_produto"><option value="1">Revenda</option><option value="3">Fabricação Própria</option></select></label>
         <label class="input-item col-span-4" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida*<input type="text" formControlName="descricao_reduzida" maxlength="60" /></label>
         <label class="input-item col-span-3" [class.invalid]="form.get('colecao')?.invalid && (form.get('colecao')?.touched || submitted)">Coleção*<select formControlName="colecao"><option [ngValue]="null">— selecione —</option><option *ngFor="let c of colecoes" [ngValue]="c.id">{{ c.label }}</option></select></label>
@@ -108,13 +108,37 @@
         <label class="input-item col-span-3" [class.invalid]="form.get('grade')?.invalid && (form.get('grade')?.touched || submitted)">Grade*<select formControlName="grade"><option [ngValue]="null">— selecione —</option><option *ngFor="let g of grades" [ngValue]="g.id">{{ g.label }}</option></select></label>
         <label class="input-item col-span-3">Tabela de preço<select formControlName="tabela_preco"><option [ngValue]="null">— selecione —</option><option *ngFor="let t of tabelas" [ngValue]="t.id">{{ t.label }}</option></select></label>
         <label class="input-item col-span-3">Preço<input type="number" step="0.01" min="0" formControlName="preco" /></label>
+        <section class="col-span-12 sku-cost-box" *ngIf="!consultando">
+          <div class="sku-cost-head"><div><strong>Dados fiscais</strong><small>Tributação do Produto Venda</small></div></div>
+          <div class="grid-12">
+            <label class="input-item col-span-2">Origem<input type="number" min="0" step="1" formControlName="origem_mercadoria" /></label>
+            <label class="input-item col-span-2">CST/CSOSN ICMS<input type="text" maxlength="3" formControlName="csosn_ou_cst_icms" /></label>
+            <label class="input-item col-span-2">Alíquota ICMS<input type="number" min="0" step="0.01" formControlName="aliquota_icms" /></label>
+            <label class="input-item col-span-2">CFOP dentro<input type="text" maxlength="4" formControlName="cfop_venda_dentro" /></label>
+            <label class="input-item col-span-2">CFOP fora<input type="text" maxlength="4" formControlName="cfop_venda_fora" /></label>
+            <label class="input-item col-span-2">CST PIS<input type="text" maxlength="2" formControlName="cst_pis" /></label>
+            <label class="input-item col-span-2">Alíquota PIS<input type="number" min="0" step="0.01" formControlName="aliq_pis" /></label>
+            <label class="input-item col-span-2">CST COFINS<input type="text" maxlength="2" formControlName="cst_cofins" /></label>
+            <label class="input-item col-span-2">Alíquota COFINS<input type="number" min="0" step="0.01" formControlName="aliq_cofins" /></label>
+            <label class="input-item col-span-2">Situação IPI<input type="text" maxlength="2" formControlName="ipi_situacao" /></label>
+            <label class="input-item col-span-2">Alíquota IPI<input type="number" min="0" step="0.01" formControlName="aliq_ipi" /></label>
+          </div>
+        </section>
         <div class="col-span-12 vinculos-grid">
           <section class="vinculo-box"><div class="vinculo-head"><div><span class="vinculo-title">Lojas vinculadas</span><small>{{ lojasSelecionadasIds().length || 0 }} selecionada(s)</small></div><button class="btn" type="button" (click)="abrirModalLojas()" *ngIf="!consultando && podeEditarModulo">Alterar lojas</button></div><div class="chips" *ngIf="lojasSelecionadasResumo().length > 0; else semLojasTpl"><span class="chip" *ngFor="let loja of lojasSelecionadasResumo()">{{ loja }}</span></div><ng-template #semLojasTpl><div class="empty-inline">Nenhuma loja selecionada.</div></ng-template></section>
           <section class="vinculo-box"><div class="vinculo-head"><div><span class="vinculo-title">Cores vinculadas</span><small>{{ coresSelecionadasIds().length || 0 }} selecionada(s)</small></div><button class="btn" type="button" (click)="abrirModalCores()" *ngIf="!consultando && podeEditarModulo">Incluir/remover cores</button></div><div class="chips" *ngIf="coresSelecionadasResumo().length > 0; else semCoresTpl"><span class="chip" *ngFor="let cor of coresSelecionadasResumo()">{{ cor }}</span></div><ng-template #semCoresTpl><div class="empty-inline">Nenhuma cor selecionada.</div></ng-template></section>
         </div>
         <section class="col-span-12 sku-cost-box" *ngIf="editingId && produtoSkus().length">
           <div class="sku-cost-head"><div><strong>SKUs e custos</strong><small>{{ produtoSkus().length }} variação(ões)</small></div></div>
-          <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Cor</th><th>Tamanho</th><th>Código de barras</th><th class="num">Estoque</th><th class="num">Custo original</th><th class="num">Última compra</th><th class="num">Custo médio</th><th class="num">Preço venda</th><th class="num">Margem</th><th class="num">Margem %</th></tr></thead><tbody><tr *ngFor="let sku of produtoSkus()"><td>{{ sku.cor_descricao || sku.idcor }}</td><td>{{ sku.tamanho_descricao || sku.idtamanho }}</td><td>{{ sku.ean13 }}</td><td class="num">{{ sku.estoque_total || 0 }}</td><td class="num">{{ money(sku.custo_original) }}</td><td class="num">{{ money(sku.custo_ultima_compra) }}</td><td class="num">{{ money(sku.custo_medio) }}</td><td class="num">{{ money(sku.preco_venda) }}</td><td class="num">{{ money(sku.margem_valor) }}</td><td class="num">{{ percent(sku.margem_percentual) }}</td></tr></tbody></table></div>
+          <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Cor</th><th>Tamanho</th><th>Código de barras</th><th>Status</th><th class="num">Estoque</th><th class="num">Custo original</th><th class="num">Última compra</th><th class="num">Custo médio</th><th class="num">Preço venda</th><th class="num">Margem %</th></tr></thead><tbody><tr *ngFor="let sku of produtoSkus()"><td>{{ sku.cor_descricao || sku.idcor }}</td><td>{{ sku.tamanho_descricao || sku.idtamanho }}</td><td>{{ sku.ean13 }}</td><td><span class="status-pill" [class.inactive]="sku.ativo === false">{{ sku.ativo === false ? 'Inativo' : 'Ativo' }}</span></td><td class="num">{{ sku.estoque_total || 0 }}</td><td class="num">{{ money(sku.custo_original) }}</td><td class="num">{{ money(sku.custo_ultima_compra) }}</td><td class="num">{{ money(sku.custo_medio) }}</td><td class="num">{{ money(sku.preco_venda) }}</td><td class="num">{{ percent(sku.margem_percentual) }}</td></tr></tbody></table></div>
+        </section>
+        <section class="col-span-12 sku-cost-box" *ngIf="!consultando">
+          <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ totalImagensSelecionadas() }} de 3 imagem(ns)</small></div><label class="btn upload-btn" *ngIf="podeEditarModulo" [class.disabled]="totalImagensSelecionadas() >= 3">Incluir imagem<input type="file" accept="image/*" multiple [disabled]="totalImagensSelecionadas() >= 3" (change)="onImagemSelecionada($event)" /></label></div>
+          <div class="chips" *ngIf="totalImagensSelecionadas() > 0; else semImagensEdicaoTpl">
+            <figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption><div class="image-actions"><button class="btn" type="button" [disabled]="img.principal" (click)="marcarImagemPrincipal(img)">Principal</button><button class="btn danger-soft" type="button" (click)="removerImagem(img)">Excluir</button></div></figure>
+            <figure class="product-image-preview" *ngFor="let img of imagensPendentes(); let i = index"><img [src]="img.preview" alt="Imagem selecionada" /><figcaption>{{ img.principal ? 'Principal' : 'Nova imagem' }}</figcaption><div class="image-actions"><button class="btn" type="button" [disabled]="img.principal" (click)="marcarPendentePrincipal(i)">Principal</button><button class="btn danger-soft" type="button" (click)="removerImagemPendente(i)">Remover</button></div></figure>
+          </div>
+          <ng-template #semImagensEdicaoTpl><div class="empty-inline">Nenhuma imagem cadastrada.</div></ng-template>
         </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando && consultaProduto() as p">
           <div class="sku-cost-head"><div><strong>Fiscal</strong><small>Dados fiscais do produto</small></div></div>
@@ -129,9 +153,10 @@
           <div class="sku-cost-head"><div><strong>Estoque por loja × SKU</strong><small>{{ estoqueConsultaRows().length }} posição(ões)</small></div></div>
           <div class="sku-cost-table-wrap"><table class="sku-cost-table"><thead><tr><th>Loja</th><th>Cor</th><th>Tamanho</th><th>EAN</th><th class="num">Físico</th><th class="num">Reserva</th><th class="num">Disponível</th></tr></thead><tbody><tr *ngFor="let row of estoqueConsultaRows()"><td>{{ row.loja }}</td><td>{{ row.cor }}</td><td>{{ row.tamanho }}</td><td>{{ row.ean }}</td><td class="num">{{ row.estoque }}</td><td class="num">{{ row.reserva }}</td><td class="num">{{ row.disponivel }}</td></tr></tbody></table></div>
         </section>
-        <section class="col-span-12 sku-cost-box" *ngIf="consultando && produtoImagens().length">
+        <section class="col-span-12 sku-cost-box" *ngIf="consultando">
           <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ produtoImagens().length }} imagem(ns)</small></div></div>
-          <div class="chips"><figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption></figure></div>
+          <div class="chips" *ngIf="produtoImagens().length; else semImagensConsultaTpl"><figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption></figure></div>
+          <ng-template #semImagensConsultaTpl><div class="empty-inline">Nenhuma imagem cadastrada.</div></ng-template>
         </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando && consultaProduto()?.tipo_produto === '3' && (produtoFichasTecnicas().length || produtoOrdensProducao().length)">
           <div class="sku-cost-head"><div><strong>Fabricação própria</strong><small>Ficha Técnica e Ordem de Produção</small></div></div>
@@ -150,6 +175,6 @@
   <div class="modal-backdrop" *ngIf="skuConfirmModal as sku"><div class="modal confirm-modal"><div class="modal-header"><h4>Criar SKUs/EANs</h4></div><div class="modal-body"><p>Você incluiu nova(s) cor(es): <strong>{{ sku.nomes }}</strong>.</p><p>Ao salvar, o sistema vai criar os SKUs e os códigos EAN correspondentes para todos os tamanhos da grade deste produto.</p></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharCriacaoSkus()">Voltar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarCriacaoSkus()">Confirmar</button></div></div></div>
   <div class="modal-backdrop" *ngIf="excluirModal as produto"><div class="modal confirm-modal"><div class="modal-header"><h4>Excluir produto</h4></div><div class="modal-body"><p>Confirma a exclusão do produto <strong>{{ produto.descricao }}</strong>?</p></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div></div></div>
   <div class="modal-backdrop" *ngIf="segurancaModal as modal"><div class="modal confirm-modal"><div class="modal-header"><h4>{{ modal.title }}</h4></div><div class="modal-body security-grid"><p>{{ modal.produto.descricao }}</p><label>Motivo<input type="text" [(ngModel)]="modal.motivo" /></label><label>Senha<input type="password" [(ngModel)]="modal.senha" /></label></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharSeguranca()">Voltar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarSeguranca()">Confirmar</button></div></div></div>
-  <div class="modal-backdrop" *ngIf="lojasModalAberto()"><div class="modal"><div class="modal-header"><h4>Selecionar lojas</h4></div><div class="modal-body"><app-lojas-selector [selected]="lojasSelecionadasIds()" (selectedChange)="lojasSelecionadasIds.set($event)"></app-lojas-selector></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharModalLojas()">Cancelar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarLojas(lojasSelecionadasIds())">Aplicar</button></div></div></div>
+  <div class="modal-backdrop" *ngIf="lojasModalAberto()"><div class="modal"><div class="modal-header"><h4>Selecionar lojas</h4></div><div class="modal-body"><div class="modal-tools"><button class="btn" type="button" (click)="selecionarTodasLojas()">Todas</button><button class="btn" type="button" (click)="lojasSelecionadasIds.set([])">Limpar</button></div><app-lojas-selector [selected]="lojasSelecionadasIds()" (selectedChange)="lojasSelecionadasIds.set($event)"></app-lojas-selector></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharModalLojas()">Cancelar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarLojas(lojasSelecionadasIds())">Aplicar</button></div></div></div>
   <div class="modal-backdrop" *ngIf="coresModalAberto()"><div class="modal"><div class="modal-header"><h4>Selecionar cores</h4></div><div class="modal-body"><app-cores-selector [cores]="coresDisponiveis" [selected]="coresSelecionadasIds()" (selectedChange)="coresSelecionadasIds.set($event)" [filtro]="corFiltro()"></app-cores-selector></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharModalCores()">Cancelar</button><button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarCores(coresSelecionadasIds())">Aplicar</button></div></div></div>
 </div>

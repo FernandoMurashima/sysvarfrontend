@@ -8,14 +8,55 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid #e5e7eb; /* opcional: combina com os outros cards */
-  margin: 0;                 /* evita deslocamentos */
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.ls-card h3 {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.ls-card .muted {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0 0 10px 0;
 }
 
 /* grid responsivo, sem forçar largura além do pai */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-  gap: 8px 16px;
-  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.linha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.linha input[type="checkbox"] {
+  transform: scale(0.9);
+  margin: 0;
+}
+
+.err {
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 13px;
 }

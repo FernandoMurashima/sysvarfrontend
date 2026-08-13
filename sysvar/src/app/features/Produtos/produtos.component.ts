@@ -39,6 +39,7 @@ import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type ItemRef = { id: number; label: string };
+type ImagemPendente = { file: File; preview: string; principal: boolean };
 
 @Component({
   selector: 'app-produtos',
@@ -144,6 +145,7 @@ export class ProdutosComponent {
   totalRegistros = signal(0);
   produtoHistorico = signal<any[]>([]);
   produtoImagens = signal<any[]>([]);
+  imagensPendentes = signal<ImagemPendente[]>([]);
   produtoEstoques = signal<Estoque[]>([]);
   produtoFichasTecnicas = signal<any[]>([]);
   produtoOrdensProducao = signal<any[]>([]);
@@ -161,6 +163,12 @@ export class ProdutosComponent {
     const ids = Array.isArray(sel) ? sel : (sel?.ids ?? []);
     this.lojasSelecionadasIds.set(ids);
     this.fecharModalLojas();
+  }
+  selecionarTodasLojas(): void {
+    const ids = this.lojasDisponiveis
+      .map(loja => this.lojaId(loja))
+      .filter((id): id is number => id != null);
+    this.lojasSelecionadasIds.set(ids);
   }
 
   // CORES (lista + ids + modal)
@@ -222,6 +230,17 @@ export class ProdutosComponent {
     grade: [null, [Validators.required]],
 
     ncm: [null, [Validators.required, Validators.pattern(/^\d{4}\.\d{2}\.\d{2}$/)]],
+    origem_mercadoria: [null],
+    csosn_ou_cst_icms: [null],
+    aliquota_icms: [null, [Validators.min(0)]],
+    cfop_venda_dentro: [null],
+    cfop_venda_fora: [null],
+    cst_pis: [null],
+    aliq_pis: [null, [Validators.min(0)]],
+    cst_cofins: [null],
+    aliq_cofins: [null, [Validators.min(0)]],
+    ipi_situacao: [null],
+    aliq_ipi: [null, [Validators.min(0)]],
 
     // preço
     tabela_preco: [null],
@@ -471,7 +490,7 @@ export class ProdutosComponent {
   }
 
   tipoProdutoLabel(tipo?: string | null): string {
-    if (tipo === '3') return 'Produto Próprio';
+    if (tipo === '3') return 'Fabricação Própria';
     return 'Revenda';
   }
 
@@ -665,6 +684,7 @@ export class ProdutosComponent {
     this.produtoSkus.set([]);
     this.produtoHistorico.set([]);
     this.produtoImagens.set([]);
+    this.imagensPendentes.set([]);
     this.produtoEstoques.set([]);
     this.produtoFichasTecnicas.set([]);
     this.produtoOrdensProducao.set([]);
@@ -681,6 +701,17 @@ export class ProdutosComponent {
       material: null,
       grade: null,
       ncm: null,
+      origem_mercadoria: null,
+      csosn_ou_cst_icms: null,
+      aliquota_icms: null,
+      cfop_venda_dentro: null,
+      cfop_venda_fora: null,
+      cst_pis: null,
+      aliq_pis: null,
+      cst_cofins: null,
+      aliq_cofins: null,
+      ipi_situacao: null,
+      aliq_ipi: null,
       tabela_preco: null,
       preco: null,
     });
@@ -711,6 +742,17 @@ export class ProdutosComponent {
       material: row.material ?? null,
       grade: row.grade ?? null,
       ncm: row.ncm ?? null,
+      origem_mercadoria: row.origem_mercadoria ?? null,
+      csosn_ou_cst_icms: row.csosn_ou_cst_icms ?? null,
+      aliquota_icms: row.aliquota_icms ?? null,
+      cfop_venda_dentro: row.cfop_venda_dentro ?? null,
+      cfop_venda_fora: row.cfop_venda_fora ?? null,
+      cst_pis: row.cst_pis ?? null,
+      aliq_pis: row.aliq_pis ?? null,
+      cst_cofins: row.cst_cofins ?? null,
+      aliq_cofins: row.aliq_cofins ?? null,
+      ipi_situacao: row.ipi_situacao ?? null,
+      aliq_ipi: row.aliq_ipi ?? null,
       tabela_preco: null,
       preco: null,
     });
@@ -830,7 +872,7 @@ export class ProdutosComponent {
     const lojas = this.lojasSelecionadasIds();
 
     if (!['1', '3'].includes(tipo) || (!this.editingId && !cores.length)) {
-      this.finishSave();
+      this.finishSaveWithImages(prodId);
       return;
     }
 
@@ -838,23 +880,23 @@ export class ProdutosComponent {
       next: (_resp: any) => {
         // se não tiver loja nenhuma marcada, termina aqui
         if (!lojas.length) {
-          this.finishSave();
+          this.finishSaveWithImages(prodId);
           return;
         }
 
         this.api.inicializarEstoque(prodId, lojas).subscribe({
           next: () => {
-            this.finishSave();
+            this.finishSaveWithImages(prodId);
           },
           error: (err) => {
             this.showError(String(err?.error?.detail || 'Produto/SKUs ok, mas falhou ao criar estoque inicial.'));
-            this.finishSave();
+            this.finishSaveWithImages(prodId);
           }
         });
       },
       error: (err) => {
         this.showError(String(err?.error?.detail || 'Produto salvo, mas falhou ao gerar SKUs.'));
-        this.finishSave();
+        this.finishSaveWithImages(prodId);
       }
     });
   }
@@ -924,10 +966,7 @@ export class ProdutosComponent {
       error: () => this.produtoHistorico.set([])
     });
 
-    this.api.imagens(prodId).subscribe({
-      next: (res: any) => this.produtoImagens.set(this.arrayOrResults<any>(res)),
-      error: () => this.produtoImagens.set([])
-    });
+    this.carregarImagensProduto(prodId);
 
     const tipo = this.form.getRawValue()?.tipo_produto;
     if (tipo === '3') {
@@ -943,10 +982,108 @@ export class ProdutosComponent {
   }
 
   private finishSave() {
+    const wasEditing = !!this.editingId;
     this.saving = false;
     this.cancelarEdicao();
     this.setViewList();
-    this.showSuccess(this.editingId ? 'Alterações salvas.' : 'Produto criado.');
+    this.showSuccess(wasEditing ? 'Alterações salvas.' : 'Produto criado.');
+  }
+
+  private finishSaveWithImages(prodId: number): void {
+    this.salvarImagensPendentes(prodId, () => this.finishSave());
+  }
+
+  totalImagensSelecionadas(): number {
+    return this.produtoImagens().length + this.imagensPendentes().length;
+  }
+
+  onImagemSelecionada(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const files = Array.from(input?.files || []);
+    if (!files.length) return;
+    const vagas = Math.max(0, 3 - this.totalImagensSelecionadas());
+    if (!vagas) {
+      this.showError('Limite de 3 imagens por produto.');
+      if (input) input.value = '';
+      return;
+    }
+    const novas = files.slice(0, vagas).map((file, index) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      principal: this.totalImagensSelecionadas() === 0 && index === 0,
+    }));
+    this.imagensPendentes.set([...this.imagensPendentes(), ...novas]);
+    if (files.length > vagas) this.showError('Limite de 3 imagens por produto.');
+    if (input) input.value = '';
+  }
+
+  removerImagemPendente(index: number): void {
+    const arr = this.imagensPendentes().slice();
+    const [removida] = arr.splice(index, 1);
+    if (removida?.preview) URL.revokeObjectURL(removida.preview);
+    if (removida?.principal && arr.length && !this.produtoImagens().some(img => img.principal)) {
+      arr[0] = { ...arr[0], principal: true };
+    }
+    this.imagensPendentes.set(arr);
+  }
+
+  marcarPendentePrincipal(index: number): void {
+    this.imagensPendentes.set(this.imagensPendentes().map((img, i) => ({ ...img, principal: i === index })));
+  }
+
+  marcarImagemPrincipal(img: any): void {
+    if (!img?.id || this.consultando || !this.podeEditarModulo) return;
+    this.api.marcarImagemPrincipal(img.id).subscribe({
+      next: () => this.carregarImagensProduto(this.editingId),
+      error: (err) => this.showError(String(err?.error?.detail || 'Falha ao marcar imagem principal.')),
+    });
+  }
+
+  removerImagem(img: any): void {
+    if (!img?.id || this.consultando || !this.podeEditarModulo) return;
+    this.api.removerImagem(img.id).subscribe({
+      next: () => this.carregarImagensProduto(this.editingId),
+      error: (err) => this.showError(String(err?.error?.detail || 'Falha ao remover imagem.')),
+    });
+  }
+
+  private carregarImagensProduto(prodId?: number | null): void {
+    if (!prodId) {
+      this.produtoImagens.set([]);
+      return;
+    }
+    this.api.imagens(prodId).subscribe({
+      next: (res: any) => this.produtoImagens.set(this.arrayOrResults<any>(res)),
+      error: () => this.produtoImagens.set([])
+    });
+  }
+
+  private salvarImagensPendentes(prodId: number, done: () => void): void {
+    const pendentes = this.imagensPendentes();
+    if (!pendentes.length) {
+      done();
+      return;
+    }
+    let index = 0;
+    const enviarProxima = () => {
+      const item = pendentes[index];
+      if (!item) {
+        this.imagensPendentes.set([]);
+        done();
+        return;
+      }
+      this.api.criarImagem(prodId, item.file, item.principal, this.produtoImagens().length + index + 1).subscribe({
+        next: () => {
+          index += 1;
+          enviarProxima();
+        },
+        error: (err) => {
+          this.showError(String(err?.error?.detail || 'Produto salvo, mas falhou ao gravar imagem.'));
+          done();
+        }
+      });
+    };
+    enviarProxima();
   }
 
   excluir(row: Produto) {
