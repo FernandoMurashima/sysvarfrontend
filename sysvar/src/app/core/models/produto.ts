@@ -30,12 +30,12 @@ export interface Produto {
   // Estado
   ativo?: boolean;
   bloqueado_venda?: boolean;
-  controla_estoque?: boolean;
   cadastro_fiscal_incompleto?: boolean;
-  saldo_uso_consumo?: string | number | null;
-  matriz_uso_consumo?: string | null;
 
   observacoes?: string | null;
   data_cadastro?: string | null;
   data_inativo?: string | null;
+  custo_original?: number | string | null;
+  custo_ultima_compra?: number | string | null;
+  custo_medio?: number | string | null;
 }

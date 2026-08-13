@@ -24,13 +24,12 @@
     <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores().total }}</strong><small>Total</small></div></div>
     <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ indicadores().ativos }}</strong><small>Ativos</small></div></div>
     <div class="indicator"><span class="indicator-icon orange">▧</span><div><strong>{{ indicadores().inativos }}</strong><small>Inativos</small></div></div>
-    <div class="indicator"><span class="indicator-icon purple">⌂</span><div><strong>{{ indicadores().controlados_estoque }}</strong><small>Controlados em Estoque</small></div></div>
     <div class="indicator"><span class="indicator-icon cyan">!</span><div><strong>{{ indicadores().cadastro_fiscal_incompleto }}</strong><small>Fiscal incompleto</small></div></div>
   </section>
 
   <section class="filter-bar" *ngIf="filtersVisible">
     <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions()" [showActions]="false" placeholder="Buscar por descrição, referência, código, NCM ou unidade..." (search)="doSearch()" (cleared)="clearSearch()" />
-    <label class="inline-filter"><span>Unidade</span><select [(ngModel)]="filterUnidade" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let u of unidades" [value]="u.label">{{ u.label }}</option></select></label>
+    <label class="inline-filter"><span>Unidade</span><select [(ngModel)]="filterUnidade" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
     <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option></select></label>
     <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
     <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
@@ -65,7 +64,7 @@
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="paged().length > 0; else emptyTpl">
-        <thead><tr><th class="select-col"></th><th class="col-descricao">Descrição</th><th *ngIf="visibleColumn('referencia')">Código</th><th *ngIf="visibleColumn('reduzido')">Descrição reduzida</th><th *ngIf="visibleColumn('unidade')">Unidade</th><th *ngIf="visibleColumn('ncm')">NCM</th><th>Controla Estoque</th><th>Situação Fiscal</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
+        <thead><tr><th class="select-col"></th><th class="col-descricao">Descrição</th><th *ngIf="visibleColumn('referencia')">Código</th><th *ngIf="visibleColumn('reduzido')">Descrição reduzida</th><th *ngIf="visibleColumn('unidade')">Unidade</th><th *ngIf="visibleColumn('ncm')">NCM</th><th>Situação Fiscal</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
         <tbody>
           <tr *ngFor="let p of paged()" [class.selected]="isSelected(p)" (click)="selecionarProduto(p)" tabindex="0" (keyup.enter)="selecionarProduto(p)">
             <td class="select-col"><input type="checkbox" [checked]="isSelected(p)" (click)="$event.stopPropagation(); selecionarProduto(p)" /></td>
@@ -74,7 +73,6 @@
             <td *ngIf="visibleColumn('reduzido')">{{ p.descricao_reduzida || '—' }}</td>
             <td *ngIf="visibleColumn('unidade')">{{ unidadeLabel(p.unidade ?? null) }}</td>
             <td *ngIf="visibleColumn('ncm')">{{ p.ncm || '—' }}</td>
-            <td>{{ p.controla_estoque ? 'Sim' : 'Não' }}</td>
             <td>{{ p.cadastro_fiscal_incompleto ? 'Incompleto' : 'Completo' }}</td>
             <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="p.ativo === false">{{ statusLabel(p) }}</span></td>
           </tr>
@@ -100,12 +98,38 @@
         <label class="input-item col-span-4" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
         <label class="input-item col-span-2" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida*<input type="text" formControlName="descricao_reduzida" /></label>
         <label class="input-item col-span-2" [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">Unidade*<select formControlName="unidade"><option [ngValue]="null">— selecione —</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
-        <label class="input-item col-span-2 checkbox-line"><input type="checkbox" formControlName="controla_estoque" /> Controla estoque</label>
+        <h4 class="section-title col-span-12">Dados Fiscais</h4>
         <label class="input-item col-span-3" [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">NCM<select formControlName="ncm"><option [ngValue]="null">— selecione —</option><ng-container *ngFor="let n of (ncms$ | async) ?? []"><option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">{{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}</option></ng-container></select></label>
-        <label class="input-item col-span-6">Observações<input type="text" formControlName="observacoes" /></label>
+        <label class="input-item col-span-2">Origem<input type="number" formControlName="origem_mercadoria" /></label>
+        <label class="input-item col-span-2">CST/CSOSN<input type="text" formControlName="csosn_ou_cst_icms" maxlength="3" /></label>
+        <label class="input-item col-span-2">ICMS %<input type="number" step="0.01" formControlName="aliquota_icms" /></label>
+        <label class="input-item col-span-2">CFOP dentro<input type="text" formControlName="cfop_venda_dentro" maxlength="4" /></label>
+        <label class="input-item col-span-2">CFOP fora<input type="text" formControlName="cfop_venda_fora" maxlength="4" /></label>
+        <label class="input-item col-span-2">CST PIS<input type="text" formControlName="cst_pis" maxlength="2" /></label>
+        <label class="input-item col-span-2">PIS %<input type="number" step="0.01" formControlName="aliq_pis" /></label>
+        <label class="input-item col-span-2">CST COFINS<input type="text" formControlName="cst_cofins" maxlength="2" /></label>
+        <label class="input-item col-span-2">COFINS %<input type="number" step="0.01" formControlName="aliq_cofins" /></label>
+        <label class="input-item col-span-2">IPI situação<input type="text" formControlName="ipi_situacao" maxlength="2" /></label>
+        <label class="input-item col-span-2">IPI %<input type="number" step="0.01" formControlName="aliq_ipi" /></label>
+        <label class="input-item col-span-12">Observações<input type="text" formControlName="observacoes" /></label>
       </div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length"><strong>Pendências</strong><ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul></div>
     </form>
+  </section>
+
+  <section class="card form-panel" *ngIf="view() === 'consulta' && consultaProduto() as p">
+    <div class="form-title">
+      <div><h3>Consultar Produto de Uso/Consumo</h3><p>Visão consolidada do cadastro.</p></div>
+      <div class="form-title-actions"><button class="btn ghost" type="button" (click)="setViewList()">Voltar</button></div>
+    </div>
+    <div class="detail-grid">
+      <section><h4>Identificação</h4><p><strong>Código</strong><span>{{ p.referencia || '—' }}</span></p><p><strong>Descrição</strong><span>{{ p.descricao }}</span></p><p><strong>Descrição reduzida</strong><span>{{ p.descricao_reduzida || '—' }}</span></p><p><strong>Unidade</strong><span>{{ unidadeLabel(p.unidade ?? null) }}</span></p><p><strong>Status</strong><span>{{ statusLabel(p) }}</span></p></section>
+      <section><h4>Situação Fiscal</h4><p><strong>Situação</strong><span>{{ p.cadastro_fiscal_incompleto ? 'Incompleto' : 'Completo' }}</span></p><p><strong>NCM</strong><span>{{ p.ncm || '—' }}</span></p><p><strong>Origem</strong><span>{{ p.origem_mercadoria ?? '—' }}</span></p><p><strong>CST/CSOSN</strong><span>{{ p.csosn_ou_cst_icms || '—' }}</span></p><p><strong>ICMS</strong><span>{{ p.aliquota_icms ?? '—' }}</span></p><p><strong>CFOP dentro</strong><span>{{ p.cfop_venda_dentro || '—' }}</span></p><p><strong>CFOP fora</strong><span>{{ p.cfop_venda_fora || '—' }}</span></p><p><strong>PIS</strong><span>{{ p.cst_pis || '—' }} / {{ p.aliq_pis ?? '—' }}</span></p><p><strong>COFINS</strong><span>{{ p.cst_cofins || '—' }} / {{ p.aliq_cofins ?? '—' }}</span></p><p><strong>IPI</strong><span>{{ p.ipi_situacao || '—' }} / {{ p.aliq_ipi ?? '—' }}</span></p></section>
+      <section><h4>Custos</h4><p><strong>Custo original</strong><span>{{ p.custo_original ?? '—' }}</span></p><p><strong>Última compra</strong><span>{{ p.custo_ultima_compra ?? '—' }}</span></p><p><strong>Custo médio</strong><span>{{ p.custo_medio ?? '—' }}</span></p></section>
+      <section><h4>Observações</h4><p><span>{{ p.observacoes || '—' }}</span></p></section>
+      <section class="wide"><h4>Histórico</h4><div *ngIf="consultaHistorico().length; else semHist"><p *ngFor="let h of consultaHistorico()"><strong>{{ h.data_evento | date:'short' }}</strong><span>{{ h.tipo_evento }} — {{ h.descricao || '—' }}</span></p></div><ng-template #semHist><p><span>Nenhum histórico registrado.</span></p></ng-template></section>
+      <section class="wide"><h4>Movimentações</h4><div *ngIf="consultaMovimentacoes().length; else semMov"><p *ngFor="let m of consultaMovimentacoes()"><strong>{{ m.data_movimento | date:'short' }}</strong><span>{{ m.tipo }} — {{ m.quantidade }} — {{ m.origem || '—' }} / {{ m.destino || '—' }} — {{ m.documento || '—' }} — {{ m.motivo || '—' }}</span></p></div><ng-template #semMov><p><span>Nenhuma movimentação registrada.</span></p></ng-template></section>
+    </div>
   </section>
 
   <div class="modal-backdrop" *ngIf="excluirModal as produto"><div class="modal confirm-modal"><div class="modal-header"><h4>Excluir produto</h4></div><div class="modal-body"><p>Confirma a exclusão do produto <strong>{{ produto.descricao }}</strong>?</p></div><div class="modal-footer"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div></div></div>

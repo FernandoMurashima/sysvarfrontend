@@ -4,15 +4,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { Observable, Subscription } from 'rxjs';
+import { Observable } from 'rxjs';
 
 import { Produto } from '../../core/models/produto';
 import { ProdutosService } from '../../core/services/produtos.service';
 
-import { GruposService } from '../../core/services/grupos.service';
-import { SubgruposService } from '../../core/services/subgrupos.service';
 import { UnidadesService } from '../../core/services/unidades.service';
-import { MateriaisService } from '../../core/services/material.service';
 import { NcmsService } from '../../core/services/ncms.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
@@ -43,14 +40,11 @@ export class ProdutosUsoComponent {
   private api = inject(ProdutosService);
   private auth = inject(AuthService);
 
-  private gruposApi = inject(GruposService);
-  private subgruposApi = inject(SubgruposService);
   private unidadesApi = inject(UnidadesService);
-  private materiaisApi = inject(MateriaisService);
   private ncmsApi = inject(NcmsService);
 
   // navegação
-  view = signal<'list' | 'form'>('list');
+  view = signal<'list' | 'form' | 'consulta'>('list');
   setViewList() { this.view.set('list'); this.cancelarEdicao(); this.load(); }
   setViewForm() { this.view.set('form'); }
 
@@ -70,7 +64,7 @@ export class ProdutosUsoComponent {
   saving = false;
   excluirModal: Produto | null = null;
   segurancaModal: {
-    action: 'inativar' | 'bloquear';
+    action: 'inativar';
     produto: Produto;
     title: string;
     motivo: string;
@@ -93,47 +87,23 @@ export class ProdutosUsoComponent {
 
   // lista / pager
   produtos = signal<Produto[]>([]);
+  totalRecords = signal(0);
+  indicadoresSrv = signal({ total: 0, ativos: 0, inativos: 0, cadastro_fiscal_incompleto: 0 });
+  consultaProduto = signal<Produto | null>(null);
+  consultaHistorico = signal<any[]>([]);
+  consultaMovimentacoes = signal<any[]>([]);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
 
-  produtosFiltrados = computed(() => {
-    const term = this.normalize(this.search);
-    const unidade = this.normalize(this.filterUnidade);
-    const status = this.filterStatus;
-    const ncm = this.normalize(this.filterNcm);
-    const referencia = this.normalize(this.filterReferencia);
-    const codigo = this.normalize(this.filterCodigo);
-
-    return this.produtos().filter(p => {
-      const haystack = this.normalize([
-        p.descricao,
-        p.descricao_reduzida,
-        p.referencia,
-        p.ncm,
-        this.unidadeLabel(p.unidade ?? null),
-        this.tipoProdutoLabel(p.tipo_produto),
-      ].filter(Boolean).join(' '));
-      if (term && !haystack.includes(term)) return false;
-      if (unidade && this.normalize(this.unidadeLabel(p.unidade ?? null)) !== unidade) return false;
-      if (status === 'ATIVO' && p.ativo === false) return false;
-      if (status === 'INATIVO' && p.ativo !== false) return false;
-      if (status === 'BLOQUEADO' && !p.bloqueado_venda) return false;
-      if (ncm && !this.normalize(p.ncm || '').includes(ncm)) return false;
-      if (referencia && !this.normalize(p.referencia || '').includes(referencia)) return false;
-      if (codigo && !this.normalize(p.descricao_reduzida || '').includes(codigo)) return false;
-      return true;
-    });
-  });
-
-  total = computed(() => this.produtosFiltrados().length);
-  totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
+  produtosFiltrados = computed(() => this.produtos());
+  total = computed(() => this.totalRecords());
+  totalPages = computed(() => Math.max(1, Math.ceil(this.totalRecords() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
   paged = computed(() => {
-    const start = (this.page() - 1) * this.pageSize();
-    return this.produtosFiltrados().slice(start, start + this.pageSize());
+    return this.produtos();
   });
   searchSuggestions = computed(() => this.produtos().flatMap(p => [
     p.descricao,
@@ -145,14 +115,7 @@ export class ProdutosUsoComponent {
   ].filter((v): v is string => !!v)));
 
   indicadores = computed(() => {
-    const rows = this.produtos();
-    const total = rows.length;
-    const ativos = rows.filter(p => p.ativo !== false).length;
-    const usoConsumo = rows.filter(p => p.tipo_produto === '2').length;
-    const inativos = rows.filter(p => p.ativo === false).length;
-    const controlados_estoque = rows.filter(p => !!p.controla_estoque).length;
-    const cadastro_fiscal_incompleto = rows.filter(p => !!p.cadastro_fiscal_incompleto).length;
-    return { total, ativos, usoConsumo, inativos, controlados_estoque, cadastro_fiscal_incompleto };
+    return this.indicadoresSrv();
   });
 
   // form
@@ -175,13 +138,20 @@ export class ProdutosUsoComponent {
     descricao_reduzida: [null, [Validators.required, Validators.maxLength(60)]],
 
     unidade: [null, [Validators.required]],
-    grupo: [null],
-    subgrupo: [null],
-    material: [null],
-    controla_estoque: [false],
 
     // NCM opcional (se preencher, tem que ser ####.##.##)
     ncm: [null, [Validators.pattern(/^\d{4}\.\d{2}\.\d{2}$/)]],
+    origem_mercadoria: [null],
+    csosn_ou_cst_icms: [null],
+    aliquota_icms: [null],
+    cfop_venda_dentro: [null],
+    cfop_venda_fora: [null],
+    cst_pis: [null],
+    aliq_pis: [null],
+    cst_cofins: [null],
+    aliq_cofins: [null],
+    ipi_situacao: [null],
+    aliq_ipi: [null],
 
     observacoes: [null],
   });
@@ -189,14 +159,9 @@ export class ProdutosUsoComponent {
   // streams/options
   ncms$: Observable<any[]> = this.ncmsApi.list('');
 
-  grupos: ItemRef[] = [];
-  subgrupos: ItemRef[] = [];
   unidades: ItemRef[] = [];
-  materiais: ItemRef[] = [];
 
   private unidadeMap = new Map<number, string>();
-  private subGrupoSub?: Subscription;
-  private tipoProdutoSub?: Subscription;
 
   constructor() {
     effect(() => {
@@ -211,8 +176,6 @@ export class ProdutosUsoComponent {
     this.loadLookups();
     this.loadColumnsPreference();
     this.loadViewPreference();
-    this.wireGrupoToSubgrupo();
-    this.wireTipoProduto();
     this.load();
   }
 
@@ -225,19 +188,6 @@ export class ProdutosUsoComponent {
 
   // lookups
   private loadLookups() {
-    // Grupos (opcional para uso/consumo)
-    this.gruposApi.list({ search: '', ordering: 'Descricao', page_size: 200 }).subscribe({
-      next: (rows: any) => {
-        const arr = this.arrayOrResults<any>(rows);
-        this.grupos = arr
-          .slice()
-          .sort((a, b) => (a.Descricao || '').localeCompare(b.Descricao || ''))
-          .map(g => ({ id: g.Idgrupo as number, label: `${g.Descricao}` }));
-      },
-      error: () => { this.grupos = []; }
-    });
-
-    // Unidades (obrigatório)
     this.unidadesApi.list({ search: '', ordering: 'Descricao', page_size: 200 }).subscribe({
       next: (rows: any) => {
         const arr = this.arrayOrResults<any>(rows);
@@ -250,61 +200,19 @@ export class ProdutosUsoComponent {
       },
       error: () => { this.unidades = []; }
     });
-
-    // Materiais (opcional)
-    this.materiaisApi.list('').subscribe({
-      next: (rows: any[]) => {
-        const arr = Array.isArray(rows) ? rows : [];
-        this.materiais = arr
-          .slice()
-          .sort((a, b) => (a.Descricao || '').localeCompare(b.Descricao || ''))
-          .map(m => ({ id: m.Idmaterial as number, label: m.Descricao as string }));
-      },
-      error: () => { this.materiais = []; }
-    });
-
-    // Subgrupos inicial
-    this.loadSubgrupos(null);
-  }
-
-  private wireGrupoToSubgrupo() {
-    this.subGrupoSub?.unsubscribe();
-    this.subGrupoSub = this.form.get('grupo')?.valueChanges.subscribe((idGrupo: number | null) => {
-      this.form.patchValue({ subgrupo: null }, { emitEvent: false });
-      this.loadSubgrupos(idGrupo ?? null);
-    });
-  }
-
-  private loadSubgrupos(idGrupo: number | null) {
-    if (idGrupo == null) {
-      this.subgrupos = [];
-      return;
-    }
-
-    this.subgruposApi.list({ Idgrupo: idGrupo, ordering: 'Descricao' }).subscribe({
-      next: (rows: any) => {
-        const arr = this.arrayOrResults<any>(rows);
-        this.subgrupos = arr
-          .slice()
-          .sort((a, b) => (a.Descricao || '').localeCompare(b.Descricao || ''))
-          .map((sg: any) => ({
-            id: sg.Idsubgrupo as number,
-            label: sg.Descricao as string,
-          }));
-      },
-      error: () => { this.subgrupos = []; }
-    });
   }
 
   // lista / pager
   load() {
     this.loading.set(true);
-    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2', page_size: 2000 }).subscribe({
+    const params = this.listParams();
+    this.api.indicadoresUsoConsumo(params).subscribe({ next: (resp: any) => this.indicadoresSrv.set(resp) });
+    this.api.list(params).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
           .filter(p => p.tipo_produto === '2');
         this.produtos.set(rows);
-        this.page.set(1);
+        this.totalRecords.set(typeof data?.count === 'number' ? data.count : rows.length);
       },
       error: () => {
         this.produtos.set([]);
@@ -315,7 +223,22 @@ export class ProdutosUsoComponent {
     });
   }
 
-  doSearch() { this.page.set(1); }
+  private listParams(): any {
+    return {
+      ordering: '-data_cadastro',
+      ativo: this.filterStatus === 'ATIVO' ? 'true' : this.filterStatus === 'INATIVO' ? 'false' : 'all',
+      tipo_produto: '2',
+      page: this.page(),
+      page_size: this.pageSize(),
+      search: this.search || undefined,
+      referencia: this.filterReferencia || undefined,
+      codigo: this.filterCodigo || undefined,
+      unidade: this.filterUnidade || undefined,
+      ncm: this.filterNcm || undefined,
+    };
+  }
+
+  doSearch() { this.page.set(1); this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   clearSearch() {
     this.search = '';
@@ -325,26 +248,17 @@ export class ProdutosUsoComponent {
     this.filterReferencia = '';
     this.filterCodigo = '';
     this.page.set(1);
+    this.load();
   }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.produtos-uso.pageSize', String(this.pageSize())); this.page.set(1); }
-  firstPage() { this.page.set(1); }
-  prevPage() { this.page.update(p => Math.max(1, p - 1)); }
-  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
-  lastPage() { this.page.set(this.totalPages()); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.produtos-uso.pageSize', String(this.pageSize())); this.page.set(1); this.load(); }
+  firstPage() { this.page.set(1); this.load(); }
+  prevPage() { this.page.update(p => Math.max(1, p - 1)); this.load(); }
+  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); this.load(); }
+  lastPage() { this.page.set(this.totalPages()); this.load(); }
 
   unidadeLabel(id?: number | null) {
     if (!id) return '';
     return this.unidadeMap.get(id) ?? String(id);
-  }
-
-  private wireTipoProduto() {
-    this.tipoProdutoSub?.unsubscribe();
-    this.tipoProdutoSub = this.form.get('tipo_produto')?.valueChanges.subscribe((tipo: string | null) => {
-      if (tipo === '4') {
-        this.form.patchValue({ grupo: null, subgrupo: null }, { emitEvent: false });
-        this.loadSubgrupos(null);
-      }
-    });
   }
 
   tipoProdutoLabel(tipo?: string | null): string {
@@ -410,11 +324,6 @@ export class ProdutosUsoComponent {
   alternarAtivoSelecionado(): void {
     const row = this.selectedProduto();
     if (row && this.podeEditarModulo) this.toggleAtivo(row);
-  }
-
-  alternarBloqueioSelecionado(): void {
-    const row = this.selectedProduto();
-    if (row && this.podeEditarModulo) this.toggleBloqueio(row);
   }
 
   excluirSelecionado(): void {
@@ -494,14 +403,20 @@ export class ProdutosUsoComponent {
       descricao: '',
       descricao_reduzida: null,
       unidade: null,
-      grupo: null,
-      subgrupo: null,
-      material: null,
-      controla_estoque: false,
       ncm: null,
+      origem_mercadoria: null,
+      csosn_ou_cst_icms: null,
+      aliquota_icms: null,
+      cfop_venda_dentro: null,
+      cfop_venda_fora: null,
+      cst_pis: null,
+      aliq_pis: null,
+      cst_cofins: null,
+      aliq_cofins: null,
+      ipi_situacao: null,
+      aliq_ipi: null,
       observacoes: null,
     });
-    this.loadSubgrupos(null);
   }
 
   editar(row: Produto) {
@@ -518,27 +433,47 @@ export class ProdutosUsoComponent {
       descricao: row.descricao ?? '',
       descricao_reduzida: row.descricao_reduzida ?? null,
       unidade: row.unidade ?? null,
-      grupo: row.grupo ?? null,
-      subgrupo: row.subgrupo ?? null,
-      material: row.material ?? null,
-      controla_estoque: !!row.controla_estoque,
       ncm: row.ncm ?? null,
+      origem_mercadoria: row.origem_mercadoria ?? null,
+      csosn_ou_cst_icms: row.csosn_ou_cst_icms ?? null,
+      aliquota_icms: row.aliquota_icms ?? null,
+      cfop_venda_dentro: row.cfop_venda_dentro ?? null,
+      cfop_venda_fora: row.cfop_venda_fora ?? null,
+      cst_pis: row.cst_pis ?? null,
+      aliq_pis: row.aliq_pis ?? null,
+      cst_cofins: row.cst_cofins ?? null,
+      aliq_cofins: row.aliq_cofins ?? null,
+      ipi_situacao: row.ipi_situacao ?? null,
+      aliq_ipi: row.aliq_ipi ?? null,
       observacoes: row.observacoes ?? null,
     });
-
-    this.loadSubgrupos(row.grupo ?? null);
   }
 
   consultar(row: Produto) {
-    this.editar(row);
+    this.view.set('consulta');
+    this.showForm = false;
     this.consultando = true;
-    this.form.disable({ emitEvent: false });
+    this.consultaProduto.set(row);
+    this.consultaHistorico.set([]);
+    this.consultaMovimentacoes.set([]);
+    if (!row.Idproduto) return;
+    this.api.historico(row.Idproduto, { page_size: 20 }).subscribe({
+      next: (resp: any) => this.consultaHistorico.set(this.arrayOrResults<any>(resp)),
+      error: () => this.consultaHistorico.set([]),
+    });
+    this.api.movimentacoesUsoConsumo(row.Idproduto, { page_size: 20 }).subscribe({
+      next: (resp: any) => this.consultaMovimentacoes.set(this.arrayOrResults<any>(resp)),
+      error: () => this.consultaMovimentacoes.set([]),
+    });
   }
 
   cancelarEdicao() {
     this.showForm = false;
     this.editingId = null;
     this.consultando = false;
+    this.consultaProduto.set(null);
+    this.consultaHistorico.set([]);
+    this.consultaMovimentacoes.set([]);
     this.form.enable({ emitEvent: false });
     this.form.reset();
   }
@@ -635,27 +570,6 @@ export class ProdutosUsoComponent {
     }
   }
 
-  async toggleBloqueio(row: Produto) {
-    if (!row.Idproduto) return;
-    if (row.bloqueado_venda) {
-      this.api.desbloquearVenda(row.Idproduto).subscribe({
-        next: (resp: any) => {
-          this.replaceRow(resp);
-          this.showSuccess('Produto desbloqueado.');
-        },
-        error: (err) => this.showError(String(err?.error?.detail || 'Falha ao desbloquear'))
-      });
-    } else {
-      this.segurancaModal = {
-        action: 'bloquear',
-        produto: row,
-        title: 'Bloquear venda do produto',
-        motivo: '',
-        senha: '',
-      };
-    }
-  }
-
   confirmarSeguranca(): void {
     const modal = this.segurancaModal;
     const id = modal?.produto.Idproduto;
@@ -665,13 +579,11 @@ export class ProdutosUsoComponent {
       this.showError('Informe motivo com pelo menos 3 caracteres e a senha.');
       return;
     }
-    const req = modal.action === 'inativar'
-      ? this.api.inativarProduto(id, motivo, modal.senha)
-      : this.api.bloquearVenda(id, motivo, modal.senha);
+    const req = this.api.inativarProduto(id, motivo, modal.senha);
     req.subscribe({
       next: (resp: any) => {
         this.replaceRow(resp);
-        this.showSuccess(modal.action === 'inativar' ? 'Produto inativado.' : 'Produto bloqueado.');
+        this.showSuccess('Produto inativado.');
         this.segurancaModal = null;
       },
       error: (err) => this.showError(String(err?.error?.detail || 'Falha ao concluir a operação.'))
@@ -708,8 +620,10 @@ export class ProdutosUsoComponent {
       if (f['descricao'].errors?.['required']) msgs.push('Descrição: obrigatório.');
       if (f['descricao'].errors?.['maxlength']) msgs.push('Descrição: máx. 120 caracteres.');
     }
-    if (f['descricao_reduzida']?.invalid && f['descricao_reduzida'].errors?.['maxlength'])
-      msgs.push('Descrição reduzida: máx. 60 caracteres.');
+    if (f['descricao_reduzida']?.invalid) {
+      if (f['descricao_reduzida'].errors?.['required']) msgs.push('Descrição reduzida: obrigatória.');
+      if (f['descricao_reduzida'].errors?.['maxlength']) msgs.push('Descrição reduzida: máx. 60 caracteres.');
+    }
 
     if (f['unidade']?.invalid && f['unidade'].errors?.['required'])
       msgs.push('Unidade: obrigatória.');

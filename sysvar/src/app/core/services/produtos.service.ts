@@ -12,7 +12,7 @@ export class ProdutosService {
   private base = `${environment.apiBaseUrl}/produto/produto/`;
   private imagensBase = `${environment.apiBaseUrl}/produto/produto-imagem/`;
 
-  list(params?: { search?: string; referencia?: string; codigo?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; bloqueado_venda?: 'true' | 'false' | string; unidade?: number | string; ncm?: string; controla_estoque?: 'true' | 'false' | string; cadastro_fiscal_incompleto?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
+  list(params?: { search?: string; referencia?: string; codigo?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; bloqueado_venda?: 'true' | 'false' | string; unidade?: number | string; ncm?: string; cadastro_fiscal_incompleto?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
     let hp = new HttpParams();
     if (params?.search)    hp = hp.set('search', params.search);
     if (params?.referencia) hp = hp.set('referencia', params.referencia);
@@ -28,7 +28,6 @@ export class ProdutosService {
     if (params?.bloqueado_venda) hp = hp.set('bloqueado_venda', params.bloqueado_venda);
     if (params?.unidade) hp = hp.set('unidade', String(params.unidade));
     if (params?.ncm) hp = hp.set('ncm', params.ncm);
-    if (params?.controla_estoque) hp = hp.set('controla_estoque', params.controla_estoque);
     if (params?.cadastro_fiscal_incompleto) hp = hp.set('cadastro_fiscal_incompleto', params.cadastro_fiscal_incompleto);
     return this.http.get<Produto[] | Paginated<Produto>>(this.base, { params: hp });
   }
@@ -75,6 +74,13 @@ export class ProdutosService {
     if (params?.page) hp = hp.set('page', String(params.page));
     if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
     return this.http.get(`${this.base}${id}/historico/`, { params: hp });
+  }
+
+  movimentacoesUsoConsumo(id: number, params?: { page?: number; page_size?: number }) {
+    let hp = new HttpParams();
+    if (params?.page) hp = hp.set('page', String(params.page));
+    if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
+    return this.http.get(`${this.base}${id}/movimentacoes-uso-consumo/`, { params: hp });
   }
 
   imagens(id: number) {
