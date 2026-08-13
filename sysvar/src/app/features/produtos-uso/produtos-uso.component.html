@@ -2,7 +2,7 @@
   <section class="title-bar">
     <div class="title-left">
       <h1>Produtos Uso/Consumo</h1>
-      <button class="info-button" type="button" title="Gerencie produtos de consumo e insumos de produção.">i</button>
+      <button class="info-button" type="button" title="Gerencie produtos de uso e consumo interno.">i</button>
     </div>
     <div class="title-actions">
       <button class="btn" type="button" [routerLink]="['/ajuda/produtos-uso']">Ajuda</button>
@@ -23,16 +23,15 @@
   <section class="indicator-bar" *ngIf="indicatorsVisible">
     <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores().total }}</strong><small>Total</small></div></div>
     <div class="indicator"><span class="indicator-icon green">▤</span><div><strong>{{ indicadores().ativos }}</strong><small>Ativos</small></div></div>
-    <div class="indicator"><span class="indicator-icon orange">▧</span><div><strong>{{ indicadores().usoConsumo }}</strong><small>Uso/Consumo</small></div></div>
-    <div class="indicator"><span class="indicator-icon purple">⌂</span><div><strong>{{ indicadores().insumos }}</strong><small>Insumos</small></div></div>
-    <div class="indicator"><span class="indicator-icon cyan">!</span><div><strong>{{ indicadores().bloqueados }}</strong><small>Bloqueados</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">▧</span><div><strong>{{ indicadores().inativos }}</strong><small>Inativos</small></div></div>
+    <div class="indicator"><span class="indicator-icon purple">⌂</span><div><strong>{{ indicadores().controlados_estoque }}</strong><small>Controlados em Estoque</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">!</span><div><strong>{{ indicadores().cadastro_fiscal_incompleto }}</strong><small>Fiscal incompleto</small></div></div>
   </section>
 
   <section class="filter-bar" *ngIf="filtersVisible">
     <app-search-suggest class="main-search" [(value)]="search" [suggestions]="searchSuggestions()" [showActions]="false" placeholder="Buscar por descrição, referência, código, NCM ou unidade..." (search)="doSearch()" (cleared)="clearSearch()" />
-    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="2">Uso/Consumo</option><option value="4">Insumo de Produção</option></select></label>
     <label class="inline-filter"><span>Unidade</span><select [(ngModel)]="filterUnidade" (ngModelChange)="doSearch()"><option value="">Todas</option><option *ngFor="let u of unidades" [value]="u.label">{{ u.label }}</option></select></label>
-    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="BLOQUEADO">Bloqueados</option></select></label>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option></select></label>
     <button class="btn primary" type="button" [disabled]="loading()" (click)="doSearch()">Pesquisar</button>
     <button class="btn" type="button" (click)="advancedOpen = !advancedOpen">Filtros avançados</button>
     <div class="menu-holder">
@@ -43,7 +42,7 @@
     </div>
     <div class="advanced-filters" *ngIf="advancedOpen">
       <label><span>Referência</span><input type="text" [(ngModel)]="filterReferencia" (keyup.enter)="doSearch()" /></label>
-      <label><span>Código reduzido</span><input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="doSearch()" /></label>
+      <label><span>Descrição reduzida</span><input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="doSearch()" /></label>
       <label><span>NCM</span><input type="text" [(ngModel)]="filterNcm" (keyup.enter)="doSearch()" /></label>
       <button class="btn primary" type="button" (click)="doSearch()">Aplicar filtros</button>
     </div>
@@ -53,7 +52,6 @@
     <button class="btn" type="button" [disabled]="!selectedProduto()" (click)="consultarSelecionado()">⌕ Consultar</button>
     <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="editarSelecionado()">✎ Editar</button>
     <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="alternarAtivoSelecionado()">{{ selectedProduto()?.ativo ? '⊘ Inativar' : '↻ Ativar' }}</button>
-    <button class="btn" type="button" [disabled]="!selectedProduto() || !podeEditarModulo" (click)="alternarBloqueioSelecionado()">{{ selectedProduto()?.bloqueado_venda ? '▣ Desbloquear' : '▣ Bloquear' }}</button>
     <button class="btn danger-soft" type="button" [disabled]="!selectedProduto() || !podeExcluirModulo" (click)="excluirSelecionado()">⌫ Excluir</button>
   </section>
 
@@ -67,17 +65,18 @@
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="paged().length > 0; else emptyTpl">
-        <thead><tr><th class="select-col"></th><th class="col-descricao">Descrição</th><th *ngIf="visibleColumn('reduzido')">Código reduzido</th><th *ngIf="visibleColumn('referencia')">Referência</th><th *ngIf="visibleColumn('tipo')">Tipo</th><th *ngIf="visibleColumn('unidade')">Unidade</th><th *ngIf="visibleColumn('ncm')">NCM</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
+        <thead><tr><th class="select-col"></th><th class="col-descricao">Descrição</th><th *ngIf="visibleColumn('referencia')">Código</th><th *ngIf="visibleColumn('reduzido')">Descrição reduzida</th><th *ngIf="visibleColumn('unidade')">Unidade</th><th *ngIf="visibleColumn('ncm')">NCM</th><th>Controla Estoque</th><th>Situação Fiscal</th><th *ngIf="visibleColumn('status')">Status</th></tr></thead>
         <tbody>
           <tr *ngFor="let p of paged()" [class.selected]="isSelected(p)" (click)="selecionarProduto(p)" tabindex="0" (keyup.enter)="selecionarProduto(p)">
             <td class="select-col"><input type="checkbox" [checked]="isSelected(p)" (click)="$event.stopPropagation(); selecionarProduto(p)" /></td>
             <td>{{ p.descricao }}</td>
-            <td *ngIf="visibleColumn('reduzido')">{{ p.descricao_reduzida || '—' }}</td>
             <td *ngIf="visibleColumn('referencia')">{{ p.referencia || '—' }}</td>
-            <td *ngIf="visibleColumn('tipo')"><span class="type-pill">{{ tipoProdutoLabel(p.tipo_produto) }}</span></td>
+            <td *ngIf="visibleColumn('reduzido')">{{ p.descricao_reduzida || '—' }}</td>
             <td *ngIf="visibleColumn('unidade')">{{ unidadeLabel(p.unidade ?? null) }}</td>
             <td *ngIf="visibleColumn('ncm')">{{ p.ncm || '—' }}</td>
-            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="p.ativo === false" [class.blocked]="p.bloqueado_venda">{{ statusLabel(p) }}</span></td>
+            <td>{{ p.controla_estoque ? 'Sim' : 'Não' }}</td>
+            <td>{{ p.cadastro_fiscal_incompleto ? 'Incompleto' : 'Completo' }}</td>
+            <td *ngIf="visibleColumn('status')"><span class="status-pill" [class.inactive]="p.ativo === false">{{ statusLabel(p) }}</span></td>
           </tr>
         </tbody>
       </table>
@@ -97,14 +96,11 @@
     </div>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="grid-12">
-        <label class="input-item col-span-2">Tipo<select formControlName="tipo_produto"><option value="2">Uso/Consumo</option><option value="4">Insumo de Produção</option></select></label>
         <label class="input-item col-span-2">Código<input type="text" formControlName="referencia" placeholder="Gerado ao salvar" /></label>
         <label class="input-item col-span-4" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
-        <label class="input-item col-span-2" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida<input type="text" formControlName="descricao_reduzida" /></label>
+        <label class="input-item col-span-2" [class.invalid]="form.get('descricao_reduzida')?.invalid && (form.get('descricao_reduzida')?.touched || submitted)">Descrição reduzida*<input type="text" formControlName="descricao_reduzida" /></label>
         <label class="input-item col-span-2" [class.invalid]="form.get('unidade')?.invalid && (form.get('unidade')?.touched || submitted)">Unidade*<select formControlName="unidade"><option [ngValue]="null">— selecione —</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
-        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">Grupo<select formControlName="grupo"><option [ngValue]="null">— selecione —</option><option *ngFor="let g of grupos" [ngValue]="g.id">{{ g.label }}</option></select></label>
-        <label class="input-item col-span-3" *ngIf="!isInsumoProducao()">Subgrupo<select formControlName="subgrupo" [disabled]="!form.get('grupo')?.value"><option [ngValue]="null">— selecione —</option><option *ngFor="let sg of subgrupos" [ngValue]="sg.id">{{ sg.label }}</option></select></label>
-        <label class="input-item col-span-3">Material<select formControlName="material"><option [ngValue]="null">— selecione —</option><option *ngFor="let m of materiais" [ngValue]="m.id">{{ m.label }}</option></select></label>
+        <label class="input-item col-span-2 checkbox-line"><input type="checkbox" formControlName="controla_estoque" /> Controla estoque</label>
         <label class="input-item col-span-3" [class.invalid]="form.get('ncm')?.invalid && (form.get('ncm')?.touched || submitted)">NCM<select formControlName="ncm"><option [ngValue]="null">— selecione —</option><ng-container *ngFor="let n of (ncms$ | async) ?? []"><option [ngValue]="n.ncm" [title]="n.ncm + ' — ' + (n.descricao || '')">{{ n.ncm }} — {{ (n.descricao || '') | slice:0:28 }}{{ (n.descricao?.length||0) > 28 ? '…' : '' }}</option></ng-container></select></label>
         <label class="input-item col-span-6">Observações<input type="text" formControlName="observacoes" /></label>
       </div>

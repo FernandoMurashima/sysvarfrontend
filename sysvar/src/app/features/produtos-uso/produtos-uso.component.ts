@@ -56,7 +56,6 @@ export class ProdutosUsoComponent {
 
   // flags
   search = '';
-  filterTipo = '';
   filterUnidade = '';
   filterStatus = '';
   filterNcm = '';
@@ -85,9 +84,8 @@ export class ProdutosUsoComponent {
   private readonly columnsStorageKey = 'sysvar.list.produtos-uso.columns';
   private readonly viewPrefsKey = 'sysvar.ui.preferences.produtos-uso';
   columns = [
-    { key: 'reduzido', label: 'Código reduzido', visible: true, required: false },
-    { key: 'referencia', label: 'Referência', visible: true, required: false },
-    { key: 'tipo', label: 'Tipo', visible: true, required: false },
+    { key: 'referencia', label: 'Código', visible: true, required: false },
+    { key: 'reduzido', label: 'Descrição reduzida', visible: true, required: false },
     { key: 'unidade', label: 'Unidade', visible: true, required: false },
     { key: 'ncm', label: 'NCM', visible: true, required: false },
     { key: 'status', label: 'Status', visible: true, required: false },
@@ -101,7 +99,6 @@ export class ProdutosUsoComponent {
 
   produtosFiltrados = computed(() => {
     const term = this.normalize(this.search);
-    const tipo = this.filterTipo;
     const unidade = this.normalize(this.filterUnidade);
     const status = this.filterStatus;
     const ncm = this.normalize(this.filterNcm);
@@ -118,7 +115,6 @@ export class ProdutosUsoComponent {
         this.tipoProdutoLabel(p.tipo_produto),
       ].filter(Boolean).join(' '));
       if (term && !haystack.includes(term)) return false;
-      if (tipo && p.tipo_produto !== tipo) return false;
       if (unidade && this.normalize(this.unidadeLabel(p.unidade ?? null)) !== unidade) return false;
       if (status === 'ATIVO' && p.ativo === false) return false;
       if (status === 'INATIVO' && p.ativo !== false) return false;
@@ -152,10 +148,11 @@ export class ProdutosUsoComponent {
     const rows = this.produtos();
     const total = rows.length;
     const ativos = rows.filter(p => p.ativo !== false).length;
-    const insumos = rows.filter(p => p.tipo_produto === '4').length;
     const usoConsumo = rows.filter(p => p.tipo_produto === '2').length;
-    const bloqueados = rows.filter(p => !!p.bloqueado_venda).length;
-    return { total, ativos, usoConsumo, insumos, bloqueados };
+    const inativos = rows.filter(p => p.ativo === false).length;
+    const controlados_estoque = rows.filter(p => !!p.controla_estoque).length;
+    const cadastro_fiscal_incompleto = rows.filter(p => !!p.cadastro_fiscal_incompleto).length;
+    return { total, ativos, usoConsumo, inativos, controlados_estoque, cadastro_fiscal_incompleto };
   });
 
   // form
@@ -175,12 +172,13 @@ export class ProdutosUsoComponent {
     tipo_produto: ['2', [Validators.required]],
     referencia: [{ value: '', disabled: true }],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
-    descricao_reduzida: [null, [Validators.maxLength(60)]],
+    descricao_reduzida: [null, [Validators.required, Validators.maxLength(60)]],
 
     unidade: [null, [Validators.required]],
     grupo: [null],
     subgrupo: [null],
     material: [null],
+    controla_estoque: [false],
 
     // NCM opcional (se preencher, tem que ser ####.##.##)
     ncm: [null, [Validators.pattern(/^\d{4}\.\d{2}\.\d{2}$/)]],
@@ -301,10 +299,10 @@ export class ProdutosUsoComponent {
   // lista / pager
   load() {
     this.loading.set(true);
-    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2,4', page_size: 2000 }).subscribe({
+    this.api.list({ ordering: '-data_cadastro', ativo: 'all', tipo_produto: '2', page_size: 2000 }).subscribe({
       next: (data: any) => {
         const rows = this.arrayOrResults<Produto>(data)
-          .filter(p => p.tipo_produto === '2' || p.tipo_produto === '4');
+          .filter(p => p.tipo_produto === '2');
         this.produtos.set(rows);
         this.page.set(1);
       },
@@ -321,7 +319,6 @@ export class ProdutosUsoComponent {
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   clearSearch() {
     this.search = '';
-    this.filterTipo = '';
     this.filterUnidade = '';
     this.filterStatus = '';
     this.filterNcm = '';
@@ -356,7 +353,6 @@ export class ProdutosUsoComponent {
   }
 
   statusLabel(p: Produto): string {
-    if (p.bloqueado_venda) return 'Bloqueado';
     return p.ativo === false ? 'Inativo' : 'Ativo';
   }
 
@@ -382,7 +378,6 @@ export class ProdutosUsoComponent {
       { key: 'consultar', label: 'Consultar', icon: '⌕' },
       { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
       { key: 'inativar', label: row.ativo ? 'Inativar' : 'Ativar', icon: '⊘', visible: this.podeEditarModulo },
-      { key: 'bloquear', label: row.bloqueado_venda ? 'Desbloquear' : 'Bloquear', icon: '▣', visible: this.podeEditarModulo },
       { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
     ];
   }
@@ -391,7 +386,6 @@ export class ProdutosUsoComponent {
     if (action === 'consultar') this.consultar(row);
     if (action === 'editar') this.editar(row);
     if (action === 'inativar') this.toggleAtivo(row);
-    if (action === 'bloquear') this.toggleBloqueio(row);
     if (action === 'excluir') this.excluir(row);
   }
 
@@ -503,6 +497,7 @@ export class ProdutosUsoComponent {
       grupo: null,
       subgrupo: null,
       material: null,
+      controla_estoque: false,
       ncm: null,
       observacoes: null,
     });
@@ -526,6 +521,7 @@ export class ProdutosUsoComponent {
       grupo: row.grupo ?? null,
       subgrupo: row.subgrupo ?? null,
       material: row.material ?? null,
+      controla_estoque: !!row.controla_estoque,
       ncm: row.ncm ?? null,
       observacoes: row.observacoes ?? null,
     });
@@ -555,8 +551,10 @@ export class ProdutosUsoComponent {
       ...this.form.value,
       grade: null,
       colecao: null,
-      grupo: this.isInsumoProducao() ? null : this.form.value.grupo,
-      subgrupo: this.isInsumoProducao() ? null : this.form.value.subgrupo,
+      grupo: null,
+      subgrupo: null,
+      material: null,
+      tipo_produto: '2',
       referencia: undefined, // não deve ser enviada
     };
 
