@@ -8,12 +8,14 @@ export class SubgruposService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/produto/subgrupo/`;
 
-  list(params?: { Idgrupo?: number; search?: string; ordering?: string }): Observable<SubgrupoModel[] | any> {
+  list(params?: { Idgrupo?: number; search?: string; ordering?: string; page?: number; page_size?: number }): Observable<SubgrupoModel[] | any> {
     let httpParams = new HttpParams();
     // IMPORTANTE: o campo no backend chama "Idgrupo" (mesmo case)
     if (params?.Idgrupo != null) httpParams = httpParams.set('Idgrupo', String(params.Idgrupo));
     if (params?.search)          httpParams = httpParams.set('search', params.search);
     if (params?.ordering)        httpParams = httpParams.set('ordering', params.ordering);
+    if (params?.page)            httpParams = httpParams.set('page', String(params.page));
+    if (params?.page_size)       httpParams = httpParams.set('page_size', String(params.page_size));
     return this.http.get<SubgrupoModel[] | any>(this.base, { params: httpParams });
   }
 

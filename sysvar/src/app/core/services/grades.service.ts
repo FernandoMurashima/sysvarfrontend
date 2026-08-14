@@ -9,9 +9,14 @@ export class GradesService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiBaseUrl}/produto/grade/`;
 
-  list(params?: { ordering?: string }): Observable<GradeModel[] | any> {
+  list(params?: { search?: string; Status?: string; status?: string; ordering?: string; page?: number; page_size?: number }): Observable<GradeModel[] | any> {
     let hp = new HttpParams();
+    if (params?.search) hp = hp.set('search', params.search);
+    if (params?.Status) hp = hp.set('Status', params.Status);
+    if (params?.status) hp = hp.set('status', params.status);
     if (params?.ordering) hp = hp.set('ordering', params.ordering);
+    if (params?.page) hp = hp.set('page', String(params.page));
+    if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
     return this.http.get<GradeModel[] | any>(this.baseUrl, { params: hp });
   }
   create(payload: Omit<GradeModel, 'Idgrade'>) { return this.http.post<GradeModel>(this.baseUrl, payload); }

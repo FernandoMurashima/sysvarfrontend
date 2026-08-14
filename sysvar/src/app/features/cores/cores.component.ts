@@ -124,12 +124,12 @@ export class CoresComponent implements OnInit {
   // --------- Fluxo ---------
   load(): void {
     this.loading = true;
-    this.api.list({ page_size: 2000, ordering: 'Descricao' }).subscribe({
+    this.api.list({ search: this.search || undefined, Status: this.filterStatus || undefined, page: this.page, page_size: this.pageSize, ordering: 'Descricao' }).subscribe({
       next: (res: any) => {
         const arr: Cor[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.coresAll = arr;
-        this.page = 1;
-        this.applyPage();
+        this.cores = arr;
+        this.total = Array.isArray(res) ? arr.length : (res?.count ?? arr.length);
         this.loading = false;
         this.errorMsg = '';
       },
@@ -145,41 +145,37 @@ export class CoresComponent implements OnInit {
   }
 
   applyPage(): void {
-    this.total = this.coresFiltradas.length;
-    if (this.page > this.totalPages) this.page = this.totalPages;
-    const start = (this.page - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.cores = this.coresFiltradas.slice(start, end);
-    if (this.selectedCor && !this.coresFiltradas.some(c => this.corId(c) === this.corId(this.selectedCor))) this.selectedCor = null;
+    this.cores = this.coresAll;
+    if (this.selectedCor && !this.cores.some(c => this.corId(c) === this.corId(this.selectedCor))) this.selectedCor = null;
   }
 
   onPageSizeChange(sizeStr: string): void {
     const size = Number(sizeStr) || 10;
     this.pageSize = size;
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
-  firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
-  prevPage(): void  { if (this.page > 1) { this.page--; this.applyPage(); } }
-  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
-  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void  { if (this.page > 1) { this.page--; this.load(); } }
+  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void {
     if (ev.key === 'Enter') this.doSearch();
   }
   doSearch(): void {
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
   clearSearch(): void {
     this.search = '';
     this.filterStatus = '';
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
 
   get indicadores() {
-    const total = this.coresAll.length;
+    const total = this.total;
     const ativas = this.coresAll.filter(c => this.isAtivo(c)).length;
     return { total, ativas, inativas: total - ativas, codigos: this.coresAll.filter(c => !!c.Codigo).length, nomes: this.coresAll.filter(c => !!c.Cor).length };
   }
@@ -210,7 +206,7 @@ export class CoresComponent implements OnInit {
     this.pageSize = 20;
     this.columns = this.columns.map(c => ({ ...c, visible: true }));
     this.saveColumnsPreference();
-    this.applyPage();
+    this.load();
   }
 
   @HostListener('window:sysvar-cores-toggle-indicators')
@@ -233,7 +229,7 @@ export class CoresComponent implements OnInit {
       Descricao: '',
       Codigo: '',
       Cor: '',
-      Status: ''
+      Status: 'ATIVO'
     });
   }
 
@@ -402,7 +398,7 @@ export class CoresComponent implements OnInit {
 
   exportarCsv(): void {
     const headers = ['Descrição', 'Código', 'Nome da cor', 'Status'];
-    const rows = this.coresFiltradas.map(item => [
+    const rows = this.cores.map(item => [
       item.Descricao ?? '',
       item.Codigo ?? '',
       item.Cor ?? '',
@@ -461,3 +457,5 @@ export class CoresComponent implements OnInit {
     localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }
+
+

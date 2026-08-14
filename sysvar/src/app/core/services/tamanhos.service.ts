@@ -12,10 +12,15 @@ export class TamanhosService {
   private baseUrl = `${environment.apiBaseUrl}/produto/tamanho/`;
 
   /** Sempre retorna array normalizado */
-  list(params?: { idgrade?: number; ordering?: string }): Observable<TamanhoModel[]> {
+  list(params?: { idgrade?: number; search?: string; Status?: string; status?: string; ordering?: string; page?: number; page_size?: number }): Observable<TamanhoModel[]> {
     let hp = new HttpParams();
     if (params?.idgrade != null) hp = hp.set('idgrade', String(params.idgrade));
+    if (params?.search) hp = hp.set('search', params.search);
+    if (params?.Status) hp = hp.set('Status', params.Status);
+    if (params?.status) hp = hp.set('status', params.status);
     if (params?.ordering) hp = hp.set('ordering', params.ordering);
+    if (params?.page) hp = hp.set('page', String(params.page));
+    if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
     return this.http.get<TamanhoModel[] | Paginated<TamanhoModel>>(this.baseUrl, { params: hp }).pipe(
       map((data) => (Array.isArray(data) ? data : data?.results ?? []))
     );

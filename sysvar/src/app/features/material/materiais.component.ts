@@ -45,21 +45,16 @@ export class MateriaisComponent {
   ];
 
   items = signal<Material[]>([]);
+  totalRecords = signal(0);
   page = signal(1);
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
 
-  filteredItems = computed(() => {
-    return this.items().filter(item => {
-      if (this.filterStatus === 'ativo' && !item.Status) return false;
-      if (this.filterStatus === 'inativo' && item.Status) return false;
-      return true;
-    });
-  });
-  total = computed(() => this.filteredItems().length);
+  filteredItems = computed(() => this.items());
+  total = computed(() => this.totalRecords());
   indicadores = computed(() => {
     const rows = this.items();
-    const total = rows.length;
+    const total = this.totalRecords();
     const ativos = rows.filter(i => !!i.Status).length;
     return { total, ativos, inativos: total - ativos, codigos: rows.filter(i => !!i.Codigo).length, descricoes: rows.filter(i => !!i.Descricao).length };
   });
@@ -67,10 +62,7 @@ export class MateriaisComponent {
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
-  paged = computed(() => {
-    const start = (this.page() - 1) * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
-  });
+  paged = computed(() => this.items());
   searchSuggestions = computed(() => {
     const valores = this.items().flatMap(item => [
       item.Descricao,
@@ -104,8 +96,8 @@ export class MateriaisComponent {
 
   load() {
     this.loading.set(true);
-    this.api.list(this.search).subscribe({
-      next: rows => { this.items.set(rows); this.page.set(1); },
+    this.api.list({ search: this.search || undefined, Status: this.filterStatus || undefined, page: this.page(), page_size: this.pageSize(), ordering: 'Descricao' }).subscribe({
+      next: (resp: any) => { const rows = Array.isArray(resp) ? resp : (resp?.results ?? []); this.items.set(rows); this.totalRecords.set(Array.isArray(resp) ? rows.length : (resp?.count ?? rows.length)); },
       error: () => { this.successMsg.set(null); this.items.set([]); this.openErrorOverlay(); this.loading.set(false); },
       complete: () => this.loading.set(false),
     });
@@ -113,13 +105,13 @@ export class MateriaisComponent {
   doSearch() { this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
   clearSearch() { this.search = ''; this.load(); }
-  doFilter() { this.page.set(1); }
+  doFilter() { this.page.set(1); this.load(); }
   clearFilters() { this.search = ''; this.filterStatus = ''; this.load(); }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.materiais.pageSize', String(+v)); this.page.set(1); }
-  firstPage() { this.page.set(1); }
-  prevPage() { this.page.update(p => Math.max(1, p - 1)); }
-  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
-  lastPage() { this.page.set(this.totalPages()); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); localStorage.setItem('sysvar.list.materiais.pageSize', String(+v)); this.page.set(1); this.load(); }
+  firstPage() { this.page.set(1); this.load(); }
+  prevPage() { this.page.update(p => Math.max(1, p - 1)); this.load(); }
+  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); this.load(); }
+  lastPage() { this.page.set(this.totalPages()); this.load(); }
 
   selecionarItem(row: Material): void { this.selectedItem.set(this.isSelected(row) ? null : row); }
   isSelected(row: Material): boolean { return !!this.selectedItem() && this.selectedItem()?.Idmaterial === row.Idmaterial; }
@@ -146,7 +138,7 @@ export class MateriaisComponent {
     this.showForm = true; this.editingId = null; this.submitted = false;
     this.consultando = false;
     this.form.enable({ emitEvent: false });
-    this.form.reset({ Descricao: '', Codigo: null, Status: null });
+    this.form.reset({ Descricao: '', Codigo: null, Status: 'ATIVO' });
   }
 
   editar(row: Material, modoConsulta = false) {
@@ -261,7 +253,7 @@ export class MateriaisComponent {
 
   exportarCsv(): void {
     const headers = ['Descrição', 'Código', 'Status'];
-    const body = this.filteredItems().map(r => [
+    const body = this.items().map(r => [
       r.Descricao || '',
       r.Codigo || '',
       r.Status ? 'Ativo' : 'Inativo',
@@ -311,3 +303,4 @@ export class MateriaisComponent {
     localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }
+

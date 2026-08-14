@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Colecao } from '../models/colecao';
-import { Observable, expand, map, reduce } from 'rxjs';
+import { Observable, map } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 
 type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 
@@ -12,26 +13,19 @@ export class ColecoesService {
 
   constructor(private http: HttpClient) {}
 
-  /** Busca todas as páginas do DRF e filtra no client (padrão Loja). */
-  list(search: string = ''): Observable<Colecao[]> {
-    const first$ = this.http.get<Page<Colecao>>(
-      `${this.baseUrl}?ordering=-Codigo&page_size=100`
-    );
-
-    return first$.pipe(
-      expand(page => (page.next ? this.http.get<Page<Colecao>>(page.next) : [])),
-      map(page => page.results),
-      reduce((acc, cur) => acc.concat(cur), [] as Colecao[]),
-      map(rows => {
-        const q = (search || '').trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(r => {
-          const d = (r.Descricao || '').toLowerCase();
-          const c = (r.Codigo || '').toLowerCase();
-          return d.includes(q) || c.includes(q);
-        });
-      })
-    );
+  list(params: Record<string, string | number | null | undefined> | string = {}): Observable<Page<Colecao> | Colecao[]> {
+    if (typeof params === 'string') {
+      const hp = new HttpParams()
+        .set('search', params)
+        .set('ordering', '-Codigo')
+        .set('page_size', '200');
+      return this.http.get<Page<Colecao>>(this.baseUrl, { params: hp }).pipe(map(resp => resp.results ?? []));
+    }
+    let hp = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') hp = hp.set(key, String(value));
+    });
+    return this.http.get<Page<Colecao> | Colecao[]>(this.baseUrl, { params: hp });
   }
 
   create(body: Partial<Colecao>) {

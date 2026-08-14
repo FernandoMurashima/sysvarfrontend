@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Observable, expand, map, reduce } from 'rxjs';
+import { Observable, map } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 import { Material } from '../models/material';
 
 type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
@@ -12,22 +13,21 @@ export class MateriaisService {
 
   constructor(private http: HttpClient) {}
 
-  list(search: string = ''): Observable<Material[]> {
-    const first$ = this.http.get<Page<Material>>(`${this.baseUrl}?ordering=Descricao&page_size=100`);
-    return first$.pipe(
-      expand(p => (p.next ? this.http.get<Page<Material>>(p.next) : [])),
-      map(p => p.results),
-      reduce((acc, cur) => acc.concat(cur), [] as Material[]),
-      map(rows => {
-        const q = (search || '').trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(r => {
-          const d = (r.Descricao || '').toLowerCase();
-          const c = (r.Codigo || '').toLowerCase();
-          return d.includes(q) || c.includes(q);
-        });
-      })
-    );
+  list(params: string): Observable<Material[]>;
+  list(params?: Record<string, string | number | null | undefined>): Observable<Page<Material> | Material[]>;
+  list(params: Record<string, string | number | null | undefined> | string = {}): Observable<Page<Material> | Material[]> {
+    if (typeof params === 'string') {
+      const hp = new HttpParams()
+        .set('search', params)
+        .set('ordering', 'Descricao')
+        .set('page_size', '200');
+      return this.http.get<Page<Material>>(this.baseUrl, { params: hp }).pipe(map(resp => resp.results ?? []));
+    }
+    let hp = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') hp = hp.set(key, String(value));
+    });
+    return this.http.get<Page<Material> | Material[]>(this.baseUrl, { params: hp });
   }
 
   create(body: Partial<Material>) { return this.http.post<Material>(this.baseUrl, body); }

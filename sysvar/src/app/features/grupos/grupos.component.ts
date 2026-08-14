@@ -82,24 +82,11 @@ export class GruposComponent implements OnInit {
   }
 
   get gruposFiltrados(): GrupoModel[] {
-    const termo = this.normalize(this.search);
-    return this.grupos.filter(g => {
-      const matchesSearch = !termo || [
-        g.Codigo,
-        g.Descricao,
-        String(g.Margem ?? '')
-      ].some(v => this.normalize(v).includes(termo));
-      const margem = Number(g.Margem ?? 0);
-      const matchesMargem =
-        !this.filterMargem ||
-        (this.filterMargem === 'sem' && margem === 0) ||
-        (this.filterMargem === 'com' && margem > 0);
-      return matchesSearch && matchesMargem;
-    });
+    return this.grupos;
   }
 
   get indicadores() {
-    const total = this.grupos.length;
+    const total = this.totalRecords;
     const comMargem = this.grupos.filter(g => Number(g.Margem ?? 0) > 0).length;
     return {
       total,
@@ -121,6 +108,13 @@ export class GruposComponent implements OnInit {
   formModeGrupo: 'new' | 'edit' | null = null;
 
   selectedGrupoId: number | null = null;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50];
+  totalRecords = 0;
+  get totalPages(): number { return Math.max(1, Math.ceil(this.totalRecords / this.pageSize)); }
+  get pageStart(): number { return this.totalRecords === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
+  get pageEnd(): number { return Math.min(this.page * this.pageSize, this.totalRecords); }
 
   // Form Grupo
   formGrupo = this.fb.group({
@@ -150,9 +144,10 @@ export class GruposComponent implements OnInit {
   loadGrupos() {
     this.loading = true;
     this.errorMsg = '';
-    this.gruposApi.list({ ordering: '-data_cadastro', page_size: 2000 }).subscribe({
+    this.gruposApi.list({ search: this.search || undefined, page: this.page, page_size: this.pageSize, ordering: '-data_cadastro' }).subscribe({
       next: (data) => {
-        this.grupos = Array.isArray(data) ? data : (data as any).results ?? [];
+        this.grupos = Array.isArray(data) ? data : ((data as any).results ?? []);
+        this.totalRecords = Array.isArray(data) ? this.grupos.length : ((data as any).count ?? this.grupos.length);
         this.carregarTodosSubgrupos();
       },
       error: (err) => {
@@ -164,8 +159,13 @@ export class GruposComponent implements OnInit {
   }
 
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadGrupos(); }
-  doSearch() { this.errorMsg = ''; }
-  clearSearch() { this.search = ''; this.filterMargem = ''; this.doSearch(); }
+  doSearch() { this.page = 1; this.errorMsg = ''; this.loadGrupos(); }
+  clearSearch() { this.search = ''; this.filterMargem = ''; this.page = 1; this.loadGrupos(); }
+  onPageSizeChange(v: number) { this.pageSize = +v; this.page = 1; this.loadGrupos(); }
+  firstPage() { this.page = 1; this.loadGrupos(); }
+  prevPage() { this.page = Math.max(1, this.page - 1); this.loadGrupos(); }
+  nextPage() { this.page = Math.min(this.totalPages, this.page + 1); this.loadGrupos(); }
+  lastPage() { this.page = this.totalPages; this.loadGrupos(); }
 
   selecionarGrupoLinha(g: GrupoModel): void {
     this.selectedGrupo = this.isSelectedGrupo(g) ? null : g;
@@ -508,7 +508,7 @@ export class GruposComponent implements OnInit {
 
   exportarCsv(): void {
     const headers = ['Codigo', 'Descricao', 'Margem'];
-    const rows = this.gruposFiltrados.map(g => [
+    const rows = this.grupos.map(g => [
       g.Codigo ?? '',
       g.Descricao ?? '',
       String(g.Margem ?? 0).replace('.', ',')
@@ -559,3 +559,4 @@ export class GruposComponent implements OnInit {
     localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }
+

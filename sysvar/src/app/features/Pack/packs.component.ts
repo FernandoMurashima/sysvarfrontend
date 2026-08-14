@@ -66,6 +66,13 @@ export class PacksComponent implements OnInit {
     { key: 'status', label: 'Status', visible: true, required: false },
   ];
   selectedPackId: number | null = null;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50];
+  totalRecords = 0;
+  get totalPages(): number { return Math.max(1, Math.ceil(this.totalRecords / this.pageSize)); }
+  get pageStart(): number { return this.totalRecords === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
+  get pageEnd(): number { return Math.min(this.page * this.pageSize, this.totalRecords); }
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
@@ -90,7 +97,7 @@ export class PacksComponent implements OnInit {
   }
 
   get indicadores() {
-    const total = this.packs.length;
+    const total = this.totalRecords;
     const ativos = this.packs.filter(p => !!p.ativo).length;
     const grades = new Set(this.packs.map(p => p.grade).filter(Boolean)).size;
     return { total, ativos, inativos: total - ativos, grades, itens: this.items.length };
@@ -149,25 +156,26 @@ export class PacksComponent implements OnInit {
 
   loadPacks() {
     this.loading = true; this.errorMsg = '';
-    this.packsApi.list({ search: this.search, ordering: '-data_cadastro' }).subscribe({
+    this.packsApi.list({ search: this.search || undefined, grade: this.filterGrade ? Number(this.filterGrade) : undefined, ativo: this.filterStatus || undefined, page: this.page, page_size: this.pageSize, ordering: '-data_cadastro' }).subscribe({
       next: (data) => {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
-        const grade = this.filterGrade ? Number(this.filterGrade) : null;
-        this.packs = (Array.isArray(rows) ? rows : []).filter((p: PackModel) => {
-          const matchesGrade = !grade || p.grade === grade;
-          const matchesStatus = !this.filterStatus || String(!!p.ativo) === this.filterStatus;
-          return matchesGrade && matchesStatus;
-        });
+        this.packs = Array.isArray(rows) ? rows : [];
+        this.totalRecords = Array.isArray(payload) ? this.packs.length : (payload?.count ?? this.packs.length);
       },
       error: () => (this.errorMsg = 'Falha ao carregar packs.'),
       complete: () => (this.loading = false),
     });
   }
 
-  onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.loadPacks(); }
-  doSearch() { this.loadPacks(); }
-  clearSearch() { this.search = ''; this.filterGrade = ''; this.filterStatus = ''; this.loadPacks(); }
+  onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
+  doSearch() { this.page = 1; this.loadPacks(); }
+  clearSearch() { this.search = ''; this.filterGrade = ''; this.filterStatus = ''; this.page = 1; this.loadPacks(); }
+  onPageSizeChange(v: number) { this.pageSize = +v; this.page = 1; this.loadPacks(); }
+  firstPage() { this.page = 1; this.loadPacks(); }
+  prevPage() { this.page = Math.max(1, this.page - 1); this.loadPacks(); }
+  nextPage() { this.page = Math.min(this.totalPages, this.page + 1); this.loadPacks(); }
+  lastPage() { this.page = this.totalPages; this.loadPacks(); }
 
   selecionarPackLinha(p: PackModel): void { this.selectedPack = this.isSelectedPack(p) ? null : p; }
   isSelectedPack(p: PackModel): boolean { return !!this.selectedPack && this.selectedPack.id === p.id; }
@@ -518,3 +526,4 @@ export class PacksComponent implements OnInit {
     localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }
+

@@ -9,7 +9,7 @@
     <div class="indicator"><span class="indicator-icon green">%</span><div><strong>{{ indicadores.comMargem }}</strong><small>Com margem</small></div></div>
     <div class="indicator"><span class="indicator-icon orange">0</span><div><strong>{{ indicadores.semMargem }}</strong><small>Sem margem</small></div></div>
     <div class="indicator"><span class="indicator-icon purple">▦</span><div><strong>{{ indicadores.subgrupos }}</strong><small>Subgrupos</small></div></div>
-    <div class="indicator"><span class="indicator-icon cyan">#</span><div><strong>{{ gruposFiltrados.length }}</strong><small>Filtrados</small></div></div>
+    <div class="indicator"><span class="indicator-icon cyan">#</span><div><strong>{{ totalRecords }}</strong><small>Filtrados</small></div></div>
   </section>
 
   <section class="filter-bar" *ngIf="filtersVisible">
@@ -37,10 +37,9 @@
   </section>
 
   <section class="results-area">
-    <div class="results-header"><div><strong>Grupos cadastrados</strong><span>{{ gruposFiltrados.length }} registro(s) encontrado(s)</span></div></div>
+    <div class="results-header"><div><strong>Grupos cadastrados</strong><span>{{ totalRecords }} registro(s) encontrado(s)</span></div><div class="list-controls"><label>Itens por página:</label><select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)"><option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option></select></div></div>
     <div class="table-wrapper">
-      <table class="table" *ngIf="gruposFiltrados.length > 0; else emptyTpl"><thead><tr><th class="select-col"></th><th *ngIf="visibleColumn('codigo')">Código</th><th *ngIf="visibleColumn('descricao')">Descrição</th><th *ngIf="visibleColumn('margem')">Margem (%)</th><th *ngIf="visibleColumn('subgrupos')">Subgrupos</th></tr></thead><tbody><tr *ngFor="let g of gruposFiltrados" [class.selected]="isSelectedGrupo(g)" (click)="selecionarGrupoLinha(g)"><td class="select-col"><input type="checkbox" [checked]="isSelectedGrupo(g)" (click)="$event.stopPropagation(); selecionarGrupoLinha(g)" /></td><td *ngIf="visibleColumn('codigo')">{{ g.Codigo }}</td><td *ngIf="visibleColumn('descricao')">{{ g.Descricao }}</td><td *ngIf="visibleColumn('margem')">{{ g.Margem | number:'1.2-2' }}</td><td *ngIf="visibleColumn('subgrupos')">{{ subgrupoCount(g) }}</td></tr></tbody></table>
-      <ng-template #emptyTpl><div class="empty-hint" *ngIf="!loading">Nenhum grupo encontrado.</div><div class="loading" *ngIf="loading">Carregando...</div></ng-template>
+      <table class="table" *ngIf="gruposFiltrados.length > 0; else emptyTpl"><thead><tr><th class="select-col"></th><th *ngIf="visibleColumn('codigo')">Código</th><th *ngIf="visibleColumn('descricao')">Descrição</th><th *ngIf="visibleColumn('margem')">Margem (%)</th><th *ngIf="visibleColumn('subgrupos')">Subgrupos</th></tr></thead><tbody><tr *ngFor="let g of gruposFiltrados" [class.selected]="isSelectedGrupo(g)" (click)="selecionarGrupoLinha(g)"><td class="select-col"><input type="checkbox" [checked]="isSelectedGrupo(g)" (click)="$event.stopPropagation(); selecionarGrupoLinha(g)" /></td><td *ngIf="visibleColumn('codigo')">{{ g.Codigo }}</td><td *ngIf="visibleColumn('descricao')">{{ g.Descricao }}</td><td *ngIf="visibleColumn('margem')">{{ g.Margem | number:'1.2-2' }}</td><td *ngIf="visibleColumn('subgrupos')">{{ subgrupoCount(g) }}</td></tr></tbody></table><div class="pager" *ngIf="totalRecords > 0"><div class="left"><button class="btn" type="button" (click)="firstPage()" [disabled]="page === 1">« Primeira</button><button class="btn" type="button" (click)="prevPage()" [disabled]="page === 1">‹ Anterior</button></div><div class="center">Página {{ page }} de {{ totalPages }} <span class="range">— Mostrando {{ pageStart }} – {{ pageEnd }} de {{ totalRecords }}</span></div><div class="right"><button class="btn" type="button" (click)="nextPage()" [disabled]="page >= totalPages">Próxima ›</button><button class="btn" type="button" (click)="lastPage()" [disabled]="page >= totalPages">Última »</button></div></div>`n      <ng-template #emptyTpl><div class="empty-hint" *ngIf="!loading">Nenhum grupo encontrado.</div><div class="loading" *ngIf="loading">Carregando...</div></ng-template>
     </div>
   </section>
 
@@ -52,3 +51,4 @@
 </div>
 
 <div class="overlay" *ngIf="excluirModal as modal"><div class="overlay-card"><h4>Confirmar exclusão</h4><p>{{ modal.titulo }}</p><div class="overlay-actions"><button class="btn" type="button" (click)="fecharExclusao()">Voltar</button><button class="btn danger" *ngIf="podeExcluirModulo" type="button" (click)="confirmarExclusao()">Excluir</button></div></div></div>
+

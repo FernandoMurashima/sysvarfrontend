@@ -49,32 +49,15 @@ export class ColecoesComponent {
   pageSizeOptions = [10, 20, 50];
   pageSize = signal(20);
 
-  colecoesFiltradas = computed(() => {
-    const termo = this.normalize(this.search);
-    return this.colecoes().filter(item => {
-      const matchesSearch = !termo || [
-        item.Codigo,
-        item.Descricao,
-        item.Estacao,
-        item.Status,
-        this.estLabel(item.Estacao),
-        this.statusLabel(item.Status)
-      ].some(v => this.normalize(v).includes(termo));
-      const matchesEstacao = !this.filterEstacao || item.Estacao === this.filterEstacao;
-      const matchesStatus = !this.filterStatus || item.Status === this.filterStatus;
-      return matchesSearch && matchesEstacao && matchesStatus;
-    });
-  });
+  colecoesFiltradas = computed(() => this.colecoes());
 
-  total = computed(() => this.colecoesFiltradas().length);
+  totalRecords = signal(0);
+  total = computed(() => this.totalRecords());
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
   pageStart = computed(() => (this.page() - 1) * this.pageSize() + 1);
   pageEnd = computed(() => Math.min(this.page() * this.pageSize(), this.total()));
 
-  paged = computed(() => {
-    const start = (this.page() - 1) * this.pageSize();
-    return this.colecoesFiltradas().slice(start, start + this.pageSize());
-  });
+  paged = computed(() => this.colecoes());
   searchSuggestions = computed(() => {
     const valores = this.colecoes().flatMap(item => [
       item.Codigo,
@@ -138,10 +121,11 @@ export class ColecoesComponent {
   // ---------- lista/pager ----------
   load() {
     this.loading.set(true);
-    this.api.list('').subscribe({
-      next: (rows) => {
+    this.api.list({ search: this.search || undefined, Estacao: this.filterEstacao || undefined, Status: this.filterStatus || undefined, page: this.page(), page_size: this.pageSize(), ordering: '-Codigo' }).subscribe({
+      next: (resp: any) => {
+        const rows = Array.isArray(resp) ? resp : (resp?.results ?? []);
         this.colecoes.set(rows);
-        this.page.set(1);
+        this.totalRecords.set(Array.isArray(resp) ? rows.length : (resp?.count ?? rows.length));
       },
       error: () => {
         this.successMsg.set(null);
@@ -152,14 +136,14 @@ export class ColecoesComponent {
       complete: () => this.loading.set(false),
     });
   }
-  doSearch() { this.page.set(1); }
+  doSearch() { this.page.set(1); this.load(); }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
-  clearSearch() { this.search = ''; this.filterEstacao = ''; this.filterStatus = ''; this.page.set(1); }
-  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); }
-  firstPage() { this.page.set(1); }
-  prevPage() { this.page.update(p => Math.max(1, p - 1)); }
-  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
-  lastPage() { this.page.set(this.totalPages()); }
+  clearSearch() { this.search = ''; this.filterEstacao = ''; this.filterStatus = ''; this.page.set(1); this.load(); }
+  onPageSizeChange(v: number) { this.pageSize.set(+v); this.page.set(1); this.load(); }
+  firstPage() { this.page.set(1); this.load(); }
+  prevPage() { this.page.update(p => Math.max(1, p - 1)); this.load(); }
+  nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); this.load(); }
+  lastPage() { this.page.set(this.totalPages()); this.load(); }
 
   // ---------- form ----------
   novo() {
@@ -303,7 +287,7 @@ export class ColecoesComponent {
 
   exportarCsv(): void {
     const headers = ['Descrição', 'Código', 'Estação', 'Status'];
-    const rows = this.colecoesFiltradas().map(item => [
+    const rows = this.colecoes().map(item => [
       item.Descricao ?? '',
       item.Codigo ?? '',
       this.estLabel(item.Estacao),
@@ -345,4 +329,5 @@ export class ColecoesComponent {
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }
+
 

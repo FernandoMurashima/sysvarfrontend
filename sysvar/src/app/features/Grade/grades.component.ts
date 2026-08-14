@@ -57,6 +57,13 @@ export class GradesComponent implements OnInit {
     { key: 'tamanhos', label: 'Tamanhos', visible: true, required: false },
   ];
   selectedGradeId: number | null = null;
+  page = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50];
+  totalRecords = 0;
+  get totalPages(): number { return Math.max(1, Math.ceil(this.totalRecords / this.pageSize)); }
+  get pageStart(): number { return this.totalRecords === 0 ? 0 : (this.page - 1) * this.pageSize + 1; }
+  get pageEnd(): number { return Math.min(this.page * this.pageSize, this.totalRecords); }
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('produtos', true) !== false;
@@ -81,24 +88,11 @@ export class GradesComponent implements OnInit {
   }
 
   get gradesFiltradas(): GradeModel[] {
-    const termo = this.normalize(this.search);
-    return this.grades.filter(g => {
-      const matchesSearch = !termo || [
-        g.Idgrade,
-        g.Descricao,
-        g.Status
-      ].some(v => this.normalize(v).includes(termo));
-      const ativo = this.isAtiva(g.Status);
-      const matchesStatus =
-        !this.filterStatus ||
-        (this.filterStatus === 'ATIVA' && ativo) ||
-        (this.filterStatus === 'INATIVA' && !ativo);
-      return matchesSearch && matchesStatus;
-    });
+    return this.grades;
   }
 
   get indicadores() {
-    const total = this.grades.length;
+    const total = this.totalRecords;
     const ativas = this.grades.filter(g => this.isAtiva(g.Status)).length;
     return { total, ativas, inativas: total - ativas, tamanhos: this.allTamanhos.length };
   }
@@ -109,7 +103,7 @@ export class GradesComponent implements OnInit {
 
   formGrade = this.fb.group({
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
-    Status: [''],
+    Status: ['ATIVO'],
   });
 
   editingTamId: number | null = null;
@@ -120,7 +114,7 @@ export class GradesComponent implements OnInit {
     Idgrade: [0, [Validators.required]],
     Tamanho: ['', [Validators.required, Validators.maxLength(10)]],
     Descricao: ['Tamanho', [Validators.required, Validators.maxLength(100)]],
-    Status: [''],
+    Status: ['ATIVO'],
   });
 
   ngOnInit(): void {
@@ -133,11 +127,12 @@ export class GradesComponent implements OnInit {
   loadGrades() {
     this.loading = true; this.errorMsg = '';
     // <- sem 'search', o service só aceita { ordering?: string }
-    this.gradesApi.list({ ordering: 'Descricao' }).subscribe({
+    this.gradesApi.list({ search: this.search || undefined, Status: this.filterStatus || undefined, page: this.page, page_size: this.pageSize, ordering: 'Descricao' }).subscribe({
       next: (data) => {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
         this.grades = Array.isArray(rows) ? rows : [];
+        this.totalRecords = Array.isArray(payload) ? this.grades.length : (payload?.count ?? this.grades.length);
         this.carregarTodosTamanhos();
       },
       error: () => { this.errorMsg = 'Falha ao carregar grades.'; },
@@ -145,10 +140,13 @@ export class GradesComponent implements OnInit {
     });
   }
   onSearchKeyup(ev: KeyboardEvent) { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch() {
-    this.errorMsg = '';
-  }
-  clearSearch() { this.search = ''; this.filterStatus = ''; }
+  doSearch() { this.page = 1; this.errorMsg = ''; this.loadGrades(); }
+  clearSearch() { this.search = ''; this.filterStatus = ''; this.page = 1; this.loadGrades(); }
+  onPageSizeChange(v: number) { this.pageSize = +v; this.page = 1; this.loadGrades(); }
+  firstPage() { this.page = 1; this.loadGrades(); }
+  prevPage() { this.page = Math.max(1, this.page - 1); this.loadGrades(); }
+  nextPage() { this.page = Math.min(this.totalPages, this.page + 1); this.loadGrades(); }
+  lastPage() { this.page = this.totalPages; this.loadGrades(); }
 
   selecionarGradeLinha(g: GradeModel): void { this.selectedGrade = this.isSelectedGrade(g) ? null : g; }
   isSelectedGrade(g: GradeModel): boolean { return !!this.selectedGrade && this.selectedGrade.Idgrade === g.Idgrade; }
@@ -178,7 +176,7 @@ export class GradesComponent implements OnInit {
     this.formModeGrade = 'new';
     this.submitted = false;
     this.formGrade.enable({ emitEvent: false });
-    this.formGrade.reset({ Descricao: '', Status: '' });
+    this.formGrade.reset({ Descricao: '', Status: 'ATIVO' });
     this.successMsg = ''; this.errorMsg = '';
   }
 
@@ -206,7 +204,7 @@ export class GradesComponent implements OnInit {
     const raw = this.formGrade.getRawValue();
     const payload = {
       Descricao: String(raw.Descricao ?? '').trim(),
-      Status: (raw.Status ?? '') || null,
+      Status: (raw.Status ?? 'ATIVO') || 'ATIVO',
     };
 
     const isEdit = !!this.editingGradeId;
@@ -271,7 +269,7 @@ export class GradesComponent implements OnInit {
     this.formModeGrade = null;
     this.submitted = false;
     this.formGrade.enable({ emitEvent: false });
-    this.formGrade.reset({ Descricao: '', Status: '' });
+    this.formGrade.reset({ Descricao: '', Status: 'ATIVO' });
   }
 
   fieldInvalidGrade(name: string) {
@@ -326,7 +324,7 @@ export class GradesComponent implements OnInit {
       Idgrade: this.selectedGradeId ?? 0,
       Tamanho: '',
       Descricao: 'Tamanho',
-      Status: ''
+      Status: 'ATIVO'
     });
   }
 
@@ -358,7 +356,7 @@ export class GradesComponent implements OnInit {
       idgrade: Number(raw.Idgrade),
       Tamanho: String(raw.Tamanho ?? '').trim(),
       Descricao: String(raw.Descricao ?? '').trim() || 'Tamanho',
-      Status: (raw.Status ?? '') || null
+      Status: (raw.Status ?? 'ATIVO') || 'ATIVO'
     };
 
     const req$ = this.editingTamId
@@ -455,12 +453,12 @@ export class GradesComponent implements OnInit {
   }
 
   statusLabel(status: any): string {
-    return status || '—';
+    return this.isAtiva(status) ? 'Ativo' : 'Inativo';
   }
 
   exportarCsv(): void {
     const headers = ['ID', 'Descrição', 'Status'];
-    const rows = this.gradesFiltradas.map(g => [
+    const rows = this.grades.map(g => [
       String(g.Idgrade ?? ''),
       g.Descricao ?? '',
       this.statusLabel(g.Status)
@@ -515,3 +513,5 @@ export class GradesComponent implements OnInit {
     localStorage.setItem(this.viewPrefsKey, JSON.stringify({ indicatorsVisible: this.indicatorsVisible, filtersVisible: this.filtersVisible }));
   }
 }
+
+

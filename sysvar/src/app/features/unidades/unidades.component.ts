@@ -105,12 +105,12 @@ export class UnidadesComponent implements OnInit {
   // --------- Fluxo ---------
   load(): void {
     this.loading = true;
-    this.api.list({ search: this.search, page_size: 2000, ordering: 'Descricao' }).subscribe({
+    this.api.list({ search: this.search || undefined, page: this.page, page_size: this.pageSize, ordering: this.orderingParam() }).subscribe({
       next: (res: any) => {
         const arr: Unidade[] = Array.isArray(res) ? res : (res?.results ?? []);
         this.unidadesAll = arr;
-        this.page = 1;
-        this.applyPage();
+        this.unidades = arr;
+        this.total = Array.isArray(res) ? arr.length : (res?.count ?? arr.length);
         this.loading = false;
         this.errorMsg = '';
       },
@@ -126,12 +126,8 @@ export class UnidadesComponent implements OnInit {
   }
 
   applyPage(): void {
-    const filtered = this.unidadesFiltradas;
-    this.total = filtered.length;
-    const start = (this.page - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    this.unidades = filtered.slice(start, end);
-    if (this.selectedUnidade && !filtered.some(u => this.unidadeId(u) === this.unidadeId(this.selectedUnidade))) this.selectedUnidade = null;
+    this.unidades = this.unidadesAll;
+    if (this.selectedUnidade && !this.unidades.some(u => this.unidadeId(u) === this.unidadeId(this.selectedUnidade))) this.selectedUnidade = null;
   }
 
   onPageSizeChange(sizeStr: string | number): void {
@@ -139,20 +135,20 @@ export class UnidadesComponent implements OnInit {
     this.pageSize = size;
     localStorage.setItem('sysvar.list.unidades.pageSize', String(this.pageSize));
     this.page = 1;
-    this.applyPage();
+    this.load();
   }
   onPageChange(page: number): void {
     this.page = Math.max(1, Math.min(page, this.totalPages));
-    this.applyPage();
+    this.load();
   }
-  firstPage(): void { if (this.page !== 1) { this.page = 1; this.applyPage(); } }
-  prevPage(): void  { if (this.page > 1)  { this.page--; this.applyPage(); } }
-  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.applyPage(); } }
-  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.applyPage(); } }
+  firstPage(): void { if (this.page !== 1) { this.page = 1; this.load(); } }
+  prevPage(): void  { if (this.page > 1)  { this.page--; this.load(); } }
+  nextPage(): void  { if (this.page < this.totalPages) { this.page++; this.load(); } }
+  lastPage(): void  { if (this.page !== this.totalPages) { this.page = this.totalPages; this.load(); } }
 
   onSearchKeyup(ev: KeyboardEvent): void { if (ev.key === 'Enter') this.doSearch(); }
-  doSearch(): void { this.page = 1; this.applyPage(); }
-  clearSearch(): void { this.search = ''; this.page = 1; this.applyPage(); }
+  doSearch(): void { this.page = 1; this.load(); }
+  clearSearch(): void { this.search = ''; this.page = 1; this.load(); }
 
   unidadeId(u: Unidade | null): number | null {
     return u ? ((u as any).Idunidade ?? null) : null;
@@ -174,7 +170,7 @@ export class UnidadesComponent implements OnInit {
     this.pageSize = 20;
     this.columns = this.columns.map(c => ({ ...c, visible: true }));
     this.saveColumnsPreference();
-    this.applyPage();
+    this.load();
   }
 
   @HostListener('window:sysvar-unidades-toggle-indicators')
@@ -313,12 +309,7 @@ export class UnidadesComponent implements OnInit {
 
   get unidadesFiltradas(): Unidade[] {
     const term = this.normalize(this.search);
-    return this.unidadesAll
-      .filter(u => {
-        if (!term) return true;
-        return this.normalize([u.Descricao, u.Codigo, u.permite_decimal ? 'decimal' : 'inteira'].join(' ')).includes(term);
-      })
-      .sort((a, b) => this.compareUnidades(a, b));
+    return this.unidadesAll;
   }
 
   sortBy(key: 'descricao' | 'codigo' | 'decimal'): void {
@@ -328,7 +319,7 @@ export class UnidadesComponent implements OnInit {
       this.sortKey = key;
       this.sortDir = 'asc';
     }
-    this.applyPage();
+    this.load();
   }
 
   sortIcon(key: 'descricao' | 'codigo' | 'decimal'): string {
@@ -349,7 +340,7 @@ export class UnidadesComponent implements OnInit {
 
   exportarCsv(): void {
     const headers = ['Descricao', 'Codigo', 'Aceita decimal'];
-    const body = this.unidadesFiltradas.map(u => [u.Descricao || '', u.Codigo || '', u.permite_decimal ? 'Sim' : 'Nao']);
+    const body = this.unidades.map(u => [u.Descricao || '', u.Codigo || '', u.permite_decimal ? 'Sim' : 'Nao']);
     const csv = [headers, ...body]
       .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
       .join('\r\n');
@@ -360,6 +351,13 @@ export class UnidadesComponent implements OnInit {
     link.download = 'unidades.csv';
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  private orderingParam(): string {
+    const prefix = this.sortDir === 'desc' ? '-' : '';
+    if (this.sortKey === 'codigo') return `${prefix}Codigo`;
+    if (this.sortKey === 'decimal') return `${prefix}permite_decimal`;
+    return `${prefix}Descricao`;
   }
 
   private compareUnidades(a: Unidade, b: Unidade): number {
@@ -437,3 +435,5 @@ export class UnidadesComponent implements OnInit {
   }
   closeErrorOverlay(): void { this.errorOverlayOpen = false; }
 }
+
+

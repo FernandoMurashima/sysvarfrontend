@@ -9,12 +9,13 @@ export class PacksService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/produto/pack/`;
 
-  list(params?: { search?: string; grade?: number; ativo?: boolean; ordering?: string; page_size?: number }): Observable<PackModel[] | any> {
+  list(params?: { search?: string; grade?: number; ativo?: boolean | string; ordering?: string; page?: number; page_size?: number }): Observable<PackModel[] | any> {
     let httpParams = new HttpParams();
     if (params?.search)   httpParams = httpParams.set('search', params.search);
     if (params?.grade)    httpParams = httpParams.set('grade', String(params.grade));
     if (params?.ativo !== undefined) httpParams = httpParams.set('ativo', String(params.ativo));
     if (params?.ordering) httpParams = httpParams.set('ordering', params.ordering);
+    if (params?.page) httpParams = httpParams.set('page', String(params.page));
     if (params?.page_size) httpParams = httpParams.set('page_size', String(params.page_size));
     return this.http.get<PackModel[] | any>(this.base, { params: httpParams });
   }
