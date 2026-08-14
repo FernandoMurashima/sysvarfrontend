@@ -16,12 +16,11 @@ import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-packs',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent],
   templateUrl: './packs.component.html',
   styleUrls: ['./packs.component.css'],
 })
@@ -66,6 +65,7 @@ export class PacksComponent implements OnInit {
     { key: 'status', label: 'Status', visible: true, required: false },
   ];
   selectedPackId: number | null = null;
+  selectedItem: PackItemModel | null = null;
   page = 1;
   pageSize = 20;
   pageSizeOptions = [10, 20, 50];
@@ -323,6 +323,7 @@ export class PacksComponent implements OnInit {
   // ===== SUB: ITENS =====
   selecionarPack(id: number, gid: number) {
     this.selectedPackId = id;
+    this.selectedItem = null;
     this.formItem.patchValue({ pack: id });
     this.loadItens(id);
     this.loadTamanhos(gid);
@@ -331,6 +332,7 @@ export class PacksComponent implements OnInit {
 
   fecharItens() {
     this.selectedPackId = null;
+    this.selectedItem = null;
     this.items = [];
     this.tamanhosDaGrade = [];
     this.novoItem();
@@ -342,6 +344,9 @@ export class PacksComponent implements OnInit {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
         this.items = Array.isArray(rows) ? rows : [];
+        if (this.selectedItem && !this.items.some(item => item.id === this.selectedItem?.id)) {
+          this.selectedItem = null;
+        }
       },
       error: () => (this.errorMsg = 'Falha ao carregar itens do pack.'),
     });
@@ -367,6 +372,18 @@ export class PacksComponent implements OnInit {
     this.formItem.enable({ emitEvent: false });
     this.formItem.reset({ pack: this.selectedPackId, tamanho: null, qtd: 1 });
   }
+
+  selecionarItemLinha(it: PackItemModel): void {
+    this.selectedItem = this.isSelectedItem(it) ? null : it;
+  }
+
+  isSelectedItem(it: PackItemModel): boolean {
+    return !!this.selectedItem && this.selectedItem.id === it.id;
+  }
+
+  consultarItemSelecionado(): void { if (this.selectedItem) this.consultarItem(this.selectedItem); }
+  editarItemSelecionado(): void { if (this.selectedItem && this.podeEditarModulo) this.editarItem(this.selectedItem); }
+  excluirItemSelecionado(): void { if (this.selectedItem && this.podeExcluirModulo) this.excluirItem(this.selectedItem); }
 
   editarItem(it: PackItemModel) {
     this.editingItemId = it.id ?? null;
@@ -422,6 +439,7 @@ export class PacksComponent implements OnInit {
       next: () => {
         this.excluirModal = null;
         this.successMsg = 'Item excluído.';
+        this.selectedItem = null;
         if (this.selectedPackId) this.loadItens(this.selectedPackId);
       },
       error: () => (this.errorMsg = 'Falha ao excluir o item do pack.'),
@@ -450,38 +468,6 @@ export class PacksComponent implements OnInit {
     if (!col || col.required) return;
     col.visible = visible;
     this.saveColumnsPreference();
-  }
-
-  packActions(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'itens', label: 'Itens', icon: '☷' },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  itemActions(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcaoPack(action: string | Event, p: PackModel): void {
-    if (typeof action !== 'string') return;
-    if (action === 'consultar') this.consultarPack(p);
-    if (action === 'editar') this.editarPack(p);
-    if (action === 'itens') this.selecionarPack(p.id!, p.grade);
-    if (action === 'excluir') this.excluirPack(p);
-  }
-
-  executarAcaoItem(action: string | Event, item: PackItemModel): void {
-    if (typeof action !== 'string') return;
-    if (action === 'consultar') this.consultarItem(item);
-    if (action === 'editar') this.editarItem(item);
-    if (action === 'excluir') this.excluirItem(item);
   }
 
   exportarCsv(): void {
