@@ -64,6 +64,7 @@ export class ShellComponent {
       children: [
         { label: 'Produto Venda'       ,   link: '/produtos',      icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Produtos Uso/consumo',   link: '/produtos-uso',  icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
+        { label: 'Insumos',                link: '/insumos',       icon: 'bi bi-box2',          roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Grupos',                 link: '/grupos',        icon: 'bi bi-diagram-2',     roles: this.produtosRoles, moduloEmpresa: 'produtos' },        
         { label: 'Cores',                  link: '/cores',         icon: 'bi bi-palette',       roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Grades',                 link: '/grades',        icon: 'bi bi-grid',          roles: this.produtosRoles, moduloEmpresa: 'produtos' },
@@ -227,7 +228,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
+    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
   }
 
   toggleBarControls(): void {
@@ -244,6 +245,7 @@ export class ShellComponent {
       '/natureza': 'naturezas',
       '/produtos': 'produtos-revenda',
       '/produtos-uso': 'produtos-uso',
+      '/insumos': 'insumos',
       '/grupos': 'grupos',
       '/cores': 'cores',
       '/grades': 'grades',

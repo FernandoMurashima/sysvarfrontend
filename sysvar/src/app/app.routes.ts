@@ -34,6 +34,7 @@ import { MateriaisComponent } from './features/material/materiais.component';
 import { FormasPagamentoComponent } from './features/formas-pagamento/formas-pagamento.component';
 import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pagamento.component';
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
+import { InsumosComponent } from './features/insumos/insumos.component';
 import { PedidosRevendaComponent } from './features/pedidos-revenda/pedidos-revenda.component';
 import { PedidosUsoConsumoComponent } from './features/pedidos-uso-consumo/pedidos-uso-consumo.component';
 import { NotasFiscaisEntradaComponent } from './features/notas-fiscais-entrada/notas-fiscais-entrada.component';
@@ -107,6 +108,7 @@ export const routes: Routes = [
       { path: 'grades', component: GradesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos', component: ProdutosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
+      { path: 'insumos', component: InsumosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/pdv-desktop', redirectTo: 'loja/pdv-offline', pathMatch: 'full' },
       { path: 'vendas/relatorios', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },

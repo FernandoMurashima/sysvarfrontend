@@ -12,7 +12,7 @@ export class ProdutosService {
   private base = `${environment.apiBaseUrl}/produto/produto/`;
   private imagensBase = `${environment.apiBaseUrl}/produto/produto-imagem/`;
 
-  list(params?: { search?: string; referencia?: string; codigo?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; bloqueado_venda?: 'true' | 'false' | string; unidade?: number | string; ncm?: string; cadastro_fiscal_incompleto?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
+  list(params?: { search?: string; referencia?: string; codigo?: string; ordering?: string; page?: number; page_size?: number; ativo?: 'all' | 'true' | 'false'; tipo_produto?: '1' | '2' | '3' | '4' | string; grupo?: number | string; colecao?: number | string; subgrupo?: number | string; material?: number | string; bloqueado_venda?: 'true' | 'false' | string; unidade?: number | string; ncm?: string; cadastro_fiscal_incompleto?: 'true' | 'false' | string }): Observable<Produto[] | Paginated<Produto>> {
     let hp = new HttpParams();
     if (params?.search)    hp = hp.set('search', params.search);
     if (params?.referencia) hp = hp.set('referencia', params.referencia);
@@ -25,6 +25,7 @@ export class ProdutosService {
     if (params?.grupo) hp = hp.set('grupo', String(params.grupo));
     if (params?.colecao) hp = hp.set('colecao', String(params.colecao));
     if (params?.subgrupo) hp = hp.set('subgrupo', String(params.subgrupo));
+    if (params?.material) hp = hp.set('material', String(params.material));
     if (params?.bloqueado_venda) hp = hp.set('bloqueado_venda', params.bloqueado_venda);
     if (params?.unidade) hp = hp.set('unidade', String(params.unidade));
     if (params?.ncm) hp = hp.set('ncm', params.ncm);
@@ -38,6 +39,14 @@ export class ProdutosService {
       if (value !== null && value !== undefined && value !== '') hp = hp.set(key, String(value));
     });
     return this.http.get<Record<string, number>>(`${this.base}indicadores-uso-consumo/`, { params: hp });
+  }
+
+  indicadoresInsumos(params?: Record<string, string | number | boolean | null | undefined>) {
+    let hp = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') hp = hp.set(key, String(value));
+    });
+    return this.http.get<Record<string, number>>(`${this.base}indicadores-insumos/`, { params: hp });
   }
 
   get(id: number) { return this.http.get<Produto>(`${this.base}${id}/`); }
