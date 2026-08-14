@@ -103,6 +103,10 @@ export class PacksComponent implements OnInit {
     return { total, ativos, inativos: total - ativos, grades, itens: this.items.length };
   }
 
+  get selectedPackDetalhe(): PackModel | null {
+    return this.packs.find(p => p.id === this.selectedPackId) ?? this.selectedPack;
+  }
+
   formModePack: 'new' | 'edit' | null = null;
   editingPackId: number | null = null;
   consultandoPack = false;

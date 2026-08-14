@@ -6,4 +6,5 @@
 .sub-panel { padding: 12px 14px; }
 .sub-actions { display: flex; gap: 8px; align-items: end; justify-content: flex-end; }
 .actions-col { width: 96px; text-align: center; }
+.detail-modal { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 @media (max-width: 900px) { .span-4, .span-6, .span-7 { grid-column: 1 / -1; } }

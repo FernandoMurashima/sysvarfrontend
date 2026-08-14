@@ -1,6 +1,7 @@
 export interface GrupoModel {
   Idgrupo?: number;        // PK (readonly no front)
   Codigo: string;          // ex.: "10"
+  CodigoRef: string;       // ex.: "01"
   Descricao: string;       // ex.: "Calça"
   Margem: number;          // ex.: 10.00
   data_cadastro?: string;  // ISO (readonly)

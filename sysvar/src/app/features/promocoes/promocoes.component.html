@@ -155,7 +155,7 @@
               <th>Valor</th>
               <th>Período</th>
               <th>Status</th>
-              <th></th>
+              <th class="actions-col">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -166,10 +166,8 @@
               <td>{{ promocao.valor }}</td>
               <td>{{ promocao.data_inicio | date:'dd/MM/yyyy' }} - {{ promocao.data_fim ? (promocao.data_fim | date:'dd/MM/yyyy') : 'sem fim' }}</td>
               <td><span class="badge" [class.off]="!promocao.ativo">{{ promocao.ativo ? 'Ativa' : 'Inativa' }}</span></td>
-              <td class="row-actions">
-                <button class="btn sm" type="button" (click)="consultar(promocao)">Consultar</button>
-                <button class="btn sm" *ngIf="podeEditarModulo" type="button" (click)="editar(promocao)">Editar</button>
-                <button class="btn sm danger" *ngIf="podeEditarModulo" type="button" (click)="excluir(promocao)">Excluir</button>
+              <td class="actions-col" (click)="$event.stopPropagation()">
+                <app-row-actions-menu [actions]="rowActions()" ariaLabel="Ações da promoção" (action)="executarAcao($event, promocao)" />
               </td>
             </tr>
           </tbody>

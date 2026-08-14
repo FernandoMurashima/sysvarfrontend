@@ -1,6 +1,7 @@
 @import '../cores/cores.component.css';
 .span-7 { grid-column: span 7; }
+.span-6 { grid-column: span 6; }
 .sub-panel { padding: 12px 14px; }
 .sub-actions { display: flex; gap: 8px; justify-content: flex-end; margin: 10px 0; }
 .actions-col { width: 96px; text-align: center; }
-@media (max-width: 900px) { .span-7 { grid-column: 1 / -1; } }
+@media (max-width: 900px) { .span-7, .span-6 { grid-column: 1 / -1; } }

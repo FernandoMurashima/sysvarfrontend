@@ -174,7 +174,7 @@
             </td>
             
             <td class="actions-col" (click)="$event.stopPropagation()">
-              <app-row-actions-menu [actions]="rowActions()" (action)="executarAcao($event, c)" />
+              <app-row-actions-menu [actions]="rowActions()" ariaLabel="Ações da coleção" (action)="executarAcao($event, c)" />
             </td>
           </tr>
         </tbody>

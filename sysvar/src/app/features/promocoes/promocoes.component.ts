@@ -17,11 +17,12 @@ import { PromocoesService } from '../../core/services/promocoes.service';
 import { SubgruposService } from '../../core/services/subgrupos.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
+import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-promocoes',
   standalone: true,
-  imports: [CommonModule, FormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, SearchSuggestComponent, RowActionsMenuComponent],
   templateUrl: './promocoes.component.html',
   styleUrls: ['./promocoes.component.css']
 })
@@ -260,6 +261,20 @@ export class PromocoesComponent implements OnInit {
     if (this.consultando) return;
     if (!id) return;
     this.form.produtos = (this.form.produtos ?? []).filter(item => item !== id);
+  }
+
+  rowActions(): RowAction[] {
+    return [
+      { key: 'consultar', label: 'Consultar', icon: '⌕' },
+      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
+      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeEditarModulo, danger: true, dividerBefore: true },
+    ];
+  }
+
+  executarAcao(action: string, promocao: Promocao): void {
+    if (action === 'consultar') this.consultar(promocao);
+    if (action === 'editar') this.editar(promocao);
+    if (action === 'excluir') this.excluir(promocao);
   }
 
   escopoLabel(value: string): string {

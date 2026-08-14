@@ -97,6 +97,10 @@ export class GradesComponent implements OnInit {
     return { total, ativas, inativas: total - ativas, tamanhos: this.allTamanhos.length };
   }
 
+  get selectedGradeDetalhe(): GradeModel | null {
+    return this.grades.find(g => g.Idgrade === this.selectedGradeId) ?? this.selectedGrade;
+  }
+
   formModeGrade: 'new' | 'edit' | null = null;
   editingGradeId: number | null = null;
   consultandoGrade = false;

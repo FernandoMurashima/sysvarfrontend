@@ -54,6 +54,7 @@ export class GruposComponent implements OnInit {
   private readonly viewPrefsKey = 'sysvar.ui.preferences.grupos';
   columns = [
     { key: 'codigo', label: 'Codigo', visible: true, required: true },
+    { key: 'codigoRef', label: 'Codigo Ref.', visible: true, required: false },
     { key: 'descricao', label: 'Descricao', visible: true, required: true },
     { key: 'margem', label: 'Margem', visible: true, required: false },
     { key: 'subgrupos', label: 'Subgrupos', visible: true, required: false },
@@ -70,6 +71,7 @@ export class GruposComponent implements OnInit {
     const valores = [
       ...this.grupos.flatMap(item => [
         item.Codigo,
+        item.CodigoRef,
         item.Descricao,
         String(item.Margem ?? '')
       ]),
@@ -119,6 +121,7 @@ export class GruposComponent implements OnInit {
   // Form Grupo
   formGrupo = this.fb.group({
     Codigo: ['', [Validators.required, Validators.maxLength(12)]],
+    CodigoRef: ['', [Validators.required, Validators.pattern(/^\d{2}$/)]],
     Descricao: ['', [Validators.required, Validators.maxLength(100)]],
     Margem: [0, [Validators.required, Validators.min(0)]],
   });
@@ -203,7 +206,7 @@ export class GruposComponent implements OnInit {
     this.formModeGrupo = 'new';      // <- abre o form
     this.submitted = false;
     this.formGrupo.enable({ emitEvent: false });
-    this.formGrupo.reset({ Codigo: '', Descricao: '', Margem: 0 });
+    this.formGrupo.reset({ Codigo: '', CodigoRef: '', Descricao: '', Margem: 0 });
     this.successMsg = '';
     this.errorMsg = '';
   }
@@ -216,6 +219,7 @@ export class GruposComponent implements OnInit {
     this.formGrupo.enable({ emitEvent: false });
     this.formGrupo.reset({
       Codigo: g.Codigo ?? '',
+      CodigoRef: g.CodigoRef ?? '',
       Descricao: g.Descricao ?? '',
       Margem: g.Margem ?? 0,
     });
@@ -242,6 +246,7 @@ export class GruposComponent implements OnInit {
     const raw = this.formGrupo.getRawValue();
     const payload: Omit<GrupoModel, 'Idgrupo' | 'data_cadastro'> = {
       Codigo: String(raw.Codigo ?? '').trim(),
+      CodigoRef: String(raw.CodigoRef ?? '').trim(),
       Descricao: String(raw.Descricao ?? '').trim(),
       Margem: Number(raw.Margem ?? 0),
     };
@@ -260,8 +265,8 @@ export class GruposComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         console.error(err);
-        const detail = (err?.error?.detail || err?.error?.error || err?.error) ?? '';
-        this.errorMsg = (typeof detail === 'string' && detail) ? detail : 'Falha ao salvar o grupo.';
+        this.errorMsg = this.extractApiError(err) || 'Falha ao salvar o grupo.';
+        this.saving = false;
       },
       complete: () => this.saving = false
     });
@@ -312,7 +317,7 @@ export class GruposComponent implements OnInit {
     this.formModeGrupo = null;       // <- esconde o form
     this.submitted = false;
     this.formGrupo.enable({ emitEvent: false });
-    this.formGrupo.reset({ Codigo: '', Descricao: '', Margem: 0 });
+    this.formGrupo.reset({ Codigo: '', CodigoRef: '', Descricao: '', Margem: 0 });
   }
 
   fieldInvalidGrupo(name: string) {
@@ -323,6 +328,7 @@ export class GruposComponent implements OnInit {
   getGrupoErrors(): string[] {
     const msgs: string[] = [];
     if (this.fieldInvalidGrupo('Codigo')) msgs.push('Informe o Código (máx. 12).');
+    if (this.fieldInvalidGrupo('CodigoRef')) msgs.push('Código de Referência deve ter exatamente 2 dígitos numéricos.');
     if (this.fieldInvalidGrupo('Descricao')) msgs.push('Informe a Descrição (máx. 100).');
     if (this.fieldInvalidGrupo('Margem')) msgs.push('Informe a Margem (>= 0).');
     return msgs;
@@ -507,9 +513,10 @@ export class GruposComponent implements OnInit {
   }
 
   exportarCsv(): void {
-    const headers = ['Codigo', 'Descricao', 'Margem'];
+    const headers = ['Codigo', 'CodigoRef', 'Descricao', 'Margem'];
     const rows = this.grupos.map(g => [
       g.Codigo ?? '',
+      g.CodigoRef ?? '',
       g.Descricao ?? '',
       String(g.Margem ?? 0).replace('.', ',')
     ]);
@@ -529,6 +536,29 @@ export class GruposComponent implements OnInit {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
+  }
+
+  private extractApiError(err: HttpErrorResponse): string {
+    const body = err?.error;
+    if (!body) return '';
+    if (typeof body === 'string') return body;
+    const fieldLabels: Record<string, string> = {
+      Codigo: 'Código',
+      CodigoRef: 'Código de Referência',
+      Descricao: 'Descrição',
+      Margem: 'Margem',
+    };
+    for (const key of Object.keys(fieldLabels)) {
+      const value = body[key];
+      if (Array.isArray(value) && value.length) return String(value[0]);
+      if (typeof value === 'string' && value) return value;
+    }
+    if (typeof body.detail === 'string') return body.detail;
+    if (typeof body.error === 'string') return body.error;
+    const first = Object.values(body)[0];
+    if (Array.isArray(first) && first.length) return String(first[0]);
+    if (typeof first === 'string') return first;
+    return '';
   }
 
   private loadColumnsPreference(): void {
