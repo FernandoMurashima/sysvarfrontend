@@ -3,7 +3,6 @@
 .span-8 { grid-column: span 8; }
 .sub-panel { padding: 12px 14px; }
 .sub-actions { display: flex; gap: 8px; justify-content: flex-end; margin: 10px 0; }
-.actions-col { width: 96px; text-align: center; }
 .detail-modal { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .tamanho-action-bar { margin: 12px 0; }
 @media (max-width: 900px) { .span-6, .span-8 { grid-column: 1 / -1; } }

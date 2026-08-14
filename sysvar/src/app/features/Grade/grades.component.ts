@@ -11,12 +11,11 @@ import { TamanhoModel } from '../../core/models/tamanho';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent],
   templateUrl: './grades.component.html',
   styleUrls: ['./grades.component.css'],
 })
@@ -438,22 +437,6 @@ export class GradesComponent implements OnInit {
     if (!col || col.required) return;
     col.visible = visible;
     this.saveColumnsPreference();
-  }
-
-  rowActionsGrade(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'tamanhos', label: 'Tamanhos', icon: '▦' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcaoGrade(action: string, g: GradeModel): void {
-    if (action === 'consultar') this.consultarGrade(g);
-    if (action === 'tamanhos' && g.Idgrade) this.selecionarGrade(g.Idgrade);
-    if (action === 'editar') this.editarGrade(g);
-    if (action === 'excluir') this.excluirGrade(g);
   }
 
   tamanhoCount(grade: GradeModel): number {
