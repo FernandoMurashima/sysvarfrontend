@@ -62,9 +62,14 @@ export class ShellComponent {
     {
       label: 'Produtos', icon: 'bi bi-box-seam', roles: this.produtosRoles, moduloEmpresa: 'produtos',
       children: [
-        { label: 'Produto Venda'       ,   link: '/produtos',      icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
-        { label: 'Produtos Uso/consumo',   link: '/produtos-uso',  icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
-        { label: 'Insumos',                link: '/insumos',       icon: 'bi bi-box2',          roles: this.produtosRoles, moduloEmpresa: 'produtos' },
+        {
+          label: 'Cadastro de Produtos', icon: 'bi bi-boxes', roles: this.produtosRoles, moduloEmpresa: 'produtos',
+          children: [
+            { label: 'Produto Venda'       ,   link: '/produtos',      icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
+            { label: 'Produto Uso/Consumo',    link: '/produtos-uso',  icon: 'bi bi-box',           roles: this.produtosRoles, moduloEmpresa: 'produtos' },
+            { label: 'Insumos',                link: '/insumos',       icon: 'bi bi-box2',          roles: this.produtosRoles, moduloEmpresa: 'produtos' },
+          ]
+        },
         { label: 'Grupos',                 link: '/grupos',        icon: 'bi bi-diagram-2',     roles: this.produtosRoles, moduloEmpresa: 'produtos' },        
         { label: 'Cores',                  link: '/cores',         icon: 'bi bi-palette',       roles: this.produtosRoles, moduloEmpresa: 'produtos' },
         { label: 'Grades',                 link: '/grades',        icon: 'bi bi-grid',          roles: this.produtosRoles, moduloEmpresa: 'produtos' },
