@@ -80,6 +80,12 @@
 
   <div *ngIf="successMsg()" class="alert success">{{ successMsg() }}</div>
 
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selectedColecao" (click)="consultarSelecionada()">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selectedColecao || !podeEditarModulo" (click)="editarSelecionada()">✎ Editar</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selectedColecao || !podeExcluirModulo" (click)="excluirSelecionada()">⌫ Excluir</button>
+  </section>
+
   <div class="overlay" *ngIf="excluirModal as colecao">
     <div class="overlay-card">
       <h4>Excluir coleção</h4>
@@ -154,16 +160,18 @@
       <table class="table" *ngIf="paged().length > 0; else emptyTpl">
         <thead>
           <tr>
+            <th class="select-col"></th>
             <th *ngIf="visibleColumn('descricao')">Descrição</th>
             <th *ngIf="visibleColumn('codigo')">Código</th>
             <th *ngIf="visibleColumn('estacao')">Estação</th>
             <th *ngIf="visibleColumn('status')">Status</th>
-            
-            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let c of paged()" (click)="consultar(c)">
+          <tr *ngFor="let c of paged()" [class.selected]="isSelectedColecao(c)" (click)="selecionarColecaoLinha(c)">
+            <td class="select-col">
+              <input type="checkbox" [checked]="isSelectedColecao(c)" (click)="$event.stopPropagation(); selecionarColecaoLinha(c)" />
+            </td>
             <td *ngIf="visibleColumn('descricao')">{{ c.Descricao }}</td>
             <td *ngIf="visibleColumn('codigo')">{{ c.Codigo }}</td>
             <td *ngIf="visibleColumn('estacao')">{{ estLabel(c.Estacao) }}</td>
@@ -171,10 +179,6 @@
               <span class="badge" [ngClass]="isAtiva(c.Status) ? 'badge-ok' : 'badge-off'">
                 {{ statusLabel(c.Status) }}
               </span>
-            </td>
-            
-            <td class="actions-col" (click)="$event.stopPropagation()">
-              <app-row-actions-menu [actions]="rowActions()" ariaLabel="Ações da coleção" (action)="executarAcao($event, c)" />
             </td>
           </tr>
         </tbody>

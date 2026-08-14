@@ -190,6 +190,13 @@ label.invalid select {
   margin-top: 12px;
 }
 
+.action-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+}
+
 .list-title-row {
   display: flex;
   justify-content: space-between;
@@ -250,10 +257,18 @@ label.invalid select {
   background: #f8fafc;
 }
 
-.actions-col {
-  width: 96px;
-  min-width: 96px;
+.table tbody tr.selected {
+  background: #e0f2fe;
+}
+
+.select-col {
+  width: 44px;
   text-align: center !important;
+}
+
+.select-col input {
+  width: 16px;
+  height: 16px;
 }
 
 .badge {
@@ -319,6 +334,12 @@ label.invalid select {
   background: #ef4444;
   border-color: #dc2626;
   color: #fff;
+}
+
+.btn.danger-soft {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #b91c1c;
 }
 
 .btn:disabled {

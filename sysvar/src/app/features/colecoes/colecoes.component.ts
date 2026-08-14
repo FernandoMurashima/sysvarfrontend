@@ -8,12 +8,11 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 
 @Component({
   selector: 'app-colecoes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent],
   templateUrl: './colecoes.component.html',
   styleUrls: ['./colecoes.component.css'],
 })
@@ -42,6 +41,7 @@ export class ColecoesComponent {
   submitted = false;
   saving = false;
   excluirModal: Colecao | null = null;
+  selectedColecao: Colecao | null = null;
 
   // lista/paginação client-side
   colecoes = signal<Colecao[]>([]);
@@ -126,6 +126,9 @@ export class ColecoesComponent {
         const rows = Array.isArray(resp) ? resp : (resp?.results ?? []);
         this.colecoes.set(rows);
         this.totalRecords.set(Array.isArray(resp) ? rows.length : (resp?.count ?? rows.length));
+        if (this.selectedColecao && !rows.some((item: Colecao) => item.Idcolecao === this.selectedColecao?.Idcolecao)) {
+          this.selectedColecao = null;
+        }
       },
       error: () => {
         this.successMsg.set(null);
@@ -144,6 +147,18 @@ export class ColecoesComponent {
   prevPage() { this.page.update(p => Math.max(1, p - 1)); this.load(); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); this.load(); }
   lastPage() { this.page.set(this.totalPages()); this.load(); }
+
+  selecionarColecaoLinha(row: Colecao): void {
+    this.selectedColecao = this.isSelectedColecao(row) ? null : row;
+  }
+
+  isSelectedColecao(row: Colecao): boolean {
+    return !!this.selectedColecao && this.selectedColecao.Idcolecao === row.Idcolecao;
+  }
+
+  consultarSelecionada(): void { if (this.selectedColecao) this.consultar(this.selectedColecao); }
+  editarSelecionada(): void { if (this.selectedColecao && this.podeEditarModulo) this.editar(this.selectedColecao); }
+  excluirSelecionada(): void { if (this.selectedColecao && this.podeExcluirModulo) this.excluir(this.selectedColecao); }
 
   // ---------- form ----------
   novo() {
@@ -227,6 +242,7 @@ export class ColecoesComponent {
     if (!row?.Idcolecao) return;
     this.api.delete(row.Idcolecao).subscribe(() => {
       this.excluirModal = null;
+      this.selectedColecao = null;
       this.successMsg.set('Coleção excluída.');
       this.load();
     });
@@ -268,21 +284,6 @@ export class ColecoesComponent {
     if (!col || col.required) return;
     col.visible = visible;
     this.saveColumnsPreference();
-  }
-
-  rowActions(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcao(action: string | Event, item: Colecao): void {
-    if (typeof action !== 'string') return;
-    if (action === 'consultar') this.consultar(item);
-    if (action === 'editar') this.editar(item);
-    if (action === 'excluir') this.excluir(item);
   }
 
   exportarCsv(): void {
