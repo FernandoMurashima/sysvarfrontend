@@ -57,6 +57,7 @@ export class GradesComponent implements OnInit {
     { key: 'tamanhos', label: 'Tamanhos', visible: true, required: false },
   ];
   selectedGradeId: number | null = null;
+  selectedTamanho: TamanhoModel | null = null;
   page = 1;
   pageSize = 20;
   pageSizeOptions = [10, 20, 50];
@@ -300,11 +301,13 @@ export class GradesComponent implements OnInit {
 
   selecionarGrade(id: number) {
     this.selectedGradeId = id;
+    this.selectedTamanho = null;
     this.carregarTamanhos(id);
     this.novoTamanho();
   }
   fecharTamanhos() {
     this.selectedGradeId = null;
+    this.selectedTamanho = null;
     this.tamanhos = [];
     this.novoTamanho();
   }
@@ -314,6 +317,9 @@ export class GradesComponent implements OnInit {
         const payload: any = data as any;
         const rows = Array.isArray(payload) ? payload : (payload?.results ?? []);
         this.tamanhos = Array.isArray(rows) ? rows : [];
+        if (this.selectedTamanho && !this.tamanhos.some(t => t.Idtamanho === this.selectedTamanho?.Idtamanho)) {
+          this.selectedTamanho = null;
+        }
       },
       error: () => this.errorMsg = 'Falha ao carregar tamanhos.'
     });
@@ -344,6 +350,18 @@ export class GradesComponent implements OnInit {
       Status: t.Status ?? ''
     });
   }
+
+  selecionarTamanhoLinha(t: TamanhoModel): void {
+    this.selectedTamanho = this.isSelectedTamanho(t) ? null : t;
+  }
+
+  isSelectedTamanho(t: TamanhoModel): boolean {
+    return !!this.selectedTamanho && this.selectedTamanho.Idtamanho === t.Idtamanho;
+  }
+
+  consultarTamanhoSelecionado(): void { if (this.selectedTamanho) this.consultarTamanho(this.selectedTamanho); }
+  editarTamanhoSelecionado(): void { if (this.selectedTamanho && this.podeEditarModulo) this.editarTamanho(this.selectedTamanho); }
+  excluirTamanhoSelecionado(): void { if (this.selectedTamanho && this.podeExcluirModulo) this.excluirTamanho(this.selectedTamanho); }
 
   consultarTamanho(t: TamanhoModel) {
     this.editarTamanho(t);
@@ -389,6 +407,7 @@ export class GradesComponent implements OnInit {
       next: () => {
         this.excluirModal = null;
         this.successMsg = 'Tamanho excluído.';
+        this.selectedTamanho = null;
         if (this.selectedGradeId) this.carregarTamanhos(this.selectedGradeId);
         this.carregarTodosTamanhos();
       },
@@ -435,20 +454,6 @@ export class GradesComponent implements OnInit {
     if (action === 'tamanhos' && g.Idgrade) this.selecionarGrade(g.Idgrade);
     if (action === 'editar') this.editarGrade(g);
     if (action === 'excluir') this.excluirGrade(g);
-  }
-
-  rowActionsTamanho(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcaoTamanho(action: string, t: TamanhoModel): void {
-    if (action === 'consultar') this.consultarTamanho(t);
-    if (action === 'editar') this.editarTamanho(t);
-    if (action === 'excluir') this.excluirTamanho(t);
   }
 
   tamanhoCount(grade: GradeModel): number {
