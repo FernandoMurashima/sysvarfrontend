@@ -35,7 +35,6 @@ export class ColecoesComponent {
     { key: 'codigo', label: 'Código', visible: true, required: false },
     { key: 'estacao', label: 'Estação', visible: true, required: false },
     { key: 'status', label: 'Status', visible: true, required: false },
-    { key: 'contador', label: 'Contador', visible: true, required: false },
   ];
   loading = signal(false);
   successMsg = signal<string | null>(null);
@@ -105,7 +104,6 @@ export class ColecoesComponent {
     Codigo: [null, [Validators.required, Validators.pattern(/^\d{2}$/)]],
     Estacao: [null, [Validators.required]],
     Status: [null, [Validators.required]],
-    Contador: [0],
   });
 
   // selects
@@ -170,7 +168,7 @@ export class ColecoesComponent {
     this.consultando = false;
     this.submitted = false;
     this.form.enable({ emitEvent: false });
-    this.form.reset({ Descricao: '', Codigo: null, Estacao: null, Status: 'CR', Contador: 0 });
+    this.form.reset({ Descricao: '', Codigo: null, Estacao: null, Status: 'CR' });
   }
 
   editar(row: Colecao) {
@@ -184,7 +182,6 @@ export class ColecoesComponent {
       Codigo: row.Codigo ?? null,
       Estacao: row.Estacao ?? null,
       Status: row.Status ?? null,
-      Contador: row.Contador ?? 0,
     });
   }
 
@@ -206,7 +203,8 @@ export class ColecoesComponent {
     this.submitted = true;
     if (this.form.invalid) { this.openErrorOverlay(); return; }
 
-    const body: Partial<Colecao> = this.form.value;
+    const body: Partial<Colecao> = { ...this.form.value };
+    delete (body as any).Contador;
     this.saving = true;
 
     const req = this.editingId
@@ -304,13 +302,12 @@ export class ColecoesComponent {
   }
 
   exportarCsv(): void {
-    const headers = ['Descrição', 'Código', 'Estação', 'Status', 'Contador'];
+    const headers = ['Descrição', 'Código', 'Estação', 'Status'];
     const rows = this.colecoesFiltradas().map(item => [
       item.Descricao ?? '',
       item.Codigo ?? '',
       this.estLabel(item.Estacao),
-      this.statusLabel(item.Status),
-      String(item.Contador ?? 0)
+      this.statusLabel(item.Status)
     ]);
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -348,3 +345,4 @@ export class ColecoesComponent {
     localStorage.setItem(this.columnsStorageKey, JSON.stringify(state));
   }
 }
+

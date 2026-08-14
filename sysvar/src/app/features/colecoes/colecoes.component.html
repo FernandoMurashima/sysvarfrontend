@@ -121,11 +121,6 @@
             <option *ngFor="let s of statusOpts" [ngValue]="s.value">{{ s.label }}</option>
           </select>
         </label>
-
-        <label>
-          Contador
-          <input type="number" formControlName="Contador" />
-        </label>
       </div>
 
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length">
@@ -163,7 +158,7 @@
             <th *ngIf="visibleColumn('codigo')">Código</th>
             <th *ngIf="visibleColumn('estacao')">Estação</th>
             <th *ngIf="visibleColumn('status')">Status</th>
-            <th *ngIf="visibleColumn('contador')">Contador</th>
+            
             <th class="actions-col">Ações</th>
           </tr>
         </thead>
@@ -177,7 +172,7 @@
                 {{ statusLabel(c.Status) }}
               </span>
             </td>
-            <td *ngIf="visibleColumn('contador')">{{ c.Contador || 0 }}</td>
+            
             <td class="actions-col" (click)="$event.stopPropagation()">
               <app-row-actions-menu [actions]="rowActions()" (action)="executarAcao($event, c)" />
             </td>
@@ -206,3 +201,4 @@
     </div>
   </section>
 </div>
+
