@@ -98,6 +98,10 @@ export class GruposComponent implements OnInit {
     };
   }
 
+  get selectedGrupoDetalhe(): GrupoModel | null {
+    return this.grupos.find(g => g.Idgrupo === this.selectedGrupoId) ?? this.selectedGrupo;
+  }
+
   percentual(valor: number): string {
     const total = this.grupos.length || 0;
     if (!total) return '0% do total';
