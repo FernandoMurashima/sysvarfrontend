@@ -10,13 +10,12 @@ import { SubgrupoModel } from '../../core/models/subgrupo';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 @Component({
   selector: 'app-grupos',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent, PageHeaderComponent, SummaryCardComponent],
   templateUrl: './grupos.component.html',
   styleUrls: ['./grupos.component.css']
 })
@@ -48,6 +47,7 @@ export class GruposComponent implements OnInit {
   columnsOpen = false;
   exportOpen = false;
   selectedGrupo: GrupoModel | null = null;
+  selectedSubgrupo: SubgrupoModel | null = null;
   indicatorsVisible = true;
   filtersVisible = true;
   private readonly columnsStorageKey = 'sysvar.list.grupos.columns';
@@ -353,12 +353,14 @@ export class GruposComponent implements OnInit {
 
   selecionarGrupo(id: number) {
     this.selectedGrupoId = id;
+    this.selectedSubgrupo = null;
     this.carregarSubgrupos(id);
     this.novoSubgrupo();
   }
 
   fecharSubgrupos() {
     this.selectedGrupoId = null;
+    this.selectedSubgrupo = null;
     this.subgrupos = [];
     this.novoSubgrupo();
   }
@@ -367,6 +369,9 @@ export class GruposComponent implements OnInit {
     this.subgruposApi.list({ Idgrupo, ordering: 'Descricao' }).subscribe({
       next: (data) => {
         this.subgrupos = Array.isArray(data) ? data : (data as any).results ?? [];
+        if (this.selectedSubgrupo && !this.subgrupos.some(s => s.Idsubgrupo === this.selectedSubgrupo?.Idsubgrupo)) {
+          this.selectedSubgrupo = null;
+        }
       },
       error: (err) => {
         console.error(err);
@@ -398,6 +403,18 @@ export class GruposComponent implements OnInit {
       Margem: s.Margem ?? 0,
     });
   }
+
+  selecionarSubgrupoLinha(s: SubgrupoModel): void {
+    this.selectedSubgrupo = this.isSelectedSubgrupo(s) ? null : s;
+  }
+
+  isSelectedSubgrupo(s: SubgrupoModel): boolean {
+    return !!this.selectedSubgrupo && this.selectedSubgrupo.Idsubgrupo === s.Idsubgrupo;
+  }
+
+  consultarSubgrupoSelecionado(): void { if (this.selectedSubgrupo) this.consultarSubgrupo(this.selectedSubgrupo); }
+  editarSubgrupoSelecionado(): void { if (this.selectedSubgrupo && this.podeEditarModulo) this.editarSubgrupo(this.selectedSubgrupo); }
+  excluirSubgrupoSelecionado(): void { if (this.selectedSubgrupo && this.podeExcluirModulo) this.excluirSubgrupo(this.selectedSubgrupo); }
 
   consultarSubgrupo(s: SubgrupoModel) {
     this.editarSubgrupo(s);
@@ -445,6 +462,7 @@ export class GruposComponent implements OnInit {
       next: () => {
         this.excluirModal = null;
         this.successMsg = 'Subgrupo excluído.';
+        this.selectedSubgrupo = null;
         if (this.selectedGrupoId) this.carregarSubgrupos(this.selectedGrupoId);
         this.carregarTodosSubgrupos();
       },
@@ -479,36 +497,6 @@ export class GruposComponent implements OnInit {
     if (!col || col.required) return;
     col.visible = visible;
     this.saveColumnsPreference();
-  }
-
-  rowActionsGrupo(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'subgrupos', label: 'Subgrupos', icon: '▦' },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcaoGrupo(action: string, g: GrupoModel): void {
-    if (action === 'consultar') this.consultarGrupo(g);
-    if (action === 'editar') this.editarGrupo(g);
-    if (action === 'subgrupos' && g.Idgrupo) this.selecionarGrupo(g.Idgrupo);
-    if (action === 'excluir') this.excluirGrupo(g);
-  }
-
-  rowActionsSubgrupo(): RowAction[] {
-    return [
-      { key: 'consultar', label: 'Consultar', icon: '⌕' },
-      { key: 'editar', label: 'Editar', icon: '✎', visible: this.podeEditarModulo },
-      { key: 'excluir', label: 'Excluir', icon: '⌫', visible: this.podeExcluirModulo, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarAcaoSubgrupo(action: string, s: SubgrupoModel): void {
-    if (action === 'consultar') this.consultarSubgrupo(s);
-    if (action === 'editar') this.editarSubgrupo(s);
-    if (action === 'excluir') this.excluirSubgrupo(s);
   }
 
   subgrupoCount(grupo: GrupoModel): number {
