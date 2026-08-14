@@ -29,6 +29,8 @@ export class TabelaprecoComponent {
   submitted = false;
   saving = false;
   excluirModal: TabelaPreco | null = null;
+  consultaModal: TabelaPreco | null = null;
+  selectedTabela: TabelaPreco | null = null;
 
   items = signal<TabelaPreco[]>([]);
   page = signal(1);
@@ -87,7 +89,13 @@ export class TabelaprecoComponent {
   load() {
     this.loading.set(true);
     this.api.list(this.search).subscribe({
-      next: rows => { this.items.set(rows); this.page.set(1); },
+      next: rows => {
+        this.items.set(rows);
+        this.page.set(1);
+        if (this.selectedTabela && !rows.some(item => item.Idtabela === this.selectedTabela?.Idtabela)) {
+          this.selectedTabela = null;
+        }
+      },
       error: () => { this.successMsg.set(null); this.items.set([]); this.openErrorOverlay(); this.loading.set(false); },
       complete: () => this.loading.set(false),
     });
@@ -100,6 +108,31 @@ export class TabelaprecoComponent {
   prevPage() { this.page.update(p => Math.max(1, p - 1)); }
   nextPage() { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
   lastPage() { this.page.set(this.totalPages()); }
+
+  selecionarTabelaLinha(row: TabelaPreco): void {
+    this.selectedTabela = this.isSelectedTabela(row) ? null : row;
+  }
+
+  isSelectedTabela(row: TabelaPreco): boolean {
+    return !!this.selectedTabela && this.selectedTabela.Idtabela === row.Idtabela;
+  }
+
+  consultarSelecionada(): void {
+    if (!this.selectedTabela) return;
+    const id = this.selectedTabela.Idtabela;
+    if (!id) return;
+    this.api.list().subscribe({
+      next: rows => {
+        this.consultaModal = rows.find(item => item.Idtabela === id) ?? this.selectedTabela;
+      },
+      error: () => {
+        this.consultaModal = this.selectedTabela;
+      },
+    });
+  }
+
+  editarSelecionada(): void { if (this.selectedTabela && this.podeEditarModulo) this.editar(this.selectedTabela); }
+  excluirSelecionada(): void { if (this.selectedTabela && this.podeEditarModulo) this.excluir(this.selectedTabela); }
 
   novo() {
     this.showForm = true; this.editingId = null; this.submitted = false;
@@ -121,9 +154,8 @@ export class TabelaprecoComponent {
   }
 
   consultar(row: TabelaPreco) {
-    this.editar(row);
-    this.consultando = true;
-    this.form.disable({ emitEvent: false });
+    this.selectedTabela = row;
+    this.consultarSelecionada();
   }
 
   cancelarEdicao() { this.showForm = false; this.editingId = null; this.consultando = false; this.form.enable({ emitEvent: false }); this.form.reset(); }
@@ -158,6 +190,7 @@ export class TabelaprecoComponent {
     if (!row?.Idtabela) return;
     this.api.delete(row.Idtabela).subscribe(() => {
       this.excluirModal = null;
+      this.selectedTabela = null;
       this.successMsg.set('Tabela excluída.');
       this.load();
     });
@@ -165,6 +198,10 @@ export class TabelaprecoComponent {
 
   fecharExclusao(): void {
     this.excluirModal = null;
+  }
+
+  fecharConsulta(): void {
+    this.consultaModal = null;
   }
 
   getFormErrors(): string[] {
