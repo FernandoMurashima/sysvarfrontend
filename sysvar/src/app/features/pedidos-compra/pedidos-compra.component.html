@@ -240,23 +240,36 @@
 
     <hr class="divider" />
 
-    <!-- ITENS -->
     <div class="section-header item-section-head">
-      <h3>Resumo dos Itens</h3>
-      <button class="btn primary" type="button" (click)="abrirItensPedido()">Itens</button>
+      <h3>Resumos</h3>
     </div>
 
     <div class="indicator-bar compact-summary">
-      <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ itens.length }}</strong><small>Linhas</small></div></div>
+      <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ itens.length }}</strong><small>Linhas de itens</small></div></div>
       <div class="indicator"><span class="indicator-icon green">Qtd</span><div><strong>{{ quantidadeTotalItens | number : '1.0-3' }}</strong><small>Quantidade</small></div></div>
-      <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ totalItensResumo | number : '1.2-2' }}</strong><small>Total dos itens</small></div></div>
-      <div class="indicator"><span class="indicator-icon orange">Tipo</span><div><strong>{{ tipoPedidoLabel(pedidoAtual?.tipo) }}</strong><small>Tipo</small></div></div>
+      <div class="indicator"><span class="indicator-icon purple">Pg</span><div><strong>{{ resumoFormaPagamento }}</strong><small>Forma de pagamento</small></div></div>
+      <div class="indicator"><span class="indicator-icon orange">Rec</span><div><strong>{{ resumoRecebimento }}</strong><small>Recebimento</small></div></div>
     </div>
+
+    <div class="indicator-bar compact-summary">
+      <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ toNumber(pedidoAtual?.total_itens || totalItensResumo) | number : '1.2-2' }}</strong><small>Total bruto/itens</small></div></div>
+      <div class="indicator"><span class="indicator-icon orange">Desc</span><div><strong>{{ toNumber(pedidoAtual?.total_desconto || 0) | number : '1.2-2' }}</strong><small>Desconto geral</small></div></div>
+      <div class="indicator"><span class="indicator-icon blue">Frete</span><div><strong>{{ toNumber(pedidoAtual?.frete || 0) | number : '1.2-2' }}</strong><small>Frete</small></div></div>
+      <div class="indicator"><span class="indicator-icon green">Tot</span><div><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong><small>Total pedido</small></div></div>
+    </div>
+
+    <section class="action-bar">
+      <button class="btn" type="button" (click)="abrirItensPedido()">Itens</button>
+      <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirFormaPagamento()">Forma de Pagamento</button>
+      <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirRecebimentos()">Recebimentos</button>
+    </section>
     <!-- AÇÕES FINAIS DO PEDIDO -->
     <div class="actions-form">
       <button class="btn primary" type="button" (click)="salvarPedido()" [disabled]="saving" *ngIf="!consultando && podeEditarModulo">
         Gravar pedido
       </button>
+      <button class="btn" type="button" *ngIf="pedidoAtual && isAberto(pedidoAtual) && podeEditarModulo" (click)="aprovarPedido(pedidoAtual)">Aprovar</button>
+      <button class="btn danger" type="button" *ngIf="pedidoAtual && isAberto(pedidoAtual) && podeEditarModulo" (click)="cancelarPedido(pedidoAtual)">Cancelar Pedido</button>
       <button class="btn ghost" type="button" (click)="cancelar()">
         {{ consultando ? 'Voltar' : 'Cancelar' }}
       </button>
@@ -372,6 +385,96 @@
       </div>
     </section>
   </div>
+  <div class="modal-backdrop" *ngIf="pagamentoModalAberto">
+    <section class="modal-card product-modal payment-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Forma de Pagamento</h3>
+          <p class="modal-text">Total do Pedido: {{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</p>
+        </div>
+        <button class="btn" type="button" (click)="fecharFormaPagamento()">Fechar</button>
+      </div>
+
+      <form [formGroup]="pagamentoForm" class="itens-form">
+        <div class="grid-12 itens-grid">
+          <label class="input-item col-span-4">
+            Forma de Pagamento
+            <select formControlName="forma_pagamento_codigo" (change)="onFormaPagamentoChange()">
+              <option [ngValue]="null">Selecione</option>
+              <option *ngFor="let fp of formas" [ngValue]="fp.codigo">{{ fp.label }}</option>
+            </select>
+          </label>
+          <label class="input-item col-span-4">
+            Prazo
+            <select formControlName="prazo_pagamento">
+              <option [ngValue]="null">Selecione</option>
+              <option *ngFor="let prazo of prazos" [ngValue]="prazo.id">{{ prazo.label }}</option>
+            </select>
+          </label>
+          <div class="input-item col-span-4 readonly-box">
+            Situação
+            <strong [class.badge-ok]="parcelasConsistentes" [class.inactive]="!parcelasConsistentes">{{ parcelasConsistentes ? 'OK' : 'Pendente/Inconsistente' }}</strong>
+          </div>
+        </div>
+        <div class="actions-form" *ngIf="isAberto(pedidoAtual) && !consultando">
+          <button class="btn primary" type="button" [disabled]="savingPagamento" (click)="aplicarFormaPagamento()">Aplicar</button>
+        </div>
+      </form>
+
+      <div class="indicator-bar compact-summary">
+        <div class="indicator"><span class="indicator-icon purple">Ped</span><div><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong><small>Total do Pedido</small></div></div>
+        <div class="indicator"><span class="indicator-icon green">Parc</span><div><strong>{{ totalParcelas | number : '1.2-2' }}</strong><small>Total das Parcelas</small></div></div>
+        <div class="indicator"><span class="indicator-icon orange">Dif</span><div><strong>{{ diferencaParcelas | number : '1.2-2' }}</strong><small>Diferença</small></div></div>
+      </div>
+
+      <div class="table-wrapper itens-wrapper">
+        <table class="table" *ngIf="parcelas.length > 0; else parcelasEmptyTpl">
+          <thead><tr><th>Nº Parcela</th><th>Vencimento</th><th>Valor</th><th>Situação</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of parcelas"><td>{{ p.parcela_n }}</td><td>{{ p.vencimento }}</td><td>{{ p.valor | number : '1.2-2' }}</td><td>{{ p.status || '-' }}</td></tr>
+          </tbody>
+        </table>
+        <ng-template #parcelasEmptyTpl><div class="empty-hint">{{ loadingParcelas ? 'Carregando parcelas...' : 'Nenhuma parcela planejada.' }}</div></ng-template>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="recebimentosModalAberto">
+    <section class="modal-card product-modal recebimentos-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Recebimentos</h3>
+          <p class="modal-text">Consulta de recebimentos vinculados à Nota Fiscal de Entrada.</p>
+        </div>
+        <button class="btn" type="button" (click)="fecharRecebimentos()">Fechar</button>
+      </div>
+
+      <div class="empty-hint" *ngIf="(pedidoAtual?.status || 'AB') === 'AB'">Pedido ainda não aprovado / sem recebimentos.</div>
+
+      <div class="table-wrapper itens-wrapper">
+        <table class="table" *ngIf="recebimentos.length > 0; else recebimentosEmptyTpl">
+          <thead><tr><th>Produto</th><th>Referência</th><th>Cor</th><th>Pack</th><th>Qtd Pedida</th><th>Qtd Recebida</th><th>Saldo</th><th>Situação</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of recebimentos">
+              <td>{{ r.produto }}</td><td>{{ r.referencia || '-' }}</td><td>{{ r.cor || '-' }}</td><td>{{ r.pack || '-' }}</td>
+              <td>{{ r.qtd_pedida | number : '1.0-3' }}</td><td>{{ r.qtd_recebida | number : '1.0-3' }}</td><td>{{ r.saldo | number : '1.0-3' }}</td>
+              <td><span class="status-pill" [ngClass]="r.situacao === 'Recebido' ? 'badge-ok' : (r.situacao === 'Parcial' ? 'inactive' : '')">{{ r.situacao }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #recebimentosEmptyTpl><div class="empty-hint">{{ loadingRecebimentos ? 'Carregando recebimentos...' : 'Nenhum item de recebimento encontrado.' }}</div></ng-template>
+      </div>
+
+      <div class="section-header item-section-head"><h3>Notas Fiscais Relacionadas</h3></div>
+      <div class="table-wrapper itens-wrapper">
+        <table class="table" *ngIf="notasEntrada.length > 0; else notasEmptyTpl">
+          <thead><tr><th>Número</th><th>Série</th><th>Entrada</th><th>Status</th></tr></thead>
+          <tbody><tr *ngFor="let n of notasEntrada"><td>{{ n.numero }}</td><td>{{ n.serie || '-' }}</td><td>{{ n.dt_entrada }}</td><td>{{ n.status }}</td></tr></tbody>
+        </table>
+        <ng-template #notasEmptyTpl><div class="empty-hint">Nenhuma NF de entrada vinculada.</div></ng-template>
+      </div>
+    </section>
+  </div>
   <div class="modal-backdrop" *ngIf="consultaProdutoAberta">
     <section class="modal-card product-modal">
       <div class="modal-head">
@@ -418,5 +521,7 @@
     </section>
   </div>
 </div>
+
+
 
 

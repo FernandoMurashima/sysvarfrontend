@@ -52,6 +52,26 @@ interface PedidoCompraItemUI {
   unidade_label?: string;
 }
 
+interface PedidoCompraParcelaUI {
+  id: number;
+  parcela_n: number;
+  vencimento: string;
+  valor: number;
+  status?: string;
+}
+
+interface RecebimentoItemUI {
+  item_id: number | null;
+  produto: string;
+  referencia: string;
+  cor: string;
+  pack: string;
+  qtd_pedida: number;
+  qtd_recebida: number;
+  saldo: number;
+  situacao: 'Pendente' | 'Parcial' | 'Recebido';
+}
+
 @Component({
   selector: 'app-pedidos-compra',
   standalone: true,
@@ -143,8 +163,21 @@ export class PedidosCompraComponent implements OnInit {
   pedidoAtualId = signal<number | null>(null);
   pedidoAtual: any | null = null;
   itensModalAberto = false;
+  pagamentoModalAberto = false;
+  recebimentosModalAberto = false;
   selectedItem: PedidoCompraItemUI | null = null;
   produtoSelecionado: any | null = null;
+
+  pagamentoForm: FormGroup = this.fb.group({
+    forma_pagamento_codigo: [null],
+    prazo_pagamento: [null],
+  });
+  parcelas: PedidoCompraParcelaUI[] = [];
+  loadingParcelas = false;
+  savingPagamento = false;
+  recebimentos: RecebimentoItemUI[] = [];
+  notasEntrada: any[] = [];
+  loadingRecebimentos = false;
 
   // form de cabeçalho
   headerForm: FormGroup = this.fb.group({
@@ -248,6 +281,28 @@ export class PedidosCompraComponent implements OnInit {
   }
   get totalItensResumo(): number {
     return this.itens.reduce((acc, it) => acc + Number(it.total_item || 0), 0);
+  }
+  get totalParcelas(): number {
+    return this.parcelas.reduce((acc, p) => acc + Number(p.valor || 0), 0);
+  }
+  get diferencaParcelas(): number {
+    return Number(this.pedidoAtual?.total_pedido || 0) - this.totalParcelas;
+  }
+  get parcelasConsistentes(): boolean {
+    return Math.round(this.diferencaParcelas * 100) === 0;
+  }
+  get resumoFormaPagamento(): string {
+    if (!this.pedidoAtual?.forma_pagamento) return 'Não definida';
+    const prazo = this.pedidoAtual?.prazo_pagamento_descricao || this.prazoLabel(this.pedidoAtual?.prazo_pagamento);
+    const parcelas = this.parcelas.length ? `${this.parcelas.length} parcela(s)` : 'sem parcelas';
+    return [this.pedidoAtual.forma_pagamento, prazo, parcelas].filter(Boolean).join(' · ');
+  }
+  get resumoRecebimento(): 'Pendente' | 'Parcial' | 'Completo' {
+    if (!this.recebimentos.length) return 'Pendente';
+    const recebidos = this.recebimentos.filter(r => r.qtd_recebida > 0).length;
+    if (recebidos === 0) return 'Pendente';
+    const completos = this.recebimentos.every(r => r.qtd_pedida > 0 && r.qtd_recebida >= r.qtd_pedida);
+    return completos ? 'Completo' : 'Parcial';
   }
   get produtoConsultaSuggestions(): string[] {
     const base = [...this.produtosConsulta, ...this.produtosSugestoes];
@@ -559,6 +614,11 @@ export class PedidosCompraComponent implements OnInit {
     return this.fornecedorMap.get(id) ? `${id} - ${this.fornecedorMap.get(id)}` : String(id);
   }
 
+  prazoLabel(id: number | null | undefined): string {
+    if (!id) return '';
+    return this.prazos.find(p => p.id === Number(id))?.label || String(id);
+  }
+
   tipoPedidoLabel(tipo: unknown): string {
     const map: Record<string, string> = {
       '1': 'Revenda',
@@ -566,6 +626,10 @@ export class PedidosCompraComponent implements OnInit {
       '4': 'Insumo',
     };
     return map[String(tipo || '')] || 'Não definido';
+  }
+
+  toNumber(value: unknown): number {
+    return Number(value || 0);
   }
 
   tipoProdutoFiltro(): string {
@@ -670,6 +734,165 @@ export class PedidosCompraComponent implements OnInit {
     this.setViewList();
   }
 
+  abrirFormaPagamento(): void {
+    const pedidoId = this.pedidoAtualId();
+    if (!pedidoId) {
+      this.showError('Salve o cabeçalho antes de definir a forma de pagamento.');
+      return;
+    }
+    this.pagamentoForm.reset({
+      forma_pagamento_codigo: this.pedidoAtual?.forma_pagamento ?? null,
+      prazo_pagamento: this.pedidoAtual?.prazo_pagamento ?? null,
+    });
+    if (this.isAberto(this.pedidoAtual) && !this.consultando) {
+      this.pagamentoForm.enable({ emitEvent: false });
+    } else {
+      this.pagamentoForm.disable({ emitEvent: false });
+    }
+    this.carregarParcelas(pedidoId);
+    this.pagamentoModalAberto = true;
+  }
+
+  fecharFormaPagamento(): void {
+    this.pagamentoModalAberto = false;
+    const pedidoId = this.pedidoAtualId();
+    if (pedidoId) {
+      this.carregarParcelas(pedidoId);
+      this.recarregarPedidoAtual(pedidoId);
+    }
+  }
+
+  aplicarFormaPagamento(): void {
+    const pedidoId = this.pedidoAtualId();
+    if (!pedidoId || !this.isAberto(this.pedidoAtual) || this.consultando) return;
+    const raw = this.pagamentoForm.getRawValue();
+    if (!raw.forma_pagamento_codigo) {
+      this.showError('Selecione a forma de pagamento.');
+      return;
+    }
+    this.savingPagamento = true;
+    this.pedidosApi.setFormaPagamento(pedidoId, raw.forma_pagamento_codigo, raw.prazo_pagamento).subscribe({
+      next: pedido => {
+        this.savingPagamento = false;
+        this.pedidoAtual = pedido;
+        this.carregarParcelas(pedidoId);
+        this.showSuccess('Forma de pagamento atualizada.');
+      },
+      error: (err) => {
+        this.savingPagamento = false;
+        this.showError(err?.error?.detail || 'Erro ao aplicar forma de pagamento.');
+      },
+    });
+  }
+
+  private carregarParcelas(pedidoId: number): void {
+    this.loadingParcelas = true;
+    this.pedidosApi.listParcelas(pedidoId).subscribe({
+      next: (resp: any) => {
+        this.parcelas = this.arrayOrResults<any>(resp).map(p => ({
+          id: Number(p.id || 0),
+          parcela_n: Number(p.parcela_n || 0),
+          vencimento: p.vencimento,
+          valor: Number(p.valor || 0),
+          status: p.status,
+        }));
+        this.loadingParcelas = false;
+      },
+      error: () => {
+        this.parcelas = [];
+        this.loadingParcelas = false;
+      },
+    });
+  }
+
+  abrirRecebimentos(): void {
+    const pedidoId = this.pedidoAtualId();
+    if (!pedidoId) {
+      this.showError('Salve o pedido antes de consultar recebimentos.');
+      return;
+    }
+    this.recebimentosModalAberto = true;
+    this.carregarRecebimentos(pedidoId);
+  }
+
+  fecharRecebimentos(): void {
+    this.recebimentosModalAberto = false;
+  }
+
+  private carregarRecebimentos(pedidoId: number): void {
+    this.loadingRecebimentos = true;
+    const entregasUrl = `${environment.apiBaseUrl}/compras/entregas/`;
+    const notasUrl = `${environment.apiBaseUrl}/fiscal/notas-entrada/`;
+    const itensNotasUrl = `${environment.apiBaseUrl}/fiscal/notas-entrada-itens/`;
+    const params = new HttpParams().set('pedido', String(pedidoId)).set('page_size', '1000');
+
+    let entregas: any[] = [];
+    let itensNotas: any[] = [];
+
+    this.http.get<any>(entregasUrl, { params }).subscribe({
+      next: resp => {
+        entregas = this.arrayOrResults<any>(resp);
+        this.http.get<any>(itensNotasUrl, { params }).subscribe({
+          next: itensResp => {
+            itensNotas = this.arrayOrResults<any>(itensResp);
+            this.montarRecebimentos(entregas, itensNotas);
+            this.loadingRecebimentos = false;
+          },
+          error: () => {
+            this.montarRecebimentos(entregas, []);
+            this.loadingRecebimentos = false;
+          },
+        });
+      },
+      error: () => {
+        this.montarRecebimentos([], []);
+        this.loadingRecebimentos = false;
+      },
+    });
+
+    this.http.get<any>(notasUrl, { params }).subscribe({
+      next: resp => {
+        this.notasEntrada = this.arrayOrResults<any>(resp);
+      },
+      error: () => {
+        this.notasEntrada = [];
+      },
+    });
+  }
+
+  private montarRecebimentos(entregas: any[], itensNotas: any[]): void {
+    const recebidosPorItem = new Map<number, number>();
+    itensNotas.forEach(item => {
+      const itemId = Number(item.pedido_item || 0);
+      const nota = this.notasEntrada.find(n => Number(n.id) === Number(item.nota));
+      if (nota?.status === 'CA') return;
+      recebidosPorItem.set(itemId, (recebidosPorItem.get(itemId) || 0) + Number(item.qtd_recebida || 0));
+    });
+
+    this.recebimentos = this.itens.map(item => {
+      const entrega = entregas.find(e => Number(e.item) === Number(item.id));
+      const qtdPedida = Number(entrega?.qtd_prevista ?? item.quantidade ?? 0);
+      const qtdRecebida = Number(entrega?.qtd_recebida ?? recebidosPorItem.get(Number(item.id)) ?? 0);
+      const saldo = Math.max(qtdPedida - qtdRecebida, 0);
+      const situacao: RecebimentoItemUI['situacao'] = qtdRecebida <= 0
+        ? 'Pendente'
+        : qtdRecebida >= qtdPedida
+          ? 'Recebido'
+          : 'Parcial';
+      return {
+        item_id: item.id,
+        produto: item.produto_label || item.produto_referencia || '',
+        referencia: item.produto_referencia || '',
+        cor: item.cor_nome || '',
+        pack: item.pack_nome || '',
+        qtd_pedida: qtdPedida,
+        qtd_recebida: qtdRecebida,
+        saldo,
+        situacao,
+      };
+    });
+  }
+
   abrirItensPedido(): void {
     this.submitted = true;
     if (this.headerForm.invalid) {
@@ -769,10 +992,10 @@ export class PedidosCompraComponent implements OnInit {
   }
 
   onFormaPagamentoChange(): void {
-    const codigo = this.headerForm.get('forma_pagamento_codigo')?.value;
+    const codigo = this.pagamentoForm.get('forma_pagamento_codigo')?.value || this.headerForm.get('forma_pagamento_codigo')?.value;
     const forma = this.formas.find(f => f.codigo === codigo);
     if (forma?.prazo) {
-      this.headerForm.patchValue({ prazo_pagamento: forma.prazo }, { emitEvent: false });
+      this.pagamentoForm.patchValue({ prazo_pagamento: forma.prazo }, { emitEvent: false });
     }
   }
 
@@ -1091,12 +1314,8 @@ export class PedidosCompraComponent implements OnInit {
       desconto_valor: 0,
       total_item: 0,
       observacoes: '',
-      frete: 0,
-      total_desconto: 0,
     });
-    this.pedidoAtual = null;
     this.selectedItem = null;
-    this.itensModalAberto = false;
     this.produtoDescricaoAtual = '';
     this.produtoGradeAtual = null;
     this.packsProduto = [];
@@ -1367,6 +1586,7 @@ export class PedidosCompraComponent implements OnInit {
           } as PedidoCompraItemUI;
         });
         this.loadingItens = false;
+        this.carregarRecebimentos(pedidoId);
       },
       error: () => {
         this.itens = [];
@@ -1416,6 +1636,8 @@ export class PedidosCompraComponent implements OnInit {
 
     this.itens = [];
     this.carregarItensPedido(p.id);
+    this.carregarParcelas(p.id);
+    this.carregarRecebimentos(p.id);
     this.setViewForm();
 
     if (somenteConsulta) {
