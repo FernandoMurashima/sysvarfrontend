@@ -283,7 +283,7 @@ export class ShellComponent {
       '/producao': 'producao',
       '/producao/ficha-tecnica': 'ficha-tecnica',
       '/producao/ordens': 'ordem-producao',
-      '/compras/pedidos': 'pedidos-revenda',
+      '/compras/pedidos': 'pedidos-compra',
       '/compras/pedidos-revenda': 'pedidos-revenda',
       '/compras/pedidos-uso-consumo': 'pedidos-uso-consumo',
       '/compras/notas-entrada': 'notas-entrada',

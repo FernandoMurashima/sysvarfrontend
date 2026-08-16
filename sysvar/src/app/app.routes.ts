@@ -35,8 +35,7 @@ import { FormasPagamentoComponent } from './features/formas-pagamento/formas-pag
 import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pagamento.component';
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
 import { InsumosComponent } from './features/insumos/insumos.component';
-import { PedidosRevendaComponent } from './features/pedidos-revenda/pedidos-revenda.component';
-import { PedidosUsoConsumoComponent } from './features/pedidos-uso-consumo/pedidos-uso-consumo.component';
+import { PedidosCompraComponent } from './features/pedidos-compra/pedidos-compra.component';
 import { NotasFiscaisEntradaComponent } from './features/notas-fiscais-entrada/notas-fiscais-entrada.component';
 import { FinanceiroTitulosComponent } from './features/financeiro-titulos/financeiro-titulos.component';
 import { CaixasComponent } from './features/caixas/caixas.component';
@@ -129,9 +128,9 @@ export const routes: Routes = [
       { path: 'fiscal/regras-tributarias', component: RegrasTributariasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'distribuicao' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
-      { path: 'compras/pedidos', component: PedidosRevendaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
-      { path: 'compras/pedidos-revenda', component: PedidosRevendaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
-      { path: 'compras/pedidos-uso-consumo', component: PedidosUsoConsumoComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
+      { path: 'compras/pedidos', component: PedidosCompraComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
+      { path: 'compras/pedidos-revenda', redirectTo: 'compras/pedidos', pathMatch: 'full' },
+      { path: 'compras/pedidos-uso-consumo', redirectTo: 'compras/pedidos', pathMatch: 'full' },
       { path: 'compras/notas-entrada', component: NotasFiscaisEntradaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'producao', component: ProducaoHomeComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'producao' } },
       { path: 'producao/ficha-tecnica', component: FichaTecnicaComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'producao' } },
