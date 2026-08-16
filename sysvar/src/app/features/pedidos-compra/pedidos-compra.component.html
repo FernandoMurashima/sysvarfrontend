@@ -59,12 +59,12 @@
   </div>
 
   <section class="indicator-bar" *ngIf="view() === 'list' && indicatorsVisible">
-    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ pedidosAll.length }}</strong><small>Total</small></div></div>
-    <div class="indicator"><span class="indicator-icon green">☷</span><div><strong>{{ abertos }}</strong><small>Abertos</small></div></div>
-    <div class="indicator"><span class="indicator-icon orange">✓</span><div><strong>{{ aprovados }}</strong><small>Aprovados</small></div></div>
-    <div class="indicator"><span class="indicator-icon cyan">■</span><div><strong>{{ atendidos }}</strong><small>Atendidos</small></div></div>
-    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ pendentesAprovacao }}</strong><small>Pendentes de aprovação</small></div></div>
-    <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ valorTotalListado | number : '1.2-2' }}</strong><small>Total listado</small></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon blue">#</span><div><small>Total</small><strong>{{ pedidosAll.length }}</strong></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon green">AB</span><div><small>Abertos</small><strong>{{ abertos }}</strong></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon orange">AP</span><div><small>Aprovados</small><strong>{{ aprovados }}</strong></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon cyan">AT</span><div><small>Atendidos</small><strong>{{ atendidos }}</strong></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon orange">!</span><div><small>Pendentes</small><strong>{{ pendentesAprovacao }}</strong></div></div>
+    <div class="indicator stat-card"><span class="indicator-icon purple">R$</span><div><small>Total listado</small><strong>{{ valorTotalListado | number : '1.2-2' }}</strong></div></div>
   </section>
 
   <section class="filter-bar" *ngIf="view() === 'list' && filtersVisible">
@@ -160,7 +160,10 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>{{ consultando ? 'Consultar Pedido de Compra' : (pedidoAtualId() ? 'Editar Pedido de Compra' : 'Novo Pedido de Compra') }}</h3>
+    <div class="form-title-row">
+      <h3>{{ consultando ? 'Consultar Pedido de Compra' : (pedidoAtualId() ? 'Editar Pedido de Compra' : 'Novo Pedido de Compra') }}</h3>
+      <button class="btn" type="button" (click)="cancelar()">Voltar</button>
+    </div>
 
     <!-- Cabeçalho -->
     <form [formGroup]="headerForm" novalidate>
@@ -244,18 +247,18 @@
       <h3>Resumos</h3>
     </div>
 
-    <div class="indicator-bar compact-summary">
-      <div class="indicator"><span class="indicator-icon blue">#</span><div><strong>{{ itens.length }}</strong><small>Linhas de itens</small></div></div>
-      <div class="indicator"><span class="indicator-icon green">Qtd</span><div><strong>{{ quantidadeTotalItens | number : '1.0-3' }}</strong><small>Quantidade</small></div></div>
-      <div class="indicator"><span class="indicator-icon purple">Pg</span><div><strong>{{ resumoFormaPagamento }}</strong><small>Forma de pagamento</small></div></div>
-      <div class="indicator"><span class="indicator-icon orange">Rec</span><div><strong>{{ resumoRecebimento }}</strong><small>Recebimento</small></div></div>
+    <div class="indicator-bar compact-summary summary-grid">
+      <div class="indicator summary-card"><span class="indicator-icon blue">#</span><div><small>Linhas de itens</small><strong>{{ itens.length }}</strong></div></div>
+      <div class="indicator summary-card"><span class="indicator-icon green">Qtd</span><div><small>Quantidade</small><strong>{{ quantidadeTotalItens | number : '1.0-3' }}</strong></div></div>
+      <div class="indicator summary-card wide"><span class="indicator-icon purple">Pg</span><div><small>Forma de pagamento</small><strong>{{ resumoFormaPagamento }}</strong></div></div>
+      <div class="indicator summary-card"><span class="indicator-icon orange">Rec</span><div><small>Recebimento</small><strong>{{ resumoRecebimento }}</strong></div></div>
     </div>
 
-    <div class="indicator-bar compact-summary">
-      <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ toNumber(pedidoAtual?.total_itens || totalItensResumo) | number : '1.2-2' }}</strong><small>Total bruto/itens</small></div></div>
-      <div class="indicator"><span class="indicator-icon orange">Desc</span><div><strong>{{ toNumber(pedidoAtual?.total_desconto || 0) | number : '1.2-2' }}</strong><small>Desconto geral</small></div></div>
-      <div class="indicator"><span class="indicator-icon blue">Frete</span><div><strong>{{ toNumber(pedidoAtual?.frete || 0) | number : '1.2-2' }}</strong><small>Frete</small></div></div>
-      <div class="indicator"><span class="indicator-icon green">Tot</span><div><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong><small>Total pedido</small></div></div>
+    <div class="indicator-bar compact-summary summary-grid totals-grid">
+      <div class="indicator summary-card"><span class="indicator-icon purple">R$</span><div><small>Total bruto/itens</small><strong>{{ toNumber(pedidoAtual?.total_itens || totalItensResumo) | number : '1.2-2' }}</strong></div></div>
+      <div class="indicator summary-card"><span class="indicator-icon orange">Desc</span><div><small>Desconto geral</small><strong>{{ toNumber(pedidoAtual?.total_desconto || 0) | number : '1.2-2' }}</strong></div></div>
+      <div class="indicator summary-card"><span class="indicator-icon blue">Fr</span><div><small>Frete</small><strong>{{ toNumber(pedidoAtual?.frete || 0) | number : '1.2-2' }}</strong></div></div>
+      <div class="indicator summary-card total"><span class="indicator-icon green">Tot</span><div><small>Total pedido</small><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong></div></div>
     </div>
 
     <section class="action-bar">
@@ -286,9 +289,9 @@
         <button class="btn" type="button" (click)="fecharItensPedido()">Fechar</button>
       </div>
 
-      <form class="itens-form" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando && isAberto(pedidoAtual)">
+      <form class="itens-form" [class.revenda-layout]="isPedidoRevenda()" [class.consumo-layout]="isPedidoUsoOuInsumo()" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando && isAberto(pedidoAtual)">
         <div class="grid-12 itens-grid">
-          <label class="input-item product-entry">
+          <label class="input-item product-entry item-product">
             Produto*
             <div class="product-line">
               <input type="text" formControlName="produto_input" autocomplete="off" placeholder="Descrição, ref. ou ID" (input)="buscarSugestoesProduto()" (focus)="buscarSugestoesProduto()" (blur)="fecharSugestoesProdutoComAtraso()" (keyup.enter)="onProdutoBlur()" />
@@ -303,39 +306,39 @@
             <small class="field-hint" *ngIf="produtoDescricaoAtual">{{ produtoDescricaoAtual }}</small>
           </label>
 
-          <label class="input-item col-span-2" *ngIf="isPedidoRevenda()">
+          <label class="input-item item-cor" *ngIf="isPedidoRevenda()">
             Cor*
             <select formControlName="cor"><option [ngValue]="null">Selecione</option><option *ngFor="let c of coresProduto" [ngValue]="c.id">{{ c.label }}</option></select>
           </label>
-          <label class="input-item col-span-1" *ngIf="isPedidoRevenda()">
+          <label class="input-item item-pack" *ngIf="isPedidoRevenda()">
             Pack*
             <select formControlName="pack" (change)="onPackBlur()"><option [ngValue]="null">Selecione</option><option *ngFor="let p of packsProduto" [ngValue]="p.id">{{ p.label }}</option></select>
           </label>
-          <label class="input-item col-span-1" *ngIf="isPedidoRevenda()">
+          <label class="input-item item-npacks" *ngIf="isPedidoRevenda()">
             Nº packs*
             <input type="number" formControlName="n_packs" min="1" />
           </label>
-          <label class="input-item col-span-2" *ngIf="isPedidoUsoOuInsumo()">
+          <label class="input-item item-unidade" *ngIf="isPedidoUsoOuInsumo()">
             Unidade
             <input type="text" [value]="unidadeProdutoSelecionadoLabel()" readonly />
           </label>
-          <label class="input-item col-span-1">
+          <label class="input-item item-qtd">
             Quantidade
             <input type="number" formControlName="quantidade" [readonly]="isPedidoRevenda()" step="0.001" />
           </label>
-          <label class="input-item col-span-2">
+          <label class="input-item item-preco">
             Preço unitário*
             <input type="number" formControlName="preco_unit" step="0.01" />
           </label>
-          <label class="input-item col-span-1">
+          <label class="input-item item-desconto">
             Desconto
             <input type="number" formControlName="desconto_valor" step="0.01" />
           </label>
-          <label class="input-item col-span-1">
+          <label class="input-item item-total">
             Total
             <input type="number" formControlName="total_item" readonly />
           </label>
-          <label class="input-item col-span-12">
+          <label class="input-item item-observacoes">
             Observações
             <textarea rows="2" formControlName="observacoes"></textarea>
           </label>
@@ -352,7 +355,7 @@
         <button class="btn danger" type="button" [disabled]="!selectedItem || consultando || !isAberto(pedidoAtual)" (click)="removerItemSelecionado()">Excluir</button>
       </section>
 
-      <div class="table-wrapper itens-wrapper">
+      <div class="table-wrapper itens-wrapper items-table-area">
         <table class="table" *ngIf="itens.length > 0; else itensEmptyTpl">
           <thead>
             <tr>
@@ -427,7 +430,7 @@
         <div class="indicator"><span class="indicator-icon orange">Dif</span><div><strong>{{ diferencaParcelas | number : '1.2-2' }}</strong><small>Diferença</small></div></div>
       </div>
 
-      <div class="table-wrapper itens-wrapper">
+      <div class="table-wrapper itens-wrapper payment-table-area">
         <table class="table" *ngIf="parcelas.length > 0; else parcelasEmptyTpl">
           <thead><tr><th>Nº Parcela</th><th>Vencimento</th><th>Valor</th><th>Situação</th></tr></thead>
           <tbody>
@@ -451,7 +454,7 @@
 
       <div class="empty-hint" *ngIf="(pedidoAtual?.status || 'AB') === 'AB'">Pedido ainda não aprovado / sem recebimentos.</div>
 
-      <div class="table-wrapper itens-wrapper">
+      <div class="table-wrapper itens-wrapper recebimentos-table-area">
         <table class="table" *ngIf="recebimentos.length > 0; else recebimentosEmptyTpl">
           <thead><tr><th>Produto</th><th>Referência</th><th>Cor</th><th>Pack</th><th>Qtd Pedida</th><th>Qtd Recebida</th><th>Saldo</th><th>Situação</th></tr></thead>
           <tbody>
@@ -465,8 +468,8 @@
         <ng-template #recebimentosEmptyTpl><div class="empty-hint">{{ loadingRecebimentos ? 'Carregando recebimentos...' : 'Nenhum item de recebimento encontrado.' }}</div></ng-template>
       </div>
 
-      <div class="section-header item-section-head"><h3>Notas Fiscais Relacionadas</h3></div>
-      <div class="table-wrapper itens-wrapper">
+      <div class="section-header item-section-head notas-head"><h3>Notas Fiscais Relacionadas</h3></div>
+      <div class="table-wrapper itens-wrapper notas-table-area">
         <table class="table" *ngIf="notasEntrada.length > 0; else notasEmptyTpl">
           <thead><tr><th>Número</th><th>Série</th><th>Entrada</th><th>Status</th></tr></thead>
           <tbody><tr *ngFor="let n of notasEntrada"><td>{{ n.numero }}</td><td>{{ n.serie || '-' }}</td><td>{{ n.dt_entrada }}</td><td>{{ n.status }}</td></tr></tbody>
