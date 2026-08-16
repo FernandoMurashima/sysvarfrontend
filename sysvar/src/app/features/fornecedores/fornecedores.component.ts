@@ -334,11 +334,11 @@ export class FornecedoresComponent implements OnInit {
       f.apelido,
       f.documento || f.cnpj,
       f.email,
-      f.cidade,
-      f.estado,
+      this.cidadePrincipal(f),
+      this.estadoPrincipal(f),
       ...this.categoriasFornecedor(f).map(c => this.categoriaLabel(c)),
     ].filter((v): v is string => !!v));
-    this.cidadesOptions = Array.from(new Set(this.fornecedores.map(f => (f.cidade || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    this.cidadesOptions = Array.from(new Set(this.fornecedores.map(f => (this.cidadePrincipal(f) || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 
   doSearch(): void {
@@ -639,6 +639,7 @@ export class FornecedoresComponent implements OnInit {
         this.errorMsg = '';
         this.limparEnderecoForm();
         this.carregarFornecedor(fornecedorId);
+        this.load();
       },
       error: err => this.errorMsg = this.extractApiMessage(err, 'Falha ao salvar endereço.'),
     });
@@ -827,7 +828,22 @@ export class FornecedoresComponent implements OnInit {
     if (f.natureza_padrao_codigo || f.natureza_padrao_descricao) return [f.natureza_padrao_codigo, f.natureza_padrao_descricao].filter(Boolean).join(' - ');
     return this.naturezas.find(n => n.idnatureza === f.natureza_padrao) ? this.naturezaLabel(this.naturezas.find(n => n.idnatureza === f.natureza_padrao)!) : '-';
   }
-  cidadeUf(f: Fornecedor): string { return [f.cidade, f.estado?.toUpperCase()].filter(Boolean).join('/') || '-'; }
+  private enderecoPrincipal(f: Fornecedor): FornecedorEndereco | undefined {
+    const enderecos = f.enderecos || [];
+    return enderecos.find(e => e.ativo !== false && e.principal)
+      || enderecos.find(e => e.ativo !== false)
+      || enderecos[0];
+  }
+
+  private cidadePrincipal(f: Fornecedor): string {
+    return (f.cidade || this.enderecoPrincipal(f)?.cidade || '').trim();
+  }
+
+  private estadoPrincipal(f: Fornecedor): string {
+    return (f.estado || this.enderecoPrincipal(f)?.estado || '').trim().toUpperCase();
+  }
+
+  cidadeUf(f: Fornecedor): string { return [this.cidadePrincipal(f), this.estadoPrincipal(f)].filter(Boolean).join('/') || '-'; }
   statusLabel(f: Fornecedor): string { return f.bloqueio ? 'Bloqueado' : (f.ativo === false ? 'Inativo' : 'Ativo'); }
   visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
   trackFornecedor(_: number, f: Fornecedor): number | string { return f.id ?? f.documento ?? f.nome_fornecedor; }
