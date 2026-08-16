@@ -289,7 +289,9 @@ export class PedidosCompraComponent implements OnInit {
     return Number(this.pedidoAtual?.total_pedido || 0) - this.totalParcelas;
   }
   get parcelasConsistentes(): boolean {
-    return Math.round(this.diferencaParcelas * 100) === 0;
+    return this.parcelas.length > 0
+      && Number(this.pedidoAtual?.total_pedido || 0) > 0
+      && Math.round(this.diferencaParcelas * 100) === 0;
   }
   get resumoFormaPagamento(): string {
     if (!this.pedidoAtual?.forma_pagamento) return 'Não definida';
