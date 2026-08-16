@@ -1,6 +1,6 @@
 <div class="cadastro-page">
   <section class="title-bar">
-    <div class="title-left"><h1>Pedidos de Revenda</h1><button class="info-button" type="button" title="Gerencie compras para revenda e produtos próprios.">i</button></div>
+    <div class="title-left"><h1>Pedido de Compra</h1><button class="info-button" type="button" title="Gerencie pedidos de compra.">i</button></div>
     <div class="title-actions"><button class="btn" type="button">Ajuda</button><button class="btn" type="button" [routerLink]="['/home']">Home</button><button class="btn" type="button" [disabled]="loadingPedidos" (click)="clearSearch()">Limpar</button><div class="menu-holder"><button class="btn" type="button" (click)="columnsOpen = !columnsOpen">Colunas</button><div class="floating-menu" *ngIf="columnsOpen"><label class="column-option" *ngFor="let col of columns"><input type="checkbox" [checked]="col.visible" [disabled]="col.required" (change)="toggleColumn(col.key, $any($event.target).checked)" /><span>{{ col.label }}</span></label></div></div><button class="btn primary" *ngIf="podeEditarModulo" type="button" [disabled]="saving" (click)="novo()">+ Novo Pedido</button></div>
   </section>
 
@@ -63,6 +63,7 @@
     <div class="indicator"><span class="indicator-icon green">☷</span><div><strong>{{ abertos }}</strong><small>Abertos</small></div></div>
     <div class="indicator"><span class="indicator-icon orange">✓</span><div><strong>{{ aprovados }}</strong><small>Aprovados</small></div></div>
     <div class="indicator"><span class="indicator-icon cyan">■</span><div><strong>{{ atendidos }}</strong><small>Atendidos</small></div></div>
+    <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ pendentesAprovacao }}</strong><small>Pendentes de aprovação</small></div></div>
     <div class="indicator"><span class="indicator-icon purple">R$</span><div><strong>{{ valorTotalListado | number : '1.2-2' }}</strong><small>Total listado</small></div></div>
   </section>
 
@@ -76,6 +77,7 @@
       (search)="doSearch()"
       (cleared)="clearSearch()"
     />
+    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filterTipo" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="1">Revenda</option><option value="2">Uso/Consumo</option><option value="4">Insumo</option></select></label>
     <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="doSearch()"><option value="">Todos</option><option value="AB">Abertos</option><option value="AP">Aprovados</option><option value="AT">Atendidos</option><option value="CA">Cancelados</option></select></label>
     <button class="btn primary" type="button" (click)="doSearch()">Pesquisar</button>
     <button class="btn" type="button" (click)="setViewList()">Atualizar</button>
@@ -107,6 +109,7 @@
         <thead>
           <tr>
             <th *ngIf="visibleColumn('numero')" class="col-numero">Nº Pedido</th>
+            <th *ngIf="visibleColumn('tipo')" class="col-status">Tipo</th>
             <th *ngIf="visibleColumn('loja')" class="col-loja">Loja</th>
             <th *ngIf="visibleColumn('fornecedor')" class="col-fornecedor">Fornecedor</th>
             <th *ngIf="visibleColumn('emissao')" class="col-emissao">Emissão</th>
@@ -118,6 +121,7 @@
         <tbody>
           <tr *ngFor="let p of pedidos" [class.selected]="pedidoSelecionado(p)" (click)="selecionarPedido(p)" (dblclick)="consultarPedido(p)">
             <td *ngIf="visibleColumn('numero')">{{ p.id }}</td>
+            <td *ngIf="visibleColumn('tipo')">{{ tipoPedidoLabel(p.tipo) }}</td>
             <td *ngIf="visibleColumn('loja')">{{ labelLoja(p.loja) }}</td>
             <td *ngIf="visibleColumn('fornecedor')">{{ labelFornecedor(p.fornecedor) }}</td>
             <td *ngIf="visibleColumn('emissao')">{{ p.emissao }}</td>
@@ -156,7 +160,7 @@
 
   <!-- FORM -->
   <section class="card form" *ngIf="view() === 'form'">
-    <h3>{{ consultando ? 'Consultar Pedido de Revenda' : (pedidoAtualId() ? 'Editar Pedido de Revenda' : 'Novo Pedido de Revenda') }}</h3>
+    <h3>{{ consultando ? 'Consultar Pedido de Compra' : (pedidoAtualId() ? 'Editar Pedido de Compra' : 'Novo Pedido de Compra') }}</h3>
 
     <!-- Cabeçalho -->
     <form [formGroup]="headerForm" novalidate>

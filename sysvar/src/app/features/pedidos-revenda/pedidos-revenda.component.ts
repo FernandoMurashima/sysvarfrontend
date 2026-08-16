@@ -101,6 +101,7 @@ export class PedidosRevendaComponent implements OnInit {
   private readonly viewPrefsKey = 'sysvar.ui.preferences.pedidos-revenda';
   columns = [
     { key: 'numero', label: 'Nº Pedido', visible: true, required: true },
+    { key: 'tipo', label: 'Tipo', visible: true, required: false },
     { key: 'loja', label: 'Loja', visible: true, required: false },
     { key: 'fornecedor', label: 'Fornecedor', visible: true, required: false },
     { key: 'emissao', label: 'Emissão', visible: true, required: false },
@@ -108,6 +109,7 @@ export class PedidosRevendaComponent implements OnInit {
     { key: 'natureza', label: 'Natureza', visible: true, required: false },
     { key: 'total', label: 'Total', visible: true, required: false },
   ];
+  filterTipo = '';
   selectedPedido: any | null = null;
   confirmModal: {
     action: 'removerItem' | 'excluirPedido' | 'cancelarPedido';
@@ -220,6 +222,9 @@ export class PedidosRevendaComponent implements OnInit {
   }
   get atendidos(): number {
     return this.pedidosAll.filter(p => (p.status || '').toUpperCase() === 'AT').length;
+  }
+  get pendentesAprovacao(): number {
+    return this.pedidosAll.filter(p => (p.status || '').toUpperCase() === 'AB' && Number(p.total_pedido || 0) > 0).length;
   }
   get valorTotalListado(): number {
     return this.pedidosFiltered.reduce((acc, p) => acc + Number(p.total_pedido || 0), 0);
@@ -386,7 +391,7 @@ export class PedidosRevendaComponent implements OnInit {
     this.loadingPedidos = true;
 
     this.pedidosApi
-      .listar({ tipo: '1', page_size: 500 })
+      .listar({ page_size: 500 })
       .subscribe({
         next: (resp: any) => {
           const arr = this.arrayOrResults<any>(resp);
@@ -427,6 +432,9 @@ export class PedidosRevendaComponent implements OnInit {
     }
     if (this.filterStatus) {
       base = base.filter(p => (p.status || '').toUpperCase() === this.filterStatus);
+    }
+    if (this.filterTipo) {
+      base = base.filter(p => String(p.tipo || '') === this.filterTipo);
     }
 
     this.pedidosFiltered = base;
@@ -484,6 +492,7 @@ export class PedidosRevendaComponent implements OnInit {
   clearSearch(): void {
     this.search = '';
     this.filterStatus = '';
+    this.filterTipo = '';
     this.applyFilter();
   }
 
@@ -513,6 +522,15 @@ export class PedidosRevendaComponent implements OnInit {
   labelFornecedor(id: number | null | undefined): string {
     if (!id) return '';
     return this.fornecedorMap.get(id) ? `${id} - ${this.fornecedorMap.get(id)}` : String(id);
+  }
+
+  tipoPedidoLabel(tipo: unknown): string {
+    const map: Record<string, string> = {
+      '1': 'Revenda',
+      '2': 'Uso/Consumo',
+      '4': 'Insumo',
+    };
+    return map[String(tipo || '')] || 'Não definido';
   }
 
   // ===== validação do form =====
@@ -1027,7 +1045,6 @@ export class PedidosRevendaComponent implements OnInit {
   private criarPedidoEAdicionarItem() {
     const v = this.headerForm.value;
     const payloadHeader: any = {
-      tipo: '1',
       loja: v.loja,
       fornecedor: v.fornecedor,
       emissao: v.emissao,

@@ -129,6 +129,7 @@ export const routes: Routes = [
       { path: 'fiscal/regras-tributarias', component: RegrasTributariasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'distribuicao' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
+      { path: 'compras/pedidos', component: PedidosRevendaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos-revenda', component: PedidosRevendaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos-uso-consumo', component: PedidosUsoConsumoComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/notas-entrada', component: NotasFiscaisEntradaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },

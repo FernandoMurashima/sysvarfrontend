@@ -84,8 +84,7 @@ export class ShellComponent {
     {
       label: 'Compras', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras',
       children: [
-        { label: 'Pedido de Compra Revenda', link: '/compras/pedidos-revenda', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
-        { label: 'Pedido de Compra Uso/Consumo', link: '/compras/pedidos-uso-consumo', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
+        { label: 'Pedido de Compra', link: '/compras/pedidos', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Entrada de NF-e', link: '/compras/notas-entrada', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Notas Lançadas', link: '/compras/notas-entrada', icon: 'bi bi-receipt-cutoff', roles: this.comprasRoles, moduloEmpresa: 'compras' },
       ]
@@ -233,7 +232,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
+    return ['/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/packs', '/unidades', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/estoque/inventario', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/compras/pedidos', '/compras/pedidos-revenda', '/compras/pedidos-uso-consumo', '/compras/notas-entrada'].includes(path);
   }
 
   toggleBarControls(): void {
@@ -284,6 +283,7 @@ export class ShellComponent {
       '/producao': 'producao',
       '/producao/ficha-tecnica': 'ficha-tecnica',
       '/producao/ordens': 'ordem-producao',
+      '/compras/pedidos': 'pedidos-revenda',
       '/compras/pedidos-revenda': 'pedidos-revenda',
       '/compras/pedidos-uso-consumo': 'pedidos-uso-consumo',
       '/compras/notas-entrada': 'notas-entrada',

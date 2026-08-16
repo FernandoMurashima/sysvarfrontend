@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 
 export interface PedidoCompra {
   id: number;
-  tipo: '1' | '2';
+  tipo: '' | '1' | '2' | '4';
   loja: number;
   fornecedor: number;
   emissao: string;
@@ -41,7 +41,7 @@ export class PedidosCompraService {
   // ===== Pedido (header) =====
 
   listar(params?: {
-    tipo?: '1' | '2';
+    tipo?: '1' | '2' | '4';
     status?: string;
     loja?: number;
     fornecedor?: number;
