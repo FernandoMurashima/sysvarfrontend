@@ -104,14 +104,29 @@ textarea { resize: vertical; max-height: 34px; }
 .section-header h3 { margin: 0; }
 .item-section-head .btn { min-height: 30px; padding: 5px 10px; }
 .summary-grid {
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
-  margin-bottom: 8px;
+  grid-template-columns: minmax(92px, .58fr) minmax(104px, .68fr) minmax(190px, 1.35fr) minmax(112px, .78fr) repeat(3, minmax(118px, .82fr)) minmax(132px, .95fr);
+  gap: 6px;
+  margin-bottom: 4px;
 }
 .summary-card {
-  min-height: 52px;
-  padding: 7px 10px;
+  min-height: 44px;
+  gap: 7px;
+  padding: 6px 8px;
 }
-.summary-card strong { font-size: 16px; }
+.summary-card .indicator-icon {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  font-size: 10px;
+}
+.summary-card small {
+  font-size: 9.5px;
+  line-height: 1.05;
+}
+.summary-card strong {
+  font-size: 13px;
+  line-height: 1.08;
+}
 .summary-card.wide { grid-column: span 1; }
 .summary-card.total {
   border-color: #bbf7d0;
@@ -119,6 +134,9 @@ textarea { resize: vertical; max-height: 34px; }
 }
 .totals-grid { margin-bottom: 4px; }
 .itens-grid { align-items: start; }
+.initial-layout .itens-grid {
+  grid-template-columns: minmax(320px, 2.4fr) 116px 128px 112px 120px;
+}
 .revenda-layout .itens-grid {
   grid-template-columns: minmax(280px, 2.1fr) minmax(128px, .8fr) minmax(110px, .75fr) 86px 104px 122px 106px 116px;
 }
@@ -193,6 +211,61 @@ textarea { resize: vertical; max-height: 34px; }
 }
 .items-modal { width: min(1180px, calc(100vw - 28px)); }
 .recebimentos-modal { width: min(1160px, calc(100vw - 28px)); }
+.payment-modal { width: min(980px, calc(100vw - 28px)); }
+.payment-form {
+  padding: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.payment-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) minmax(190px, 1fr) minmax(150px, .7fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.payment-field { min-width: 0; }
+.payment-status {
+  min-height: 54px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 7px 9px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #fff;
+}
+.payment-status span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.payment-status strong {
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payment-apply {
+  display: flex;
+  justify-content: flex-end;
+}
+.payment-apply .btn { min-height: 34px; }
+.payment-summary-grid {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.payment-summary-card {
+  min-height: 50px;
+  padding: 7px 10px;
+}
+.payment-summary-card strong { font-size: 16px; }
 .lookup-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
 .lookup-table { max-height: 360px; overflow: auto; border: 1px solid #dbe4ef; border-radius: 6px; background: #fff; }
 .lookup-table .table { table-layout: auto; }
@@ -230,8 +303,9 @@ textarea { resize: vertical; max-height: 34px; }
 @media (max-width: 900px) {
   .indicator-bar, .summary-grid, .filter-bar, .grid-12 { grid-template-columns: 1fr; }
   .col-span-1,.col-span-2,.col-span-3,.col-span-4,.col-span-5,.col-span-6,.col-span-8,.col-span-12 { grid-column: 1 / -1; }
-  .revenda-layout .itens-grid, .consumo-layout .itens-grid, .lookup-head { grid-template-columns: 1fr; }
+  .initial-layout .itens-grid, .revenda-layout .itens-grid, .consumo-layout .itens-grid, .lookup-head, .payment-grid, .payment-summary-grid { grid-template-columns: 1fr; }
   .item-observacoes { grid-column: 1 / -1 !important; }
   .section-header { align-items: stretch; flex-direction: column; }
   .form-title-row { align-items: stretch; flex-direction: column; }
+  .payment-apply { justify-content: flex-start; }
 }

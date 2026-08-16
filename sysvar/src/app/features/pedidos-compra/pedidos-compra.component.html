@@ -252,9 +252,6 @@
       <div class="indicator summary-card"><span class="indicator-icon green">Qtd</span><div><small>Quantidade</small><strong>{{ quantidadeTotalItens | number : '1.0-3' }}</strong></div></div>
       <div class="indicator summary-card wide"><span class="indicator-icon purple">Pg</span><div><small>Forma de pagamento</small><strong>{{ resumoFormaPagamento }}</strong></div></div>
       <div class="indicator summary-card"><span class="indicator-icon orange">Rec</span><div><small>Recebimento</small><strong>{{ resumoRecebimento }}</strong></div></div>
-    </div>
-
-    <div class="indicator-bar compact-summary summary-grid totals-grid">
       <div class="indicator summary-card"><span class="indicator-icon purple">R$</span><div><small>Total bruto/itens</small><strong>{{ toNumber(pedidoAtual?.total_itens || totalItensResumo) | number : '1.2-2' }}</strong></div></div>
       <div class="indicator summary-card"><span class="indicator-icon orange">Desc</span><div><small>Desconto geral</small><strong>{{ toNumber(pedidoAtual?.total_desconto || 0) | number : '1.2-2' }}</strong></div></div>
       <div class="indicator summary-card"><span class="indicator-icon blue">Fr</span><div><small>Frete</small><strong>{{ toNumber(pedidoAtual?.frete || 0) | number : '1.2-2' }}</strong></div></div>
@@ -289,7 +286,7 @@
         <button class="btn" type="button" (click)="fecharItensPedido()">Fechar</button>
       </div>
 
-      <form class="itens-form" [class.revenda-layout]="isPedidoRevenda()" [class.consumo-layout]="isPedidoUsoOuInsumo()" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando && isAberto(pedidoAtual)">
+      <form class="itens-form" [class.initial-layout]="!isPedidoRevenda() && !isPedidoUsoOuInsumo()" [class.revenda-layout]="isPedidoRevenda()" [class.consumo-layout]="isPedidoUsoOuInsumo()" [formGroup]="itemForm" (ngSubmit)="adicionarItem()" *ngIf="!consultando && isAberto(pedidoAtual)">
         <div class="grid-12 itens-grid">
           <label class="input-item product-entry item-product">
             Produto*
@@ -398,36 +395,36 @@
         <button class="btn" type="button" (click)="fecharFormaPagamento()">Fechar</button>
       </div>
 
-      <form [formGroup]="pagamentoForm" class="itens-form">
-        <div class="grid-12 itens-grid">
-          <label class="input-item col-span-4">
+      <form [formGroup]="pagamentoForm" class="payment-form">
+        <div class="payment-grid">
+          <label class="input-item payment-field">
             Forma de Pagamento
             <select formControlName="forma_pagamento_codigo" (change)="onFormaPagamentoChange()">
               <option [ngValue]="null">Selecione</option>
               <option *ngFor="let fp of formas" [ngValue]="fp.codigo">{{ fp.label }}</option>
             </select>
           </label>
-          <label class="input-item col-span-4">
+          <label class="input-item payment-field">
             Prazo
             <select formControlName="prazo_pagamento">
               <option [ngValue]="null">Selecione</option>
               <option *ngFor="let prazo of prazos" [ngValue]="prazo.id">{{ prazo.label }}</option>
             </select>
           </label>
-          <div class="input-item col-span-4 readonly-box">
-            Situação
+          <div class="input-item readonly-box payment-status">
+            <span>Situação</span>
             <strong [class.badge-ok]="parcelasConsistentes" [class.inactive]="!parcelasConsistentes">{{ parcelasConsistentes ? 'OK' : 'Pendente/Inconsistente' }}</strong>
           </div>
-        </div>
-        <div class="actions-form" *ngIf="isAberto(pedidoAtual) && !consultando">
-          <button class="btn primary" type="button" [disabled]="savingPagamento" (click)="aplicarFormaPagamento()">Aplicar</button>
+          <div class="payment-apply" *ngIf="isAberto(pedidoAtual) && !consultando">
+            <button class="btn primary" type="button" [disabled]="savingPagamento" (click)="aplicarFormaPagamento()">Aplicar</button>
+          </div>
         </div>
       </form>
 
-      <div class="indicator-bar compact-summary">
-        <div class="indicator"><span class="indicator-icon purple">Ped</span><div><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong><small>Total do Pedido</small></div></div>
-        <div class="indicator"><span class="indicator-icon green">Parc</span><div><strong>{{ totalParcelas | number : '1.2-2' }}</strong><small>Total das Parcelas</small></div></div>
-        <div class="indicator"><span class="indicator-icon orange">Dif</span><div><strong>{{ diferencaParcelas | number : '1.2-2' }}</strong><small>Diferença</small></div></div>
+      <div class="indicator-bar compact-summary payment-summary-grid">
+        <div class="indicator payment-summary-card"><span class="indicator-icon purple">Ped</span><div><small>Total do Pedido</small><strong>{{ toNumber(pedidoAtual?.total_pedido || 0) | number : '1.2-2' }}</strong></div></div>
+        <div class="indicator payment-summary-card"><span class="indicator-icon green">Parc</span><div><small>Total das Parcelas</small><strong>{{ totalParcelas | number : '1.2-2' }}</strong></div></div>
+        <div class="indicator payment-summary-card"><span class="indicator-icon orange">Dif</span><div><small>Diferença</small><strong>{{ diferencaParcelas | number : '1.2-2' }}</strong></div></div>
       </div>
 
       <div class="table-wrapper itens-wrapper payment-table-area">
