@@ -32,3 +32,13 @@ describe('rotas operacionais', () => {
     expect(rota?.data?.['allowPasswordChange']).toBeTrue();
   });
 });
+
+describe('rotas de compras', () => {
+  const shell = routes.find(route => route.path === '');
+
+  it('entrada de nfe pertence ao modulo compras sem requisito fiscal paralelo', () => {
+    const rota = shell?.children?.find(route => route.path === 'compras/notas-entrada');
+    expect(rota?.data?.['moduloEmpresa']).toBe('compras');
+    expect(rota?.data?.['moduloEmpresa']).not.toBe('fiscal');
+  });
+});
