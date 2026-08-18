@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { LojasService } from '../../core/services/lojas.service';
@@ -174,8 +174,21 @@ describe('NotasFiscaisEntradaComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     const headers = Array.from(el.querySelectorAll('.itens-wrapper th')).map(th => th.textContent?.trim());
     expect(headers).not.toContain('Ações');
+    expect(el.textContent).not.toContain('Inserir');
+    expect(el.textContent).not.toContain('Remover');
+    expect(el.querySelector('.item-action-bar')).toBeNull();
     expect(el.querySelector('.itens-wrapper .actions-cell')).toBeNull();
     expect(el.querySelectorAll('.itens-wrapper tbody .btn').length).toBe(0);
+  });
+
+  it('exibe checkbox por item refletindo se ja existe nota_item persistido', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const checks = fixture.nativeElement.querySelectorAll('.confirm-checkbox') as NodeListOf<HTMLInputElement>;
+    expect(checks.length).toBe(2);
+    expect(checks[0].checked).toBeTrue();
+    expect(checks[1].checked).toBeFalse();
   });
 
   it('clicar em uma linha seleciona somente um item e aplica destaque', () => {
@@ -196,35 +209,98 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.itens-wrapper tbody tr.selected').length).toBe(1);
   });
 
-  it('barra de acoes atua sobre item selecionado e fica desabilitada sem selecao', () => {
+  it('checkbox confirma item sem substituir a selecao visual da linha', () => {
     component.editar(nota);
     fixture.detectChanges();
-    const buttons = fixture.nativeElement.querySelectorAll('.item-action-bar button') as NodeListOf<HTMLButtonElement>;
-    expect(buttons.length).toBe(2);
-    expect(buttons[0].disabled).toBeTrue();
-    expect(buttons[1].disabled).toBeTrue();
+    const rows = fixture.nativeElement.querySelectorAll('.itens-wrapper tbody tr') as NodeListOf<HTMLTableRowElement>;
+    const checkbox = fixture.nativeElement.querySelectorAll('.confirm-checkbox')[1] as HTMLInputElement;
 
-    component.selecionarItem(component.itensPedido[0]);
+    rows[0].click();
     fixture.detectChanges();
-    expect(buttons[0].disabled).toBeFalse();
-    expect(buttons[1].disabled).toBeFalse();
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
 
-    buttons[0].click();
-    expect(notasApi.atualizarItem).toHaveBeenCalledWith(201, jasmine.objectContaining({ pedido_item: 101 }));
-
-    buttons[1].click();
-    expect(component.confirmModal?.item?.pedido_item).toBe(101);
+    expect(component.selectedItem?.pedido_item).toBe(101);
+    expect(rows[0].classList.contains('selected')).toBeTrue();
+    expect(rows[1].classList.contains('selected')).toBeFalse();
+    expect(notasApi.criarItem).toHaveBeenCalledWith(jasmine.objectContaining({ pedido_item: 102 }));
   });
 
-  it('remover item selecionado limpa selecao apos confirmacao', () => {
+  it('marcar checkbox usa a mesma gravacao do inserir e so confirma apos sucesso', () => {
+    const save$ = new Subject<any>();
+    notasApi.criarItem.and.returnValue(save$);
     component.editar(nota);
-    component.selecionarItem(component.itensPedido[0]);
+    fixture.detectChanges();
 
-    component.removerItemSelecionado();
+    const item = component.itensPedido[1];
+    item.qtd_receber = 2;
+    item.preco_unit_nf = 11;
+    item.desconto_item = 1;
+    const checkbox = fixture.nativeElement.querySelectorAll('.confirm-checkbox')[1] as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(notasApi.criarItem).toHaveBeenCalledWith(jasmine.objectContaining({
+      pedido_item: 102,
+      qtd_recebida: '2',
+      preco_unit_nf: '11',
+      desconto_item: '1',
+    }));
+    expect(component.itemConfirmado(item)).toBeFalse();
+
+    save$.next({ id: 202, nota: nota.id, pedido_item: 102 });
+    save$.complete();
+    fixture.detectChanges();
+    expect(component.itemConfirmado(item)).toBeTrue();
+  });
+
+  it('erro ao marcar checkbox mantem item desmarcado', () => {
+    notasApi.criarItem.and.returnValue(throwError(() => ({ error: { detail: 'Falha ao gravar' } })));
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const item = component.itensPedido[1];
+    const checkbox = fixture.nativeElement.querySelectorAll('.confirm-checkbox')[1] as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+
+    expect(component.itemConfirmado(item)).toBeFalse();
+    expect(component.erro).toBe('Falha ao gravar');
+  });
+
+  it('desmarcar item gravado abre confirmacao e remove usando fluxo existente', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const item = component.itensPedido[0];
+    const checkbox = fixture.nativeElement.querySelectorAll('.confirm-checkbox')[0] as HTMLInputElement;
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+    expect(component.confirmModal?.item?.pedido_item).toBe(101);
+
     component.confirmarAcao();
 
     expect(notasApi.removerItem).toHaveBeenCalledWith(201);
     expect(component.selectedItem).toBeNull();
+    expect(component.itemConfirmado(item)).toBeFalse();
+  });
+
+  it('erro ao remover mantem checkbox marcado e item na nf', () => {
+    notasApi.removerItem.and.returnValue(throwError(() => ({ error: { detail: 'falha' } })));
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const item = component.itensPedido[0];
+    const checkbox = fixture.nativeElement.querySelectorAll('.confirm-checkbox')[0] as HTMLInputElement;
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+    component.confirmarAcao();
+
+    expect(component.itemConfirmado(item)).toBeTrue();
+    expect(item.nota_item).toBe(201);
+    expect(component.erro).toContain('Não foi possível remover');
   });
 
   it('trocar contexto limpa selecao antiga de item', () => {
@@ -238,16 +314,25 @@ describe('NotasFiscaisEntradaComponent', () => {
 
   it('estados AB FE e CA controlam alteracao dos itens', () => {
     component.editar(nota);
-    component.selecionarItem(component.itensPedido[0]);
-    expect(component.podeAlterarItemSelecionado()).toBeTrue();
+    expect(component.podeAlterarItem(component.itensPedido[0])).toBeTrue();
 
     component.editar(notaFechada);
-    component.selecionarItem(component.itensPedido[0]);
-    expect(component.podeAlterarItemSelecionado()).toBeFalse();
+    fixture.detectChanges();
+    let checks = fixture.nativeElement.querySelectorAll('.confirm-checkbox') as NodeListOf<HTMLInputElement>;
+    expect(component.podeAlterarItem(component.itensPedido[0])).toBeFalse();
+    expect(checks[0].checked).toBeTrue();
+    expect(checks[0].disabled).toBeTrue();
+    expect(checks[1].checked).toBeFalse();
+    expect(checks[1].disabled).toBeTrue();
 
     component.editar(notaCancelada);
-    component.selecionarItem(component.itensPedido[0]);
-    expect(component.podeAlterarItemSelecionado()).toBeFalse();
+    fixture.detectChanges();
+    checks = fixture.nativeElement.querySelectorAll('.confirm-checkbox') as NodeListOf<HTMLInputElement>;
+    expect(component.podeAlterarItem(component.itensPedido[0])).toBeFalse();
+    expect(checks[0].checked).toBeTrue();
+    expect(checks[0].disabled).toBeTrue();
+    expect(checks[1].checked).toBeFalse();
+    expect(checks[1].disabled).toBeTrue();
   });
 
   it('pedido selecionado exibe pedido loja fornecedor e tipo', () => {
@@ -300,13 +385,13 @@ describe('NotasFiscaisEntradaComponent', () => {
     item.preco_unit_nf = 5;
     item.desconto_item = 50.01;
 
-    component.salvarItemSelecionado();
+    component.salvarItem(item);
 
     expect(component.erro).toContain('Desconto do item');
     expect(notasApi.atualizarItem).not.toHaveBeenCalled();
 
     item.desconto_item = 50;
-    component.salvarItemSelecionado();
+    component.salvarItem(item);
 
     expect(notasApi.atualizarItem).toHaveBeenCalledWith(201, jasmine.objectContaining({ desconto_item: '50' }));
   });
@@ -322,7 +407,7 @@ describe('NotasFiscaisEntradaComponent', () => {
 
     item.desconto_item = -1;
     component.selecionarItem(item);
-    component.salvarItemSelecionado();
+    component.salvarItem(item);
 
     expect(component.erro).toContain('Desconto do item');
   });

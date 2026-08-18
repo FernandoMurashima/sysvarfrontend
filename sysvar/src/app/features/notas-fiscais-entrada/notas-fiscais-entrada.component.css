@@ -212,11 +212,21 @@ select {
 }
 
 .itens-wrapper .table {
-  min-width: 980px;
+  min-width: 1020px;
 }
 
-.item-action-bar {
-  margin: 8px 0;
+.itens-wrapper .confirm-col,
+.itens-wrapper .confirm-cell {
+  width: 42px;
+  text-align: center;
+}
+
+.confirm-checkbox {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  vertical-align: middle;
 }
 
 .itens-wrapper .table input {

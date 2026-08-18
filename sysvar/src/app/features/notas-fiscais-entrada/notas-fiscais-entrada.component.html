@@ -215,15 +215,11 @@
 
     <h3>Itens do Pedido</h3>
 
-    <section class="action-bar item-action-bar" *ngIf="notaAtual()">
-      <button class="btn primary" type="button" [disabled]="!podeAlterarItemSelecionado()" (click)="salvarItemSelecionado()">✓ Inserir</button>
-      <button class="btn danger" type="button" [disabled]="!podeAlterarItemSelecionado() || !selectedItem?.nota_item" (click)="removerItemSelecionado()">× Remover</button>
-    </section>
-
     <div class="table-wrapper itens-wrapper" *ngIf="notaAtual(); else saveFirstTpl">
       <table class="table" *ngIf="itensPedido.length > 0; else itensEmptyTpl">
         <thead>
           <tr>
+            <th class="confirm-col">OK</th>
             <th>Item pedido</th>
             <th>Descrição</th>
             <th>Pedida</th>
@@ -237,6 +233,17 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of itensPedido" [class.selected]="itemSelecionado(item)" (click)="selecionarItem(item)" tabindex="0" (keyup.enter)="selecionarItem(item)" [attr.aria-selected]="itemSelecionado(item)">
+            <td class="confirm-cell">
+              <input
+                class="confirm-checkbox"
+                type="checkbox"
+                [checked]="itemConfirmado(item)"
+                [disabled]="!podeAlterarItem(item)"
+                (click)="$event.stopPropagation()"
+                (change)="alternarConfirmacaoItem($event, item)"
+                title="Confirmar item na NF"
+              />
+            </td>
             <td>{{ item.pedido_item }}</td>
             <td>{{ descricaoItem(item) }}</td>
             <td>{{ item.qtd_pedido | number : '1.3-3' }}</td>

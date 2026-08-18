@@ -23,6 +23,7 @@ type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
   preco_unit_nf: number;
   desconto_item: number;
   total_item: number;
+  confirmado: boolean;
 };
 
 @Component({
@@ -506,6 +507,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
             preco_unit_nf: preco,
             desconto_item: 0,
             total_item: qtdInicial * preco,
+            confirmado: !!item.nota_item,
           };
         });
         this.preservarSelecaoItem();
@@ -528,16 +530,24 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     return !!this.selectedItem && this.itemKey(this.selectedItem) === this.itemKey(item);
   }
 
-  podeAlterarItemSelecionado(): boolean {
-    return !!this.selectedItem && this.notaAtual()?.status === 'AB' && !this.saving;
+  podeAlterarItem(item: ItemRecebimentoUI | null): boolean {
+    return !!item && this.notaAtual()?.status === 'AB' && !this.saving;
   }
 
-  salvarItemSelecionado(): void {
-    if (this.selectedItem) this.salvarItem(this.selectedItem);
+  itemConfirmado(item: ItemRecebimentoUI): boolean {
+    return !!item.confirmado;
   }
 
-  removerItemSelecionado(): void {
-    if (this.selectedItem) this.removerItem(this.selectedItem);
+  alternarConfirmacaoItem(event: Event, item: ItemRecebimentoUI): void {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    input.checked = this.itemConfirmado(item);
+    if (!this.podeAlterarItem(item)) return;
+    if (input.checked) {
+      this.removerItem(item);
+      return;
+    }
+    this.salvarItem(item);
   }
 
   private preservarSelecaoItem(): void {
@@ -553,6 +563,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   recalcularItem(item: ItemRecebimentoUI): void {
     const bruto = Number(item.qtd_receber || 0) * Number(item.preco_unit_nf || 0);
     item.total_item = Math.max(0, bruto - Number(item.desconto_item || 0));
+    if (item.nota_item) item.confirmado = false;
   }
 
   salvarItem(item: ItemRecebimentoUI): void {
@@ -602,7 +613,9 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
     this.saving = true;
     req.subscribe({
-      next: () => {
+      next: (saved) => {
+        item.nota_item = saved?.id ?? item.nota_item;
+        item.confirmado = true;
         this.saving = false;
         this.mensagem = 'Item gravado.';
         this.erro = '';
@@ -610,6 +623,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.carregarItensPedido(nota.id);
       },
       error: (err) => {
+        item.confirmado = false;
         this.saving = false;
         this.erro = err?.error?.detail || 'Não foi possível gravar o item.';
       },
@@ -667,6 +681,8 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (!nota || !item.nota_item) return;
     this.notasApi.removerItem(item.nota_item).subscribe({
       next: () => {
+        item.confirmado = false;
+        item.nota_item = null;
         this.confirmModal = null;
         this.selectedItem = null;
         this.mensagem = 'Item removido.';
@@ -674,6 +690,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.carregarItensPedido(nota.id);
       },
       error: () => {
+        item.confirmado = true;
         this.erro = 'Não foi possível remover o item.';
       },
     });
