@@ -194,7 +194,11 @@ select {
 }
 
 .itens-wrapper .table {
-  min-width: 1120px;
+  min-width: 980px;
+}
+
+.item-action-bar {
+  margin: 8px 0;
 }
 
 .itens-wrapper .table input {
@@ -202,16 +206,6 @@ select {
   height: 28px;
   padding: 4px 6px;
   text-align: right;
-}
-
-.actions-cell {
-  overflow: visible !important;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.actions-cell .btn + .btn {
-  margin-left: 4px;
 }
 
 @media (max-width: 1100px) {

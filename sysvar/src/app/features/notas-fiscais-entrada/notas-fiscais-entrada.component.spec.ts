@@ -28,6 +28,32 @@ describe('NotasFiscaisEntradaComponent', () => {
     valor_total: '100.00',
     observacoes: '',
   };
+  const notaFechada = { ...nota, id: 2, status: 'FE' as const };
+  const notaCancelada = { ...nota, id: 3, status: 'CA' as const };
+  const itemBase = {
+    pedido_item: 101,
+    nota_item: 201,
+    produto: 1,
+    produto_descricao: 'Produto A',
+    produto_referencia: 'REF-A',
+    cor: null,
+    pack: null,
+    descricao_livre: null,
+    qtd_pedido: '2.000',
+    qtd_recebida_outras_notas: '0.000',
+    qtd_na_nota: '1.000',
+    saldo_total_recebivel: '2.000',
+    saldo_pendente: '1.000',
+    preco_unit_pedido: '10.0000',
+    quantidades_validas: [],
+  };
+  const itemOutro = {
+    ...itemBase,
+    pedido_item: 102,
+    nota_item: null,
+    produto_descricao: 'Produto B',
+    produto_referencia: 'REF-B',
+  };
 
   const notasApi = {
     listar: jasmine.createSpy('listar'),
@@ -50,6 +76,11 @@ describe('NotasFiscaisEntradaComponent', () => {
     localStorage.clear();
     notasApi.listar.and.returnValue(of({ count: 42, next: null, previous: null, results: [nota] }));
     notasApi.indicadores.and.returnValue(of({ total: 42, abertas: 20, fechadas: 15, canceladas: 7, valor_total: '1234.56' }));
+    notasApi.get.and.returnValue(of(nota));
+    notasApi.itensPedido.and.returnValue(of([itemBase, itemOutro]));
+    notasApi.criarItem.and.returnValue(of({ id: 202, nota: nota.id, pedido_item: itemOutro.pedido_item, qtd_recebida: '2.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '20.00' }));
+    notasApi.atualizarItem.and.returnValue(of({ id: 201, nota: nota.id, pedido_item: itemBase.pedido_item, qtd_recebida: '1.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '10.00' }));
+    notasApi.removerItem.and.returnValue(of(undefined));
     pedidosApi.listar.and.returnValue(of({ count: 0, results: [] }));
     lojasApi.list.and.returnValue(of({ count: 1, results: [{ id: 3, nome_loja: 'Loja A' }] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, results: [{ id: 4, nome_fornecedor: 'Fornecedor A' }] }));
@@ -134,5 +165,94 @@ describe('NotasFiscaisEntradaComponent', () => {
     component.loadNotas();
 
     expect(component.selectedNota).toBeNull();
+  });
+
+  it('tabela de itens nao possui coluna ou botoes de acoes por linha', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const headers = Array.from(el.querySelectorAll('.itens-wrapper th')).map(th => th.textContent?.trim());
+    expect(headers).not.toContain('Ações');
+    expect(el.querySelector('.itens-wrapper .actions-cell')).toBeNull();
+    expect(el.querySelectorAll('.itens-wrapper tbody .btn').length).toBe(0);
+  });
+
+  it('clicar em uma linha seleciona somente um item e aplica destaque', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+    const rows = fixture.nativeElement.querySelectorAll('.itens-wrapper tbody tr') as NodeListOf<HTMLTableRowElement>;
+
+    rows[0].click();
+    fixture.detectChanges();
+    expect(component.selectedItem?.pedido_item).toBe(101);
+    expect(rows[0].classList.contains('selected')).toBeTrue();
+    expect(fixture.nativeElement.querySelectorAll('.itens-wrapper tbody tr.selected').length).toBe(1);
+
+    rows[1].click();
+    fixture.detectChanges();
+    expect(component.selectedItem?.pedido_item).toBe(102);
+    expect(rows[1].classList.contains('selected')).toBeTrue();
+    expect(fixture.nativeElement.querySelectorAll('.itens-wrapper tbody tr.selected').length).toBe(1);
+  });
+
+  it('barra de acoes atua sobre item selecionado e fica desabilitada sem selecao', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+    const buttons = fixture.nativeElement.querySelectorAll('.item-action-bar button') as NodeListOf<HTMLButtonElement>;
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].disabled).toBeTrue();
+    expect(buttons[1].disabled).toBeTrue();
+
+    component.selecionarItem(component.itensPedido[0]);
+    fixture.detectChanges();
+    expect(buttons[0].disabled).toBeFalse();
+    expect(buttons[1].disabled).toBeFalse();
+
+    buttons[0].click();
+    expect(notasApi.atualizarItem).toHaveBeenCalledWith(201, jasmine.objectContaining({ pedido_item: 101 }));
+
+    buttons[1].click();
+    expect(component.confirmModal?.item?.pedido_item).toBe(101);
+  });
+
+  it('remover item selecionado limpa selecao apos confirmacao', () => {
+    component.editar(nota);
+    component.selecionarItem(component.itensPedido[0]);
+
+    component.removerItemSelecionado();
+    component.confirmarAcao();
+
+    expect(notasApi.removerItem).toHaveBeenCalledWith(201);
+    expect(component.selectedItem).toBeNull();
+  });
+
+  it('trocar contexto limpa selecao antiga de item', () => {
+    component.editar(nota);
+    component.selecionarItem(component.itensPedido[0]);
+
+    component.editar({ ...nota, id: 9, numero: '999' });
+
+    expect(component.selectedItem).toBeNull();
+  });
+
+  it('estados AB FE e CA controlam alteracao dos itens', () => {
+    component.editar(nota);
+    component.selecionarItem(component.itensPedido[0]);
+    expect(component.podeAlterarItemSelecionado()).toBeTrue();
+
+    component.editar(notaFechada);
+    component.selecionarItem(component.itensPedido[0]);
+    expect(component.podeAlterarItemSelecionado()).toBeFalse();
+
+    component.editar(notaCancelada);
+    component.selecionarItem(component.itensPedido[0]);
+    expect(component.podeAlterarItemSelecionado()).toBeFalse();
+  });
+
+  it('nao importa RowActionsMenuComponent para os itens da nf', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-row-actions-menu')).toBeNull();
   });
 });

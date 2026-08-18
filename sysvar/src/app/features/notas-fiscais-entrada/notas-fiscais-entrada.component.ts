@@ -13,10 +13,10 @@ import {
 } from '../../core/models/nota-fiscal-entrada';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
 
 type Option = { id: number; label: string };
+type RowAction = { key: string; label: string; icon?: string; disabled?: boolean; visible?: boolean; danger?: boolean; dividerBefore?: boolean };
 
 type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
   qtd_receber: number;
@@ -28,7 +28,7 @@ type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
 @Component({
   selector: 'app-notas-fiscais-entrada',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, RowActionsMenuComponent, SummaryCardComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent, PageHeaderComponent, SummaryCardComponent],
   templateUrl: './notas-fiscais-entrada.component.html',
   styleUrls: ['./notas-fiscais-entrada.component.css'],
 })
@@ -91,6 +91,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   private fornecedorMap = new Map<number, string>();
 
   itensPedido: ItemRecebimentoUI[] = [];
+  selectedItem: ItemRecebimentoUI | null = null;
   loadingItens = false;
 
   form: FormGroup = this.fb.group({
@@ -370,6 +371,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.erro = '';
     this.notaAtual.set(null);
     this.itensPedido = [];
+    this.selectedItem = null;
     this.form.reset({
       pedido_compra: null,
       modelo: '55',
@@ -389,6 +391,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.view.set('list');
     this.notaAtual.set(null);
     this.itensPedido = [];
+    this.selectedItem = null;
     this.loadNotas();
   }
 
@@ -415,6 +418,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     }
 
     this.view.set('form');
+    this.selectedItem = null;
     this.carregarItensPedido(nota.id);
   }
 
@@ -431,19 +435,6 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       this.notaAtual.set(nota);
       this.cancelarNota();
     }
-  }
-
-  itemRowActions(item: ItemRecebimentoUI): RowAction[] {
-    const bloqueada = this.notaAtual()?.status !== 'AB';
-    return [
-      { key: 'gravar', label: 'Gravar', icon: '✓', disabled: bloqueada || this.saving },
-      { key: 'remover', label: 'Remover', icon: '×', disabled: bloqueada || !item.nota_item, danger: true, dividerBefore: true },
-    ];
-  }
-
-  executarItemAcao(action: string | Event, item: ItemRecebimentoUI): void {
-    if (action === 'gravar') this.salvarItem(item);
-    if (action === 'remover') this.removerItem(item);
   }
 
   salvarCabecalho(): void {
@@ -509,14 +500,46 @@ export class NotasFiscaisEntradaComponent implements OnInit {
             total_item: qtdInicial * preco,
           };
         });
+        this.preservarSelecaoItem();
         this.loadingItens = false;
       },
       error: () => {
         this.itensPedido = [];
+        this.selectedItem = null;
         this.loadingItens = false;
         this.erro = 'Não foi possível carregar os itens do pedido.';
       },
     });
+  }
+
+  selecionarItem(item: ItemRecebimentoUI): void {
+    this.selectedItem = item;
+  }
+
+  itemSelecionado(item: ItemRecebimentoUI): boolean {
+    return !!this.selectedItem && this.itemKey(this.selectedItem) === this.itemKey(item);
+  }
+
+  podeAlterarItemSelecionado(): boolean {
+    return !!this.selectedItem && this.notaAtual()?.status === 'AB' && !this.saving;
+  }
+
+  salvarItemSelecionado(): void {
+    if (this.selectedItem) this.salvarItem(this.selectedItem);
+  }
+
+  removerItemSelecionado(): void {
+    if (this.selectedItem) this.removerItem(this.selectedItem);
+  }
+
+  private preservarSelecaoItem(): void {
+    if (!this.selectedItem) return;
+    const selectedKey = this.itemKey(this.selectedItem);
+    this.selectedItem = this.itensPedido.find(item => this.itemKey(item) === selectedKey) || null;
+  }
+
+  private itemKey(item: ItemRecebimentoUI): number {
+    return item.nota_item || item.pedido_item;
   }
 
   recalcularItem(item: ItemRecebimentoUI): void {
@@ -622,6 +645,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.notasApi.removerItem(item.nota_item).subscribe({
       next: () => {
         this.confirmModal = null;
+        this.selectedItem = null;
         this.mensagem = 'Item removido.';
         this.notasApi.get(nota.id).subscribe(n => this.notaAtual.set(n));
         this.carregarItensPedido(nota.id);
