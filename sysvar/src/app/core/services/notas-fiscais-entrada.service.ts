@@ -16,30 +16,77 @@ type Paginated<T> = {
   previous?: string | null;
 };
 
+export type NotaFiscalEntradaIndicadores = {
+  total: number;
+  abertas: number;
+  fechadas: number;
+  canceladas: number;
+  valor_total: string;
+};
+
+export type NotaFiscalEntradaListParams = {
+  pedido?: number;
+  pedido_compra?: number;
+  fornecedor?: number;
+  loja?: number;
+  status?: string;
+  numero?: string;
+  chave_acesso?: string;
+  search?: string;
+  dt_emissao_de?: string;
+  dt_emissao_ate?: string;
+  dt_entrada_de?: string;
+  dt_entrada_ate?: string;
+  valor_min?: number | string;
+  valor_max?: number | string;
+  page?: number;
+  page_size?: number;
+};
+
 @Injectable({ providedIn: 'root' })
 export class NotasFiscaisEntradaService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/fiscal/notas-entrada/`;
   private baseItens = `${environment.apiBaseUrl}/fiscal/notas-entrada-itens/`;
 
-  listar(params?: {
-    pedido?: number;
-    pedido_compra?: number;
-    status?: string;
-    numero?: string;
-    chave_acesso?: string;
-    page?: number;
-    page_size?: number;
-  }): Observable<NotaFiscalEntrada[] | Paginated<NotaFiscalEntrada>> {
+  listar(params?: NotaFiscalEntradaListParams): Observable<NotaFiscalEntrada[] | Paginated<NotaFiscalEntrada>> {
     let hp = new HttpParams();
     if (params?.pedido) hp = hp.set('pedido', String(params.pedido));
     if (params?.pedido_compra) hp = hp.set('pedido_compra', String(params.pedido_compra));
+    if (params?.fornecedor) hp = hp.set('fornecedor', String(params.fornecedor));
+    if (params?.loja) hp = hp.set('loja', String(params.loja));
     if (params?.status) hp = hp.set('status', params.status);
     if (params?.numero) hp = hp.set('numero', params.numero);
     if (params?.chave_acesso) hp = hp.set('chave_acesso', params.chave_acesso);
+    if (params?.search) hp = hp.set('search', params.search);
+    if (params?.dt_emissao_de) hp = hp.set('dt_emissao_de', params.dt_emissao_de);
+    if (params?.dt_emissao_ate) hp = hp.set('dt_emissao_ate', params.dt_emissao_ate);
+    if (params?.dt_entrada_de) hp = hp.set('dt_entrada_de', params.dt_entrada_de);
+    if (params?.dt_entrada_ate) hp = hp.set('dt_entrada_ate', params.dt_entrada_ate);
+    if (params?.valor_min !== undefined && params.valor_min !== null && params.valor_min !== '') hp = hp.set('valor_min', String(params.valor_min));
+    if (params?.valor_max !== undefined && params.valor_max !== null && params.valor_max !== '') hp = hp.set('valor_max', String(params.valor_max));
     if (params?.page) hp = hp.set('page', String(params.page));
     if (params?.page_size) hp = hp.set('page_size', String(params.page_size));
     return this.http.get<NotaFiscalEntrada[] | Paginated<NotaFiscalEntrada>>(this.base, { params: hp });
+  }
+
+  indicadores(params?: NotaFiscalEntradaListParams): Observable<NotaFiscalEntradaIndicadores> {
+    let hp = new HttpParams();
+    if (params?.pedido) hp = hp.set('pedido', String(params.pedido));
+    if (params?.pedido_compra) hp = hp.set('pedido_compra', String(params.pedido_compra));
+    if (params?.fornecedor) hp = hp.set('fornecedor', String(params.fornecedor));
+    if (params?.loja) hp = hp.set('loja', String(params.loja));
+    if (params?.status) hp = hp.set('status', params.status);
+    if (params?.numero) hp = hp.set('numero', params.numero);
+    if (params?.chave_acesso) hp = hp.set('chave_acesso', params.chave_acesso);
+    if (params?.search) hp = hp.set('search', params.search);
+    if (params?.dt_emissao_de) hp = hp.set('dt_emissao_de', params.dt_emissao_de);
+    if (params?.dt_emissao_ate) hp = hp.set('dt_emissao_ate', params.dt_emissao_ate);
+    if (params?.dt_entrada_de) hp = hp.set('dt_entrada_de', params.dt_entrada_de);
+    if (params?.dt_entrada_ate) hp = hp.set('dt_entrada_ate', params.dt_entrada_ate);
+    if (params?.valor_min !== undefined && params.valor_min !== null && params.valor_min !== '') hp = hp.set('valor_min', String(params.valor_min));
+    if (params?.valor_max !== undefined && params.valor_max !== null && params.valor_max !== '') hp = hp.set('valor_max', String(params.valor_max));
+    return this.http.get<NotaFiscalEntradaIndicadores>(`${this.base}indicadores/`, { params: hp });
   }
 
   get(id: number): Observable<NotaFiscalEntrada> {

@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { LojasService } from '../../core/services/lojas.service';
-import { NotasFiscaisEntradaService } from '../../core/services/notas-fiscais-entrada.service';
+import { NotaFiscalEntradaIndicadores, NotaFiscalEntradaListParams, NotasFiscaisEntradaService } from '../../core/services/notas-fiscais-entrada.service';
 import { PedidoCompra, PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import {
   NotaFiscalEntrada,
@@ -60,6 +60,8 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   search = '';
   filtroStatus = '';
+  filtroFornecedor: number | null = null;
+  filtroLoja: number | null = null;
   filtroEmissaoDe = '';
   filtroEmissaoAte = '';
   filtroEntradaDe = '';
@@ -69,6 +71,14 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   notas: NotaFiscalEntrada[] = [];
   notasFiltradas: NotaFiscalEntrada[] = [];
   notasPagina: NotaFiscalEntrada[] = [];
+  totalRecords = 0;
+  indicadores: NotaFiscalEntradaIndicadores = {
+    total: 0,
+    abertas: 0,
+    fechadas: 0,
+    canceladas: 0,
+    valor_total: '0.00',
+  };
 
   page = 1;
   pageSize = 20;
@@ -96,7 +106,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   });
 
   get total(): number {
-    return this.notasFiltradas.length;
+    return this.totalRecords;
   }
 
   get totalPages(): number {
@@ -110,7 +120,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     return Math.min(this.page * this.pageSize, this.total);
   }
   get searchSuggestions(): string[] {
-    return this.notas.flatMap(n => [
+    return this.notasPagina.flatMap(n => [
       String(n.pedido_compra ?? ''),
       n.numero,
       n.serie,
@@ -119,16 +129,16 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     ].filter(Boolean));
   }
   get abertas(): number {
-    return this.notas.filter(n => n.status === 'AB').length;
+    return this.indicadores.abertas;
   }
   get fechadas(): number {
-    return this.notas.filter(n => n.status === 'FE').length;
+    return this.indicadores.fechadas;
   }
   get canceladas(): number {
-    return this.notas.filter(n => n.status === 'CA').length;
+    return this.indicadores.canceladas;
   }
   get valorTotalListado(): number {
-    return this.notasFiltradas.reduce((acc, n) => acc + Number(n.valor_total || 0), 0);
+    return Number(this.indicadores.valor_total || 0);
   }
 
   ngOnInit(): void {
@@ -177,7 +187,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   private loadPedidosAprovados(): void {
-    this.pedidosApi.listar({ status: 'AP', page_size: 1000 }).subscribe({
+    this.pedidosApi.listar({ status: 'AP', page_size: 500 }).subscribe({
       next: (resp: any) => {
         this.pedidosAprovados = this.arrayOrResults<PedidoCompra>(resp);
       },
@@ -189,16 +199,21 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   loadNotas(): void {
     this.loading = true;
-    this.notasApi.listar({ page_size: 1000 }).subscribe({
+    this.notasApi.listar(this.listParams(true)).subscribe({
       next: (resp: any) => {
-        this.notas = this.arrayOrResults<NotaFiscalEntrada>(resp);
-        this.applyFilter();
+        this.notasPagina = this.arrayOrResults<NotaFiscalEntrada>(resp);
+        this.notas = this.notasPagina;
+        this.notasFiltradas = this.notasPagina;
+        this.totalRecords = Array.isArray(resp) ? this.notasPagina.length : Number(resp?.count ?? this.notasPagina.length);
+        this.limparSelecaoForaDaPagina();
         this.loading = false;
+        this.loadIndicadores();
       },
       error: () => {
         this.notas = [];
         this.notasFiltradas = [];
         this.notasPagina = [];
+        this.totalRecords = 0;
         this.loading = false;
         this.erro = 'Não foi possível carregar as notas fiscais.';
       },
@@ -206,66 +221,46 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   applyFilter(): void {
-    const term = this.normalizeSearch(this.search);
-    let base = this.notas.slice();
-
-    if (term) {
-      base = base.filter(n => {
-        const alvo = this.normalizeSearch([
-          n.pedido_compra,
-          n.modelo,
-          n.serie,
-          n.numero,
-          n.chave_acesso,
-          n.dt_emissao,
-          n.dt_entrada,
-          n.valor_total,
-          this.statusLabel(n.status),
-        ].filter(Boolean).join(' '));
-        return alvo.includes(term);
-      });
-    }
-
-    if (this.filtroStatus) {
-      base = base.filter(n => n.status === this.filtroStatus);
-    }
-
-    if (this.filtroEmissaoDe) {
-      base = base.filter(n => String(n.dt_emissao || '') >= this.filtroEmissaoDe);
-    }
-    if (this.filtroEmissaoAte) {
-      base = base.filter(n => String(n.dt_emissao || '') <= this.filtroEmissaoAte);
-    }
-
-    if (this.filtroEntradaDe) {
-      base = base.filter(n => String(n.dt_entrada || '') >= this.filtroEntradaDe);
-    }
-    if (this.filtroEntradaAte) {
-      base = base.filter(n => String(n.dt_entrada || '') <= this.filtroEntradaAte);
-    }
-
-    const valorMin = Number(this.filtroValorMin);
-    if (this.filtroValorMin !== null && this.filtroValorMin !== undefined && !Number.isNaN(valorMin)) {
-      base = base.filter(n => Number(n.valor_total || 0) >= valorMin);
-    }
-
-    const valorMax = Number(this.filtroValorMax);
-    if (this.filtroValorMax !== null && this.filtroValorMax !== undefined && !Number.isNaN(valorMax)) {
-      base = base.filter(n => Number(n.valor_total || 0) <= valorMax);
-    }
-
-    this.notasFiltradas = base;
     this.page = 1;
     this.selectedNota = null;
-    this.applyPage();
+    this.loadNotas();
   }
 
   private applyPage(): void {
-    const start = (this.page - 1) * this.pageSize;
-    this.notasPagina = this.notasFiltradas.slice(start, start + this.pageSize);
-    if (this.selectedNota && !this.notasFiltradas.some(n => n.id === this.selectedNota?.id)) {
+    this.loadNotas();
+  }
+
+  private limparSelecaoForaDaPagina(): void {
+    if (this.selectedNota && !this.notasPagina.some(n => n.id === this.selectedNota?.id)) {
       this.selectedNota = null;
     }
+  }
+
+  private listParams(includePaging = false): NotaFiscalEntradaListParams {
+    const params: NotaFiscalEntradaListParams = {
+      search: this.search || undefined,
+      status: this.filtroStatus || undefined,
+      fornecedor: this.filtroFornecedor || undefined,
+      loja: this.filtroLoja || undefined,
+      dt_emissao_de: this.filtroEmissaoDe || undefined,
+      dt_emissao_ate: this.filtroEmissaoAte || undefined,
+      dt_entrada_de: this.filtroEntradaDe || undefined,
+      dt_entrada_ate: this.filtroEntradaAte || undefined,
+      valor_min: this.filtroValorMin ?? undefined,
+      valor_max: this.filtroValorMax ?? undefined,
+    };
+    if (includePaging) {
+      params.page = this.page;
+      params.page_size = this.pageSize;
+    }
+    return params;
+  }
+
+  private loadIndicadores(): void {
+    this.notasApi.indicadores(this.listParams()).subscribe({
+      next: (indicadores) => this.indicadores = indicadores,
+      error: () => this.indicadores = { total: this.totalRecords, abertas: 0, fechadas: 0, canceladas: 0, valor_total: '0.00' },
+    });
   }
 
   onSearchKeyup(ev: KeyboardEvent): void {
@@ -275,6 +270,8 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   clearSearch(): void {
     this.search = '';
     this.filtroStatus = '';
+    this.filtroFornecedor = null;
+    this.filtroLoja = null;
     this.filtroEmissaoDe = '';
     this.filtroEmissaoAte = '';
     this.filtroEntradaDe = '';
@@ -288,27 +285,27 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.pageSize = Number(sizeStr) || 20;
     this.page = 1;
     localStorage.setItem('sysvar.list.notas-entrada.pageSize', String(this.pageSize));
-    this.applyPage();
+    this.loadNotas();
   }
 
   firstPage(): void {
     if (this.page !== 1) {
       this.page = 1;
-      this.applyPage();
+      this.loadNotas();
     }
   }
 
   prevPage(): void {
     if (this.page > 1) {
       this.page--;
-      this.applyPage();
+      this.loadNotas();
     }
   }
 
   lastPage(): void {
     if (this.page !== this.totalPages) {
       this.page = this.totalPages;
-      this.applyPage();
+      this.loadNotas();
     }
   }
 
@@ -353,7 +350,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.advancedFiltersOpen = false;
     this.pageSize = 20;
     this.saveViewPreference();
-    this.applyPage();
+    this.loadNotas();
   }
 
   @HostListener('window:sysvar-notas-entrada-toggle-indicators') onToggleIndicatorsEvent(): void { this.toggleIndicators(); }
@@ -363,7 +360,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   nextPage(): void {
     if (this.page < this.totalPages) {
       this.page++;
-      this.applyPage();
+      this.loadNotas();
     }
   }
 

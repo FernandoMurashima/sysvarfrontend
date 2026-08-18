@@ -28,7 +28,7 @@
   </div>
 
   <section class="indicator-bar" *ngIf="view() === 'list' && indicatorsVisible">
-    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ notas.length }}</strong><small>Total</small></div></div>
+    <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores.total }}</strong><small>Total</small></div></div>
     <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ abertas }}</strong><small>Abertas</small></div></div>
     <div class="indicator"><span class="indicator-icon cyan">■</span><div><strong>{{ fechadas }}</strong><small>Fechadas</small></div></div>
     <div class="indicator"><span class="indicator-icon orange">!</span><div><strong>{{ canceladas }}</strong><small>Canceladas</small></div></div>
@@ -45,14 +45,16 @@
       (search)="applyFilter()"
       (cleared)="clearSearch()"
     />
-    <label class="inline-filter status-filter"><span>Status</span><select [(ngModel)]="filtroStatus"><option value="">Todos</option><option value="AB">Aberta</option><option value="FE">Fechada</option><option value="CA">Cancelada</option></select></label>
-    <label class="inline-filter range-filter"><span>Emissão</span><input type="date" [(ngModel)]="filtroEmissaoDe" /><input type="date" [(ngModel)]="filtroEmissaoAte" /></label>
-    <label class="inline-filter range-filter"><span>Entrada</span><input type="date" [(ngModel)]="filtroEntradaDe" /><input type="date" [(ngModel)]="filtroEntradaAte" /></label>
+    <label class="inline-filter status-filter"><span>Status</span><select [(ngModel)]="filtroStatus" (ngModelChange)="applyFilter()"><option value="">Todos</option><option value="AB">Aberta</option><option value="FE">Fechada</option><option value="CA">Cancelada</option></select></label>
+    <label class="inline-filter range-filter"><span>Emissão</span><input type="date" [(ngModel)]="filtroEmissaoDe" (change)="applyFilter()" /><input type="date" [(ngModel)]="filtroEmissaoAte" (change)="applyFilter()" /></label>
+    <label class="inline-filter range-filter"><span>Entrada</span><input type="date" [(ngModel)]="filtroEntradaDe" (change)="applyFilter()" /><input type="date" [(ngModel)]="filtroEntradaAte" (change)="applyFilter()" /></label>
     <button class="btn primary" type="button" (click)="applyFilter()">Pesquisar</button>
     <button class="btn" type="button" (click)="toggleAdvancedFilters()">Filtros avançados</button>
     <div class="advanced-filters value-filters" *ngIf="advancedFiltersOpen">
-      <label class="inline-filter"><span>Valor mín.</span><input type="number" [(ngModel)]="filtroValorMin" min="0" step="0.01" /></label>
-      <label class="inline-filter"><span>Valor máx.</span><input type="number" [(ngModel)]="filtroValorMax" min="0" step="0.01" /></label>
+      <label class="inline-filter"><span>Fornecedor</span><select [(ngModel)]="filtroFornecedor" (ngModelChange)="applyFilter()"><option [ngValue]="null">Todos</option><option *ngFor="let fornecedor of fornecedores" [ngValue]="fornecedor.id">{{ fornecedor.label }}</option></select></label>
+      <label class="inline-filter"><span>Loja</span><select [(ngModel)]="filtroLoja" (ngModelChange)="applyFilter()"><option [ngValue]="null">Todas</option><option *ngFor="let loja of lojas" [ngValue]="loja.id">{{ loja.label }}</option></select></label>
+      <label class="inline-filter"><span>Valor mín.</span><input type="number" [(ngModel)]="filtroValorMin" min="0" step="0.01" (change)="applyFilter()" /></label>
+      <label class="inline-filter"><span>Valor máx.</span><input type="number" [(ngModel)]="filtroValorMax" min="0" step="0.01" (change)="applyFilter()" /></label>
     </div>
   </section>
 
