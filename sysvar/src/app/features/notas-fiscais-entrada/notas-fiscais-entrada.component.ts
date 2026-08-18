@@ -141,6 +141,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   get valorTotalListado(): number {
     return Number(this.indicadores.valor_total || 0);
   }
+  get pedidoSelecionado(): PedidoCompra | null {
+    const pedidoId = Number(this.form.get('pedido_compra')?.value || 0);
+    return this.pedidosAprovados.find(p => p.id === pedidoId) || null;
+  }
 
   ngOnInit(): void {
     this.loadViewPreference();
@@ -446,6 +450,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
+    if (!this.datasValidas()) {
+      this.erro = 'Data de entrada não pode ser anterior à data de emissão.';
+      return;
+    }
 
     const payload = this.form.getRawValue();
     const nota = this.notaAtual();
@@ -555,6 +563,21 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const saldoTotal = Number(item.saldo_total_recebivel || 0);
     if (qtd < 0 || qtd > saldoTotal) {
       this.erro = 'Quantidade recebida inválida para o saldo do pedido.';
+      return;
+    }
+    const preco = Number(item.preco_unit_nf || 0);
+    const desconto = Number(item.desconto_item || 0);
+    const bruto = qtd * preco;
+    if (preco < 0) {
+      this.erro = 'Preço do item deve ser maior ou igual a zero.';
+      return;
+    }
+    if (desconto < 0) {
+      this.erro = 'Desconto do item deve ser maior ou igual a zero.';
+      return;
+    }
+    if (desconto > bruto) {
+      this.erro = 'Desconto do item não pode ser maior que o valor bruto.';
       return;
     }
     if (!this.quantidadeFechaPack(item, qtd)) {
@@ -734,6 +757,11 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     return `${pedido.id} - ${this.labelLoja(pedido.loja)} - ${this.labelFornecedor(pedido.fornecedor)}`;
   }
 
+  tipoPedidoLabel(tipo: string | null | undefined): string {
+    const labels: Record<string, string> = { '1': 'Revenda', '2': 'Uso/Consumo', '4': 'Insumo' };
+    return labels[String(tipo || '')] || 'Não definido';
+  }
+
   statusLabel(status: string): string {
     const labels: Record<string, string> = { AB: 'Aberta', FE: 'Fechada', CA: 'Cancelada' };
     return labels[status] || status;
@@ -751,6 +779,12 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private datasValidas(): boolean {
+    const emissao = this.form.get('dt_emissao')?.value;
+    const entrada = this.form.get('dt_entrada')?.value;
+    return !emissao || !entrada || String(entrada) >= String(emissao);
   }
 
   private loadViewPreference(): void {

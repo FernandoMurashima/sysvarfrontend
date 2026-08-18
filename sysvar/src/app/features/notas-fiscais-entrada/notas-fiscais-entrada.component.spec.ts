@@ -81,7 +81,7 @@ describe('NotasFiscaisEntradaComponent', () => {
     notasApi.criarItem.and.returnValue(of({ id: 202, nota: nota.id, pedido_item: itemOutro.pedido_item, qtd_recebida: '2.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '20.00' }));
     notasApi.atualizarItem.and.returnValue(of({ id: 201, nota: nota.id, pedido_item: itemBase.pedido_item, qtd_recebida: '1.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '10.00' }));
     notasApi.removerItem.and.returnValue(of(undefined));
-    pedidosApi.listar.and.returnValue(of({ count: 0, results: [] }));
+    pedidosApi.listar.and.returnValue(of({ count: 1, results: [{ id: 10, tipo: '2', loja: 3, fornecedor: 4, emissao: '2026-01-01', status: 'AP', total_itens: '100.00', total_desconto: '0.00', frete: '0.00', total_pedido: '100.00' }] }));
     lojasApi.list.and.returnValue(of({ count: 1, results: [{ id: 3, nome_loja: 'Loja A' }] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, results: [{ id: 4, nome_fornecedor: 'Fornecedor A' }] }));
 
@@ -248,6 +248,97 @@ describe('NotasFiscaisEntradaComponent', () => {
     component.editar(notaCancelada);
     component.selecionarItem(component.itensPedido[0]);
     expect(component.podeAlterarItemSelecionado()).toBeFalse();
+  });
+
+  it('pedido selecionado exibe pedido loja fornecedor e tipo', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent || '';
+    expect(text).toContain('Pedido');
+    expect(text).toContain('10');
+    expect(text).toContain('Loja');
+    expect(text).toContain('3 - Loja A');
+    expect(text).toContain('Fornecedor');
+    expect(text).toContain('4 - Fornecedor A');
+    expect(text).toContain('Uso/Consumo');
+  });
+
+  it('cabecalho bloqueia data de entrada anterior a emissao antes da chamada', () => {
+    component.novo();
+    component.form.patchValue({
+      pedido_compra: 10,
+      numero: '123',
+      dt_emissao: '2026-08-11',
+      dt_entrada: '2026-08-10',
+    });
+
+    component.salvarCabecalho();
+
+    expect(component.erro).toContain('Data de entrada');
+    expect(notasApi.criar).not.toHaveBeenCalled();
+  });
+
+  it('itens exibem pedida recebida anteriormente saldo pendente e nesta nf', () => {
+    component.editar(nota);
+    fixture.detectChanges();
+
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('.itens-wrapper th') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
+    expect(headers).toContain('Pedida');
+    expect(headers).toContain('Já recebida');
+    expect(headers).toContain('Saldo pendente');
+    expect(headers).toContain('Nesta NF');
+  });
+
+  it('desconto acima do bruto impede envio e desconto igual ao bruto e aceito', () => {
+    notasApi.atualizarItem.calls.reset();
+    component.editar(nota);
+    const item = component.itensPedido[0];
+    component.selecionarItem(item);
+    item.qtd_receber = 10;
+    item.saldo_total_recebivel = '10.000';
+    item.preco_unit_nf = 5;
+    item.desconto_item = 50.01;
+
+    component.salvarItemSelecionado();
+
+    expect(component.erro).toContain('Desconto do item');
+    expect(notasApi.atualizarItem).not.toHaveBeenCalled();
+
+    item.desconto_item = 50;
+    component.salvarItemSelecionado();
+
+    expect(notasApi.atualizarItem).toHaveBeenCalledWith(201, jasmine.objectContaining({ desconto_item: '50' }));
+  });
+
+  it('desconto negativo impede envio e total visual nunca fica negativo', () => {
+    component.editar(nota);
+    const item = component.itensPedido[0];
+    item.qtd_receber = 1;
+    item.preco_unit_nf = 5;
+    item.desconto_item = 10;
+    component.recalcularItem(item);
+    expect(item.total_item).toBe(0);
+
+    item.desconto_item = -1;
+    component.selecionarItem(item);
+    component.salvarItemSelecionado();
+
+    expect(component.erro).toContain('Desconto do item');
+  });
+
+  it('validacoes de quantidade e pack continuam funcionando', () => {
+    component.editar(nota);
+    const item = component.itensPedido[0];
+    item.qtd_receber = 3;
+    item.saldo_total_recebivel = '2.000';
+
+    component.salvarItem(item);
+    expect(component.erro).toContain('Quantidade recebida');
+
+    const itemPack = { ...item, qtd_receber: 3, saldo_total_recebivel: '10.000', pack: 1, quantidades_validas: ['2', '4'] };
+    component.salvarItem(itemPack);
+    expect(component.erro).toContain('precisa fechar com o pack');
   });
 
   it('nao importa RowActionsMenuComponent para os itens da nf', () => {

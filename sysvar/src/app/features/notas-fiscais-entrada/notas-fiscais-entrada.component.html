@@ -190,6 +190,13 @@
       </div>
     </form>
 
+    <div class="pedido-context" *ngIf="pedidoSelecionado as pedido">
+      <span>Pedido <strong>{{ pedido.id }}</strong></span>
+      <span>Loja <strong>{{ labelLoja(pedido.loja) }}</strong></span>
+      <span>Fornecedor <strong>{{ labelFornecedor(pedido.fornecedor) }}</strong></span>
+      <span>Tipo <strong>{{ tipoPedidoLabel(pedido.tipo) }}</strong></span>
+    </div>
+
     <div class="actions-form">
       <button class="btn primary" type="button" (click)="salvarCabecalho()" [disabled]="saving || notaAtual()?.status !== 'AB' && !!notaAtual()">
         Gravar cabeçalho
@@ -219,10 +226,10 @@
           <tr>
             <th>Item pedido</th>
             <th>Descrição</th>
-            <th>Qtd pedido</th>
-            <th>Recebido outras</th>
-            <th>Saldo</th>
-            <th>Qtd NF</th>
+            <th>Pedida</th>
+            <th>Já recebida</th>
+            <th>Saldo pendente</th>
+            <th>Nesta NF</th>
             <th>Preço NF</th>
             <th>Desc</th>
             <th>Total</th>
@@ -234,7 +241,7 @@
             <td>{{ descricaoItem(item) }}</td>
             <td>{{ item.qtd_pedido | number : '1.3-3' }}</td>
             <td>{{ item.qtd_recebida_outras_notas | number : '1.3-3' }}</td>
-            <td>{{ item.saldo_total_recebivel | number : '1.3-3' }}</td>
+            <td>{{ item.saldo_pendente | number : '1.3-3' }}</td>
             <td>
               <input
                 type="number"
