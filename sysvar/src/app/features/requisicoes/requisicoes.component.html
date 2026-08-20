@@ -1,0 +1,134 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Requisições</h1><button class="info-button" type="button" title="Gerencie necessidades internas.">i</button></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="loadRequisicoes()">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditar" (click)="novo()">+ Nova Requisição</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <ng-container *ngIf="view === 'list'">
+    <section class="indicator-bar">
+      <div class="indicator stat-card"><span class="indicator-icon blue">#</span><div><small>Total</small><strong>{{ requisicoes.length }}</strong></div></div>
+      <div class="indicator stat-card"><span class="indicator-icon orange">AP</span><div><small>Aprovação</small><strong>{{ aguardandoAprovacao }}</strong></div></div>
+      <div class="indicator stat-card"><span class="indicator-icon green">OK</span><div><small>Concluídas</small><strong>{{ concluidas }}</strong></div></div>
+      <div class="indicator stat-card"><span class="indicator-icon purple">Urg</span><div><small>Urgentes</small><strong>{{ urgentes }}</strong></div></div>
+    </section>
+
+    <section class="filter-bar">
+      <app-search-suggest class="main-search" [(value)]="search" [suggestions]="[]" placeholder="Buscar por número, loja, setor ou requisitante" (search)="applyFilter()" (cleared)="search=''; applyFilter()" />
+      <button class="btn primary" type="button" (click)="applyFilter()">Pesquisar</button>
+      <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()"><option value="">Todos</option><option value="RASCUNHO">Rascunho</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovação</option><option value="APROVADA">Aprovada</option><option value="ATENDIDA_PARCIALMENTE">Atendida parcialmente</option><option value="EM_PROCESSO_COMPRA">Aguardando Cotação</option><option value="CONCLUIDA">Concluída</option><option value="REJEITADA">Rejeitada</option><option value="CANCELADA">Cancelada</option></select></label>
+      <label class="inline-filter"><span>Prioridade</span><select [(ngModel)]="filterPrioridade" (ngModelChange)="applyFilter()"><option value="">Todas</option><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+      <button class="btn" type="button" (click)="search=''; filterStatus=''; filterPrioridade=''; applyFilter()">Limpar</button>
+    </section>
+
+    <section class="results-area table-card">
+      <div class="results-header">
+        <div class="left"><strong>Requisições cadastradas</strong> <span>{{ filtered.length }} registro(s) encontrado(s)</span></div>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" *ngIf="pageRows.length; else emptyTpl">
+          <thead><tr><th>Número</th><th>Data</th><th>Loja</th><th>Setor</th><th>Requisitante</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of pageRows" [class.selected]="selected?.id === r.id" (click)="selecionar(r)" (dblclick)="abrir(r, true)">
+              <td>{{ r.numero }}</td>
+              <td>{{ r.data_requisicao }}</td>
+              <td>{{ r.loja_nome || r.loja }}</td>
+              <td>{{ r.setor_nome || r.setor }}</td>
+              <td>{{ r.requisitante_nome || r.requisitante }}</td>
+              <td><span class="status-pill" [ngClass]="r.prioridade === 'NORMAL' ? 'badge-ok' : 'inactive'">{{ r.prioridade }}</span></td>
+              <td><span class="status-pill">{{ statusLabel(r.status) }}</span></td>
+              <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); abrir(r, true)">Consultar</button><button class="btn sm" type="button" [disabled]="r.status !== 'RASCUNHO'" (click)="$event.stopPropagation(); abrir(r)">Editar</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma requisição encontrada.' }}</div></ng-template>
+      </div>
+      <div class="pager" *ngIf="filtered.length > pageSize">
+        <button class="btn" type="button" [disabled]="page === 1" (click)="page = page - 1; applyPage()">Anterior</button>
+        <span>Página {{ page }} de {{ totalPages }}</span>
+        <button class="btn" type="button" [disabled]="page >= totalPages" (click)="page = page + 1; applyPage()">Próxima</button>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="view === 'form'">
+    <section class="card form">
+      <div class="form-title-row">
+        <h3>{{ atual ? ('Requisição ' + atual.numero) : 'Nova Requisição' }}</h3>
+        <button class="btn" type="button" (click)="voltar()">Voltar</button>
+      </div>
+
+      <form [formGroup]="headerForm" class="grid-12">
+        <label class="input-item col-span-3">Loja*<select formControlName="loja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','loja')">{{ msg }}</small></label>
+        <label class="input-item col-span-3">Setor*<select formControlName="setor"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setores" [ngValue]="s.id">{{ s.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','setor')">{{ msg }}</small></label>
+        <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
+        <label class="input-item col-span-2">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+        <div class="input-item col-span-2"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status || 'RASCUNHO') }}</span></div>
+        <label class="input-item col-span-6">Justificativa<textarea rows="2" formControlName="justificativa"></textarea></label>
+        <label class="input-item col-span-6">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
+      </form>
+
+      <div class="actions-form" *ngIf="!consultando && podeEditar">
+        <button class="btn" type="button" [disabled]="saving" (click)="salvarRascunho()">Salvar Rascunho</button>
+        <button class="btn primary" type="button" *ngIf="!atual || atual.status === 'RASCUNHO'" [disabled]="saving" (click)="salvarEEnviar()">Salvar e Enviar</button>
+      </div>
+
+      <section class="section-header item-section-head"><h3>Itens</h3></section>
+      <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="atual && atual.status === 'RASCUNHO' && podeEditar">
+        <label class="input-item col-span-2">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Produto<select formControlName="produto"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ p.descricao }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','produto')">{{ msg }}</small></label>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Descrição<input formControlName="descricao" /><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao')">{{ msg }}</small></label>
+        <div class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'"><span>Unidade</span><span class="readonly-field">{{ unidadeProdutoSelecionado() }}</span></div>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Unidade<select formControlName="unidade"><option [ngValue]="null">Selecione</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','unidade')">{{ msg }}</small></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Quantidade<input type="number" step="0.001" formControlName="qtd_solicitada" /><small class="field-error" *ngFor="let msg of fieldErrors('item','qtd_solicitada')">{{ msg }}</small></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Categoria<input formControlName="categoria" /></label>
+        <label class="input-item col-span-6" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Especificação<textarea rows="2" formControlName="especificacao_tecnica"></textarea></label>
+
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'SERVICO'">Título<input formControlName="titulo_servico" /></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Categoria<select formControlName="categoria_servico"><option [ngValue]="null">Selecione</option><option *ngFor="let c of categorias" [ngValue]="c.id">{{ c.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','categoria_servico')">{{ msg }}</small></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Tipo<select formControlName="tipo_servico"><option value="">Selecione</option><option value="PREVENTIVA">Preventiva</option><option value="CORRETIVA">Corretiva</option><option value="INSTALACAO">Instalação</option><option value="REVISAO">Revisão</option><option value="REPARO">Reparo</option><option value="OUTRO">Outro</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','tipo_servico')">{{ msg }}</small></label>
+        <label class="input-item col-span-8" *ngIf="itemForm.value.tipo === 'SERVICO'">Descrição<textarea rows="2" formControlName="descricao_servico"></textarea></label>
+        <label class="input-item col-span-4">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
+        <div class="actions-form col-span-12"><button class="btn primary" type="button" (click)="salvarItem()">Gravar item</button><button class="btn" type="button" (click)="limparItem()">Limpar</button></div>
+      </form>
+
+      <div class="table-wrapper itens-wrapper">
+        <table class="table" *ngIf="itens.length; else itensEmpty">
+          <thead><tr><th>Tipo</th><th>Item</th><th>Qtd sol.</th><th>Qtd atend.</th><th>Pendente</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of itens">
+              <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
+              <td class="row-actions"><button class="btn sm" *ngIf="atual?.status === 'RASCUNHO'" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="atual?.status === 'RASCUNHO'" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.status !== 'ATENDIDO'" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #itensEmpty><div class="empty-hint">Nenhum item lançado.</div></ng-template>
+      </div>
+
+      <section class="actions-form" *ngIf="atual">
+        <button class="btn primary" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('aprovar')">Aprovar</button>
+        <button class="btn" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('devolver')">Devolver</button>
+        <button class="btn danger" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('rejeitar')">Rejeitar</button>
+        <button class="btn danger" type="button" *ngIf="podeEditar && !['CONCLUIDA','CANCELADA'].includes(atual.status)" (click)="abrirDecisao('cancelar')">Cancelar</button>
+      </section>
+
+      <section class="section-header item-section-head"><h3>Histórico</h3></section>
+      <div class="timeline"><div class="timeline-row" *ngFor="let h of historico"><strong>{{ h.data_hora | date:'short' }}</strong><span>{{ h.usuario_nome || '-' }} — {{ h.acao }} {{ h.status_anterior ? '(' + statusLabel(h.status_anterior) + ' → ' + statusLabel(h.status_novo) + ')' : '' }}</span><small>{{ h.observacao }}</small></div></div>
+    </section>
+  </ng-container>
+
+  <div class="modal-backdrop" *ngIf="decisaoModal as modal">
+    <section class="modal-card"><h3>{{ modal.titulo }}</h3><label>Motivo/observação<textarea rows="3" [(ngModel)]="modal.motivo"></textarea></label><div class="modal-actions"><button class="btn" type="button" (click)="decisaoModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarDecisao()">Confirmar</button></div></section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="atendimentoModal as modal">
+    <section class="modal-card"><h3>Atender item</h3><p class="modal-text">{{ itemTitulo(modal.item) }}</p><label>Quantidade<input type="number" step="0.001" [(ngModel)]="modal.quantidade" /></label><label>Observação<textarea rows="2" [(ngModel)]="modal.observacao"></textarea></label><div class="modal-actions"><button class="btn" type="button" (click)="atendimentoModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarAtendimento()">Atender</button></div></section>
+  </div>
+</div>

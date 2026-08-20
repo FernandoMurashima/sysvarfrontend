@@ -36,6 +36,8 @@ import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pag
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
 import { InsumosComponent } from './features/insumos/insumos.component';
 import { PedidosCompraComponent } from './features/pedidos-compra/pedidos-compra.component';
+import { RequisicoesComponent } from './features/requisicoes/requisicoes.component';
+import { SetoresComponent } from './features/setores/setores.component';
 import { NotasFiscaisEntradaComponent } from './features/notas-fiscais-entrada/notas-fiscais-entrada.component';
 import { FinanceiroTitulosComponent } from './features/financeiro-titulos/financeiro-titulos.component';
 import { CaixasComponent } from './features/caixas/caixas.component';
@@ -97,6 +99,7 @@ export const routes: Routes = [
       { path: 'fornecedores', component: FornecedoresComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'cadastros' } },
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'cargos', component: CargosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
+      { path: 'setores', component: SetoresComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
       { path: 'plano-contabil', component: PlanoContabilComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'cores', component: CoresComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
@@ -128,6 +131,7 @@ export const routes: Routes = [
       { path: 'fiscal/regras-tributarias', component: RegrasTributariasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'distribuicao' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
+      { path: 'compras/requisicoes', component: RequisicoesComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos', component: PedidosCompraComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos-revenda', redirectTo: 'compras/pedidos', pathMatch: 'full' },
       { path: 'compras/pedidos-uso-consumo', redirectTo: 'compras/pedidos', pathMatch: 'full' },

@@ -1,0 +1,62 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Setores</h1><button class="info-button" type="button" title="Administre setores utilizados em requisições.">i</button></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo Setor</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <section class="filter-bar">
+    <label class="inline-filter search-field"><span>Buscar</span><input type="search" [(ngModel)]="search" (keyup.enter)="carregar()" placeholder="Nome do setor" /></label>
+    <button class="btn primary" type="button" (click)="carregar()">Pesquisar</button>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="ativo" (ngModelChange)="carregar()"><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select></label>
+    <button class="btn" type="button" (click)="search=''; ativo=''; carregar()">Limpar</button>
+  </section>
+
+  <section class="card form" *ngIf="showForm">
+    <div class="form-title-row">
+      <h3>{{ consultando ? 'Consultar Setor' : (editingId ? 'Editar Setor' : 'Novo Setor') }}</h3>
+      <div class="title-actions">
+        <button class="btn" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+      </div>
+    </div>
+    <form [formGroup]="form" class="grid-12">
+      <label class="input-item col-span-4" [class.invalid]="isInvalid('nome')">Nome*<input formControlName="nome" maxlength="80" /><small class="field-error" *ngIf="isInvalid('nome')">Nome do setor é obrigatório.</small></label>
+      <label class="input-item col-span-8">Descrição<input formControlName="descricao" /></label>
+      <label class="check-line col-span-2"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+      <label class="check-line col-span-3"><input type="checkbox" formControlName="pode_fazer_requisicao" /> Pode fazer requisição</label>
+      <label class="check-line col-span-3"><input type="checkbox" formControlName="recebe_requisicoes" /> Recebe requisições</label>
+      <label class="check-line col-span-4"><input type="checkbox" formControlName="controla_estoque_uso_consumo" /> Controla estoque de uso/consumo</label>
+    </form>
+  </section>
+
+  <section class="results-area table-card">
+    <div class="results-header">
+      <div><strong>Setores cadastrados</strong> <span>{{ filtered.length }} registro(s) encontrado(s)</span></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="filtered.length; else emptyTpl">
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Descrição</th><th>Pode fazer</th><th>Recebe</th><th>Controla estoque</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let s of filtered" [class.selected]="selected?.id === s.id" (click)="selecionar(s)">
+            <td>{{ s.nome }}</td>
+            <td>{{ s.empresa_nome || s.empresa }}</td>
+            <td>{{ s.descricao || '-' }}</td>
+            <td>{{ s.pode_fazer_requisicao ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.recebe_requisicoes ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.controla_estoque_uso_consumo ? 'Sim' : 'Não' }}</td>
+            <td><span class="status-pill" [class.inactive]="s.ativo === false">{{ statusLabel(s) }}</span></td>
+            <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); consultar(s)">Consultar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); editar(s)">Editar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); alternarAtivo(s)">{{ s.ativo === false ? 'Ativar' : 'Inativar' }}</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhum setor encontrado.' }}</div></ng-template>
+    </div>
+  </section>
+</div>
