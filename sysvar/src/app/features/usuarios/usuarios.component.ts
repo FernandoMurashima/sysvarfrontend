@@ -453,13 +453,12 @@ export class UsuariosComponent implements OnInit {
     return REQUISICOES_DIREITOS[modulo.key]?.label || modulo.label;
   }
 
-  setDireitoRequisicoes(modulo: ModuloPermissao, value: 'HERDAR' | 'NONE' | 'ATIVO'): void {
-    modulo.acesso = value === 'ATIVO' ? REQUISICOES_DIREITOS[modulo.key].active : value;
+  setDireitoRequisicoes(modulo: ModuloPermissao, ativo: boolean): void {
+    modulo.acesso = ativo ? REQUISICOES_DIREITOS[modulo.key].active : 'NONE';
   }
 
-  direitoRequisicoesValue(modulo: ModuloPermissao): 'HERDAR' | 'NONE' | 'ATIVO' {
-    if (modulo.acesso === 'HERDAR' || modulo.acesso === 'NONE') return modulo.acesso;
-    return 'ATIVO';
+  direitoRequisicoesAtivo(modulo: ModuloPermissao): boolean {
+    return modulo.acesso !== 'HERDAR' && modulo.acesso !== 'NONE';
   }
 
   private validatePasswordPair(): string | null {
