@@ -106,11 +106,12 @@ export class RequisicoesComponent implements OnInit {
   }
 
   get visoesDisponiveis(): RequisicaoVisao[] {
-    const base: RequisicaoVisao[] = ['minhas'];
+    const base: RequisicaoVisao[] = [];
+    if (this.podeEditar) base.push('minhas');
     if (this.podeAprovar) base.push('para_analisar');
     if (this.podeAtender) base.push('para_atender');
     if (this.podeVerTodas) base.push('todas');
-    return base;
+    return base.length ? base : ['minhas'];
   }
 
   get totalPages(): number {
@@ -130,6 +131,7 @@ export class RequisicoesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.syncVisaoDisponivel();
     this.loadLookups();
     this.loadRequisicoes();
     this.loadContadoresVisoes();
@@ -176,6 +178,7 @@ export class RequisicoesComponent implements OnInit {
   }
 
   loadRequisicoes(): void {
+    this.syncVisaoDisponivel();
     this.loading = true;
     this.api.listar({ page_size: 500, visao: this.visao }).subscribe({
       next: resp => {
@@ -562,6 +565,13 @@ export class RequisicoesComponent implements OnInit {
   trocarVisao(visao: RequisicaoVisao): void {
     this.visao = visao;
     this.loadRequisicoes();
+  }
+
+  private syncVisaoDisponivel(): void {
+    const visoes = this.visoesDisponiveis;
+    if (!visoes.includes(this.visao)) {
+      this.visao = visoes[0];
+    }
   }
 
   podeEditarConteudo(req: Requisicao | null): boolean {

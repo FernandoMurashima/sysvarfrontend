@@ -42,10 +42,16 @@
       <thead><tr><th>Módulo</th><th>Sem acesso</th><th>Consulta</th><th>Edição</th></tr></thead>
       <tbody>
         <tr *ngFor="let perm of form.permissoes_modulos">
-          <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" [disabled]="!podeEditarModulo" /></td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" [disabled]="!podeEditarModulo" /></td>
-          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" [disabled]="!podeEditarModulo" /></td>
+          <ng-container *ngIf="isDireitoRequisicoes(perm); else acessoModuloGenerico">
+            <td>Requisições - {{ direitoRequisicoesLabel(perm) }}</td>
+            <td colspan="3"><label class="check-line"><input type="checkbox" [checked]="direitoRequisicoesAtivo(perm)" [disabled]="!podeEditarModulo" (change)="setDireitoRequisicoes(perm, $any($event.target).checked)" /> Permitir</label></td>
+          </ng-container>
+          <ng-template #acessoModuloGenerico>
+            <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
+            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" [disabled]="!podeEditarModulo" /></td>
+            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" [disabled]="!podeEditarModulo" /></td>
+            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" [disabled]="!podeEditarModulo" /></td>
+          </ng-template>
         </tr>
       </tbody>
     </table>

@@ -55,4 +55,25 @@ describe('PermissionService auditoria', () => {
     expect(service.canAccess(requisicoes)).toBeTrue();
     expect(auth.podeAcessarModulo).not.toHaveBeenCalledWith('compras');
   });
+
+  it('exibe Requisições para atendente sem permissao de Compras', () => {
+    const requisicoes: NavItem = {
+      label: 'Requisições',
+      link: '/requisicoes',
+      moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'],
+    };
+    auth.podeAcessarModulo.and.callFake((modulo: string | null) => modulo === 'requisicoes_atendimento');
+    expect(service.canAccess(requisicoes)).toBeTrue();
+    expect(auth.podeAcessarModulo).not.toHaveBeenCalledWith('compras');
+  });
+
+  it('oculta Requisições quando nao ha direitos especificos', () => {
+    const requisicoes: NavItem = {
+      label: 'Requisições',
+      link: '/requisicoes',
+      moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'],
+    };
+    auth.podeAcessarModulo.and.returnValue(false);
+    expect(service.canAccess(requisicoes)).toBeFalse();
+  });
 });

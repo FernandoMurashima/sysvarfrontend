@@ -32,6 +32,13 @@ type ModuloPermissao = {
   efetivo?: 'NONE' | 'VIEW' | 'EDIT';
 };
 
+const REQUISICOES_DIREITOS: Record<string, { label: string; active: 'VIEW' | 'EDIT' }> = {
+  requisicoes: { label: 'Requisitar', active: 'EDIT' },
+  requisicoes_analise: { label: 'Analisar', active: 'EDIT' },
+  requisicoes_atendimento: { label: 'Atender', active: 'EDIT' },
+  requisicoes_todas: { label: 'Visualizar todas', active: 'VIEW' },
+};
+
 type CampoPermissao = {
   key: string;
   label: string;
@@ -436,6 +443,23 @@ export class UsuariosComponent implements OnInit {
   }
 
   private normalizarPermissoesPorTipo(): void {
+  }
+
+  isDireitoRequisicoes(modulo: ModuloPermissao): boolean {
+    return modulo.key in REQUISICOES_DIREITOS;
+  }
+
+  direitoRequisicoesLabel(modulo: ModuloPermissao): string {
+    return REQUISICOES_DIREITOS[modulo.key]?.label || modulo.label;
+  }
+
+  setDireitoRequisicoes(modulo: ModuloPermissao, value: 'HERDAR' | 'NONE' | 'ATIVO'): void {
+    modulo.acesso = value === 'ATIVO' ? REQUISICOES_DIREITOS[modulo.key].active : value;
+  }
+
+  direitoRequisicoesValue(modulo: ModuloPermissao): 'HERDAR' | 'NONE' | 'ATIVO' {
+    if (modulo.acesso === 'HERDAR' || modulo.acesso === 'NONE') return modulo.acesso;
+    return 'ATIVO';
   }
 
   private validatePasswordPair(): string | null {

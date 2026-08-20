@@ -5,6 +5,13 @@ import { AccessControlService, PerfilAcesso } from '../../core/services/access-c
 import { AuthService } from '../../core/auth.service';
 import { ModuloSistema } from '../../core/models/empresa';
 
+const REQUISICOES_DIREITOS: Record<string, { label: string; active: 'VIEW' | 'EDIT' }> = {
+  requisicoes: { label: 'Requisitar', active: 'EDIT' },
+  requisicoes_analise: { label: 'Analisar', active: 'EDIT' },
+  requisicoes_atendimento: { label: 'Atender', active: 'EDIT' },
+  requisicoes_todas: { label: 'Visualizar todas', active: 'VIEW' },
+};
+
 @Component({
   selector: 'app-perfis-acesso',
   standalone: true,
@@ -90,5 +97,22 @@ export class PerfisAcessoComponent implements OnInit {
         this.saving = false;
       }
     });
+  }
+
+  isDireitoRequisicoes(perm: { modulo_chave?: string }): boolean {
+    return Boolean(perm.modulo_chave && REQUISICOES_DIREITOS[perm.modulo_chave]);
+  }
+
+  direitoRequisicoesLabel(perm: { modulo_chave?: string; modulo_nome?: string }): string {
+    return (perm.modulo_chave && REQUISICOES_DIREITOS[perm.modulo_chave]?.label) || perm.modulo_nome || perm.modulo_chave || '';
+  }
+
+  direitoRequisicoesAtivo(perm: { acesso: string }): boolean {
+    return perm.acesso !== 'NONE';
+  }
+
+  setDireitoRequisicoes(perm: { modulo_chave?: string; acesso: string }, ativo: boolean): void {
+    if (!perm.modulo_chave || !REQUISICOES_DIREITOS[perm.modulo_chave]) return;
+    perm.acesso = ativo ? REQUISICOES_DIREITOS[perm.modulo_chave].active : 'NONE';
   }
 }
