@@ -18,6 +18,11 @@ describe('authGuard troca obrigatoria', () => {
   beforeEach(() => {
     router.navigateByUrl.calls.reset();
     auth.getCurrentUser.calls.reset();
+    auth.podeAcessarModulo.calls.reset();
+    auth.empresaModuloHabilitado.calls.reset();
+    auth.isAuthenticated.and.returnValue(true);
+    auth.podeAcessarModulo.and.returnValue(true);
+    auth.empresaModuloHabilitado.and.returnValue(true);
     TestBed.configureTestingModule({
       providers: [
         { provide: Router, useValue: router },
@@ -37,5 +42,16 @@ describe('authGuard troca obrigatoria', () => {
     auth.getCurrentUser.and.returnValue({ deve_trocar_senha: true });
     const result = TestBed.runInInjectionContext(() => authGuard({ data: { allowPasswordChange: true }, routeConfig: { path: 'change-password-required' } } as any, {} as any));
     expect(result).toBeTrue();
+  });
+
+  it('permite rota de Requisições com qualquer permissao propria sem Compras', () => {
+    auth.getCurrentUser.and.returnValue({ deve_trocar_senha: false });
+    auth.podeAcessarModulo.and.callFake((modulo: string | null) => modulo === 'requisicoes');
+    const result = TestBed.runInInjectionContext(() => authGuard({
+      data: { moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'] },
+      routeConfig: { path: 'requisicoes' },
+    } as any, {} as any));
+    expect(result).toBeTrue();
+    expect(auth.podeAcessarModulo).not.toHaveBeenCalledWith('compras');
   });
 });

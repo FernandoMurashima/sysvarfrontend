@@ -49,6 +49,14 @@ export const authGuard: CanActivateFn = (route) => {
   }
 
   const moduloEmpresa = route.data?.['moduloEmpresa'] as ModuloEmpresa | undefined;
+  const moduloEmpresaAnyOf = (route.data?.['moduloEmpresaAnyOf'] ?? []) as ModuloEmpresa[];
+  if (moduloEmpresaAnyOf.length) {
+    const hasAny = moduloEmpresaAnyOf.some(modulo => auth.podeAcessarModulo(modulo) === true && auth.empresaModuloHabilitado(modulo));
+    if (!hasAny) {
+      router.navigateByUrl('/home');
+      return false;
+    }
+  }
   const permissaoModulo = auth.podeAcessarModulo(moduloEmpresa || null);
   if (moduloEmpresa && (permissaoModulo === false || permissaoModulo === null)) {
     router.navigateByUrl('/home');

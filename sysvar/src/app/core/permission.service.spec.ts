@@ -44,4 +44,15 @@ describe('PermissionService auditoria', () => {
     auth.getCurrentUser.and.returnValue({ is_company_master: true });
     expect(service.canAccess(item)).toBeTrue();
   });
+
+  it('exibe Requisições com qualquer permissao propria sem exigir Compras', () => {
+    const requisicoes: NavItem = {
+      label: 'Requisições',
+      link: '/requisicoes',
+      moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'],
+    };
+    auth.podeAcessarModulo.and.callFake((modulo: string | null) => modulo === 'requisicoes');
+    expect(service.canAccess(requisicoes)).toBeTrue();
+    expect(auth.podeAcessarModulo).not.toHaveBeenCalledWith('compras');
+  });
 });

@@ -42,3 +42,13 @@ describe('rotas de compras', () => {
     expect(rota?.data?.['moduloEmpresa']).not.toBe('fiscal');
   });
 });
+
+describe('rotas de requisicoes', () => {
+  const shell = routes.find(route => route.path === '');
+
+  it('usa permissao propria em qualquer papel de Requisições', () => {
+    const rota = shell?.children?.find(route => route.path === 'requisicoes');
+    expect(rota?.data?.['moduloEmpresa']).toBeUndefined();
+    expect(rota?.data?.['moduloEmpresaAnyOf']).toEqual(['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas']);
+  });
+});

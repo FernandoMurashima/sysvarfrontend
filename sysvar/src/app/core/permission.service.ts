@@ -13,6 +13,11 @@ export class PermissionService {
 
   canAccess(item: NavItem): boolean {
     if (item.superOnly) return this.auth.getCurrentUser()?.is_superuser === true;
+    const anyOf = item.moduloEmpresaAnyOf || [];
+    if (anyOf.length) {
+      const hasAny = anyOf.some(modulo => this.auth.podeAcessarModulo(modulo) === true && this.auth.empresaModuloHabilitado(modulo));
+      if (!hasAny) return false;
+    }
     const permissaoModulo = this.auth.podeAcessarModulo(item.moduloEmpresa || null);
     if (item.moduloEmpresa && !permissaoModulo) return false;
     if (item.moduloEmpresa && !this.auth.empresaModuloHabilitado(item.moduloEmpresa)) return false;
@@ -37,6 +42,7 @@ export class PermissionService {
           roles: node.roles,
           superOnly: node.superOnly,
           moduloEmpresa: node.moduloEmpresa,
+          moduloEmpresaAnyOf: node.moduloEmpresaAnyOf,
           ...(hasChild ? { children: filteredChildren } : {})
         };
         out.push(next);

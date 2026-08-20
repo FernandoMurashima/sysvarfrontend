@@ -92,7 +92,7 @@ export class ShellComponent {
       ]
     },
 
-    { label: 'Requisições', link: '/requisicoes', icon: 'bi bi-clipboard-check', moduloEmpresa: 'requisicoes' },
+    { label: 'Requisições', link: '/requisicoes', icon: 'bi bi-clipboard-check', moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'] },
 
     {
       label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',

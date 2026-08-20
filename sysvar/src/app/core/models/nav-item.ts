@@ -21,4 +21,5 @@ export interface NavItem {
   roles?: UserRole[];   // <- agora usando o tipo exportado
   superOnly?: boolean;
   moduloEmpresa?: ModuloEmpresa;
+  moduloEmpresaAnyOf?: ModuloEmpresa[];
 }
