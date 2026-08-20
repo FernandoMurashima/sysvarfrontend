@@ -3,6 +3,7 @@ export type RequisicaoStatus = 'RASCUNHO' | 'SOLICITADA' | 'EM_ANALISE' | 'AGUAR
 export type RequisicaoItemTipo = 'MATERIAL' | 'SERVICO';
 export type RequisicaoItemOrigem = 'PRODUTO' | 'LIVRE' | 'SERVICO';
 export type RequisicaoItemStatus = 'PENDENTE' | 'APROVADO' | 'REJEITADO' | 'EM_SEPARACAO' | 'ATENDIDO' | 'ATENDIDO_PARCIALMENTE' | 'AGUARDANDO_COTACAO' | 'EM_COTACAO' | 'PEDIDO_GERADO' | 'AGUARDANDO_RECEBIMENTO' | 'RECEBIDO' | 'SERVICO_CONTRATACAO' | 'SERVICO_CONCLUIDO' | 'CANCELADO';
+export type RequisicaoItemFinalidade = 'USO_CONSUMO' | 'ALMOXARIFADO' | 'IMOBILIZADO' | 'OUTRO';
 
 export interface RequisicaoServicoCategoria {
   id: number;
@@ -33,6 +34,7 @@ export interface RequisicaoItem {
   produto_referencia?: string | null;
   descricao: string;
   categoria: string;
+  finalidade: RequisicaoItemFinalidade | '';
   unidade: number | null;
   unidade_descricao?: string | null;
   especificacao_tecnica: string;

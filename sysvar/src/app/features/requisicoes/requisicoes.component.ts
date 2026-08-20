@@ -74,6 +74,7 @@ export class RequisicoesComponent implements OnInit {
     produto: [null as number | null],
     descricao: [''],
     categoria: [''],
+    finalidade: ['USO_CONSUMO'],
     unidade: [null as number | null],
     qtd_solicitada: [1, [Validators.required, Validators.min(0.001)]],
     especificacao_tecnica: [''],
@@ -239,15 +240,7 @@ export class RequisicoesComponent implements OnInit {
       return;
     }
     const raw = this.itemForm.value;
-    const payload: any = { ...raw, requisicao: this.atual.id };
-    if (payload.tipo === 'MATERIAL' && payload.origem === 'PRODUTO') {
-      payload.unidade = this.produtoSelecionado()?.unidade || null;
-    }
-    if (payload.tipo === 'SERVICO') {
-      payload.origem = 'SERVICO';
-      payload.qtd_solicitada = 1;
-      payload.produto = null;
-    }
+    const payload = this.buildItemPayload(this.atual.id);
     const obs = raw.id ? this.api.updateItem(raw.id, payload) : this.api.createItem(payload);
     obs.subscribe({
       next: () => {
@@ -306,13 +299,7 @@ export class RequisicoesComponent implements OnInit {
 
   private salvarItemAntesDeEnviar(requisicaoId: number, done: () => void): void {
     const raw = this.itemForm.value;
-    const payload: any = { ...raw, requisicao: requisicaoId };
-    if (payload.tipo === 'MATERIAL' && payload.origem === 'PRODUTO') payload.unidade = this.produtoSelecionado()?.unidade || null;
-    if (payload.tipo === 'SERVICO') {
-      payload.origem = 'SERVICO';
-      payload.qtd_solicitada = 1;
-      payload.produto = null;
-    }
+    const payload = this.buildItemPayload(requisicaoId);
     const obs = raw.id ? this.api.updateItem(raw.id, payload) : this.api.createItem(payload);
     obs.subscribe({
       next: () => done(),
@@ -333,6 +320,7 @@ export class RequisicoesComponent implements OnInit {
       produto: item.produto,
       descricao: item.descricao,
       categoria: item.categoria,
+      finalidade: item.finalidade || 'USO_CONSUMO',
       unidade: item.unidade,
       qtd_solicitada: Number(item.qtd_solicitada || 1),
       especificacao_tecnica: item.especificacao_tecnica,
@@ -345,7 +333,23 @@ export class RequisicoesComponent implements OnInit {
   }
 
   limparItem(): void {
-    this.itemForm.reset({ id: null, tipo: 'MATERIAL', origem: 'PRODUTO', produto: null, unidade: null, qtd_solicitada: 1 });
+    this.itemForm.reset({
+      id: null,
+      tipo: 'MATERIAL',
+      origem: 'PRODUTO',
+      produto: null,
+      descricao: '',
+      categoria: '',
+      finalidade: 'USO_CONSUMO',
+      unidade: null,
+      qtd_solicitada: 1,
+      especificacao_tecnica: '',
+      titulo_servico: '',
+      descricao_servico: '',
+      categoria_servico: null,
+      tipo_servico: '',
+      observacoes: '',
+    });
     this.selectedItem = null;
   }
 
@@ -442,6 +446,43 @@ export class RequisicoesComponent implements OnInit {
     }
   }
 
+  private buildItemPayload(requisicaoId: number): Partial<RequisicaoItem> & { requisicao: number } {
+    const raw = this.itemForm.getRawValue();
+    const base: any = {
+      requisicao: requisicaoId,
+      tipo: raw.tipo,
+      origem: raw.tipo === 'SERVICO' ? 'SERVICO' : raw.origem,
+      observacoes: raw.observacoes || '',
+    };
+    if (raw.id) base.id = raw.id;
+    if (raw.tipo === 'SERVICO') {
+      return {
+        ...base,
+        titulo_servico: raw.titulo_servico || '',
+        descricao_servico: raw.descricao_servico || '',
+        categoria_servico: raw.categoria_servico,
+        tipo_servico: raw.tipo_servico || '',
+      };
+    }
+    if (raw.origem === 'PRODUTO') {
+      return {
+        ...base,
+        produto: raw.produto,
+        finalidade: raw.finalidade || '',
+        qtd_solicitada: String(raw.qtd_solicitada || ''),
+      };
+    }
+    return {
+      ...base,
+      descricao: raw.descricao || '',
+      categoria: raw.categoria || '',
+      finalidade: raw.finalidade || '',
+      unidade: raw.unidade,
+      qtd_solicitada: String(raw.qtd_solicitada || ''),
+      especificacao_tecnica: raw.especificacao_tecnica || '',
+    };
+  }
+
   itemTitulo(item: RequisicaoItem): string {
     if (item.tipo === 'SERVICO') return item.titulo_servico;
     if (item.origem === 'PRODUTO') return item.produto_descricao || this.produtoLabel(item.produto);
@@ -520,6 +561,8 @@ export class RequisicoesComponent implements OnInit {
       descricao: 'Descrição',
       categoria_servico: 'Categoria de serviço',
       tipo_servico: 'Tipo de serviço',
+      finalidade: 'Finalidade',
+      descricao_servico: 'Descrição do serviço',
       setor: 'Setor',
       loja: 'Loja',
       itens: 'Itens',
