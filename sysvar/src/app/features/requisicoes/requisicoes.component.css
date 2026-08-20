@@ -46,6 +46,11 @@ h1, h3 {
   color: #fff;
 }
 
+.send-action {
+  font-weight: 700;
+  padding-inline: 18px;
+}
+
 .btn.danger {
   border-color: #dc2626;
   color: #dc2626;
@@ -85,6 +90,28 @@ h1, h3 {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr));
   gap: 10px;
+}
+
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #475569;
+  padding: 9px 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tab-button.active {
+  border-color: #2563eb;
+  color: #1d4ed8;
 }
 
 .indicator {

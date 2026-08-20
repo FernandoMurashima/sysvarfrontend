@@ -12,6 +12,7 @@ import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, Requisi
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
+type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender' | 'todas';
 
 @Component({
   selector: 'app-requisicoes',
@@ -51,6 +52,8 @@ export class RequisicoesComponent implements OnInit {
   search = '';
   filterStatus = '';
   filterPrioridade = '';
+  visao: RequisicaoVisao = 'minhas';
+  viewCounts: Partial<Record<RequisicaoVisao, number>> = {};
   page = 1;
   pageSize = 20;
   selected: Requisicao | null = null;
@@ -94,6 +97,18 @@ export class RequisicoesComponent implements OnInit {
     return ['Admin', 'Diretor', 'Gerente'].includes(this.auth.getUserType() || '') && this.podeEditar;
   }
 
+  get podeAtender(): boolean {
+    return this.podeEditar;
+  }
+
+  get visoesDisponiveis(): RequisicaoVisao[] {
+    const base: RequisicaoVisao[] = ['minhas'];
+    if (this.podeAprovar) base.push('para_analisar');
+    if (this.podeAtender) base.push('para_atender');
+    if (this.podeAprovar) base.push('todas');
+    return base;
+  }
+
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.filtered.length / this.pageSize));
   }
@@ -113,6 +128,7 @@ export class RequisicoesComponent implements OnInit {
   ngOnInit(): void {
     this.loadLookups();
     this.loadRequisicoes();
+    this.loadContadoresVisoes();
     this.itemForm.get('tipo')?.valueChanges.subscribe(tipo => {
       this.itemForm.patchValue({ origem: tipo === 'SERVICO' ? 'SERVICO' : 'PRODUTO' }, { emitEvent: false });
       this.syncProdutoUnidade();
@@ -157,7 +173,7 @@ export class RequisicoesComponent implements OnInit {
 
   loadRequisicoes(): void {
     this.loading = true;
-    this.api.listar({ page_size: 500 }).subscribe({
+    this.api.listar({ page_size: 500, visao: this.visao }).subscribe({
       next: resp => {
         this.requisicoes = this.arrayOrResults<Requisicao>(resp);
         this.applyFilter();
@@ -167,6 +183,19 @@ export class RequisicoesComponent implements OnInit {
         this.error('Erro ao carregar requisições.');
         this.loading = false;
       },
+    });
+  }
+
+  loadContadoresVisoes(): void {
+    this.visoesDisponiveis.filter(v => v !== 'minhas' && v !== 'todas').forEach(visao => {
+      this.api.listar({ page_size: 1, visao }).subscribe({
+        next: resp => {
+          this.viewCounts[visao] = Array.isArray(resp) ? resp.length : Number(resp.count ?? resp.results?.length ?? 0);
+        },
+        error: () => {
+          this.viewCounts[visao] = 0;
+        },
+      });
     });
   }
 
@@ -201,7 +230,7 @@ export class RequisicoesComponent implements OnInit {
   abrir(r: Requisicao, consulta = false): void {
     this.api.get(r.id).subscribe(req => {
       this.atual = req;
-      this.consultando = consulta || req.status !== 'RASCUNHO';
+      this.consultando = consulta || !this.podeEditarConteudo(req);
       this.headerForm.reset({
         loja: req.loja,
         setor: req.setor,
@@ -282,7 +311,7 @@ export class RequisicoesComponent implements OnInit {
         const enviarDepois = () => this.api.salvarEnviar(req.id, payload).subscribe({
           next: enviada => {
             this.saving = false;
-            this.afterAction(enviada, 'Requisição salva e enviada.');
+            this.afterAction(enviada, 'Requisição enviada com sucesso.');
           },
           error: err => {
             this.saving = false;
@@ -371,7 +400,7 @@ export class RequisicoesComponent implements OnInit {
 
   enviar(): void {
     if (!this.atual) return;
-    this.api.enviar(this.atual.id).subscribe({ next: req => this.afterAction(req, 'Requisição enviada.'), error: err => this.error(err?.error?.detail || 'Erro ao enviar.') });
+    this.api.enviar(this.atual.id).subscribe({ next: req => this.afterAction(req, 'Requisição enviada com sucesso.'), error: err => this.error(err?.error?.detail || 'Erro ao enviar.') });
   }
 
   abrirDecisao(acao: 'aprovar' | 'rejeitar' | 'devolver' | 'cancelar'): void {
@@ -421,9 +450,10 @@ export class RequisicoesComponent implements OnInit {
     this.atual = req;
     this.itens = req.itens || [];
     this.historico = req.historico || [];
-    this.consultando = req.status !== 'RASCUNHO';
+    this.consultando = !this.podeEditarConteudo(req);
     this.success(msg);
     this.loadRequisicoes();
+    this.loadContadoresVisoes();
   }
 
   produtoLabel(id: number | null): string {
@@ -495,7 +525,45 @@ export class RequisicoesComponent implements OnInit {
   }
 
   statusLabel(status: string): string {
-    return status.replace(/_/g, ' ');
+    const labels: Record<string, string> = {
+      RASCUNHO: 'Não enviada',
+      AGUARDANDO_APROVACAO: 'Aguardando aprovação',
+      DEVOLVIDA_CORRECAO: 'Devolvida para correção',
+      APROVADA: 'Aprovada',
+      EM_ATENDIMENTO: 'Em atendimento',
+      ATENDIDA_PARCIALMENTE: 'Atendida parcialmente',
+      EM_PROCESSO_COMPRA: 'Aguardando Cotação',
+      CONCLUIDA: 'Concluída',
+      REJEITADA: 'Rejeitada',
+      CANCELADA: 'Cancelada',
+    };
+    return labels[status] || status.replace(/_/g, ' ');
+  }
+
+  visaoLabel(visao: RequisicaoVisao): string {
+    const labels: Record<RequisicaoVisao, string> = {
+      minhas: 'Minhas Requisições',
+      para_analisar: 'Para Analisar',
+      para_atender: 'Para Atender',
+      todas: 'Todas',
+    };
+    return labels[visao];
+  }
+
+  contadorVisao(visao: RequisicaoVisao): number | null {
+    if (visao === 'minhas' || visao === 'todas') return null;
+    return this.viewCounts[visao] ?? 0;
+  }
+
+  trocarVisao(visao: RequisicaoVisao): void {
+    this.visao = visao;
+    this.loadRequisicoes();
+  }
+
+  podeEditarConteudo(req: Requisicao | null): boolean {
+    if (!req || !this.podeEditar) return false;
+    const userId = this.auth.getCurrentUser()?.id;
+    return Number(req.requisitante) === Number(userId) && ['RASCUNHO', 'DEVOLVIDA_CORRECAO'].includes(req.status);
   }
 
   motivoRequisicao(req: Requisicao): string {

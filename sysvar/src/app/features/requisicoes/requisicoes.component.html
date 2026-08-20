@@ -12,6 +12,12 @@
   <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
 
   <ng-container *ngIf="view === 'list'">
+    <section class="view-tabs">
+      <button class="tab-button" type="button" *ngFor="let v of visoesDisponiveis" [class.active]="visao === v" (click)="trocarVisao(v)">
+        {{ visaoLabel(v) }} <span *ngIf="contadorVisao(v) !== null">({{ contadorVisao(v) }})</span>
+      </button>
+    </section>
+
     <section class="indicator-bar">
       <div class="indicator stat-card"><span class="indicator-icon blue">#</span><div><small>Total</small><strong>{{ requisicoes.length }}</strong></div></div>
       <div class="indicator stat-card"><span class="indicator-icon orange">AP</span><div><small>Aprovação</small><strong>{{ aguardandoAprovacao }}</strong></div></div>
@@ -22,7 +28,7 @@
     <section class="filter-bar">
       <app-search-suggest class="main-search" [(value)]="search" [suggestions]="[]" placeholder="Buscar por número, loja, setor ou requisitante" (search)="applyFilter()" (cleared)="search=''; applyFilter()" />
       <button class="btn primary" type="button" (click)="applyFilter()">Pesquisar</button>
-      <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()"><option value="">Todos</option><option value="RASCUNHO">Rascunho</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovação</option><option value="APROVADA">Aprovada</option><option value="ATENDIDA_PARCIALMENTE">Atendida parcialmente</option><option value="EM_PROCESSO_COMPRA">Aguardando Cotação</option><option value="CONCLUIDA">Concluída</option><option value="REJEITADA">Rejeitada</option><option value="CANCELADA">Cancelada</option></select></label>
+      <label class="inline-filter"><span>Status</span><select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()"><option value="">Todos</option><option value="RASCUNHO">Não enviada</option><option value="DEVOLVIDA_CORRECAO">Devolvida para correção</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovação</option><option value="APROVADA">Aprovada</option><option value="ATENDIDA_PARCIALMENTE">Atendida parcialmente</option><option value="EM_PROCESSO_COMPRA">Aguardando Cotação</option><option value="CONCLUIDA">Concluída</option><option value="REJEITADA">Rejeitada</option><option value="CANCELADA">Cancelada</option></select></label>
       <label class="inline-filter"><span>Prioridade</span><select [(ngModel)]="filterPrioridade" (ngModelChange)="applyFilter()"><option value="">Todas</option><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
       <button class="btn" type="button" (click)="search=''; filterStatus=''; filterPrioridade=''; applyFilter()">Limpar</button>
     </section>
@@ -43,7 +49,7 @@
               <td>{{ r.requisitante_nome || r.requisitante }}</td>
               <td><span class="status-pill" [ngClass]="r.prioridade === 'NORMAL' ? 'badge-ok' : 'inactive'">{{ r.prioridade }}</span></td>
               <td><span class="status-pill">{{ statusLabel(r.status) }}</span></td>
-              <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); abrir(r, true)">Consultar</button><button class="btn sm" type="button" [disabled]="r.status !== 'RASCUNHO'" (click)="$event.stopPropagation(); abrir(r)">Editar</button></td>
+              <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); abrir(r, true)">Consultar</button><button class="btn sm" type="button" [disabled]="!podeEditarConteudo(r)" (click)="$event.stopPropagation(); abrir(r)">Editar</button></td>
             </tr>
           </tbody>
         </table>
@@ -74,12 +80,12 @@
       </form>
 
       <div class="actions-form" *ngIf="!consultando && podeEditar">
-        <button class="btn" type="button" [disabled]="saving" (click)="salvarRascunho()">Salvar Rascunho</button>
-        <button class="btn primary" type="button" *ngIf="!atual || atual.status === 'RASCUNHO'" [disabled]="saving" (click)="salvarEEnviar()">Salvar e Enviar</button>
+        <button class="btn" type="button" [disabled]="saving" (click)="salvarRascunho()">Salvar</button>
+        <button class="btn primary send-action" type="button" *ngIf="!atual || podeEditarConteudo(atual)" [disabled]="saving" (click)="salvarEEnviar()">Enviar requisição</button>
       </div>
 
       <section class="section-header item-section-head"><h3>Itens</h3></section>
-      <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="atual && atual.status === 'RASCUNHO' && podeEditar">
+      <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="podeEditarConteudo(atual)">
         <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
         <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
         <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
@@ -107,7 +113,7 @@
           <tbody>
             <tr *ngFor="let item of itens">
               <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
-              <td class="row-actions"><button class="btn sm" *ngIf="atual?.status === 'RASCUNHO'" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="atual?.status === 'RASCUNHO'" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.status !== 'ATENDIDO'" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
+              <td class="row-actions"><button class="btn sm" *ngIf="podeEditarConteudo(atual)" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="podeEditarConteudo(atual)" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.status !== 'ATENDIDO'" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
             </tr>
           </tbody>
         </table>
