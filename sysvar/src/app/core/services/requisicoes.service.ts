@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Paginated, Requisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoServicoCategoria, RequisicaoSetor } from '../models/requisicao';
+import { Paginated, Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoServicoCategoria, RequisicaoSetor } from '../models/requisicao';
 
 @Injectable({ providedIn: 'root' })
 export class RequisicoesService {
@@ -12,6 +12,8 @@ export class RequisicoesService {
   private historico = `${environment.apiBaseUrl}/compras/requisicao-historico/`;
   private categorias = `${environment.apiBaseUrl}/compras/requisicao-servico-categorias/`;
   private setores = `${environment.apiBaseUrl}/compras/requisicao-setores/`;
+  private categoriasMaterial = `${environment.apiBaseUrl}/compras/requisicao-material-categorias/`;
+  private finalidades = `${environment.apiBaseUrl}/compras/requisicao-finalidades-aquisicao/`;
 
   listar(params?: Record<string, string | number | boolean | null | undefined>): Observable<Requisicao[] | Paginated<Requisicao>> {
     return this.http.get<Requisicao[] | Paginated<Requisicao>>(this.base, { params: this.params(params) });
@@ -92,6 +94,46 @@ export class RequisicoesService {
 
   listarSetoresAdmin(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoSetor[] | Paginated<RequisicaoSetor>> {
     return this.http.get<RequisicaoSetor[] | Paginated<RequisicaoSetor>>(this.setores, { params: this.params(params) });
+  }
+
+  listarCategoriasMaterial(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoMaterialCategoria[] | Paginated<RequisicaoMaterialCategoria>> {
+    return this.http.get<RequisicaoMaterialCategoria[] | Paginated<RequisicaoMaterialCategoria>>(this.categoriasMaterial, { params: this.params(params || { ativo: 'true' }) });
+  }
+
+  criarCategoriaMaterial(payload: Partial<RequisicaoMaterialCategoria>): Observable<RequisicaoMaterialCategoria> {
+    return this.http.post<RequisicaoMaterialCategoria>(this.categoriasMaterial, payload);
+  }
+
+  atualizarCategoriaMaterial(id: number, payload: Partial<RequisicaoMaterialCategoria>): Observable<RequisicaoMaterialCategoria> {
+    return this.http.patch<RequisicaoMaterialCategoria>(`${this.categoriasMaterial}${id}/`, payload);
+  }
+
+  ativarCategoriaMaterial(id: number): Observable<RequisicaoMaterialCategoria> {
+    return this.http.post<RequisicaoMaterialCategoria>(`${this.categoriasMaterial}${id}/ativar/`, {});
+  }
+
+  inativarCategoriaMaterial(id: number): Observable<RequisicaoMaterialCategoria> {
+    return this.http.post<RequisicaoMaterialCategoria>(`${this.categoriasMaterial}${id}/inativar/`, {});
+  }
+
+  listarFinalidadesAquisicao(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoFinalidadeAquisicao[] | Paginated<RequisicaoFinalidadeAquisicao>> {
+    return this.http.get<RequisicaoFinalidadeAquisicao[] | Paginated<RequisicaoFinalidadeAquisicao>>(this.finalidades, { params: this.params(params || { ativo: 'true' }) });
+  }
+
+  criarFinalidadeAquisicao(payload: Partial<RequisicaoFinalidadeAquisicao>): Observable<RequisicaoFinalidadeAquisicao> {
+    return this.http.post<RequisicaoFinalidadeAquisicao>(this.finalidades, payload);
+  }
+
+  atualizarFinalidadeAquisicao(id: number, payload: Partial<RequisicaoFinalidadeAquisicao>): Observable<RequisicaoFinalidadeAquisicao> {
+    return this.http.patch<RequisicaoFinalidadeAquisicao>(`${this.finalidades}${id}/`, payload);
+  }
+
+  ativarFinalidadeAquisicao(id: number): Observable<RequisicaoFinalidadeAquisicao> {
+    return this.http.post<RequisicaoFinalidadeAquisicao>(`${this.finalidades}${id}/ativar/`, {});
+  }
+
+  inativarFinalidadeAquisicao(id: number): Observable<RequisicaoFinalidadeAquisicao> {
+    return this.http.post<RequisicaoFinalidadeAquisicao>(`${this.finalidades}${id}/inativar/`, {});
   }
 
   criarSetor(payload: Partial<RequisicaoSetor>): Observable<RequisicaoSetor> {

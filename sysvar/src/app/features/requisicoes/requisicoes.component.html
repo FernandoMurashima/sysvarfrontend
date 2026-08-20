@@ -70,8 +70,7 @@
         <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
         <label class="input-item col-span-2">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
         <div class="input-item col-span-2"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status || 'RASCUNHO') }}</span></div>
-        <label class="input-item col-span-6">Justificativa<textarea rows="2" formControlName="justificativa"></textarea></label>
-        <label class="input-item col-span-6">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
+        <label class="input-item col-span-12 motivo-field">Motivo da Requisição<textarea rows="2" formControlName="motivo"></textarea></label>
       </form>
 
       <div class="actions-form" *ngIf="!consultando && podeEditar">
@@ -81,23 +80,25 @@
 
       <section class="section-header item-section-head"><h3>Itens</h3></section>
       <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="atual && atual.status === 'RASCUNHO' && podeEditar">
-        <label class="input-item col-span-2">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
-        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
+        <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
         <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Produto<select formControlName="produto"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ p.descricao }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','produto')">{{ msg }}</small></label>
         <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Descrição<input formControlName="descricao" /><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao')">{{ msg }}</small></label>
-        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Finalidade<select formControlName="finalidade"><option value="">Selecione</option><option value="USO_CONSUMO">Uso e Consumo</option><option value="ALMOXARIFADO">Estoque/Almoxarifado</option><option value="IMOBILIZADO">Imobilizado</option><option value="OUTRO">Outro</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','finalidade')">{{ msg }}</small></label>
-        <div class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'"><span>Unidade</span><span class="readonly-field">{{ unidadeProdutoSelecionado() }}</span></div>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Finalidade<select formControlName="finalidade_aquisicao"><option [ngValue]="null">Selecione</option><option *ngFor="let f of finalidades" [ngValue]="f.id">{{ f.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','finalidade_aquisicao')">{{ msg }}</small></label>
+        <div class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'"><span>Unidade</span><span class="readonly-field">{{ unidadeProdutoSelecionado() }}</span></div>
         <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Unidade<select formControlName="unidade"><option [ngValue]="null">Selecione</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','unidade')">{{ msg }}</small></label>
-        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Quantidade<input type="number" step="0.001" formControlName="qtd_solicitada" /><small class="field-error" *ngFor="let msg of fieldErrors('item','qtd_solicitada')">{{ msg }}</small></label>
-        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Categoria<input formControlName="categoria" /></label>
-        <label class="input-item col-span-6" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Especificação<textarea rows="2" formControlName="especificacao_tecnica"></textarea></label>
+        <label class="input-item" [ngClass]="itemForm.value.origem === 'PRODUTO' ? 'col-span-1' : 'col-span-2'" *ngIf="itemForm.value.tipo === 'MATERIAL'">Quantidade<input type="number" step="0.001" formControlName="qtd_solicitada" /><small class="field-error" *ngFor="let msg of fieldErrors('item','qtd_solicitada')">{{ msg }}</small></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Categoria<select formControlName="categoria_material"><option [ngValue]="null">Selecione</option><option *ngFor="let c of categoriasMaterial" [ngValue]="c.id">{{ c.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','categoria_material')">{{ msg }}</small></label>
+        <label class="input-item col-span-9" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Especificação<textarea rows="2" formControlName="especificacao_tecnica"></textarea></label>
 
-        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'SERVICO'">Título<input formControlName="titulo_servico" /></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'SERVICO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
         <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Categoria<select formControlName="categoria_servico"><option [ngValue]="null">Selecione</option><option *ngFor="let c of categorias" [ngValue]="c.id">{{ c.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','categoria_servico')">{{ msg }}</small></label>
         <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Tipo<select formControlName="tipo_servico"><option value="">Selecione</option><option value="PREVENTIVA">Preventiva</option><option value="CORRETIVA">Corretiva</option><option value="INSTALACAO">Instalação</option><option value="REVISAO">Revisão</option><option value="REPARO">Reparo</option><option value="OUTRO">Outro</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','tipo_servico')">{{ msg }}</small></label>
-        <label class="input-item col-span-8" *ngIf="itemForm.value.tipo === 'SERVICO'">Descrição<textarea rows="2" formControlName="descricao_servico"></textarea><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao_servico')">{{ msg }}</small></label>
-        <label class="input-item col-span-4">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
-        <div class="actions-form col-span-12"><button class="btn primary" type="button" (click)="salvarItem()">Gravar item</button><button class="btn" type="button" (click)="limparItem()">Limpar</button></div>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'SERVICO'">Título<input formControlName="titulo_servico" /></label>
+        <label class="input-item col-span-12" *ngIf="itemForm.value.tipo === 'SERVICO'">Descrição do Serviço<textarea rows="2" formControlName="descricao_servico"></textarea><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao_servico')">{{ msg }}</small></label>
+        <div class="actions-form item-actions col-span-12"><button class="btn primary" type="button" (click)="salvarItem()">Gravar item</button><button class="btn" type="button" (click)="limparItem()">Limpar</button></div>
       </form>
 
       <div class="table-wrapper itens-wrapper">
@@ -118,12 +119,25 @@
         <button class="btn" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('devolver')">Devolver</button>
         <button class="btn danger" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('rejeitar')">Rejeitar</button>
         <button class="btn danger" type="button" *ngIf="podeEditar && !['CONCLUIDA','CANCELADA'].includes(atual.status)" (click)="abrirDecisao('cancelar')">Cancelar</button>
+        <button class="btn" type="button" (click)="historicoModalAberto = true">Histórico</button>
       </section>
-
-      <section class="section-header item-section-head"><h3>Histórico</h3></section>
-      <div class="timeline"><div class="timeline-row" *ngFor="let h of historico"><strong>{{ h.data_hora | date:'short' }}</strong><span>{{ h.usuario_nome || '-' }} — {{ h.acao }} {{ h.status_anterior ? '(' + statusLabel(h.status_anterior) + ' → ' + statusLabel(h.status_novo) + ')' : '' }}</span><small>{{ h.observacao }}</small></div></div>
     </section>
   </ng-container>
+
+  <div class="modal-backdrop" *ngIf="historicoModalAberto">
+    <section class="modal-card historico-modal">
+      <div class="form-title-row"><h3>Histórico da Requisição</h3><button class="btn" type="button" (click)="historicoModalAberto = false">Fechar</button></div>
+      <div class="table-wrapper">
+        <table class="table" *ngIf="historico.length; else historicoEmpty">
+          <thead><tr><th>Data/hora</th><th>Usuário</th><th>Ação</th><th>Status anterior</th><th>Status novo</th><th>Observação</th><th>Item</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let h of historico"><td>{{ h.data_hora | date:'short' }}</td><td>{{ h.usuario_nome || '-' }}</td><td>{{ h.acao }}</td><td>{{ h.status_anterior ? statusLabel(h.status_anterior) : '-' }}</td><td>{{ h.status_novo ? statusLabel(h.status_novo) : '-' }}</td><td>{{ h.observacao || '-' }}</td><td>{{ h.item || '-' }}</td></tr>
+          </tbody>
+        </table>
+        <ng-template #historicoEmpty><div class="empty-hint">Nenhum histórico registrado.</div></ng-template>
+      </div>
+    </section>
+  </div>
 
   <div class="modal-backdrop" *ngIf="decisaoModal as modal">
     <section class="modal-card"><h3>{{ modal.titulo }}</h3><label>Motivo/observação<textarea rows="3" [(ngModel)]="modal.motivo"></textarea></label><div class="modal-actions"><button class="btn" type="button" (click)="decisaoModal = null">Voltar</button><button class="btn primary" type="button" (click)="confirmarDecisao()">Confirmar</button></div></section>

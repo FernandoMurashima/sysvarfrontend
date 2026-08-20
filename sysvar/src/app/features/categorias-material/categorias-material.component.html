@@ -1,0 +1,54 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Categorias de Material</h1><button class="info-button" type="button" title="Administre categorias de materiais usadas em requisições.">i</button></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Nova Categoria</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <section class="filter-bar">
+    <label class="inline-filter search-field"><span>Buscar</span><input type="search" [(ngModel)]="search" (keyup.enter)="carregar()" placeholder="Nome da categoria" /></label>
+    <button class="btn primary" type="button" (click)="carregar()">Pesquisar</button>
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="ativo" (ngModelChange)="carregar()"><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select></label>
+    <button class="btn" type="button" (click)="search=''; ativo=''; carregar()">Limpar</button>
+  </section>
+
+  <section class="card form" *ngIf="showForm">
+    <div class="form-title-row">
+      <h3>{{ consultando ? 'Consultar Categoria' : (editingId ? 'Editar Categoria' : 'Nova Categoria') }}</h3>
+      <div class="title-actions">
+        <button class="btn" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+      </div>
+    </div>
+    <form [formGroup]="form" class="grid-12">
+      <label class="input-item col-span-4" [class.invalid]="isInvalid('nome')">Nome*<input formControlName="nome" maxlength="80" /><small class="field-error" *ngIf="isInvalid('nome')">Nome da categoria é obrigatório.</small></label>
+      <label class="input-item col-span-8">Descrição<input formControlName="descricao" /></label>
+      <label class="check-line col-span-2"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+    </form>
+  </section>
+
+  <section class="results-area table-card">
+    <div class="results-header"><div><strong>Categorias cadastradas</strong> <span>{{ rows.length }} registro(s) encontrado(s)</span></div></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="rows.length; else emptyTpl">
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Descrição</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of rows" [class.selected]="selected?.id === row.id" (click)="selecionar(row)">
+            <td>{{ row.nome }}</td>
+            <td>{{ row.empresa_nome || row.empresa }}</td>
+            <td>{{ row.descricao || '-' }}</td>
+            <td><span class="status-pill" [class.inactive]="row.ativo === false">{{ statusLabel(row) }}</span></td>
+            <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); consultar(row)">Consultar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); editar(row)">Editar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); alternarAtivo(row)">{{ row.ativo === false ? 'Ativar' : 'Inativar' }}</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma categoria encontrada.' }}</div></ng-template>
+    </div>
+  </section>
+</div>

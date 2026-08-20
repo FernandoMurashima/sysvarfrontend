@@ -228,7 +228,17 @@ textarea {
 .col-span-4 { grid-column: span 4; }
 .col-span-6 { grid-column: span 6; }
 .col-span-8 { grid-column: span 8; }
+.col-span-1 { grid-column: span 1; }
+.col-span-9 { grid-column: span 9; }
 .col-span-12 { grid-column: span 12; }
+
+.motivo-field textarea {
+  min-height: 64px;
+}
+
+.item-actions {
+  justify-content: flex-start;
+}
 
 .section-header {
   margin-top: 14px;
@@ -296,6 +306,12 @@ textarea {
   gap: 12px;
 }
 
+.historico-modal {
+  width: min(960px, 100%);
+  max-height: 82vh;
+  overflow: auto;
+}
+
 .modal-text {
   margin: 0;
   color: #475569;
@@ -310,7 +326,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .col-span-2, .col-span-3, .col-span-4, .col-span-6, .col-span-8, .col-span-12 {
+  .col-span-1, .col-span-2, .col-span-3, .col-span-4, .col-span-6, .col-span-8, .col-span-9, .col-span-12 {
     grid-column: span 1;
   }
 }

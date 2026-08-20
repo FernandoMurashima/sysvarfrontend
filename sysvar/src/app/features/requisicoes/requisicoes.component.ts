@@ -8,7 +8,7 @@ import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { Produto } from '../../core/models/produto';
-import { Requisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoServicoCategoria, RequisicaoSetor } from '../../core/models/requisicao';
+import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoServicoCategoria, RequisicaoSetor } from '../../core/models/requisicao';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
@@ -38,6 +38,8 @@ export class RequisicoesComponent implements OnInit {
   unidades: Option[] = [];
   setores: RequisicaoSetor[] = [];
   categorias: RequisicaoServicoCategoria[] = [];
+  categoriasMaterial: RequisicaoMaterialCategoria[] = [];
+  finalidades: RequisicaoFinalidadeAquisicao[] = [];
   produtos: Produto[] = [];
 
   loading = false;
@@ -57,14 +59,14 @@ export class RequisicoesComponent implements OnInit {
   consultando = false;
   decisaoModal: { acao: 'aprovar' | 'rejeitar' | 'devolver' | 'cancelar'; titulo: string; motivo: string } | null = null;
   atendimentoModal: { item: RequisicaoItem; quantidade: number; observacao: string; disponivel: number } | null = null;
+  historicoModalAberto = false;
 
   headerForm = this.fb.group({
     loja: [null as number | null, Validators.required],
     setor: [null as number | null, Validators.required],
     data_necessaria: [''],
     prioridade: ['NORMAL', Validators.required],
-    justificativa: [''],
-    observacoes: [''],
+    motivo: [''],
   });
 
   itemForm = this.fb.group({
@@ -73,8 +75,8 @@ export class RequisicoesComponent implements OnInit {
     origem: ['PRODUTO', Validators.required],
     produto: [null as number | null],
     descricao: [''],
-    categoria: [''],
-    finalidade: ['USO_CONSUMO'],
+    categoria_material: [null as number | null],
+    finalidade_aquisicao: [null as number | null],
     unidade: [null as number | null],
     qtd_solicitada: [1, [Validators.required, Validators.min(0.001)]],
     especificacao_tecnica: [''],
@@ -82,7 +84,6 @@ export class RequisicoesComponent implements OnInit {
     descricao_servico: [''],
     categoria_servico: [null as number | null],
     tipo_servico: [''],
-    observacoes: [''],
   });
 
   get podeEditar(): boolean {
@@ -136,6 +137,13 @@ export class RequisicoesComponent implements OnInit {
       this.unidades = this.arrayOrResults<any>(resp).map(u => ({ id: Number(u.Idunidade ?? u.id), label: `${u.Codigo || ''} ${u.Descricao || ''}`.trim() })).filter(u => !!u.id);
     });
     this.api.listarCategorias().subscribe(resp => this.categorias = this.arrayOrResults<RequisicaoServicoCategoria>(resp));
+    this.api.listarCategoriasMaterial().subscribe(resp => this.categoriasMaterial = this.arrayOrResults<RequisicaoMaterialCategoria>(resp));
+    this.api.listarFinalidadesAquisicao().subscribe(resp => {
+      this.finalidades = this.arrayOrResults<RequisicaoFinalidadeAquisicao>(resp);
+      if (!this.itemForm.value.finalidade_aquisicao && this.finalidades.length) {
+        this.itemForm.patchValue({ finalidade_aquisicao: this.finalidades[0].id }, { emitEvent: false });
+      }
+    });
     this.api.listarSetores().subscribe(resp => this.setores = this.arrayOrResults<RequisicaoSetor>(resp));
     this.buscarProdutos();
   }
@@ -185,7 +193,7 @@ export class RequisicoesComponent implements OnInit {
     this.historico = [];
     this.consultando = false;
     this.selectedItem = null;
-    this.headerForm.reset({ loja: null, setor: null, data_necessaria: '', prioridade: 'NORMAL', justificativa: '', observacoes: '' });
+    this.headerForm.reset({ loja: null, setor: null, data_necessaria: '', prioridade: 'NORMAL', motivo: '' });
     this.limparItem();
     this.view = 'form';
   }
@@ -199,8 +207,7 @@ export class RequisicoesComponent implements OnInit {
         setor: req.setor,
         data_necessaria: req.data_necessaria || '',
         prioridade: req.prioridade,
-        justificativa: req.justificativa,
-        observacoes: req.observacoes,
+        motivo: this.motivoRequisicao(req),
       });
       this.itens = req.itens || [];
       this.historico = req.historico || [];
@@ -215,7 +222,7 @@ export class RequisicoesComponent implements OnInit {
       this.error('Preencha os campos obrigatórios da requisição.');
       return;
     }
-    const payload = this.headerForm.value as Partial<Requisicao>;
+    const payload = this.headerPayload();
     this.saving = true;
     const obs = this.atual ? this.api.update(this.atual.id, payload) : this.api.create(payload);
     obs.subscribe({
@@ -267,11 +274,12 @@ export class RequisicoesComponent implements OnInit {
       return;
     }
     this.saving = true;
-    const salvarCabecalho$ = this.atual ? this.api.update(this.atual.id, this.headerForm.value as Partial<Requisicao>) : this.api.create(this.headerForm.value as Partial<Requisicao>);
+    const payload = this.headerPayload();
+    const salvarCabecalho$ = this.atual ? this.api.update(this.atual.id, payload) : this.api.create(payload);
     salvarCabecalho$.subscribe({
       next: req => {
         this.atual = req;
-        const enviarDepois = () => this.api.salvarEnviar(req.id, this.headerForm.value as Partial<Requisicao>).subscribe({
+        const enviarDepois = () => this.api.salvarEnviar(req.id, payload).subscribe({
           next: enviada => {
             this.saving = false;
             this.afterAction(enviada, 'Requisição salva e enviada.');
@@ -319,8 +327,8 @@ export class RequisicoesComponent implements OnInit {
       origem: item.origem,
       produto: item.produto,
       descricao: item.descricao,
-      categoria: item.categoria,
-      finalidade: item.finalidade || 'USO_CONSUMO',
+      categoria_material: item.categoria_material,
+      finalidade_aquisicao: item.finalidade_aquisicao,
       unidade: item.unidade,
       qtd_solicitada: Number(item.qtd_solicitada || 1),
       especificacao_tecnica: item.especificacao_tecnica,
@@ -328,7 +336,6 @@ export class RequisicoesComponent implements OnInit {
       descricao_servico: item.descricao_servico,
       categoria_servico: item.categoria_servico,
       tipo_servico: item.tipo_servico,
-      observacoes: item.observacoes,
     });
   }
 
@@ -339,8 +346,8 @@ export class RequisicoesComponent implements OnInit {
       origem: 'PRODUTO',
       produto: null,
       descricao: '',
-      categoria: '',
-      finalidade: 'USO_CONSUMO',
+      categoria_material: null,
+      finalidade_aquisicao: this.finalidades[0]?.id || null,
       unidade: null,
       qtd_solicitada: 1,
       especificacao_tecnica: '',
@@ -348,7 +355,6 @@ export class RequisicoesComponent implements OnInit {
       descricao_servico: '',
       categoria_servico: null,
       tipo_servico: '',
-      observacoes: '',
     });
     this.selectedItem = null;
   }
@@ -452,7 +458,6 @@ export class RequisicoesComponent implements OnInit {
       requisicao: requisicaoId,
       tipo: raw.tipo,
       origem: raw.tipo === 'SERVICO' ? 'SERVICO' : raw.origem,
-      observacoes: raw.observacoes || '',
     };
     if (raw.id) base.id = raw.id;
     if (raw.tipo === 'SERVICO') {
@@ -468,15 +473,15 @@ export class RequisicoesComponent implements OnInit {
       return {
         ...base,
         produto: raw.produto,
-        finalidade: raw.finalidade || '',
+        finalidade_aquisicao: raw.finalidade_aquisicao,
         qtd_solicitada: String(raw.qtd_solicitada || ''),
       };
     }
     return {
       ...base,
       descricao: raw.descricao || '',
-      categoria: raw.categoria || '',
-      finalidade: raw.finalidade || '',
+      categoria_material: raw.categoria_material,
+      finalidade_aquisicao: raw.finalidade_aquisicao,
       unidade: raw.unidade,
       qtd_solicitada: String(raw.qtd_solicitada || ''),
       especificacao_tecnica: raw.especificacao_tecnica || '',
@@ -491,6 +496,25 @@ export class RequisicoesComponent implements OnInit {
 
   statusLabel(status: string): string {
     return status.replace(/_/g, ' ');
+  }
+
+  motivoRequisicao(req: Requisicao): string {
+    const justificativa = (req.justificativa || '').trim();
+    const observacoes = (req.observacoes || '').trim();
+    if (justificativa && observacoes && justificativa !== observacoes) return `${justificativa}\n${observacoes}`;
+    return justificativa || observacoes;
+  }
+
+  private headerPayload(): Partial<Requisicao> {
+    const raw = this.headerForm.value;
+    return {
+      loja: raw.loja ? Number(raw.loja) : undefined,
+      setor: raw.setor ? Number(raw.setor) : undefined,
+      data_necessaria: raw.data_necessaria || null,
+      prioridade: (raw.prioridade || 'NORMAL') as Requisicao['prioridade'],
+      justificativa: raw.motivo || '',
+      observacoes: '',
+    };
   }
 
   selecionar(r: Requisicao): void {
@@ -560,8 +584,10 @@ export class RequisicoesComponent implements OnInit {
       unidade: 'Unidade',
       descricao: 'Descrição',
       categoria_servico: 'Categoria de serviço',
+      categoria_material: 'Categoria de material',
       tipo_servico: 'Tipo de serviço',
       finalidade: 'Finalidade',
+      finalidade_aquisicao: 'Finalidade',
       descricao_servico: 'Descrição do serviço',
       setor: 'Setor',
       loja: 'Loja',

@@ -24,6 +24,25 @@ export interface RequisicaoSetor {
   controla_estoque_uso_consumo: boolean;
 }
 
+export interface RequisicaoMaterialCategoria {
+  id: number;
+  empresa: number;
+  empresa_nome?: string | null;
+  nome: string;
+  descricao?: string;
+  ativo: boolean;
+}
+
+export interface RequisicaoFinalidadeAquisicao {
+  id: number;
+  empresa: number;
+  empresa_nome?: string | null;
+  nome: string;
+  descricao?: string;
+  ativo: boolean;
+  comportamento: RequisicaoItemFinalidade;
+}
+
 export interface RequisicaoItem {
   id: number;
   requisicao: number;
@@ -34,7 +53,12 @@ export interface RequisicaoItem {
   produto_referencia?: string | null;
   descricao: string;
   categoria: string;
+  categoria_material: number | null;
+  categoria_material_nome?: string | null;
   finalidade: RequisicaoItemFinalidade | '';
+  finalidade_aquisicao: number | null;
+  finalidade_aquisicao_nome?: string | null;
+  finalidade_comportamento?: RequisicaoItemFinalidade | null;
   unidade: number | null;
   unidade_descricao?: string | null;
   especificacao_tecnica: string;
