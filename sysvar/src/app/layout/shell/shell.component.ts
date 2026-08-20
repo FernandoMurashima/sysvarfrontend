@@ -87,11 +87,12 @@ export class ShellComponent {
     {
       label: 'Compras', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras',
       children: [
-        { label: 'Requisições', link: '/compras/requisicoes', icon: 'bi bi-clipboard-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Pedido de Compra', link: '/compras/pedidos', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Entrada de NF-e', link: '/compras/notas-entrada', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras' },
       ]
     },
+
+    { label: 'Requisições', link: '/requisicoes', icon: 'bi bi-clipboard-check', moduloEmpresa: 'requisicoes' },
 
     {
       label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',

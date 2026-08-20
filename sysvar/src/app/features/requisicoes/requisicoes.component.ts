@@ -90,22 +90,26 @@ export class RequisicoesComponent implements OnInit {
   });
 
   get podeEditar(): boolean {
-    return this.auth.podeAcessarModulo('compras', true) !== false;
+    return this.auth.podeAcessarModulo('requisicoes', true) === true;
   }
 
   get podeAprovar(): boolean {
-    return ['Admin', 'Diretor', 'Gerente'].includes(this.auth.getUserType() || '') && this.podeEditar;
+    return this.auth.podeAcessarModulo('requisicoes_analise', true) === true;
   }
 
   get podeAtender(): boolean {
-    return this.podeEditar;
+    return this.auth.podeAcessarModulo('requisicoes_atendimento', true) === true;
+  }
+
+  get podeVerTodas(): boolean {
+    return this.auth.podeAcessarModulo('requisicoes_todas') === true;
   }
 
   get visoesDisponiveis(): RequisicaoVisao[] {
     const base: RequisicaoVisao[] = ['minhas'];
     if (this.podeAprovar) base.push('para_analisar');
     if (this.podeAtender) base.push('para_atender');
-    if (this.podeAprovar) base.push('todas');
+    if (this.podeVerTodas) base.push('todas');
     return base;
   }
 
