@@ -103,6 +103,11 @@ describe('CotacoesComponent', () => {
     component.form.patchValue({ loja: 2, tipo_compra: 'USO_CONSUMO', prioridade: 'URGENTE', observacao: 'Teste' });
     component.salvar();
     expect(api.criar).toHaveBeenCalledWith(jasmine.objectContaining({ loja: 2, tipo_compra: 'USO_CONSUMO', prioridade: 'URGENTE', observacao: 'Teste' }));
+    expect(component.atual?.id).toBe(8);
+    expect(component.view).toBe('form');
+    expect(api.listarItens).toHaveBeenCalledWith(8);
+    expect(api.listarFornecedores).toHaveBeenCalledWith(8);
+    expect(api.comparativo).toHaveBeenCalledWith(8);
   });
 
   it('salva edicao de cabecalho em elaboracao', () => {

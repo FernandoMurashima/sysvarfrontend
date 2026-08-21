@@ -235,7 +235,10 @@ export class CotacoesComponent implements OnInit {
         this.saving = false;
         this.successMsg = 'Cotação salva.';
         this.atual = cotacao;
-        this.view = 'list';
+        this.view = 'form';
+        this.loadItens(cotacao.id);
+        this.loadFornecedoresCotacao(cotacao.id);
+        this.loadComparativo(cotacao.id);
         this.loadCotacoes();
       },
       error: err => {
