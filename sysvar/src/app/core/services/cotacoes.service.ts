@@ -9,7 +9,6 @@ export class CotacoesService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/compras/cotacoes/`;
   private itensBase = `${environment.apiBaseUrl}/compras/cotacao-itens/`;
-  private lojasBase = `${environment.apiBaseUrl}/compras/requisicoes/lojas-permitidas/`;
 
   listar(params?: { loja?: number; status?: string; page?: number; page_size?: number }): Observable<Cotacao[] | Paginated<Cotacao>> {
     let hp = new HttpParams();
@@ -29,10 +28,6 @@ export class CotacoesService {
 
   atualizar(id: number, payload: Partial<Cotacao>): Observable<Cotacao> {
     return this.http.patch<Cotacao>(`${this.base}${id}/`, payload);
-  }
-
-  lojasPermitidas(): Observable<any[] | Paginated<any>> {
-    return this.http.get<any[] | Paginated<any>>(this.lojasBase);
   }
 
   listarItens(cotacao: number): Observable<CotacaoItem[] | Paginated<CotacaoItem>> {

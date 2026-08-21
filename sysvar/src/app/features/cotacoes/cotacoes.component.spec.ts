@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { ProdutosService } from '../../core/services/produtos.service';
+import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { CotacoesComponent } from './cotacoes.component';
 
@@ -11,13 +12,15 @@ describe('CotacoesComponent', () => {
   let fixture: ComponentFixture<CotacoesComponent>;
   let component: CotacoesComponent;
   let api: jasmine.SpyObj<CotacoesService>;
+  let requisicoesApi: jasmine.SpyObj<RequisicoesService>;
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'lojasPermitidas', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem']);
+    requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
-    api.lojasPermitidas.and.returnValue(of([{ id: 2, nome_loja: 'Loja A' }]));
+    requisicoesApi.lojasPermitidas.and.returnValue(of([{ id: 2, nome_loja: 'Loja A' }]));
     api.criar.and.returnValue(of({ id: 8, numero: 2, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
     api.atualizar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'URGENTE', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
     api.listarItens.and.returnValue(of([{ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Item', quantidade_cotar: '1.000', unidade: 4, permite_alternativo: true } as any]));
@@ -31,6 +34,7 @@ describe('CotacoesComponent', () => {
       imports: [CotacoesComponent],
       providers: [
         { provide: CotacoesService, useValue: api },
+        { provide: RequisicoesService, useValue: requisicoesApi },
         { provide: AuthService, useValue: auth },
         { provide: ProdutosService, useValue: { list: () => of([{ Idproduto: 5, descricao: 'Produto A', unidade: 4 }]) } },
         { provide: UnidadesService, useValue: { list: () => of([{ Idunidade: 4, Descricao: 'UN' }]) } },
@@ -45,9 +49,16 @@ describe('CotacoesComponent', () => {
   it('carrega listagem e lojas permitidas', () => {
     component.ngOnInit();
     expect(api.listar).toHaveBeenCalledWith(jasmine.objectContaining({ page_size: 500 }));
-    expect(api.lojasPermitidas).toHaveBeenCalled();
+    expect(requisicoesApi.lojasPermitidas).toHaveBeenCalled();
     expect(component.cotacoes.length).toBe(1);
     expect(component.lojas[0].label).toContain('Loja A');
+  });
+
+  it('seleciona automaticamente loja unica e habilita salvar', () => {
+    component.ngOnInit();
+    component.nova();
+    expect(component.form.value.loja).toBe(2);
+    expect(component.form.valid).toBeTrue();
   });
 
   it('exibe Nova Cotacao conforme EDIT', () => {

@@ -7,6 +7,7 @@ import { Cotacao, CotacaoItem, CotacaoTipoCompra } from '../../core/models/cotac
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { ProdutosService } from '../../core/services/produtos.service';
+import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 
 type Option = { id: number; label: string };
@@ -22,6 +23,7 @@ export class CotacoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(CotacoesService);
   private produtosApi = inject(ProdutosService);
+  private requisicoesApi = inject(RequisicoesService);
   private unidadesApi = inject(UnidadesService);
   private auth = inject(AuthService);
 
@@ -93,14 +95,21 @@ export class CotacoesComponent implements OnInit {
   }
 
   loadLojas(): void {
-    this.api.lojasPermitidas().subscribe({
+    this.requisicoesApi.lojasPermitidas().subscribe({
       next: resp => {
         this.lojas = (Array.isArray(resp) ? resp : resp.results || [])
           .map(l => ({ id: Number(l.id ?? l.Idloja), label: `${l.id ?? l.Idloja} - ${l.nome_loja}` }))
           .filter(l => !!l.id);
+        this.selecionarLojaUnica();
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar lojas permitidas.'),
     });
+  }
+
+  selecionarLojaUnica(): void {
+    if (this.lojas.length === 1 && !this.form.value.loja) {
+      this.form.patchValue({ loja: this.lojas[0].id });
+    }
   }
 
   loadProdutos(): void {
@@ -126,6 +135,7 @@ export class CotacoesComponent implements OnInit {
     this.itens = [];
     this.limparItem();
     this.form.reset({ loja: null, data_limite_propostas: '', prioridade: 'NORMAL', tipo_compra: 'OUTRO', observacao: '' });
+    this.selecionarLojaUnica();
     this.view = 'form';
   }
 
