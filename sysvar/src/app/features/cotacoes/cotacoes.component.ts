@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoItem, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -33,6 +33,8 @@ export class CotacoesComponent implements OnInit {
   produtos: Produto[] = [];
   unidades: Option[] = [];
   itens: CotacaoItem[] = [];
+  apoioItens: Record<number, CotacaoItemApoioDecisao> = {};
+  apoioExpandido = new Set<number>();
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
   necessidades: CotacaoNecessidade[] = [];
   necessidadesExpandidas = new Set<string>();
@@ -205,9 +207,31 @@ export class CotacoesComponent implements OnInit {
 
   loadItens(cotacaoId: number): void {
     this.api.listarItens(cotacaoId).subscribe({
-      next: resp => this.itens = Array.isArray(resp) ? resp : resp.results || [],
+      next: resp => {
+        this.itens = Array.isArray(resp) ? resp : resp.results || [];
+        this.apoioItens = {};
+        this.apoioExpandido.clear();
+      },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar itens.'),
     });
+  }
+
+  toggleApoioItem(item: CotacaoItem): void {
+    if (this.apoioExpandido.has(item.id)) {
+      this.apoioExpandido.delete(item.id);
+      return;
+    }
+    this.apoioExpandido.add(item.id);
+    if (this.apoioItens[item.id]) return;
+    this.api.apoioDecisaoItem(item.id).subscribe({
+      next: apoio => this.apoioItens[item.id] = apoio,
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar apoio do item.'),
+    });
+  }
+
+  moeda(valor: string | number | null | undefined): string {
+    if (valor === null || valor === undefined || valor === '') return '-';
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   abrirModalRequisicoes(): void {

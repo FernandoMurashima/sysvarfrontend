@@ -16,7 +16,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
@@ -28,6 +28,7 @@ describe('CotacoesComponent', () => {
     api.criarItem.and.returnValue(of({ id: 11, cotacao: 7, origem: 'AVULSO', descricao: 'Novo', quantidade_cotar: '2.000', unidade: 4, permite_alternativo: true } as any));
     api.atualizarItem.and.returnValue(of({ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Editado', quantidade_cotar: '3.000', unidade: 4, permite_alternativo: false } as any));
     api.excluirItem.and.returnValue(of(undefined));
+    api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
       { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },
       { id: 21, numero: 124, loja: 2, loja_nome: 'Loja A', setor_nome: 'Adm', requisitante_nome: 'maria', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'URGENTE', itens: [] },
@@ -161,6 +162,14 @@ describe('CotacoesComponent', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.removerRequisicao(20);
     expect(api.removerRequisicao).toHaveBeenCalledWith(7, 20);
+  });
+
+  it('carrega apoio de decisao do item', () => {
+    const item = { id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Item', quantidade_cotar: '1.000', unidade: 4, permite_alternativo: true } as any;
+    component.toggleApoioItem(item);
+    expect(api.apoioDecisaoItem).toHaveBeenCalledWith(10);
+    expect(component.apoioExpandido.has(10)).toBeTrue();
+    expect(component.apoioItens[10].estoque_atual).toBe('7.000');
   });
 
   it('abre visao de necessidades', () => {

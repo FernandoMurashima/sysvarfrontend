@@ -89,6 +89,19 @@ export interface CotacaoNecessidade {
   }>;
 }
 
+export interface CotacaoItemApoioDecisao {
+  cotacao_item: number;
+  produto?: number | null;
+  necessidade_aberta?: string | number | null;
+  estoque_atual?: string | number | null;
+  pedidos_pendentes?: string | number | null;
+  ultimas_compras: Array<{ data: string; quantidade: string | number; preco_unitario: string | number; fornecedor: string }>;
+  media_quantidades_ultimas_compras?: string | number | null;
+  ultimo_preco?: string | number | null;
+  preco_medio?: string | number | null;
+  quantidade_cotar: string | number;
+}
+
 export interface Paginated<T> {
   results: T[];
   count?: number;

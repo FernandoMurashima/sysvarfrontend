@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoItem, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
@@ -45,6 +45,10 @@ export class CotacoesService {
 
   excluirItem(id: number): Observable<void> {
     return this.http.delete<void>(`${this.itensBase}${id}/`);
+  }
+
+  apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {
+    return this.http.get<CotacaoItemApoioDecisao>(`${this.itensBase}${id}/apoio-decisao/`);
   }
 
   requisicoesDisponiveis(): Observable<CotacaoRequisicaoDisponivel[]> {

@@ -89,19 +89,40 @@
 
     <div class="table-wrapper itens-table">
       <table class="table" *ngIf="itens.length; else emptyItens">
-        <thead><tr><th>Item</th><th>Produto/Descrição</th><th>Qtd</th><th>Unidade</th><th>Especificação</th><th>Marca</th><th>Alternativo</th><th>Origem</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Item</th><th>Produto/Descrição</th><th>Qtd</th><th>Unidade</th><th>Especificação</th><th>Marca</th><th>Alternativo</th><th>Origem</th><th>Apoio</th><th>Ações</th></tr></thead>
         <tbody>
-          <tr *ngFor="let item of itens; let i = index">
-            <td>{{ i + 1 }}</td>
-            <td>{{ item.produto_descricao || item.descricao }}</td>
-            <td>{{ item.quantidade_cotar }}</td>
-            <td>{{ item.unidade_descricao || item.unidade }}</td>
-            <td>{{ item.especificacao_tecnica || '-' }}</td>
-            <td>{{ item.marca_desejada || '-' }}</td>
-            <td>{{ item.permite_alternativo ? 'Sim' : 'Não' }}</td>
-            <td>{{ origemItem(item) }}</td>
-            <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarItens" (click)="editarItem(item)">Editar</button><button class="btn sm danger" type="button" [disabled]="!podeEditarItens" (click)="excluirItem(item)">Excluir</button></td>
-          </tr>
+          <ng-container *ngFor="let item of itens; let i = index">
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td>{{ item.produto_descricao || item.descricao }}</td>
+              <td>{{ item.quantidade_cotar }}</td>
+              <td>{{ item.unidade_descricao || item.unidade }}</td>
+              <td>{{ item.especificacao_tecnica || '-' }}</td>
+              <td>{{ item.marca_desejada || '-' }}</td>
+              <td>{{ item.permite_alternativo ? 'Sim' : 'Não' }}</td>
+              <td>{{ origemItem(item) }}</td>
+              <td><button class="btn sm" type="button" (click)="toggleApoioItem(item)">{{ apoioExpandido.has(item.id) ? 'Ocultar' : 'Ver' }}</button></td>
+              <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarItens" (click)="editarItem(item)">Editar</button><button class="btn sm danger" type="button" [disabled]="!podeEditarItens" (click)="excluirItem(item)">Excluir</button></td>
+            </tr>
+            <tr *ngIf="apoioExpandido.has(item.id)">
+              <td colspan="10">
+                <div class="apoio-panel" *ngIf="apoioItens[item.id] as apoio; else carregandoApoio">
+                  <div>Necessidade aberta: <strong>{{ apoio.necessidade_aberta ?? '-' }}</strong></div>
+                  <div>Estoque atual: <strong>{{ apoio.estoque_atual ?? '-' }}</strong></div>
+                  <div>Pedidos pendentes: <strong>{{ apoio.pedidos_pendentes ?? '-' }}</strong></div>
+                  <div>Quantidade a cotar: <strong>{{ apoio.quantidade_cotar }}</strong></div>
+                  <div class="apoio-compras" *ngIf="apoio.ultimas_compras.length">
+                    <strong>Últimas compras</strong>
+                    <div *ngFor="let c of apoio.ultimas_compras">{{ c.data }} - {{ c.quantidade }} un - {{ moeda(c.preco_unitario) }} - {{ c.fornecedor }}</div>
+                    <div>Média últimas compras: <strong>{{ apoio.media_quantidades_ultimas_compras }}</strong></div>
+                    <div>Último preço: <strong>{{ moeda(apoio.ultimo_preco) }}</strong></div>
+                    <div>Preço médio: <strong>{{ moeda(apoio.preco_medio) }}</strong></div>
+                  </div>
+                </div>
+                <ng-template #carregandoApoio><div class="apoio-panel">Carregando apoio...</div></ng-template>
+              </td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
       <ng-template #emptyItens><div class="empty-hint">Nenhum item informado.</div></ng-template>

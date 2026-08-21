@@ -33,5 +33,7 @@ h1, h3 { margin: 0; }
 .modal-large { width: min(1100px, 96vw); max-height: 86vh; overflow: auto; background: #fff; border-radius: 8px; padding: 14px; box-shadow: 0 20px 50px rgba(15, 23, 42, .2); }
 .req-items { display: grid; gap: 4px; padding: 8px 12px; background: #f8fafc; color: #334155; }
 .filter-row { display: grid; grid-template-columns: 1.3fr 1.5fr 1.2fr .8fr auto; gap: 10px; align-items: end; margin: 12px 0; }
+.apoio-panel { display: grid; gap: 6px; padding: 10px 12px; background: #f8fafc; color: #334155; border-radius: 6px; }
+.apoio-compras { display: grid; gap: 4px; margin-top: 4px; }
 @media (max-width: 900px) { .filter-row { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .grid-12 { grid-template-columns: 1fr; } .col-span-2, .col-span-3, .col-span-12 { grid-column: 1; } }
