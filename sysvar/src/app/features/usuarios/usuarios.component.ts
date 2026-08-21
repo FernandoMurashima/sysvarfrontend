@@ -157,10 +157,7 @@ export class UsuariosComponent implements OnInit {
 
   modulosPermissao: ModuloPermissao[] = [];
 
-  camposPermissao: CampoPermissao[] = [
-    { key: 'funcionario.salario', label: 'Ver salário de funcionários', pode_ver: false },
-    { key: 'produto.custo', label: 'Ver custos e margens de produtos', pode_ver: false },
-  ];
+  camposPermissao: CampoPermissao[] = [];
 
   form = this.fb.group({
     username: ['', [Validators.required, Validators.maxLength(150), this.usernameValidator]],
@@ -405,14 +402,6 @@ export class UsuariosComponent implements OnInit {
     }
     const pwd = (raw.password ?? '').trim();
     if (pwd) payload.password = pwd;
-    payload.permissoes_modulos = this.modulosPermissao.map(m => ({
-      modulo: m.key,
-      acesso: m.acesso,
-    }));
-    payload.permissoes_campos = this.camposPermissao.map(c => ({
-      campo: c.key,
-      pode_ver: c.pode_ver,
-    }));
     return payload;
   }
 

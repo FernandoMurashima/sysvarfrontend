@@ -12,7 +12,8 @@ export interface PerfilAcesso {
   ativo?: boolean;
   padrao?: boolean;
   usuarios_count?: number;
-  permissoes_modulos?: Array<{ id?: number; modulo: number; modulo_chave?: string; modulo_nome?: string; acesso: 'NONE' | 'VIEW' | 'EDIT' }>;
+  permissoes_modulos?: Array<{ id?: number; modulo: number; modulo_chave?: string; modulo_nome?: string; acesso: 'NONE' | 'VIEW' | 'EDIT'; pode_excluir?: boolean }>;
+  permissoes_processos?: Array<{ id?: number; codigo: string; permitido: boolean }>;
 }
 
 type ListResp<T> = T[] | { results: T[]; count: number };

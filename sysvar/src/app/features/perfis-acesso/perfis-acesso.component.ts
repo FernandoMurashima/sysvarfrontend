@@ -5,12 +5,20 @@ import { AccessControlService, PerfilAcesso } from '../../core/services/access-c
 import { AuthService } from '../../core/auth.service';
 import { ModuloSistema } from '../../core/models/empresa';
 
-const REQUISICOES_DIREITOS: Record<string, { label: string; active: 'VIEW' | 'EDIT' }> = {
-  requisicoes: { label: 'Requisitar', active: 'EDIT' },
-  requisicoes_analise: { label: 'Analisar', active: 'EDIT' },
-  requisicoes_atendimento: { label: 'Atender', active: 'EDIT' },
-  requisicoes_todas: { label: 'Visualizar todas', active: 'VIEW' },
-};
+const PROCESSOS = [
+  { grupo: 'Requisições', itens: [
+    { codigo: 'requisicoes.fazer', label: 'Fazer requisição' },
+    { codigo: 'requisicoes.aprovar', label: 'Aprovar requisição' },
+    { codigo: 'requisicoes.atender', label: 'Atender requisição' },
+  ] },
+  { grupo: 'Pedido de Compra', itens: [{ codigo: 'pedido_compra.aprovar', label: 'Aprovar pedido de compra' }] },
+  { grupo: 'Vendas', itens: [{ codigo: 'vendas.autorizar_desconto', label: 'Autorizar desconto' }] },
+];
+
+const SENSIVEIS = [
+  { codigo: 'funcionario.salario', label: 'Ver salário' },
+  { codigo: 'produto.custo', label: 'Ver custos e margens' },
+];
 
 @Component({
   selector: 'app-perfis-acesso',
@@ -30,6 +38,8 @@ export class PerfisAcessoComponent implements OnInit {
   saving = false;
   errorMsg = '';
   successMsg = '';
+  processos = PROCESSOS;
+  sensiveis = SENSIVEIS;
 
   get podeEditarModulo(): boolean {
     return this.auth.podeAcessarModulo('operacional', true) === true || this.auth.getCurrentUser()?.is_company_master === true || this.auth.getCurrentUser()?.is_superuser === true;
@@ -66,18 +76,24 @@ export class PerfisAcessoComponent implements OnInit {
       descricao: '',
       ativo: true,
       padrao: false,
-      permissoes_modulos: this.modulos.map(m => ({ modulo: m.id, modulo_chave: m.chave, modulo_nome: m.nome, acesso: 'NONE' }))
+      permissoes_modulos: this.modulos.map(m => ({ modulo: m.id, modulo_chave: m.chave, modulo_nome: m.nome, acesso: 'NONE', pode_excluir: false })),
+      permissoes_processos: [...PROCESSOS.flatMap(g => g.itens), ...SENSIVEIS].map(p => ({ codigo: p.codigo, permitido: false }))
     };
   }
 
   editar(perfil: PerfilAcesso): void {
     const atuais = new Map((perfil.permissoes_modulos || []).map(p => [p.modulo_chave, p]));
+    const processos = new Map((perfil.permissoes_processos || []).map(p => [p.codigo, p]));
     this.form = {
       ...perfil,
       permissoes_modulos: this.modulos.map(m => {
         const atual = atuais.get(m.chave);
-        return { id: atual?.id, modulo: m.id, modulo_chave: m.chave, modulo_nome: m.nome, acesso: atual?.acesso || 'NONE' };
-      })
+        return { id: atual?.id, modulo: m.id, modulo_chave: m.chave, modulo_nome: m.nome, acesso: atual?.acesso || 'NONE', pode_excluir: atual?.pode_excluir || false };
+      }),
+      permissoes_processos: [...PROCESSOS.flatMap(g => g.itens), ...SENSIVEIS].map(p => {
+        const atual = processos.get(p.codigo);
+        return { id: atual?.id, codigo: p.codigo, permitido: atual?.permitido || false };
+      }),
     };
   }
 
@@ -99,20 +115,11 @@ export class PerfisAcessoComponent implements OnInit {
     });
   }
 
-  isDireitoRequisicoes(perm: { modulo_chave?: string }): boolean {
-    return Boolean(perm.modulo_chave && REQUISICOES_DIREITOS[perm.modulo_chave]);
-  }
-
-  direitoRequisicoesLabel(perm: { modulo_chave?: string; modulo_nome?: string }): string {
-    return (perm.modulo_chave && REQUISICOES_DIREITOS[perm.modulo_chave]?.label) || perm.modulo_nome || perm.modulo_chave || '';
-  }
-
-  direitoRequisicoesAtivo(perm: { acesso: string }): boolean {
-    return perm.acesso !== 'NONE';
-  }
-
-  setDireitoRequisicoes(perm: { modulo_chave?: string; acesso: string }, ativo: boolean): void {
-    if (!perm.modulo_chave || !REQUISICOES_DIREITOS[perm.modulo_chave]) return;
-    perm.acesso = ativo ? REQUISICOES_DIREITOS[perm.modulo_chave].active : 'NONE';
+  processo(codigo: string): { id?: number; codigo: string; permitido: boolean } {
+    const atual = this.form?.permissoes_processos?.find(p => p.codigo === codigo);
+    if (atual) return atual;
+    const novo = { codigo, permitido: false };
+    this.form?.permissoes_processos?.push(novo);
+    return novo;
   }
 }

@@ -51,6 +51,7 @@ interface MeResponse {
   sessao_atual?: { session_id: string; dispositivo_id: string; iniciada_em: string; ultima_atividade_em: string } | null;
   modulos_disponiveis_empresa?: string[];
   permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
+  permissoes_processos?: Record<string, boolean>;
 }
 
 export type ModuloEmpresa =
@@ -206,8 +207,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return 'EDIT';
     if (user?.permissoes_efetivas && modulo in user.permissoes_efetivas) return user.permissoes_efetivas[modulo];
-    const perm = user?.permissoes_modulos?.find(p => p.modulo === modulo);
-    return perm?.acesso ?? 'NONE';
+    return 'NONE';
   }
 
   podeAcessarModulo(modulo?: string | null, escrita = false): boolean | null {
@@ -243,13 +243,15 @@ export class AuthService {
   }
 
   podeExcluirModulo(modulo?: string | null): boolean {
-    return this.isAdministrador() && this.podeAcessarModulo(modulo, true) !== false;
+    const user = this.getCurrentUser();
+    if (user?.is_superuser || user?.is_company_master) return true;
+    return Boolean(user?.permissoes_processos?.[`modulo.${modulo}.excluir`]) && this.podeAcessarModulo(modulo, true) === true;
   }
 
   permissaoCampo(campo: string): boolean | null {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return true;
-    const perm = user?.permissoes_campos?.find(p => p.campo === campo);
-    return perm ? !!perm.pode_ver : null;
+    if (user?.is_company_master) return true;
+    return user?.permissoes_processos?.[campo] ?? null;
   }
 }

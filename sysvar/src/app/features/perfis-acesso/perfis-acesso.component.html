@@ -38,23 +38,32 @@
     <label><input type="checkbox" name="ativo" [(ngModel)]="form.ativo" /> Ativo</label>
     <label><input type="checkbox" name="padrao" [(ngModel)]="form.padrao" /> Padrão</label>
 
+    <h3>Acesso aos módulos</h3>
     <table>
-      <thead><tr><th>Módulo</th><th>Sem acesso</th><th>Consulta</th><th>Edição</th></tr></thead>
+      <thead><tr><th>Módulo</th><th>Sem acesso</th><th>Consulta</th><th>Edição</th><th>Excluir</th></tr></thead>
       <tbody>
         <tr *ngFor="let perm of form.permissoes_modulos">
-          <ng-container *ngIf="isDireitoRequisicoes(perm); else acessoModuloGenerico">
-            <td>Requisições - {{ direitoRequisicoesLabel(perm) }}</td>
-            <td colspan="3"><label class="check-line"><input type="checkbox" [checked]="direitoRequisicoesAtivo(perm)" [disabled]="!podeEditarModulo" (change)="setDireitoRequisicoes(perm, $any($event.target).checked)" /> Permitir</label></td>
-          </ng-container>
-          <ng-template #acessoModuloGenerico>
-            <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
-            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" [disabled]="!podeEditarModulo" /></td>
-            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" [disabled]="!podeEditarModulo" /></td>
-            <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" [disabled]="!podeEditarModulo" /></td>
-          </ng-template>
+          <td>{{ perm.modulo_nome || perm.modulo_chave }}</td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="NONE" [disabled]="!podeEditarModulo" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="VIEW" [disabled]="!podeEditarModulo" /></td>
+          <td><input type="radio" [name]="'m' + perm.modulo" [(ngModel)]="perm.acesso" value="EDIT" [disabled]="!podeEditarModulo" /></td>
+          <td><input type="checkbox" [name]="'d' + perm.modulo" [(ngModel)]="perm.pode_excluir" [disabled]="!podeEditarModulo || perm.acesso !== 'EDIT'" /></td>
         </tr>
       </tbody>
     </table>
+
+    <h3>Autorizações de processos</h3>
+    <section class="process-panel">
+      <div class="process-group" *ngFor="let grupo of processos">
+        <strong>{{ grupo.grupo }}</strong>
+        <label class="check-line" *ngFor="let item of grupo.itens"><input type="checkbox" [(ngModel)]="processo(item.codigo).permitido" [ngModelOptions]="{standalone: true}" [disabled]="!podeEditarModulo" />{{ item.label }}</label>
+      </div>
+    </section>
+
+    <h3>Informações sensíveis</h3>
+    <section class="process-panel">
+      <label class="check-line" *ngFor="let item of sensiveis"><input type="checkbox" [(ngModel)]="processo(item.codigo).permitido" [ngModelOptions]="{standalone: true}" [disabled]="!podeEditarModulo" />{{ item.label }}</label>
+    </section>
 
     <div class="actions">
       <button type="submit" *ngIf="podeEditarModulo" [disabled]="saving">Salvar</button>
