@@ -24,6 +24,8 @@ h1, h3 { margin: 0; }
 .input-item strong { min-height: 34px; display: flex; align-items: center; color: #111827; }
 .col-span-2 { grid-column: span 2; }
 .col-span-3 { grid-column: span 3; }
+.col-span-4 { grid-column: span 4; }
+.col-span-6 { grid-column: span 6; }
 .col-span-12 { grid-column: span 12; }
 .actions-form { justify-content: flex-end; margin-top: 12px; }
 .itens-table { margin-top: 12px; }
@@ -35,5 +37,9 @@ h1, h3 { margin: 0; }
 .filter-row { display: grid; grid-template-columns: 1.3fr 1.5fr 1.2fr .8fr auto; gap: 10px; align-items: end; margin: 12px 0; }
 .apoio-panel { display: grid; gap: 6px; padding: 10px 12px; background: #f8fafc; color: #334155; border-radius: 6px; }
 .apoio-compras { display: grid; gap: 4px; margin-top: 4px; }
+.field-hint { margin-top: 3px; color: #64748b; font-size: 12px; }
+.best { color: #047857; font-weight: 700; }
+.table-input { width: 110px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; font: inherit; }
+.comparativo-table td { vertical-align: top; }
 @media (max-width: 900px) { .filter-row { grid-template-columns: 1fr; } }
-@media (max-width: 900px) { .grid-12 { grid-template-columns: 1fr; } .col-span-2, .col-span-3, .col-span-12 { grid-column: 1; } }
+@media (max-width: 900px) { .grid-12 { grid-template-columns: 1fr; } .col-span-2, .col-span-3, .col-span-4, .col-span-6, .col-span-12 { grid-column: 1; } }

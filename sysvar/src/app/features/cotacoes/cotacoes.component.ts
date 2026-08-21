@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
@@ -39,6 +39,7 @@ export class CotacoesComponent implements OnInit {
   fornecedoresCotacao: CotacaoFornecedor[] = [];
   fornecedoresDisponiveis: Fornecedor[] = [];
   propostasPorFornecedor: Record<number, CotacaoProposta> = {};
+  comparativoCotacao: CotacaoComparativo | null = null;
   apoioItens: Record<number, CotacaoItemApoioDecisao> = {};
   apoioExpandido = new Set<number>();
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
@@ -174,6 +175,7 @@ export class CotacoesComponent implements OnInit {
     this.atual = null;
     this.itens = [];
     this.fornecedoresCotacao = [];
+    this.comparativoCotacao = null;
     this.limparItem();
     this.form.reset({ loja: null, data_limite_propostas: '', prioridade: 'NORMAL', tipo_compra: 'OUTRO', observacao: '' });
     this.selecionarLojaUnica();
@@ -192,6 +194,7 @@ export class CotacoesComponent implements OnInit {
     this.view = 'form';
     this.loadItens(cotacao.id);
     this.loadFornecedoresCotacao(cotacao.id);
+    this.loadComparativo(cotacao.id);
   }
 
   voltar(): void {
@@ -257,6 +260,13 @@ export class CotacoesComponent implements OnInit {
         rows.filter(p => p.ativa !== false).forEach(p => this.propostasPorFornecedor[p.cotacao_fornecedor] = p);
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar propostas.'),
+    });
+  }
+
+  loadComparativo(cotacaoId: number): void {
+    this.api.comparativo(cotacaoId).subscribe({
+      next: resp => this.comparativoCotacao = resp,
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar comparativo.'),
     });
   }
 
@@ -407,6 +417,7 @@ export class CotacoesComponent implements OnInit {
       next: () => {
         this.fecharModalProposta();
         this.loadFornecedoresCotacao(this.atual!.id);
+        this.loadComparativo(this.atual!.id);
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao salvar proposta.'),
     });

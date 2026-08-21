@@ -18,7 +18,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
@@ -38,6 +38,7 @@ describe('CotacoesComponent', () => {
     api.listarPropostas.and.returnValue(of([]));
     api.criarProposta.and.returnValue(of({ id: 60, cotacao: 7, cotacao_fornecedor: 50, data_proposta: '2026-08-21', total_itens: '19.00', total_proposta: '31.00', itens: [] } as any));
     api.atualizarProposta.and.returnValue(of({ id: 60, cotacao: 7, cotacao_fornecedor: 50, data_proposta: '2026-08-21', total_itens: '20.00', total_proposta: '20.00', itens: [] } as any));
+    api.comparativo.and.returnValue(of({ cotacao: 7, itens: [{ id: 10, descricao: 'Item', quantidade_cotar: '1.000' }], propostas: [{ proposta: 60, cotacao_fornecedor: 50, fornecedor: 40, fornecedor_nome: 'Fornecedor A', total_itens: '19.00', desconto_geral: '0.00', frete: '0.00', outras_despesas: '0.00', total_geral: '19.00', menor_total_geral: true, diferenca_percentual: '0.00', economia_vs_mais_cara: '0.00', prazo_entrega: '5', melhor_prazo: true, condicao_pagamento: '30 dias', validade_proposta: '2026-09-01', itens: [{ cotacao_item: 10, descricao: 'Item', quantidade_cotar: '1.000', sem_oferta: false, quantidade_ofertada: '1.000', preco_unitario: '19.00', desconto_item: '0.00', custo_final_item: '19.00', menor_preco_unitario: true, menor_custo_final: true }] }] } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
@@ -284,5 +285,25 @@ describe('CotacoesComponent', () => {
     component.propostaHeader.frete = 2;
     component.salvarProposta();
     expect(api.atualizarProposta).toHaveBeenCalledWith(60, jasmine.objectContaining({ frete: 2 }));
+  });
+
+  it('renderiza comparativo com totais e destaques', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    expect(api.comparativo).toHaveBeenCalledWith(7);
+    expect(component.comparativoCotacao?.propostas[0].menor_total_geral).toBeTrue();
+    expect(component.comparativoCotacao?.propostas[0].itens[0].menor_preco_unitario).toBeTrue();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Comparativo de propostas');
+    expect(text).toContain('Fornecedor A');
+    expect(text).toContain('Total: R$');
+    expect(text).toContain('19,00');
+  });
+
+  it('mostra Sem oferta no comparativo', () => {
+    api.comparativo.and.returnValue(of({ cotacao: 7, itens: [{ id: 10, descricao: 'Item', quantidade_cotar: '1.000' }], propostas: [{ proposta: 60, cotacao_fornecedor: 50, fornecedor: 40, fornecedor_nome: 'Fornecedor A', total_itens: '0.00', desconto_geral: '0.00', frete: '0.00', outras_despesas: '0.00', total_geral: '0.00', menor_total_geral: true, diferenca_percentual: '0.00', economia_vs_mais_cara: '0.00', itens: [{ cotacao_item: 10, descricao: 'Item', quantidade_cotar: '1.000', sem_oferta: true, preco_unitario: null, custo_final_item: null }] }] } as any));
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Sem oferta');
   });
 });

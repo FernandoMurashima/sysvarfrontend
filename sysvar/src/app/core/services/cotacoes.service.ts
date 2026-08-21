@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
@@ -80,6 +80,10 @@ export class CotacoesService {
 
   atualizarProposta(id: number, payload: Partial<CotacaoProposta>): Observable<CotacaoProposta> {
     return this.http.patch<CotacaoProposta>(`${this.propostasBase}${id}/`, payload);
+  }
+
+  comparativo(cotacao: number): Observable<CotacaoComparativo> {
+    return this.http.get<CotacaoComparativo>(`${this.base}${cotacao}/comparativo/`);
   }
 
   apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {

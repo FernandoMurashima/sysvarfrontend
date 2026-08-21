@@ -150,6 +150,53 @@
     </div>
   </section>
 
+  <section class="card form" *ngIf="view === 'form' && atual">
+    <div class="form-title-row">
+      <h3>Comparativo de propostas</h3>
+      <button class="btn" type="button" (click)="loadComparativo(atual.id)">Atualizar</button>
+    </div>
+    <div class="table-wrapper" *ngIf="comparativoCotacao?.propostas?.length; else emptyComparativo">
+      <table class="table comparativo-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th *ngFor="let p of comparativoCotacao?.propostas">
+              <div>{{ p.fornecedor_nome }}</div>
+              <div class="field-hint" [class.best]="p.menor_total_geral">Total: {{ moeda(p.total_geral) }}</div>
+              <div class="field-hint" [class.best]="p.melhor_prazo">Prazo: {{ p.prazo_entrega || '-' }}</div>
+              <div class="field-hint">Pagamento: {{ p.condicao_pagamento || '-' }}</div>
+              <div class="field-hint">Validade: {{ p.validade_proposta || '-' }}</div>
+              <div class="field-hint">Dif.: {{ p.diferenca_percentual }}%</div>
+              <div class="field-hint">Economia: {{ moeda(p.economia_vs_mais_cara) }}</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of comparativoCotacao?.itens">
+            <td><strong>{{ item.descricao }}</strong><div class="field-hint">Qtd: {{ item.quantidade_cotar }}</div></td>
+            <td *ngFor="let p of comparativoCotacao?.propostas">
+              <ng-container *ngFor="let oferta of p.itens">
+                <div *ngIf="oferta.cotacao_item === item.id">
+                  <span *ngIf="oferta.sem_oferta" class="status-pill">Sem oferta</span>
+                  <div *ngIf="!oferta.sem_oferta">
+                    <div>Qtd: {{ oferta.quantidade_ofertada }}</div>
+                    <div [class.best]="oferta.menor_preco_unitario">Preço: {{ moeda(oferta.preco_unitario) }}</div>
+                    <div>Desconto: {{ moeda(oferta.desconto_item) }}</div>
+                    <div [class.best]="oferta.menor_custo_final">Custo final: {{ moeda(oferta.custo_final_item) }}</div>
+                    <div>{{ oferta.marca || '-' }} / {{ oferta.modelo_referencia || '-' }}</div>
+                    <div>Prazo: {{ oferta.prazo_entrega_item || '-' }}</div>
+                    <div>Garantia: {{ oferta.garantia || '-' }}</div>
+                  </div>
+                </div>
+              </ng-container>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #emptyComparativo><div class="empty-hint">Nenhuma proposta registrada para comparar.</div></ng-template>
+  </section>
+
   <section class="modal-backdrop" *ngIf="modalFornecedorAberto">
     <div class="modal-large">
       <div class="form-title-row"><h3>{{ fornecedorEditando ? 'Editar fornecedor' : 'Adicionar fornecedor' }}</h3><button class="btn" type="button" (click)="fecharModalFornecedor()">Voltar</button></div>

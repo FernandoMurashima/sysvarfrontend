@@ -152,6 +152,49 @@ export interface CotacaoProposta {
   itens?: CotacaoPropostaItem[];
 }
 
+export interface CotacaoComparativoItem {
+  cotacao_item: number;
+  descricao: string;
+  quantidade_cotar: string | number;
+  sem_oferta: boolean;
+  quantidade_ofertada?: string | number | null;
+  preco_unitario?: string | number | null;
+  desconto_item?: string | number | null;
+  custo_final_item?: string | number | null;
+  menor_preco_unitario?: boolean;
+  menor_custo_final?: boolean;
+  marca?: string;
+  modelo_referencia?: string;
+  garantia?: string;
+  prazo_entrega_item?: string;
+}
+
+export interface CotacaoComparativoProposta {
+  proposta: number;
+  cotacao_fornecedor: number;
+  fornecedor: number;
+  fornecedor_nome: string;
+  total_itens: string | number;
+  desconto_geral: string | number;
+  frete: string | number;
+  outras_despesas: string | number;
+  total_geral: string | number;
+  menor_total_geral: boolean;
+  diferenca_percentual: string | number;
+  economia_vs_mais_cara: string | number;
+  prazo_entrega?: string;
+  melhor_prazo?: boolean;
+  condicao_pagamento?: string;
+  validade_proposta?: string | null;
+  itens: CotacaoComparativoItem[];
+}
+
+export interface CotacaoComparativo {
+  cotacao: number;
+  itens: Array<{ id: number; descricao: string; quantidade_cotar: string | number }>;
+  propostas: CotacaoComparativoProposta[];
+}
+
 export interface Paginated<T> {
   results: T[];
   count?: number;
