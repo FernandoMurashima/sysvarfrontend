@@ -59,4 +59,48 @@
       <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
     </div>
   </section>
+
+  <section class="card form" *ngIf="view === 'form' && atual">
+    <div class="form-title-row">
+      <h3>Itens da Cotação</h3>
+      <button class="btn" type="button" [disabled]="!podeEditarItens" (click)="limparItem()">Limpar</button>
+    </div>
+
+    <form class="grid-12" [formGroup]="itemForm">
+      <label class="input-item col-span-2">Tipo<select formControlName="modo" [disabled]="!podeEditarItens"><option value="PRODUTO">Produto cadastrado</option><option value="AVULSO">Item avulso</option></select></label>
+      <label class="input-item col-span-4" *ngIf="itemForm.value.modo === 'PRODUTO'">Produto<select formControlName="produto" [disabled]="!podeEditarItens" (ngModelChange)="produtoSelecionado()"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ p.descricao }}</option></select></label>
+      <label class="input-item col-span-4" *ngIf="itemForm.value.modo === 'AVULSO'">Descrição<input formControlName="descricao" [readonly]="!podeEditarItens" /></label>
+      <label class="input-item col-span-2">Quantidade<input type="number" min="0.001" step="0.001" formControlName="quantidade_cotar" [readonly]="!podeEditarItens" /></label>
+      <label class="input-item col-span-2">Unidade<select formControlName="unidade" [disabled]="!podeEditarItens || itemForm.value.modo === 'PRODUTO'"><option [ngValue]="null">Selecione</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select></label>
+      <label class="input-item col-span-4">Especificação técnica<input formControlName="especificacao_tecnica" [readonly]="!podeEditarItens" /></label>
+      <label class="input-item col-span-2">Marca desejada<input formControlName="marca_desejada" [readonly]="!podeEditarItens" /></label>
+      <label class="input-item col-span-2">Modelo/Referência<input formControlName="modelo_referencia" [readonly]="!podeEditarItens" /></label>
+      <label class="input-item col-span-2">Alternativo<select formControlName="permite_alternativo" [disabled]="!podeEditarItens"><option [ngValue]="true">Sim</option><option [ngValue]="false">Não</option></select></label>
+      <label class="input-item col-span-2">Observação<input formControlName="observacao" [readonly]="!podeEditarItens" /></label>
+    </form>
+
+    <div class="actions-form">
+      <button class="btn primary" type="button" [disabled]="!podeEditarItens || itemForm.invalid" (click)="salvarItem()">{{ itemEditando ? 'Gravar item' : 'Adicionar item' }}</button>
+    </div>
+
+    <div class="table-wrapper itens-table">
+      <table class="table" *ngIf="itens.length; else emptyItens">
+        <thead><tr><th>Item</th><th>Produto/Descrição</th><th>Qtd</th><th>Unidade</th><th>Especificação</th><th>Marca</th><th>Alternativo</th><th>Origem</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let item of itens; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ item.produto_descricao || item.descricao }}</td>
+            <td>{{ item.quantidade_cotar }}</td>
+            <td>{{ item.unidade_descricao || item.unidade }}</td>
+            <td>{{ item.especificacao_tecnica || '-' }}</td>
+            <td>{{ item.marca_desejada || '-' }}</td>
+            <td>{{ item.permite_alternativo ? 'Sim' : 'Não' }}</td>
+            <td>{{ item.origem }}</td>
+            <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarItens" (click)="editarItem(item)">Editar</button><button class="btn sm danger" type="button" [disabled]="!podeEditarItens" (click)="excluirItem(item)">Excluir</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyItens><div class="empty-hint">Nenhum item informado.</div></ng-template>
+    </div>
+  </section>
 </div>

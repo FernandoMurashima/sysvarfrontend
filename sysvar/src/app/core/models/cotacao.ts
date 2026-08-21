@@ -29,6 +29,24 @@ export interface Cotacao {
   responsavel_nome?: string;
 }
 
+export interface CotacaoItem {
+  id: number;
+  cotacao: number;
+  origem: 'AVULSO' | 'REQUISICAO';
+  produto?: number | null;
+  produto_descricao?: string | null;
+  descricao: string;
+  quantidade_cotar: string | number;
+  unidade: number;
+  unidade_descricao?: string | null;
+  especificacao_tecnica?: string;
+  marca_desejada?: string;
+  modelo_referencia?: string;
+  permite_alternativo: boolean;
+  observacao?: string;
+  requisicao_item_origem?: number | null;
+}
+
 export interface Paginated<T> {
   results: T[];
   count?: number;

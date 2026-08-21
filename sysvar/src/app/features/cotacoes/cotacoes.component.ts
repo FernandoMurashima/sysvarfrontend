@@ -3,8 +3,11 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
+import { ProdutosService } from '../../core/services/produtos.service';
+import { UnidadesService } from '../../core/services/unidades.service';
 
 type Option = { id: number; label: string };
 
@@ -18,11 +21,17 @@ type Option = { id: number; label: string };
 export class CotacoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(CotacoesService);
+  private produtosApi = inject(ProdutosService);
+  private unidadesApi = inject(UnidadesService);
   private auth = inject(AuthService);
 
   view: 'list' | 'form' = 'list';
   cotacoes: Cotacao[] = [];
   lojas: Option[] = [];
+  produtos: Produto[] = [];
+  unidades: Option[] = [];
+  itens: CotacaoItem[] = [];
+  itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
   saving = false;
@@ -37,8 +46,23 @@ export class CotacoesComponent implements OnInit {
     observacao: [''],
   });
 
+  itemForm = this.fb.group({
+    modo: ['PRODUTO' as 'PRODUTO' | 'AVULSO'],
+    produto: [null as number | null],
+    descricao: [''],
+    quantidade_cotar: [1, [Validators.required, Validators.min(0.001)]],
+    unidade: [null as number | null],
+    especificacao_tecnica: [''],
+    marca_desejada: [''],
+    modelo_referencia: [''],
+    permite_alternativo: [true],
+    observacao: [''],
+  });
+
   ngOnInit(): void {
     this.loadLojas();
+    this.loadProdutos();
+    this.loadUnidades();
     this.loadCotacoes();
   }
 
@@ -48,6 +72,10 @@ export class CotacoesComponent implements OnInit {
 
   get currentUser(): any {
     return this.auth.getCurrentUser();
+  }
+
+  get podeEditarItens(): boolean {
+    return this.podeEditar && this.atual?.status === 'EM_ELABORACAO';
   }
 
   loadCotacoes(): void {
@@ -75,8 +103,28 @@ export class CotacoesComponent implements OnInit {
     });
   }
 
+  loadProdutos(): void {
+    this.produtosApi.list({ page_size: 500, ordering: 'descricao' }).subscribe({
+      next: resp => this.produtos = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar produtos.'),
+    });
+  }
+
+  loadUnidades(): void {
+    this.unidadesApi.list({ page_size: 500, ordering: 'Descricao' }).subscribe({
+      next: resp => {
+        this.unidades = (Array.isArray(resp) ? resp : resp.results || [])
+          .map((u: any) => ({ id: Number(u.Idunidade ?? u.id), label: u.Descricao || u.descricao || u.Codigo || u.codigo }))
+          .filter((u: Option) => !!u.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar unidades.'),
+    });
+  }
+
   nova(): void {
     this.atual = null;
+    this.itens = [];
+    this.limparItem();
     this.form.reset({ loja: null, data_limite_propostas: '', prioridade: 'NORMAL', tipo_compra: 'OUTRO', observacao: '' });
     this.view = 'form';
   }
@@ -91,6 +139,7 @@ export class CotacoesComponent implements OnInit {
       observacao: cotacao.observacao || '',
     });
     this.view = 'form';
+    this.loadItens(cotacao.id);
   }
 
   voltar(): void {
@@ -124,6 +173,76 @@ export class CotacoesComponent implements OnInit {
         this.saving = false;
         this.errorMsg = this.errorText(err, 'Falha ao salvar cotação.');
       },
+    });
+  }
+
+  loadItens(cotacaoId: number): void {
+    this.api.listarItens(cotacaoId).subscribe({
+      next: resp => this.itens = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar itens.'),
+    });
+  }
+
+  produtoSelecionado(): void {
+    const id = Number(this.itemForm.value.produto || 0);
+    const produto = this.produtos.find(p => Number(p.Idproduto) === id);
+    if (!produto) return;
+    this.itemForm.patchValue({ descricao: produto.descricao || '', unidade: produto.unidade || null });
+  }
+
+  limparItem(): void {
+    this.itemEditando = null;
+    this.itemForm.reset({ modo: 'PRODUTO', produto: null, descricao: '', quantidade_cotar: 1, unidade: null, especificacao_tecnica: '', marca_desejada: '', modelo_referencia: '', permite_alternativo: true, observacao: '' });
+  }
+
+  editarItem(item: CotacaoItem): void {
+    this.itemEditando = item;
+    this.itemForm.reset({
+      modo: item.produto ? 'PRODUTO' : 'AVULSO',
+      produto: item.produto || null,
+      descricao: item.descricao || '',
+      quantidade_cotar: Number(item.quantidade_cotar || 0),
+      unidade: item.unidade || null,
+      especificacao_tecnica: item.especificacao_tecnica || '',
+      marca_desejada: item.marca_desejada || '',
+      modelo_referencia: item.modelo_referencia || '',
+      permite_alternativo: item.permite_alternativo !== false,
+      observacao: item.observacao || '',
+    });
+  }
+
+  salvarItem(): void {
+    if (!this.atual || !this.podeEditarItens || this.itemForm.invalid) return;
+    const raw = this.itemForm.getRawValue();
+    const produtoId = raw.modo === 'PRODUTO' ? raw.produto : null;
+    const payload: Partial<CotacaoItem> = {
+      cotacao: this.atual.id,
+      origem: 'AVULSO',
+      produto: produtoId || null,
+      descricao: produtoId ? '' : raw.descricao || '',
+      quantidade_cotar: raw.quantidade_cotar || 0,
+      unidade: raw.unidade || undefined,
+      especificacao_tecnica: raw.especificacao_tecnica || '',
+      marca_desejada: raw.marca_desejada || '',
+      modelo_referencia: raw.modelo_referencia || '',
+      permite_alternativo: raw.permite_alternativo !== false,
+      observacao: raw.observacao || '',
+    };
+    const req = this.itemEditando ? this.api.atualizarItem(this.itemEditando.id, payload) : this.api.criarItem(payload);
+    req.subscribe({
+      next: () => {
+        this.limparItem();
+        this.loadItens(this.atual!.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao salvar item.'),
+    });
+  }
+
+  excluirItem(item: CotacaoItem): void {
+    if (!this.podeEditarItens) return;
+    this.api.excluirItem(item.id).subscribe({
+      next: () => this.loadItens(this.atual!.id),
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao excluir item.'),
     });
   }
 

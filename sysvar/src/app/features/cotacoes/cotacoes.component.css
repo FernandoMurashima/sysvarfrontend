@@ -4,6 +4,7 @@
 h1, h3 { margin: 0; }
 .btn { border: 1px solid #cbd5e1; background: #fff; color: #1f2937; padding: 7px 12px; border-radius: 6px; cursor: pointer; }
 .btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btn.danger { border-color: #dc2626; color: #dc2626; }
 .btn.sm { padding: 4px 8px; font-size: 12px; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .alert { padding: 10px 12px; border-radius: 6px; }
@@ -25,4 +26,5 @@ h1, h3 { margin: 0; }
 .col-span-3 { grid-column: span 3; }
 .col-span-12 { grid-column: span 12; }
 .actions-form { justify-content: flex-end; margin-top: 12px; }
+.itens-table { margin-top: 12px; }
 @media (max-width: 900px) { .grid-12 { grid-template-columns: 1fr; } .col-span-2, .col-span-3, .col-span-12 { grid-column: 1; } }
