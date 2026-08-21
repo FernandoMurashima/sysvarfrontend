@@ -20,6 +20,8 @@ const SENSIVEIS = [
   { codigo: 'produto.custo', label: 'Ver custos e margens' },
 ];
 
+const MODULOS_TECNICOS_REQUISICOES = new Set(['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas']);
+
 @Component({
   selector: 'app-perfis-acesso',
   standalone: true,
@@ -54,7 +56,7 @@ export class PerfisAcessoComponent implements OnInit {
     this.api.modulos().subscribe({
       next: (res: any) => {
         const disponiveis = new Set(this.auth.getCurrentUser()?.modulos_disponiveis_empresa || []);
-        this.modulos = (Array.isArray(res) ? res : res?.results ?? []).filter((m: ModuloSistema) => disponiveis.has(m.chave));
+        this.modulos = (Array.isArray(res) ? res : res?.results ?? []).filter((m: ModuloSistema) => disponiveis.has(m.chave) && !MODULOS_TECNICOS_REQUISICOES.has(m.chave));
       }
     });
     this.api.perfis().subscribe({

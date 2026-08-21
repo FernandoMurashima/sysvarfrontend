@@ -3,7 +3,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { LojasService } from '../../core/services/lojas.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -12,7 +11,7 @@ import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, Requisi
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
-type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender' | 'todas';
+type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender';
 
 @Component({
   selector: 'app-requisicoes',
@@ -24,7 +23,6 @@ type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender' | 'todas';
 export class RequisicoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(RequisicoesService);
-  private lojasApi = inject(LojasService);
   private unidadesApi = inject(UnidadesService);
   private produtosApi = inject(ProdutosService);
   private auth = inject(AuthService);
@@ -90,19 +88,15 @@ export class RequisicoesComponent implements OnInit {
   });
 
   get podeEditar(): boolean {
-    return this.auth.podeAcessarModulo('requisicoes', true) === true;
+    return this.auth.podeProcesso('requisicoes.fazer');
   }
 
   get podeAprovar(): boolean {
-    return this.auth.podeAcessarModulo('requisicoes_analise', true) === true;
+    return this.auth.podeProcesso('requisicoes.aprovar');
   }
 
   get podeAtender(): boolean {
-    return this.auth.podeAcessarModulo('requisicoes_atendimento', true) === true;
-  }
-
-  get podeVerTodas(): boolean {
-    return this.auth.podeAcessarModulo('requisicoes_todas') === true;
+    return this.auth.podeProcesso('requisicoes.atender');
   }
 
   get visoesDisponiveis(): RequisicaoVisao[] {
@@ -110,7 +104,6 @@ export class RequisicoesComponent implements OnInit {
     if (this.podeEditar) base.push('minhas');
     if (this.podeAprovar) base.push('para_analisar');
     if (this.podeAtender) base.push('para_atender');
-    if (this.podeVerTodas) base.push('todas');
     return base.length ? base : ['minhas'];
   }
 
@@ -152,7 +145,7 @@ export class RequisicoesComponent implements OnInit {
   }
 
   loadLookups(): void {
-    this.lojasApi.list({ page_size: 1000, ordering: 'nome_loja' }).subscribe(resp => {
+    this.api.lojasPermitidas().subscribe(resp => {
       this.lojas = this.arrayOrResults<any>(resp).map(l => ({ id: Number(l.id ?? l.Idloja), label: `${l.id ?? l.Idloja} - ${l.nome_loja}` })).filter(l => !!l.id);
     });
     this.unidadesApi.list({ page_size: 1000, ordering: 'Descricao' }).subscribe(resp => {
@@ -194,7 +187,7 @@ export class RequisicoesComponent implements OnInit {
   }
 
   loadContadoresVisoes(): void {
-    this.visoesDisponiveis.filter(v => v !== 'minhas' && v !== 'todas').forEach(visao => {
+    this.visoesDisponiveis.filter(v => v !== 'minhas').forEach(visao => {
       this.api.listar({ page_size: 1, visao }).subscribe({
         next: resp => {
           this.viewCounts[visao] = Array.isArray(resp) ? resp.length : Number(resp.count ?? resp.results?.length ?? 0);
@@ -552,13 +545,12 @@ export class RequisicoesComponent implements OnInit {
       minhas: 'Minhas Requisições',
       para_analisar: 'Para Analisar',
       para_atender: 'Para Atender',
-      todas: 'Todas',
     };
     return labels[visao];
   }
 
   contadorVisao(visao: RequisicaoVisao): number | null {
-    if (visao === 'minhas' || visao === 'todas') return null;
+    if (visao === 'minhas') return null;
     return this.viewCounts[visao] ?? 0;
   }
 

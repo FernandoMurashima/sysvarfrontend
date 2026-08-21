@@ -18,6 +18,8 @@ export class PermissionService {
       const hasAny = anyOf.some(modulo => this.auth.podeAcessarModulo(modulo) === true && this.auth.empresaModuloHabilitado(modulo));
       if (!hasAny) return false;
     }
+    const processos = item.processoAnyOf || [];
+    if (processos.length && !processos.some(codigo => this.auth.podeProcesso(codigo))) return false;
     const permissaoModulo = this.auth.podeAcessarModulo(item.moduloEmpresa || null);
     if (item.moduloEmpresa && !permissaoModulo) return false;
     if (item.moduloEmpresa && !this.auth.empresaModuloHabilitado(item.moduloEmpresa)) return false;
@@ -43,6 +45,7 @@ export class PermissionService {
           superOnly: node.superOnly,
           moduloEmpresa: node.moduloEmpresa,
           moduloEmpresaAnyOf: node.moduloEmpresaAnyOf,
+          processoAnyOf: node.processoAnyOf,
           ...(hasChild ? { children: filteredChildren } : {})
         };
         out.push(next);

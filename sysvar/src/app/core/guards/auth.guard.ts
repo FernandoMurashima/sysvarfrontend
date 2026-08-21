@@ -57,6 +57,11 @@ export const authGuard: CanActivateFn = (route) => {
       return false;
     }
   }
+  const processoAnyOf = (route.data?.['processoAnyOf'] ?? []) as string[];
+  if (processoAnyOf.length && !processoAnyOf.some(codigo => auth.podeProcesso(codigo))) {
+    router.navigateByUrl('/home');
+    return false;
+  }
   const permissaoModulo = auth.podeAcessarModulo(moduloEmpresa || null);
   if (moduloEmpresa && (permissaoModulo === false || permissaoModulo === null)) {
     router.navigateByUrl('/home');

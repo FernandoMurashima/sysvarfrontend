@@ -19,6 +19,10 @@ export class RequisicoesService {
     return this.http.get<Requisicao[] | Paginated<Requisicao>>(this.base, { params: this.params(params) });
   }
 
+  lojasPermitidas(): Observable<any[] | Paginated<any>> {
+    return this.http.get<any[] | Paginated<any>>(`${this.base}lojas-permitidas/`);
+  }
+
   get(id: number): Observable<Requisicao> {
     return this.http.get<Requisicao>(`${this.base}${id}/`);
   }

@@ -248,6 +248,12 @@ export class AuthService {
     return Boolean(user?.permissoes_processos?.[`modulo.${modulo}.excluir`]) && this.podeAcessarModulo(modulo, true) === true;
   }
 
+  podeProcesso(codigo: string): boolean {
+    const user = this.getCurrentUser();
+    if (user?.is_superuser || user?.is_company_master) return true;
+    return user?.permissoes_processos?.[codigo] === true;
+  }
+
   permissaoCampo(campo: string): boolean | null {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return true;

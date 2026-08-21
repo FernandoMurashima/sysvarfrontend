@@ -22,4 +22,5 @@ export interface NavItem {
   superOnly?: boolean;
   moduloEmpresa?: ModuloEmpresa;
   moduloEmpresaAnyOf?: ModuloEmpresa[];
+  processoAnyOf?: string[];
 }

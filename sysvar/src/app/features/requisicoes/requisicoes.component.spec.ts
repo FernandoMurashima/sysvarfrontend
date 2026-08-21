@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { LojasService } from '../../core/services/lojas.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -15,15 +14,17 @@ describe('RequisicoesComponent permissoes', () => {
   let api: jasmine.SpyObj<RequisicoesService>;
 
   beforeEach(async () => {
-    auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeProcesso', 'getCurrentUser']);
     api = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', [
       'listar',
+      'lojasPermitidas',
       'listarCategorias',
       'listarCategoriasMaterial',
       'listarFinalidadesAquisicao',
       'listarSetores',
     ]);
     api.listar.and.returnValue(of([]));
+    api.lojasPermitidas.and.returnValue(of([]));
     api.listarCategorias.and.returnValue(of([]));
     api.listarCategoriasMaterial.and.returnValue(of([]));
     api.listarFinalidadesAquisicao.and.returnValue(of([]));
@@ -34,7 +35,6 @@ describe('RequisicoesComponent permissoes', () => {
       providers: [
         { provide: AuthService, useValue: auth },
         { provide: RequisicoesService, useValue: api },
-        { provide: LojasService, useValue: { list: () => of([]) } },
         { provide: UnidadesService, useValue: { list: () => of([]) } },
         { provide: ProdutosService, useValue: { list: () => of([]) } },
         { provide: ActivatedRoute, useValue: {} },
@@ -46,26 +46,22 @@ describe('RequisicoesComponent permissoes', () => {
   });
 
   function permissoes(ativos: string[]): void {
-    auth.podeAcessarModulo.and.callFake((modulo: any, edit?: boolean) => {
-      if (!ativos.includes(modulo)) return false;
-      return modulo === 'requisicoes_todas' || edit === true;
-    });
+    auth.podeProcesso.and.callFake((codigo: string) => ativos.includes(codigo));
   }
 
   it('Joao somente Requisitar ve Minhas e Nova, sem Todas', () => {
-    permissoes(['requisicoes']);
+    permissoes(['requisicoes.fazer']);
     expect(component.podeEditar).toBeTrue();
     expect(component.visoesDisponiveis).toEqual(['minhas']);
-    expect(component.podeVerTodas).toBeFalse();
   });
 
-  it('Paula com Requisitar, Analisar e Visualizar todas ve as abas correspondentes', () => {
-    permissoes(['requisicoes', 'requisicoes_analise', 'requisicoes_todas']);
-    expect(component.visoesDisponiveis).toEqual(['minhas', 'para_analisar', 'todas']);
+  it('Paula com Requisitar e Analisar ve as abas correspondentes', () => {
+    permissoes(['requisicoes.fazer', 'requisicoes.aprovar']);
+    expect(component.visoesDisponiveis).toEqual(['minhas', 'para_analisar']);
   });
 
   it('usuario somente Atender inicia em Para Atender', () => {
-    permissoes(['requisicoes_atendimento']);
+    permissoes(['requisicoes.atender']);
     component.ngOnInit();
     expect(component.visao).toBe('para_atender');
     expect(api.listar).toHaveBeenCalledWith(jasmine.objectContaining({ visao: 'para_atender' }));
@@ -76,6 +72,5 @@ describe('RequisicoesComponent permissoes', () => {
     expect(component.podeEditar).toBeFalse();
     expect(component.podeAprovar).toBeFalse();
     expect(component.podeAtender).toBeFalse();
-    expect(component.podeVerTodas).toBeFalse();
   });
 });
