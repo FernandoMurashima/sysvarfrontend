@@ -11,7 +11,7 @@ import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, Requisi
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
-type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender';
+type RequisicaoVisao = 'minhas' | 'para_analisar' | 'para_atender' | 'todas';
 
 @Component({
   selector: 'app-requisicoes',
@@ -103,7 +103,7 @@ export class RequisicoesComponent implements OnInit {
     const base: RequisicaoVisao[] = [];
     if (this.podeEditar) base.push('minhas');
     if (this.podeAprovar) base.push('para_analisar');
-    if (this.podeAtender) base.push('para_atender');
+    if (this.podeAtender) base.push('para_atender', 'todas');
     return base.length ? base : ['minhas'];
   }
 
@@ -545,6 +545,7 @@ export class RequisicoesComponent implements OnInit {
       minhas: 'Minhas Requisições',
       para_analisar: 'Para Analisar',
       para_atender: 'Para Atender',
+      todas: 'Todas',
     };
     return labels[visao];
   }

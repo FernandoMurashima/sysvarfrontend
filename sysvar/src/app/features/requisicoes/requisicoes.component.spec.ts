@@ -62,6 +62,7 @@ describe('RequisicoesComponent permissoes', () => {
 
   it('usuario somente Atender inicia em Para Atender', () => {
     permissoes(['requisicoes.atender']);
+    expect(component.visoesDisponiveis).toEqual(['para_atender', 'todas']);
     component.ngOnInit();
     expect(component.visao).toBe('para_atender');
     expect(api.listar).toHaveBeenCalledWith(jasmine.objectContaining({ visao: 'para_atender' }));
