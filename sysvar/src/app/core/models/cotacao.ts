@@ -115,6 +115,43 @@ export interface CotacaoFornecedor {
   atualizado_em?: string;
 }
 
+export interface CotacaoPropostaItem {
+  id?: number;
+  proposta?: number;
+  cotacao_item: number;
+  cotacao_item_descricao?: string;
+  quantidade_cotar?: string | number;
+  quantidade_ofertada?: string | number | null;
+  preco_unitario?: string | number | null;
+  desconto_item?: string | number | null;
+  marca?: string;
+  modelo_referencia?: string;
+  garantia?: string;
+  prazo_entrega_item?: string;
+  observacao?: string;
+  total_item?: string | number;
+}
+
+export interface CotacaoProposta {
+  id: number;
+  cotacao: number;
+  cotacao_fornecedor: number;
+  fornecedor_nome?: string;
+  data_proposta: string;
+  validade_proposta?: string | null;
+  prazo_entrega?: string;
+  condicao_pagamento?: string;
+  frete?: string | number;
+  outras_despesas?: string | number;
+  desconto_geral?: string | number;
+  total_itens?: string | number;
+  total_proposta?: string | number;
+  observacao?: string;
+  anexo?: string | null;
+  ativa?: boolean;
+  itens?: CotacaoPropostaItem[];
+}
+
 export interface Paginated<T> {
   results: T[];
   count?: number;

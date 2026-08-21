@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
@@ -10,11 +10,12 @@ export class CotacoesService {
   private base = `${environment.apiBaseUrl}/compras/cotacoes/`;
   private itensBase = `${environment.apiBaseUrl}/compras/cotacao-itens/`;
   private fornecedoresBase = `${environment.apiBaseUrl}/compras/cotacao-fornecedores/`;
+  private propostasBase = `${environment.apiBaseUrl}/compras/cotacao-propostas/`;
 
   listar(params?: { loja?: number; status?: string; page?: number; page_size?: number }): Observable<Cotacao[] | Paginated<Cotacao>> {
     let hp = new HttpParams();
     Object.entries(params || {}).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') hp = hp.set(key, String(value));
+      if (value !== undefined && value !== null) hp = hp.set(key, String(value));
     });
     return this.http.get<Cotacao[] | Paginated<Cotacao>>(this.base, { params: hp });
   }
@@ -63,6 +64,22 @@ export class CotacoesService {
 
   removerFornecedor(id: number): Observable<void> {
     return this.http.delete<void>(`${this.fornecedoresBase}${id}/`);
+  }
+
+  listarPropostas(params?: { cotacao?: number; cotacao_fornecedor?: number }): Observable<CotacaoProposta[] | Paginated<CotacaoProposta>> {
+    let hp = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) hp = hp.set(key, String(value));
+    });
+    return this.http.get<CotacaoProposta[] | Paginated<CotacaoProposta>>(this.propostasBase, { params: hp });
+  }
+
+  criarProposta(payload: Partial<CotacaoProposta>): Observable<CotacaoProposta> {
+    return this.http.post<CotacaoProposta>(this.propostasBase, payload);
+  }
+
+  atualizarProposta(id: number, payload: Partial<CotacaoProposta>): Observable<CotacaoProposta> {
+    return this.http.patch<CotacaoProposta>(`${this.propostasBase}${id}/`, payload);
   }
 
   apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {

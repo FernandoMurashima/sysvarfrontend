@@ -142,7 +142,7 @@
             <td>{{ f.fornecedor_nome || f.fornecedor }}</td>
             <td><span class="status-pill">{{ statusFornecedorLabel(f.status_participacao) }}</span><div class="field-hint" *ngIf="f.status_participacao === 'DESCLASSIFICADO' && f.motivo_desclassificacao">{{ f.motivo_desclassificacao }}</div></td>
             <td>{{ f.observacao || '-' }}</td>
-            <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor(f)">Editar status</button><button class="btn sm danger" type="button" [disabled]="!podeEditarFornecedores" (click)="removerFornecedor(f)">Remover</button></td>
+            <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalProposta(f)">{{ propostasPorFornecedor[f.id] ? 'Editar proposta' : 'Registrar proposta' }}</button><button class="btn sm" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor(f)">Editar status</button><button class="btn sm danger" type="button" [disabled]="!podeEditarFornecedores" (click)="removerFornecedor(f)">Remover</button></td>
           </tr>
         </tbody>
       </table>
@@ -161,6 +161,44 @@
         <label class="input-item col-span-12">Observação<textarea rows="3" [(ngModel)]="fornecedorObservacao"></textarea></label>
       </div>
       <div class="actions-form"><button class="btn primary" type="button" [disabled]="!fornecedorEditando && !fornecedorSelecionado" (click)="salvarFornecedor()">Salvar</button></div>
+    </div>
+  </section>
+
+  <section class="modal-backdrop" *ngIf="modalPropostaAberto">
+    <div class="modal-large">
+      <div class="form-title-row"><h3>{{ propostaEditando ? 'Editar proposta' : 'Registrar proposta' }}</h3><button class="btn" type="button" (click)="fecharModalProposta()">Voltar</button></div>
+      <div class="grid-12">
+        <div class="input-item col-span-4"><span>Fornecedor</span><strong>{{ propostaFornecedor?.fornecedor_nome || propostaFornecedor?.fornecedor }}</strong></div>
+        <label class="input-item col-span-2">Data da proposta<input type="date" [(ngModel)]="propostaHeader.data_proposta" /></label>
+        <label class="input-item col-span-2">Validade<input type="date" [(ngModel)]="propostaHeader.validade_proposta" /></label>
+        <label class="input-item col-span-2">Prazo de entrega<input [(ngModel)]="propostaHeader.prazo_entrega" /></label>
+        <label class="input-item col-span-2">Condição de pagamento<input [(ngModel)]="propostaHeader.condicao_pagamento" /></label>
+        <label class="input-item col-span-2">Frete<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.frete" /></label>
+        <label class="input-item col-span-2">Outras despesas<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.outras_despesas" /></label>
+        <label class="input-item col-span-2">Desconto geral<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.desconto_geral" /></label>
+        <label class="input-item col-span-6">Observação<input [(ngModel)]="propostaHeader.observacao" /></label>
+      </div>
+      <div class="table-wrapper itens-table">
+        <table class="table">
+          <thead><tr><th>Item da Cotação</th><th>Qtd cotar</th><th>Qtd ofertada</th><th>Preço unit.</th><th>Desconto</th><th>Marca</th><th>Modelo</th><th>Garantia</th><th>Prazo item</th><th>Observação</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of propostaItens">
+              <td>{{ item.cotacao_item_descricao }}</td>
+              <td>{{ item.quantidade_cotar }}</td>
+              <td><input class="table-input" type="number" min="0" step="0.001" [(ngModel)]="item.quantidade_ofertada" /></td>
+              <td><input class="table-input" type="number" min="0" step="0.01" [(ngModel)]="item.preco_unitario" /></td>
+              <td><input class="table-input" type="number" min="0" step="0.01" [(ngModel)]="item.desconto_item" /></td>
+              <td><input class="table-input" [(ngModel)]="item.marca" /></td>
+              <td><input class="table-input" [(ngModel)]="item.modelo_referencia" /></td>
+              <td><input class="table-input" [(ngModel)]="item.garantia" /></td>
+              <td><input class="table-input" [(ngModel)]="item.prazo_entrega_item" /></td>
+              <td><input class="table-input" [(ngModel)]="item.observacao" /></td>
+              <td>{{ moeda(totalItemProposta(item)) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="actions-form"><strong>Total geral: {{ moeda(totalProposta()) }}</strong><button class="btn primary" type="button" (click)="salvarProposta()">Salvar proposta</button></div>
     </div>
   </section>
 

@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
@@ -38,6 +38,7 @@ export class CotacoesComponent implements OnInit {
   itens: CotacaoItem[] = [];
   fornecedoresCotacao: CotacaoFornecedor[] = [];
   fornecedoresDisponiveis: Fornecedor[] = [];
+  propostasPorFornecedor: Record<number, CotacaoProposta> = {};
   apoioItens: Record<number, CotacaoItemApoioDecisao> = {};
   apoioExpandido = new Set<number>();
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
@@ -55,6 +56,11 @@ export class CotacoesComponent implements OnInit {
   fornecedorStatus: CotacaoFornecedorStatus = 'CONVIDADO';
   fornecedorObservacao = '';
   fornecedorMotivo = '';
+  modalPropostaAberto = false;
+  propostaFornecedor: CotacaoFornecedor | null = null;
+  propostaEditando: CotacaoProposta | null = null;
+  propostaHeader: Partial<CotacaoProposta> = {};
+  propostaItens: CotacaoPropostaItem[] = [];
   itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
@@ -235,8 +241,22 @@ export class CotacoesComponent implements OnInit {
 
   loadFornecedoresCotacao(cotacaoId: number): void {
     this.api.listarFornecedores(cotacaoId).subscribe({
-      next: resp => this.fornecedoresCotacao = Array.isArray(resp) ? resp : resp.results || [],
+      next: resp => {
+        this.fornecedoresCotacao = Array.isArray(resp) ? resp : resp.results || [];
+        this.loadPropostasCotacao(cotacaoId);
+      },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores da cotação.'),
+    });
+  }
+
+  loadPropostasCotacao(cotacaoId: number): void {
+    this.api.listarPropostas({ cotacao: cotacaoId }).subscribe({
+      next: resp => {
+        const rows = Array.isArray(resp) ? resp : resp.results || [];
+        this.propostasPorFornecedor = {};
+        rows.filter(p => p.ativa !== false).forEach(p => this.propostasPorFornecedor[p.cotacao_fornecedor] = p);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar propostas.'),
     });
   }
 
@@ -300,6 +320,95 @@ export class CotacoesComponent implements OnInit {
     this.api.removerFornecedor(row.id).subscribe({
       next: () => this.loadFornecedoresCotacao(this.atual!.id),
       error: err => this.errorMsg = this.errorText(err, 'Falha ao remover fornecedor.'),
+    });
+  }
+
+  abrirModalProposta(row: CotacaoFornecedor): void {
+    if (!this.atual || !this.podeEditarFornecedores) return;
+    this.propostaFornecedor = row;
+    this.propostaEditando = this.propostasPorFornecedor[row.id] || null;
+    const hoje = new Date().toISOString().slice(0, 10);
+    this.propostaHeader = this.propostaEditando ? { ...this.propostaEditando } : {
+      data_proposta: hoje,
+      validade_proposta: null,
+      prazo_entrega: '',
+      condicao_pagamento: '',
+      frete: 0,
+      outras_despesas: 0,
+      desconto_geral: 0,
+      observacao: '',
+    };
+    const existentes = new Map((this.propostaEditando?.itens || []).map(i => [Number(i.cotacao_item), i]));
+    this.propostaItens = this.itens.map(item => {
+      const existente = existentes.get(item.id);
+      return existente ? { ...existente } : {
+        cotacao_item: item.id,
+        cotacao_item_descricao: item.produto_descricao || item.descricao,
+        quantidade_cotar: item.quantidade_cotar,
+        quantidade_ofertada: null,
+        preco_unitario: null,
+        desconto_item: 0,
+        marca: '',
+        modelo_referencia: '',
+        garantia: '',
+        prazo_entrega_item: '',
+        observacao: '',
+      };
+    });
+    this.modalPropostaAberto = true;
+  }
+
+  fecharModalProposta(): void {
+    this.modalPropostaAberto = false;
+    this.propostaFornecedor = null;
+    this.propostaEditando = null;
+    this.propostaHeader = {};
+    this.propostaItens = [];
+  }
+
+  totalItemProposta(item: CotacaoPropostaItem): number {
+    const qtd = Number(item.quantidade_ofertada || 0);
+    const preco = Number(item.preco_unitario || 0);
+    const desconto = Number(item.desconto_item || 0);
+    return Math.max(qtd * preco - desconto, 0);
+  }
+
+  totalProposta(): number {
+    const totalItens = this.propostaItens.reduce((acc, item) => acc + this.totalItemProposta(item), 0);
+    return Math.max(totalItens - Number(this.propostaHeader.desconto_geral || 0) + Number(this.propostaHeader.frete || 0) + Number(this.propostaHeader.outras_despesas || 0), 0);
+  }
+
+  salvarProposta(): void {
+    if (!this.atual || !this.propostaFornecedor || !this.podeEditarFornecedores) return;
+    const itens = this.propostaItens
+      .filter(item => Number(item.quantidade_ofertada || 0) > 0 || Number(item.preco_unitario || 0) > 0)
+      .map(item => ({
+        cotacao_item: item.cotacao_item,
+        quantidade_ofertada: item.quantidade_ofertada || 0,
+        preco_unitario: item.preco_unitario || 0,
+        desconto_item: item.desconto_item || 0,
+        marca: item.marca || '',
+        modelo_referencia: item.modelo_referencia || '',
+        garantia: item.garantia || '',
+        prazo_entrega_item: item.prazo_entrega_item || '',
+        observacao: item.observacao || '',
+      }));
+    const payload: Partial<CotacaoProposta> = {
+      ...this.propostaHeader,
+      cotacao: this.atual.id,
+      cotacao_fornecedor: this.propostaFornecedor.id,
+      frete: this.propostaHeader.frete || 0,
+      outras_despesas: this.propostaHeader.outras_despesas || 0,
+      desconto_geral: this.propostaHeader.desconto_geral || 0,
+      itens,
+    };
+    const req = this.propostaEditando ? this.api.atualizarProposta(this.propostaEditando.id, payload) : this.api.criarProposta(payload);
+    req.subscribe({
+      next: () => {
+        this.fecharModalProposta();
+        this.loadFornecedoresCotacao(this.atual!.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao salvar proposta.'),
     });
   }
 

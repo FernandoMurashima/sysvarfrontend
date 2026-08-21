@@ -18,7 +18,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
@@ -35,6 +35,9 @@ describe('CotacoesComponent', () => {
     api.adicionarFornecedor.and.returnValue(of({ id: 51, cotacao: 7, fornecedor: 41, fornecedor_nome: 'Fornecedor B', status_participacao: 'CONVIDADO' } as any));
     api.atualizarFornecedor.and.returnValue(of({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'RECUSOU' } as any));
     api.removerFornecedor.and.returnValue(of(undefined));
+    api.listarPropostas.and.returnValue(of([]));
+    api.criarProposta.and.returnValue(of({ id: 60, cotacao: 7, cotacao_fornecedor: 50, data_proposta: '2026-08-21', total_itens: '19.00', total_proposta: '31.00', itens: [] } as any));
+    api.atualizarProposta.and.returnValue(of({ id: 60, cotacao: 7, cotacao_fornecedor: 50, data_proposta: '2026-08-21', total_itens: '20.00', total_proposta: '20.00', itens: [] } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
@@ -244,5 +247,42 @@ describe('CotacoesComponent', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.removerFornecedor({ id: 50 } as any);
     expect(api.removerFornecedor).toHaveBeenCalledWith(50);
+  });
+
+  it('abre proposta e preenche cabecalho', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalProposta({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any);
+    component.propostaHeader.condicao_pagamento = '30 dias';
+    expect(component.modalPropostaAberto).toBeTrue();
+    expect(component.propostaHeader.condicao_pagamento).toBe('30 dias');
+  });
+
+  it('preenche itens, deixa item sem oferta e calcula total', () => {
+    component.itens = [
+      { id: 10, cotacao: 7, descricao: 'Item A', quantidade_cotar: '2.000', unidade: 4, origem: 'AVULSO', permite_alternativo: true } as any,
+      { id: 11, cotacao: 7, descricao: 'Item B', quantidade_cotar: '1.000', unidade: 4, origem: 'AVULSO', permite_alternativo: true } as any,
+    ];
+    component.atual = { id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any;
+    component.abrirModalProposta({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any);
+    component.propostaItens[0].quantidade_ofertada = 2;
+    component.propostaItens[0].preco_unitario = 10;
+    component.propostaItens[0].desconto_item = 1;
+    component.propostaHeader.frete = 10;
+    component.propostaHeader.outras_despesas = 5;
+    component.propostaHeader.desconto_geral = 3;
+    expect(component.totalItemProposta(component.propostaItens[0])).toBe(19);
+    expect(component.totalProposta()).toBe(31);
+    component.salvarProposta();
+    expect(api.criarProposta).toHaveBeenCalledWith(jasmine.objectContaining({ itens: [jasmine.objectContaining({ cotacao_item: 10 })] }));
+  });
+
+  it('edita proposta existente', () => {
+    component.itens = [{ id: 10, cotacao: 7, descricao: 'Item A', quantidade_cotar: '2.000', unidade: 4, origem: 'AVULSO', permite_alternativo: true } as any];
+    component.atual = { id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any;
+    component.propostasPorFornecedor[50] = { id: 60, cotacao: 7, cotacao_fornecedor: 50, data_proposta: '2026-08-21', frete: '1.00', itens: [{ cotacao_item: 10, quantidade_ofertada: '1.000', preco_unitario: '2.00' }] } as any;
+    component.abrirModalProposta({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'PROPOSTA_RECEBIDA' } as any);
+    component.propostaHeader.frete = 2;
+    component.salvarProposta();
+    expect(api.atualizarProposta).toHaveBeenCalledWith(60, jasmine.objectContaining({ frete: 2 }));
   });
 });
