@@ -36,6 +36,7 @@ import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pag
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
 import { InsumosComponent } from './features/insumos/insumos.component';
 import { PedidosCompraComponent } from './features/pedidos-compra/pedidos-compra.component';
+import { CotacoesComponent } from './features/cotacoes/cotacoes.component';
 import { RequisicoesComponent } from './features/requisicoes/requisicoes.component';
 import { SetoresComponent } from './features/setores/setores.component';
 import { CategoriasMaterialComponent } from './features/categorias-material/categorias-material.component';
@@ -138,6 +139,7 @@ export const routes: Routes = [
       { path: 'requisicoes', component: RequisicoesComponent, data: { processoAnyOf: ['requisicoes.fazer', 'requisicoes.aprovar', 'requisicoes.atender'] } },
       { path: 'compras/requisicoes', redirectTo: 'requisicoes', pathMatch: 'full' },
       { path: 'compras/pedidos', component: PedidosCompraComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
+      { path: 'compras/cotacoes', component: CotacoesComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/pedidos-revenda', redirectTo: 'compras/pedidos', pathMatch: 'full' },
       { path: 'compras/pedidos-uso-consumo', redirectTo: 'compras/pedidos', pathMatch: 'full' },
       { path: 'compras/notas-entrada', component: NotasFiscaisEntradaComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },

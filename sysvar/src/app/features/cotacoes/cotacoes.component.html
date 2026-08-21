@@ -1,0 +1,62 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Cotações</h1></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="loadCotacoes()">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditar" (click)="nova()">+ Nova Cotação</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <section class="results-area table-card" *ngIf="view === 'list'">
+    <div class="results-header">
+      <div class="left"><strong>Cotações cadastradas</strong> <span>{{ cotacoes.length }} registro(s)</span></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="cotacoes.length; else emptyTpl">
+        <thead><tr><th>Número</th><th>Abertura</th><th>Loja</th><th>Responsável</th><th>Tipo</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let c of cotacoes" (dblclick)="abrir(c)">
+            <td>{{ c.numero }}</td>
+            <td>{{ c.data_abertura }}</td>
+            <td>{{ c.loja_nome || c.loja }}</td>
+            <td>{{ c.responsavel_nome || c.responsavel }}</td>
+            <td>{{ tipoLabel(c.tipo_compra) }}</td>
+            <td><span class="status-pill">{{ c.prioridade }}</span></td>
+            <td><span class="status-pill">{{ statusLabel(c.status) }}</span></td>
+            <td><button class="btn sm" type="button" (click)="abrir(c)">{{ c.status === 'EM_ELABORACAO' && podeEditar ? 'Editar' : 'Consultar' }}</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma cotação encontrada.' }}</div></ng-template>
+    </div>
+  </section>
+
+  <section class="card form" *ngIf="view === 'form'">
+    <div class="form-title-row">
+      <h3>{{ atual ? ('Cotação ' + atual.numero) : 'Nova Cotação' }}</h3>
+      <button class="btn" type="button" (click)="voltar()">Voltar</button>
+    </div>
+
+    <form [formGroup]="form" class="grid-12">
+      <div class="input-item col-span-2"><span>Número da Cotação</span><strong>{{ atual?.numero || 'Automático' }}</strong></div>
+      <div class="input-item col-span-3"><span>Empresa</span><strong>{{ currentUser?.empresa?.nome || atual?.empresa || 'Contexto atual' }}</strong></div>
+      <label class="input-item col-span-3">Loja<select formControlName="loja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select></label>
+      <div class="input-item col-span-2"><span>Data de abertura</span><strong>{{ atual?.data_abertura || 'Hoje' }}</strong></div>
+      <div class="input-item col-span-2"><span>Responsável</span><strong>{{ atual?.responsavel_nome || currentUser?.username || currentUser?.id || '-' }}</strong></div>
+      <label class="input-item col-span-3">Tipo de compra<select formControlName="tipo_compra"><option value="REVENDA">Revenda</option><option value="USO_CONSUMO">Uso/Consumo</option><option value="INSUMO">Insumo</option><option value="SERVICO">Serviço</option><option value="OUTRO">Outro</option></select></label>
+      <label class="input-item col-span-3">Data limite para propostas<input type="date" formControlName="data_limite_propostas" /></label>
+      <label class="input-item col-span-3">Prioridade<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+      <div class="input-item col-span-3"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status) }}</span></div>
+      <label class="input-item col-span-12">Observação geral<textarea rows="3" formControlName="observacao"></textarea></label>
+    </form>
+
+    <div class="actions-form">
+      <button class="btn" type="button" (click)="voltar()">Voltar</button>
+      <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
+    </div>
+  </section>
+</div>

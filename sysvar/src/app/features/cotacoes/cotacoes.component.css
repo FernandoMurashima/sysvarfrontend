@@ -1,0 +1,28 @@
+.cadastro-page { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.title-bar, .results-header, .form-title-row, .actions-form { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.title-left { display: flex; align-items: center; gap: 8px; }
+h1, h3 { margin: 0; }
+.btn { border: 1px solid #cbd5e1; background: #fff; color: #1f2937; padding: 7px 12px; border-radius: 6px; cursor: pointer; }
+.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btn.sm { padding: 4px 8px; font-size: 12px; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.alert { padding: 10px 12px; border-radius: 6px; }
+.alert.success { background: #ecfdf5; color: #047857; }
+.alert.error { background: #fef2f2; color: #b91c1c; }
+.table-card, .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+.table-wrapper { overflow: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; white-space: nowrap; }
+.table tbody tr:hover { background: #f8fafc; }
+.status-pill { display: inline-flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 999px; padding: 2px 8px; font-size: 12px; background: #f8fafc; }
+.status-readonly { width: fit-content; }
+.empty-hint { padding: 18px; color: #64748b; text-align: center; }
+.grid-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
+.input-item { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #475569; }
+.input-item input, .input-item select, .input-item textarea { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font: inherit; color: #111827; background: #fff; }
+.input-item strong { min-height: 34px; display: flex; align-items: center; color: #111827; }
+.col-span-2 { grid-column: span 2; }
+.col-span-3 { grid-column: span 3; }
+.col-span-12 { grid-column: span 12; }
+.actions-form { justify-content: flex-end; margin-top: 12px; }
+@media (max-width: 900px) { .grid-12 { grid-template-columns: 1fr; } .col-span-2, .col-span-3, .col-span-12 { grid-column: 1; } }
