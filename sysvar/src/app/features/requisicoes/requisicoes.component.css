@@ -244,6 +244,11 @@ textarea {
   color: #9a3412;
 }
 
+.status-pill.badge-danger, .badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .grid-12 {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));

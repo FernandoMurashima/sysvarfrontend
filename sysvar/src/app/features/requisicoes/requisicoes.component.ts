@@ -540,6 +540,24 @@ export class RequisicoesComponent implements OnInit {
     return labels[status] || status.replace(/_/g, ' ');
   }
 
+  indicadorClass(item: RequisicaoItem): string {
+    const cor = item.indicador_compra?.cor;
+    if (cor === 'VERDE') return 'badge-ok';
+    if (cor === 'AMARELO') return 'inactive';
+    if (cor === 'VERMELHO') return 'badge-danger';
+    return '';
+  }
+
+  indicadorLabel(item: RequisicaoItem): string {
+    return item.indicador_compra?.label || '-';
+  }
+
+  indicadorLinks(item: RequisicaoItem): string {
+    const cotacoes = item.indicador_compra?.cotacoes?.map(c => `Cotação ${c.numero}`) || [];
+    const pedidos = item.indicador_compra?.pedidos?.map(p => `Pedido ${p.numero || p.id}`) || [];
+    return [...cotacoes, ...pedidos].join(' / ');
+  }
+
   visaoLabel(visao: RequisicaoVisao): string {
     const labels: Record<RequisicaoVisao, string> = {
       minhas: 'Minhas Requisições',

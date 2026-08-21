@@ -109,10 +109,10 @@
 
       <div class="table-wrapper itens-wrapper">
         <table class="table" *ngIf="itens.length; else itensEmpty">
-          <thead><tr><th>Tipo</th><th>Item</th><th>Qtd sol.</th><th>Qtd atend.</th><th>Pendente</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Tipo</th><th>Item</th><th>Qtd sol.</th><th>Qtd atend.</th><th>Pendente</th><th>Disponibilidade</th><th>Vínculos</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of itens">
-              <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
+              <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill" [ngClass]="indicadorClass(item)">{{ indicadorLabel(item) }}</span></td><td>{{ indicadorLinks(item) || '-' }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
               <td class="row-actions"><button class="btn sm" *ngIf="podeEditarConteudo(atual)" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="podeEditarConteudo(atual)" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.status !== 'ATENDIDO'" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
             </tr>
           </tbody>

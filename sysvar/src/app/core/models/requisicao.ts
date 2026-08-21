@@ -72,6 +72,15 @@ export interface RequisicaoItem {
   qtd_pendente: string;
   status: RequisicaoItemStatus;
   observacoes: string;
+  indicador_compra?: {
+    cor: 'VERMELHO' | 'AMARELO' | 'VERDE' | null;
+    codigo: string;
+    label: string;
+    estoque_atual: string | number | null;
+    qtd_pendente_compra: string | number | null;
+    cotacoes: { id: number; numero: number; status: string }[];
+    pedidos: { id: number; numero: number; status: string }[];
+  };
 }
 
 export interface RequisicaoHistorico {

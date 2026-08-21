@@ -74,4 +74,48 @@ describe('RequisicoesComponent permissoes', () => {
     expect(component.podeAprovar).toBeFalse();
     expect(component.podeAtender).toBeFalse();
   });
+
+  it('exibe semaforo e vinculos do item na tela de requisicao', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, numero: 10, empresa: 1, loja: 1, setor: 1, requisitante: 1, data_requisicao: '2026-08-21', data_necessaria: null, prioridade: 'NORMAL', justificativa: '', observacoes: '', status: 'APROVADA' } as any;
+    component.itens = [{
+      id: 5,
+      requisicao: 1,
+      tipo: 'MATERIAL',
+      origem: 'PRODUTO',
+      produto: 8,
+      produto_descricao: 'Caneta azul',
+      descricao: '',
+      categoria: '',
+      categoria_material: null,
+      finalidade: 'USO_CONSUMO',
+      finalidade_aquisicao: null,
+      unidade: 1,
+      especificacao_tecnica: '',
+      titulo_servico: '',
+      descricao_servico: '',
+      categoria_servico: null,
+      tipo_servico: '',
+      qtd_solicitada: '5.000',
+      qtd_atendida: '0.000',
+      qtd_pendente: '5.000',
+      status: 'APROVADO',
+      observacoes: '',
+      indicador_compra: {
+        cor: 'AMARELO',
+        codigo: 'EM_PROCESSO_COMPRA',
+        label: 'Em processo de compra',
+        estoque_atual: '0.000',
+        qtd_pendente_compra: '5.000',
+        cotacoes: [{ id: 7, numero: 3, status: 'ABERTA' }],
+        pedidos: [{ id: 9, numero: 9, status: 'AB' }],
+      },
+    }];
+    component.view = 'form';
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Em processo de compra');
+    expect(text).toContain('Cotação 3 / Pedido 9');
+    expect(component.indicadorClass(component.itens[0])).toBe('inactive');
+  });
 });
