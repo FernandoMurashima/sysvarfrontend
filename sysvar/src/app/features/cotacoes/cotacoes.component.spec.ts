@@ -16,11 +16,12 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'requisicoesDisponiveis', 'adicionarRequisicoes', 'removerRequisicao']);
-    requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
     requisicoesApi.lojasPermitidas.and.returnValue(of([{ id: 2, nome_loja: 'Loja A' }]));
+    requisicoesApi.listarCategoriasMaterial.and.returnValue(of([{ id: 30, nome: 'Informática' }] as any));
     api.criar.and.returnValue(of({ id: 8, numero: 2, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
     api.atualizar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'URGENTE', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
     api.listarItens.and.returnValue(of([{ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Item', quantidade_cotar: '1.000', unidade: 4, permite_alternativo: true } as any]));
@@ -30,6 +31,9 @@ describe('CotacoesComponent', () => {
     api.requisicoesDisponiveis.and.returnValue(of([
       { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },
       { id: 21, numero: 124, loja: 2, loja_nome: 'Loja A', setor_nome: 'Adm', requisitante_nome: 'maria', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'URGENTE', itens: [] },
+    ] as any));
+    api.necessidades.and.returnValue(of([
+      { key: 'produto:5', produto: 5, nome: 'Produto A', quantidade_total_solicitada: '3.000', quantidade_pendente: '3.000', numero_requisicoes: 2, requisicoes_ids: [20, 21], lojas: ['Loja A'], setores: ['TI'], origens: [{ requisicao: 20, numero: 123, loja_nome: 'Loja A', setor_nome: 'TI', quantidade_solicitada: '1.000', quantidade_pendente: '1.000' }] },
     ] as any));
     api.adicionarRequisicoes.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [{ id: 1, cotacao: 7, requisicao: 20, requisicao_numero: 123 }] } as any));
     api.removerRequisicao.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [] } as any));
@@ -157,5 +161,30 @@ describe('CotacoesComponent', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.removerRequisicao(20);
     expect(api.removerRequisicao).toHaveBeenCalledWith(7, 20);
+  });
+
+  it('abre visao de necessidades', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalNecessidades();
+    expect(component.modalNecessidadesAberto).toBeTrue();
+    expect(api.necessidades).toHaveBeenCalled();
+    expect(component.necessidades.length).toBe(1);
+  });
+
+  it('filtra categoria na visao de necessidades', () => {
+    component.filtroNecessidades.categoria = '30';
+    component.loadNecessidades();
+    expect(api.necessidades).toHaveBeenCalledWith(jasmine.objectContaining({ categoria: '30' }));
+  });
+
+  it('expande origens e adiciona requisicoes pela necessidade', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalNecessidades();
+    const row = component.necessidades[0];
+    component.toggleNecessidade(row);
+    expect(component.necessidadesExpandidas.has(row.key)).toBeTrue();
+    component.selecionarRequisicoesDaNecessidade(row);
+    component.adicionarRequisicoes();
+    expect(api.adicionarRequisicoes).toHaveBeenCalledWith(7, [20, 21]);
   });
 });

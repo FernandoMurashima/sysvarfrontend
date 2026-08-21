@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoItem, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
@@ -49,6 +49,14 @@ export class CotacoesService {
 
   requisicoesDisponiveis(): Observable<CotacaoRequisicaoDisponivel[]> {
     return this.http.get<CotacaoRequisicaoDisponivel[]>(`${this.base}requisicoes-disponiveis/`);
+  }
+
+  necessidades(params?: { categoria?: number | string; search?: string; loja?: number | string; setor?: number | string }): Observable<CotacaoNecessidade[]> {
+    let hp = new HttpParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') hp = hp.set(key, String(value));
+    });
+    return this.http.get<CotacaoNecessidade[]>(`${this.base}necessidades/`, { params: hp });
   }
 
   adicionarRequisicoes(cotacao: number, requisicoes: number[]): Observable<Cotacao> {

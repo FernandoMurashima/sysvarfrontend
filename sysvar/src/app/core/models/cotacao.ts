@@ -69,6 +69,26 @@ export interface CotacaoRequisicaoDisponivel {
   itens: any[];
 }
 
+export interface CotacaoNecessidade {
+  key: string;
+  produto?: number | null;
+  nome: string;
+  quantidade_total_solicitada: string | number;
+  quantidade_pendente: string | number;
+  numero_requisicoes: number;
+  requisicoes_ids: number[];
+  lojas: string[];
+  setores: string[];
+  origens: Array<{
+    requisicao: number;
+    numero: number;
+    loja_nome: string;
+    setor_nome: string;
+    quantidade_solicitada: string | number;
+    quantidade_pendente: string | number;
+  }>;
+}
+
 export interface Paginated<T> {
   results: T[];
   count?: number;

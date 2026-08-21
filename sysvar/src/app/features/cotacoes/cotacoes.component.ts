@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -34,6 +34,11 @@ export class CotacoesComponent implements OnInit {
   unidades: Option[] = [];
   itens: CotacaoItem[] = [];
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
+  necessidades: CotacaoNecessidade[] = [];
+  necessidadesExpandidas = new Set<string>();
+  modalNecessidadesAberto = false;
+  categoriasMaterial: any[] = [];
+  filtroNecessidades = { categoria: '', search: '', loja: '', setor: '' };
   requisicoesSelecionadas = new Set<number>();
   requisicoesExpandidas = new Set<number>();
   modalRequisicoesAberto = false;
@@ -69,6 +74,7 @@ export class CotacoesComponent implements OnInit {
     this.loadLojas();
     this.loadProdutos();
     this.loadUnidades();
+    this.loadCategoriasMaterial();
     this.loadCotacoes();
   }
 
@@ -131,6 +137,13 @@ export class CotacoesComponent implements OnInit {
           .filter((u: Option) => !!u.id);
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar unidades.'),
+    });
+  }
+
+  loadCategoriasMaterial(): void {
+    this.requisicoesApi.listarCategoriasMaterial({ ativo: 'true' }).subscribe({
+      next: resp => this.categoriasMaterial = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar categorias.'),
     });
   }
 
@@ -212,6 +225,37 @@ export class CotacoesComponent implements OnInit {
     this.modalRequisicoesAberto = false;
   }
 
+  abrirModalNecessidades(): void {
+    if (!this.atual) return;
+    this.modalNecessidadesAberto = true;
+    this.necessidadesExpandidas.clear();
+    this.loadNecessidades();
+  }
+
+  fecharModalNecessidades(): void {
+    this.modalNecessidadesAberto = false;
+  }
+
+  loadNecessidades(): void {
+    this.api.necessidades({
+      categoria: this.filtroNecessidades.categoria,
+      search: this.filtroNecessidades.search,
+      loja: this.filtroNecessidades.loja,
+      setor: this.filtroNecessidades.setor,
+    }).subscribe({
+      next: rows => this.necessidades = rows,
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar necessidades.'),
+    });
+  }
+
+  toggleNecessidade(row: CotacaoNecessidade): void {
+    this.necessidadesExpandidas.has(row.key) ? this.necessidadesExpandidas.delete(row.key) : this.necessidadesExpandidas.add(row.key);
+  }
+
+  selecionarRequisicoesDaNecessidade(row: CotacaoNecessidade): void {
+    row.requisicoes_ids.forEach(id => this.requisicoesSelecionadas.add(id));
+  }
+
   toggleRequisicao(req: CotacaoRequisicaoDisponivel, checked: boolean): void {
     checked ? this.requisicoesSelecionadas.add(req.id) : this.requisicoesSelecionadas.delete(req.id);
   }
@@ -226,6 +270,7 @@ export class CotacoesComponent implements OnInit {
       next: cotacao => {
         this.atual = cotacao;
         this.modalRequisicoesAberto = false;
+        this.modalNecessidadesAberto = false;
         this.loadItens(cotacao.id);
         this.loadCotacoes();
       },
