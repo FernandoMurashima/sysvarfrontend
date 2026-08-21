@@ -63,7 +63,11 @@
   <section class="card form" *ngIf="view === 'form' && atual">
     <div class="form-title-row">
       <h3>Itens da Cotação</h3>
-      <button class="btn" type="button" [disabled]="!podeEditarItens" (click)="limparItem()">Limpar</button>
+      <div class="title-actions"><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="abrirModalRequisicoes()">Adicionar Requisições</button><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="limparItem()">Limpar</button></div>
+    </div>
+
+    <div class="linked-reqs" *ngIf="atual?.requisicoes_vinculadas?.length">
+      <span class="status-pill" *ngFor="let v of atual?.requisicoes_vinculadas">REQ-{{ v.requisicao_numero || v.requisicao }} <button class="chip-x" type="button" [disabled]="!podeEditarItens" (click)="removerRequisicao(v.requisicao)">x</button></span>
     </div>
 
     <form class="grid-12" [formGroup]="itemForm">
@@ -95,12 +99,34 @@
             <td>{{ item.especificacao_tecnica || '-' }}</td>
             <td>{{ item.marca_desejada || '-' }}</td>
             <td>{{ item.permite_alternativo ? 'Sim' : 'Não' }}</td>
-            <td>{{ item.origem }}</td>
+            <td>{{ origemItem(item) }}</td>
             <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarItens" (click)="editarItem(item)">Editar</button><button class="btn sm danger" type="button" [disabled]="!podeEditarItens" (click)="excluirItem(item)">Excluir</button></td>
           </tr>
         </tbody>
       </table>
       <ng-template #emptyItens><div class="empty-hint">Nenhum item informado.</div></ng-template>
+    </div>
+  </section>
+
+  <section class="modal-backdrop" *ngIf="modalRequisicoesAberto">
+    <div class="modal-large">
+      <div class="form-title-row"><h3>Adicionar Requisições</h3><button class="btn" type="button" (click)="fecharModalRequisicoes()">Voltar</button></div>
+      <div class="table-wrapper">
+        <table class="table">
+          <thead><tr><th>Selecionar</th><th>Número</th><th>Loja</th><th>Setor</th><th>Requisitante</th><th>Itens</th><th>Data</th><th>Prioridade</th><th>Consulta</th></tr></thead>
+          <tbody>
+            <ng-container *ngFor="let r of requisicoesDisponiveis">
+              <tr>
+                <td><input type="checkbox" [checked]="requisicoesSelecionadas.has(r.id)" (change)="toggleRequisicao(r, $any($event.target).checked)" /></td>
+                <td>REQ-{{ r.numero }}</td><td>{{ r.loja_nome }}</td><td>{{ r.setor_nome }}</td><td>{{ r.requisitante_nome }}</td><td>{{ r.quantidade_itens }}</td><td>{{ r.data_requisicao }}</td><td>{{ r.prioridade }}</td>
+                <td><button class="btn sm" type="button" (click)="toggleExpandir(r)">{{ requisicoesExpandidas.has(r.id) ? 'Ocultar' : 'Ver itens' }}</button></td>
+              </tr>
+              <tr *ngIf="requisicoesExpandidas.has(r.id)"><td colspan="9"><div class="req-items"><div *ngFor="let item of r.itens">{{ item.produto_descricao || item.descricao || item.titulo_servico }} - {{ item.qtd_solicitada }} {{ item.unidade_descricao || '' }}</div></div></td></tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+      <div class="actions-form"><button class="btn primary" type="button" [disabled]="!requisicoesSelecionadas.size" (click)="adicionarRequisicoes()">Adicionar à Cotação</button></div>
     </div>
   </section>
 </div>

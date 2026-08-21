@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoItem, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -33,6 +33,10 @@ export class CotacoesComponent implements OnInit {
   produtos: Produto[] = [];
   unidades: Option[] = [];
   itens: CotacaoItem[] = [];
+  requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
+  requisicoesSelecionadas = new Set<number>();
+  requisicoesExpandidas = new Set<number>();
+  modalRequisicoesAberto = false;
   itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
@@ -191,6 +195,61 @@ export class CotacoesComponent implements OnInit {
       next: resp => this.itens = Array.isArray(resp) ? resp : resp.results || [],
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar itens.'),
     });
+  }
+
+  abrirModalRequisicoes(): void {
+    if (!this.atual) return;
+    this.modalRequisicoesAberto = true;
+    this.requisicoesSelecionadas.clear();
+    this.requisicoesExpandidas.clear();
+    this.api.requisicoesDisponiveis().subscribe({
+      next: rows => this.requisicoesDisponiveis = rows,
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar requisições disponíveis.'),
+    });
+  }
+
+  fecharModalRequisicoes(): void {
+    this.modalRequisicoesAberto = false;
+  }
+
+  toggleRequisicao(req: CotacaoRequisicaoDisponivel, checked: boolean): void {
+    checked ? this.requisicoesSelecionadas.add(req.id) : this.requisicoesSelecionadas.delete(req.id);
+  }
+
+  toggleExpandir(req: CotacaoRequisicaoDisponivel): void {
+    this.requisicoesExpandidas.has(req.id) ? this.requisicoesExpandidas.delete(req.id) : this.requisicoesExpandidas.add(req.id);
+  }
+
+  adicionarRequisicoes(): void {
+    if (!this.atual || !this.podeEditarItens || !this.requisicoesSelecionadas.size) return;
+    this.api.adicionarRequisicoes(this.atual.id, Array.from(this.requisicoesSelecionadas)).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.modalRequisicoesAberto = false;
+        this.loadItens(cotacao.id);
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao adicionar requisições.'),
+    });
+  }
+
+  removerRequisicao(requisicao: number): void {
+    if (!this.atual || !this.podeEditarItens) return;
+    this.api.removerRequisicao(this.atual.id, requisicao).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.loadItens(cotacao.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao remover requisição.'),
+    });
+  }
+
+  requisicoesVinculadas(): number[] {
+    return Array.from(new Set(this.itens.map(i => Number((i as any).requisicao_item_origem ? i.requisicao_origem_numero : 0)).filter(Boolean)));
+  }
+
+  origemItem(item: CotacaoItem): string {
+    return item.origem === 'REQUISICAO' ? `REQ-${item.requisicao_origem_numero || item.requisicao_item_origem}` : 'Avulso';
   }
 
   produtoSelecionado(): void {

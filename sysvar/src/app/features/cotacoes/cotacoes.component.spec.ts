@@ -16,7 +16,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'requisicoesDisponiveis', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
@@ -27,6 +27,12 @@ describe('CotacoesComponent', () => {
     api.criarItem.and.returnValue(of({ id: 11, cotacao: 7, origem: 'AVULSO', descricao: 'Novo', quantidade_cotar: '2.000', unidade: 4, permite_alternativo: true } as any));
     api.atualizarItem.and.returnValue(of({ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Editado', quantidade_cotar: '3.000', unidade: 4, permite_alternativo: false } as any));
     api.excluirItem.and.returnValue(of(undefined));
+    api.requisicoesDisponiveis.and.returnValue(of([
+      { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },
+      { id: 21, numero: 124, loja: 2, loja_nome: 'Loja A', setor_nome: 'Adm', requisitante_nome: 'maria', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'URGENTE', itens: [] },
+    ] as any));
+    api.adicionarRequisicoes.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [{ id: 1, cotacao: 7, requisicao: 20, requisicao_numero: 123 }] } as any));
+    api.removerRequisicao.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [] } as any));
     auth.podeAcessarModulo.and.returnValue(true);
     auth.getCurrentUser.and.returnValue({ id: 3, username: 'cotador', empresa: { id: 1, nome: 'Empresa A' } } as any);
 
@@ -117,5 +123,39 @@ describe('CotacoesComponent', () => {
     component.abrir({ ...aberta, status: 'EM_ELABORACAO' });
     component.excluirItem({ id: 10 } as any);
     expect(api.excluirItem).toHaveBeenCalledWith(10);
+  });
+
+  it('abre modal, seleciona uma e adiciona a cotacao', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalRequisicoes();
+    expect(component.modalRequisicoesAberto).toBeTrue();
+    expect(component.requisicoesDisponiveis.length).toBe(2);
+    component.toggleRequisicao(component.requisicoesDisponiveis[0], true);
+    component.adicionarRequisicoes();
+    expect(api.adicionarRequisicoes).toHaveBeenCalledWith(7, [20]);
+  });
+
+  it('seleciona varias requisicoes', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalRequisicoes();
+    component.toggleRequisicao(component.requisicoesDisponiveis[0], true);
+    component.toggleRequisicao(component.requisicoesDisponiveis[1], true);
+    component.adicionarRequisicoes();
+    expect(api.adicionarRequisicoes).toHaveBeenCalledWith(7, [20, 21]);
+  });
+
+  it('expande requisicao para visualizar itens e exibe origem', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalRequisicoes();
+    component.toggleExpandir(component.requisicoesDisponiveis[0]);
+    expect(component.requisicoesExpandidas.has(20)).toBeTrue();
+    expect(component.origemItem({ origem: 'REQUISICAO', requisicao_origem_numero: 123 } as any)).toBe('REQ-123');
+    expect(component.origemItem({ origem: 'AVULSO' } as any)).toBe('Avulso');
+  });
+
+  it('remove vinculo de requisicao', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.removerRequisicao(20);
+    expect(api.removerRequisicao).toHaveBeenCalledWith(7, 20);
   });
 });

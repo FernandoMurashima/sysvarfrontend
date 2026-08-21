@@ -27,6 +27,7 @@ export interface Cotacao {
   status: CotacaoStatus;
   loja_nome?: string;
   responsavel_nome?: string;
+  requisicoes_vinculadas?: CotacaoRequisicao[];
 }
 
 export interface CotacaoItem {
@@ -45,6 +46,27 @@ export interface CotacaoItem {
   permite_alternativo: boolean;
   observacao?: string;
   requisicao_item_origem?: number | null;
+  requisicao_origem_numero?: number | null;
+}
+
+export interface CotacaoRequisicao {
+  id: number;
+  cotacao: number;
+  requisicao: number;
+  requisicao_numero?: number;
+}
+
+export interface CotacaoRequisicaoDisponivel {
+  id: number;
+  numero: number;
+  loja: number;
+  loja_nome: string;
+  setor_nome: string;
+  requisitante_nome: string;
+  quantidade_itens: number;
+  data_requisicao: string;
+  prioridade: string;
+  itens: any[];
 }
 
 export interface Paginated<T> {
