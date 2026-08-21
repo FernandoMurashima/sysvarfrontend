@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
@@ -110,6 +110,17 @@ describe('CotacoesComponent', () => {
     expect(api.comparativo).toHaveBeenCalledWith(8);
   });
 
+  it('mantem cotacao aberta sem erro quando comparativo ainda nao existe', () => {
+    api.comparativo.and.returnValue(throwError(() => ({ status: 404, error: { detail: 'Não encontrado.' } })));
+    component.nova();
+    component.form.patchValue({ loja: 2, tipo_compra: 'USO_CONSUMO', prioridade: 'URGENTE' });
+    component.salvar();
+    expect(component.atual?.id).toBe(8);
+    expect(component.view).toBe('form');
+    expect(component.errorMsg).toBe('');
+    expect(component.comparativoCotacao).toEqual({ cotacao: 8, itens: [], propostas: [] });
+  });
+
   it('salva edicao de cabecalho em elaboracao', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.form.patchValue({ prioridade: 'URGENTE' });
@@ -129,9 +140,33 @@ describe('CotacoesComponent', () => {
 
   it('adiciona item', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    api.listarItens.and.returnValue(of([{ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Item', quantidade_cotar: '1.000', unidade: 4, permite_alternativo: true } as any, { id: 11, cotacao: 7, origem: 'AVULSO', descricao: 'Novo', quantidade_cotar: '2.000', unidade: 4, permite_alternativo: true } as any]));
     component.itemForm.patchValue({ modo: 'AVULSO', descricao: 'Novo', quantidade_cotar: 2, unidade: 4 });
     component.salvarItem();
     expect(api.criarItem).toHaveBeenCalledWith(jasmine.objectContaining({ cotacao: 7, descricao: 'Novo', quantidade_cotar: 2, unidade: 4 }));
+    expect(component.itens.some(item => item.id === 11 && item.descricao === 'Novo')).toBeTrue();
+    expect(component.errorMsg).toBe('');
+  });
+
+  it('adiciona produto cadastrado com contrato de campos correto', () => {
+    component.ngOnInit();
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    api.listarItens.and.returnValue(of([{ id: 12, cotacao: 7, origem: 'AVULSO', produto: 5, produto_descricao: 'Produto A', descricao: 'Produto A', quantidade_cotar: '1.000', unidade: 4, unidade_descricao: 'UN', permite_alternativo: true } as any]));
+    component.itemForm.patchValue({ modo: 'PRODUTO', produto: 5, quantidade_cotar: 1 });
+    component.produtoSelecionado();
+    component.salvarItem();
+    expect(api.criarItem).toHaveBeenCalledWith(jasmine.objectContaining({ cotacao: 7, produto: 5, descricao: '', quantidade_cotar: 1, unidade: 4 }));
+    expect(component.itens[0].produto_descricao).toBe('Produto A');
+  });
+
+  it('estado vazio opcional de itens e fornecedores nao gera erro global', () => {
+    api.listarItens.and.returnValue(throwError(() => ({ status: 404, error: { detail: 'Não encontrado.' } })));
+    api.listarFornecedores.and.returnValue(throwError(() => ({ status: 404, error: { detail: 'Não encontrado.' } })));
+    component.loadItens(7);
+    component.loadFornecedoresCotacao(7);
+    expect(component.itens).toEqual([]);
+    expect(component.fornecedoresCotacao).toEqual([]);
+    expect(component.errorMsg).toBe('');
   });
 
   it('edita item', () => {
@@ -224,9 +259,19 @@ describe('CotacoesComponent', () => {
   it('adiciona fornecedor', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.abrirModalFornecedor();
+    api.listarFornecedores.and.returnValue(of([{ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO', observacao: '' } as any, { id: 51, cotacao: 7, fornecedor: 41, fornecedor_nome: 'Fornecedor B', status_participacao: 'CONVIDADO' } as any]));
     component.fornecedorSelecionado = 41;
     component.salvarFornecedor();
     expect(api.adicionarFornecedor).toHaveBeenCalledWith(jasmine.objectContaining({ cotacao: 7, fornecedor: 41, status_participacao: 'CONVIDADO' }));
+    expect(component.fornecedoresCotacao.some(f => f.id === 51 && f.fornecedor === 41)).toBeTrue();
+    expect(component.errorMsg).toBe('');
+  });
+
+  it('reabre cotacao com itens e fornecedores sem mensagens falsas de erro', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    expect(component.itens.length).toBe(1);
+    expect(component.fornecedoresCotacao.length).toBe(1);
+    expect(component.errorMsg).toBe('');
   });
 
   it('impede duplicado visualmente na lista de fornecedores', () => {

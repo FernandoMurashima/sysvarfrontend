@@ -255,7 +255,15 @@ export class CotacoesComponent implements OnInit {
         this.apoioItens = {};
         this.apoioExpandido.clear();
       },
-      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar itens.'),
+      error: err => {
+        if (this.isOptionalEmpty(err)) {
+          this.itens = [];
+          this.apoioItens = {};
+          this.apoioExpandido.clear();
+          return;
+        }
+        this.errorMsg = this.errorText(err, 'Falha ao carregar itens.');
+      },
     });
   }
 
@@ -265,7 +273,14 @@ export class CotacoesComponent implements OnInit {
         this.fornecedoresCotacao = Array.isArray(resp) ? resp : resp.results || [];
         this.loadPropostasCotacao(cotacaoId);
       },
-      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores da cotação.'),
+      error: err => {
+        if (this.isOptionalEmpty(err)) {
+          this.fornecedoresCotacao = [];
+          this.propostasPorFornecedor = {};
+          return;
+        }
+        this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores da cotação.');
+      },
     });
   }
 
@@ -276,14 +291,20 @@ export class CotacoesComponent implements OnInit {
         this.propostasPorFornecedor = {};
         rows.filter(p => p.ativa !== false).forEach(p => this.propostasPorFornecedor[p.cotacao_fornecedor] = p);
       },
-      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar propostas.'),
+      error: err => {
+        this.propostasPorFornecedor = {};
+        if (!this.isOptionalEmpty(err)) this.errorMsg = this.errorText(err, 'Falha ao carregar propostas.');
+      },
     });
   }
 
   loadComparativo(cotacaoId: number): void {
     this.api.comparativo(cotacaoId).subscribe({
       next: resp => this.comparativoCotacao = resp,
-      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar comparativo.'),
+      error: err => {
+        this.comparativoCotacao = { cotacao: cotacaoId, itens: [], propostas: [] };
+        if (!this.isOptionalEmpty(err)) this.errorMsg = this.errorText(err, 'Falha ao carregar comparativo.');
+      },
     });
   }
 
@@ -297,7 +318,7 @@ export class CotacoesComponent implements OnInit {
     this.fornecedorMotivo = row?.motivo_desclassificacao || '';
     if (!row) {
       this.fornecedoresApi.list({ page_size: 500, ordering: 'nome_fornecedor', ativo: true, utilizavel: true }).subscribe({
-        next: resp => this.fornecedoresDisponiveis = resp.results || [],
+        next: resp => this.fornecedoresDisponiveis = Array.isArray(resp as any) ? resp as any : resp.results || [],
         error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores.'),
       });
     }
@@ -334,7 +355,14 @@ export class CotacoesComponent implements OnInit {
       ? this.api.atualizarFornecedor(this.fornecedorEditando.id, payload)
       : this.api.adicionarFornecedor(payload);
     req.subscribe({
-      next: () => {
+      next: fornecedor => {
+        this.errorMsg = '';
+        this.successMsg = 'Fornecedor salvo.';
+        if (fornecedor) {
+          const idx = this.fornecedoresCotacao.findIndex(f => f.id === fornecedor.id);
+          if (idx >= 0) this.fornecedoresCotacao[idx] = fornecedor;
+          else this.fornecedoresCotacao = [...this.fornecedoresCotacao, fornecedor];
+        }
         this.fecharModalFornecedor();
         this.loadFornecedoresCotacao(this.atual!.id);
       },
@@ -678,7 +706,14 @@ export class CotacoesComponent implements OnInit {
     };
     const req = this.itemEditando ? this.api.atualizarItem(this.itemEditando.id, payload) : this.api.criarItem(payload);
     req.subscribe({
-      next: () => {
+      next: item => {
+        this.errorMsg = '';
+        this.successMsg = 'Item salvo.';
+        if (item) {
+          const idx = this.itens.findIndex(i => i.id === item.id);
+          if (idx >= 0) this.itens[idx] = item;
+          else this.itens = [...this.itens, item];
+        }
         this.limparItem();
         this.loadItens(this.atual!.id);
       },
@@ -733,5 +768,9 @@ export class CotacoesComponent implements OnInit {
     if (Array.isArray(first)) return String(first[0]);
     if (first) return String(first);
     return fallback;
+  }
+
+  private isOptionalEmpty(err: any): boolean {
+    return Number(err?.status) === 404;
   }
 }
