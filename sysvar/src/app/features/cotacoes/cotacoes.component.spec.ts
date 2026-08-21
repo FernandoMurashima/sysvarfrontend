@@ -18,7 +18,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser', 'podeProcesso']);
@@ -43,6 +43,7 @@ describe('CotacoesComponent', () => {
     api.enviarAprovacao.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'AGUARDANDO_APROVACAO', proposta_vencedora: 60 } as any));
     api.aprovar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'PEDIDO_GERADO', proposta_vencedora: 60, pedido_compra_gerado_id: 99 } as any));
     api.rejeitar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'REJEITADA', proposta_vencedora: 60, motivo_rejeicao: 'Revisar' } as any));
+    api.cancelar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'CANCELADA', motivo_cancelamento: 'Compra suspensa' } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
@@ -350,5 +351,27 @@ describe('CotacoesComponent', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Pedido de Compra gerado: 99');
     expect(text).toContain('Ver Pedido de Compra');
+  });
+
+  it('botao cancelar abre modal e exige motivo', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Cancelar Cotação');
+    component.abrirModalCancelar();
+    expect(component.modalCancelarAberto).toBeTrue();
+    component.motivoCancelamento = '';
+    component.cancelarCotacao();
+    expect(api.cancelar).not.toHaveBeenCalled();
+    component.motivoCancelamento = 'Compra suspensa';
+    component.cancelarCotacao();
+    expect(api.cancelar).toHaveBeenCalledWith(7, 'Compra suspensa');
+    expect(component.atual?.status).toBe('CANCELADA');
+  });
+
+  it('estado cancelada bloqueia edicao visual', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'CANCELADA' } as any);
+    expect(component.podeEditarItens).toBeFalse();
+    expect(component.podeEditarFornecedores).toBeFalse();
+    expect(component.podeCancelarCotacao).toBeFalse();
   });
 });

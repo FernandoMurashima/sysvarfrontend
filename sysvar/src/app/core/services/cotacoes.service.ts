@@ -102,6 +102,10 @@ export class CotacoesService {
     return this.http.post<Cotacao>(`${this.base}${cotacao}/rejeitar/`, { motivo });
   }
 
+  cancelar(cotacao: number, motivo: string): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/cancelar/`, { motivo });
+  }
+
   apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {
     return this.http.get<CotacaoItemApoioDecisao>(`${this.itensBase}${id}/apoio-decisao/`);
   }

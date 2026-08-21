@@ -59,6 +59,7 @@
       <button class="btn" type="button" *ngIf="atual?.pedido_compra_gerado_id" [routerLink]="['/compras/pedidos']" [queryParams]="{ pedido: atual?.pedido_compra_gerado_id }">Ver Pedido de Compra</button>
       <button class="btn" type="button" (click)="voltar()">Voltar</button>
       <button class="btn" type="button" *ngIf="atual && podeEditar" [disabled]="!atual.proposta_vencedora || atual.status === 'AGUARDANDO_APROVACAO' || atual.status === 'APROVADA' || atual.status === 'REJEITADA'" (click)="enviarAprovacao()">Enviar para aprovação</button>
+      <button class="btn danger" type="button" *ngIf="atual && podeCancelarCotacao" (click)="abrirModalCancelar()">Cancelar Cotação</button>
       <label class="input-item approval-reject" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao">Motivo rejeição<input [(ngModel)]="motivoRejeicao" /></label>
       <button class="btn primary" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="aprovarCotacao()">Aprovar</button>
       <button class="btn danger" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="rejeitarCotacao()">Rejeitar</button>
@@ -204,6 +205,14 @@
       </table>
     </div>
     <ng-template #emptyComparativo><div class="empty-hint">Nenhuma proposta registrada para comparar.</div></ng-template>
+  </section>
+
+  <section class="modal-backdrop" *ngIf="modalCancelarAberto">
+    <div class="modal-large">
+      <div class="form-title-row"><h3>Cancelar Cotação</h3><button class="btn" type="button" (click)="fecharModalCancelar()">Voltar</button></div>
+      <label class="input-item col-span-12">Motivo<textarea rows="3" [(ngModel)]="motivoCancelamento"></textarea></label>
+      <div class="actions-form"><button class="btn danger" type="button" (click)="cancelarCotacao()">Confirmar cancelamento</button></div>
+    </div>
   </section>
 
   <section class="modal-backdrop" *ngIf="modalFornecedorAberto">

@@ -33,6 +33,9 @@ export interface Cotacao {
   rejeitado_por?: number | null;
   rejeitado_em?: string | null;
   motivo_rejeicao?: string;
+  cancelado_por?: number | null;
+  cancelado_em?: string | null;
+  motivo_cancelamento?: string;
   snapshot_proposta_aprovada?: any;
   pedido_compra_gerado_id?: number | null;
   loja_nome?: string;

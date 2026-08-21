@@ -64,6 +64,8 @@ export class CotacoesComponent implements OnInit {
   propostaItens: CotacaoPropostaItem[] = [];
   justificativaVencedor = '';
   motivoRejeicao = '';
+  modalCancelarAberto = false;
+  motivoCancelamento = '';
   itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
@@ -118,6 +120,10 @@ export class CotacoesComponent implements OnInit {
 
   get podeAprovarCotacao(): boolean {
     return this.auth.podeProcesso('cotacao.aprovar');
+  }
+
+  get podeCancelarCotacao(): boolean {
+    return this.podeEditar && !!this.atual && !['CANCELADA', 'ENCERRADA'].includes(this.atual.status);
   }
 
   loadCotacoes(): void {
@@ -487,6 +493,33 @@ export class CotacoesComponent implements OnInit {
         this.loadCotacoes();
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao rejeitar cotação.'),
+    });
+  }
+
+  abrirModalCancelar(): void {
+    if (!this.podeCancelarCotacao) return;
+    this.motivoCancelamento = '';
+    this.modalCancelarAberto = true;
+  }
+
+  fecharModalCancelar(): void {
+    this.modalCancelarAberto = false;
+    this.motivoCancelamento = '';
+  }
+
+  cancelarCotacao(): void {
+    if (!this.atual || !this.podeCancelarCotacao) return;
+    if (!this.motivoCancelamento.trim()) {
+      this.errorMsg = 'Informe o motivo do cancelamento.';
+      return;
+    }
+    this.api.cancelar(this.atual.id, this.motivoCancelamento).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.fecharModalCancelar();
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao cancelar cotação.'),
     });
   }
 
