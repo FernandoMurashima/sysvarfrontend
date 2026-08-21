@@ -2,13 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
   private http = inject(HttpClient);
   private base = `${environment.apiBaseUrl}/compras/cotacoes/`;
   private itensBase = `${environment.apiBaseUrl}/compras/cotacao-itens/`;
+  private fornecedoresBase = `${environment.apiBaseUrl}/compras/cotacao-fornecedores/`;
 
   listar(params?: { loja?: number; status?: string; page?: number; page_size?: number }): Observable<Cotacao[] | Paginated<Cotacao>> {
     let hp = new HttpParams();
@@ -45,6 +46,23 @@ export class CotacoesService {
 
   excluirItem(id: number): Observable<void> {
     return this.http.delete<void>(`${this.itensBase}${id}/`);
+  }
+
+  listarFornecedores(cotacao: number): Observable<CotacaoFornecedor[] | Paginated<CotacaoFornecedor>> {
+    const params = new HttpParams().set('cotacao', String(cotacao));
+    return this.http.get<CotacaoFornecedor[] | Paginated<CotacaoFornecedor>>(this.fornecedoresBase, { params });
+  }
+
+  adicionarFornecedor(payload: Partial<CotacaoFornecedor>): Observable<CotacaoFornecedor> {
+    return this.http.post<CotacaoFornecedor>(this.fornecedoresBase, payload);
+  }
+
+  atualizarFornecedor(id: number, payload: Partial<CotacaoFornecedor>): Observable<CotacaoFornecedor> {
+    return this.http.patch<CotacaoFornecedor>(`${this.fornecedoresBase}${id}/`, payload);
+  }
+
+  removerFornecedor(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.fornecedoresBase}${id}/`);
   }
 
   apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {

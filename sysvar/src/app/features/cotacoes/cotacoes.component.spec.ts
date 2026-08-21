@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { CotacoesService } from '../../core/services/cotacoes.service';
+import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -13,11 +14,13 @@ describe('CotacoesComponent', () => {
   let component: CotacoesComponent;
   let api: jasmine.SpyObj<CotacoesService>;
   let requisicoesApi: jasmine.SpyObj<RequisicoesService>;
+  let fornecedoresApi: jasmine.SpyObj<FornecedoresService>;
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
+    fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
     requisicoesApi.lojasPermitidas.and.returnValue(of([{ id: 2, nome_loja: 'Loja A' }]));
@@ -28,6 +31,11 @@ describe('CotacoesComponent', () => {
     api.criarItem.and.returnValue(of({ id: 11, cotacao: 7, origem: 'AVULSO', descricao: 'Novo', quantidade_cotar: '2.000', unidade: 4, permite_alternativo: true } as any));
     api.atualizarItem.and.returnValue(of({ id: 10, cotacao: 7, origem: 'AVULSO', descricao: 'Editado', quantidade_cotar: '3.000', unidade: 4, permite_alternativo: false } as any));
     api.excluirItem.and.returnValue(of(undefined));
+    api.listarFornecedores.and.returnValue(of([{ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO', observacao: '' } as any]));
+    api.adicionarFornecedor.and.returnValue(of({ id: 51, cotacao: 7, fornecedor: 41, fornecedor_nome: 'Fornecedor B', status_participacao: 'CONVIDADO' } as any));
+    api.atualizarFornecedor.and.returnValue(of({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'RECUSOU' } as any));
+    api.removerFornecedor.and.returnValue(of(undefined));
+    fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
       { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },
@@ -45,6 +53,7 @@ describe('CotacoesComponent', () => {
       imports: [CotacoesComponent],
       providers: [
         { provide: CotacoesService, useValue: api },
+        { provide: FornecedoresService, useValue: fornecedoresApi },
         { provide: RequisicoesService, useValue: requisicoesApi },
         { provide: AuthService, useValue: auth },
         { provide: ProdutosService, useValue: { list: () => of([{ Idproduto: 5, descricao: 'Produto A', unidade: 4 }]) } },
@@ -195,5 +204,45 @@ describe('CotacoesComponent', () => {
     component.selecionarRequisicoesDaNecessidade(row);
     component.adicionarRequisicoes();
     expect(api.adicionarRequisicoes).toHaveBeenCalledWith(7, [20, 21]);
+  });
+
+  it('adiciona fornecedor', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalFornecedor();
+    component.fornecedorSelecionado = 41;
+    component.salvarFornecedor();
+    expect(api.adicionarFornecedor).toHaveBeenCalledWith(jasmine.objectContaining({ cotacao: 7, fornecedor: 41, status_participacao: 'CONVIDADO' }));
+  });
+
+  it('impede duplicado visualmente na lista de fornecedores', () => {
+    component.fornecedoresCotacao = [{ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any];
+    component.fornecedoresDisponiveis = [{ id: 40, nome_fornecedor: 'Fornecedor A' } as any, { id: 41, nome_fornecedor: 'Fornecedor B' } as any];
+    expect(component.fornecedoresParaAdicionar().map(f => f.id)).toEqual([41]);
+  });
+
+  it('altera status de fornecedor', () => {
+    const row = { id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any;
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalFornecedor(row);
+    component.fornecedorStatus = 'RECUSOU';
+    component.salvarFornecedor();
+    expect(api.atualizarFornecedor).toHaveBeenCalledWith(50, jasmine.objectContaining({ status_participacao: 'RECUSOU' }));
+  });
+
+  it('exige motivo ao desclassificar fornecedor', () => {
+    const row = { id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any;
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalFornecedor(row);
+    component.fornecedorStatus = 'DESCLASSIFICADO';
+    component.fornecedorMotivo = '';
+    component.salvarFornecedor();
+    expect(api.atualizarFornecedor).not.toHaveBeenCalled();
+    expect(component.errorMsg).toContain('motivo');
+  });
+
+  it('remove fornecedor', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.removerFornecedor({ id: 50 } as any);
+    expect(api.removerFornecedor).toHaveBeenCalledWith(50);
   });
 });

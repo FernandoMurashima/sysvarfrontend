@@ -3,9 +3,11 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
+import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -22,6 +24,7 @@ type Option = { id: number; label: string };
 export class CotacoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(CotacoesService);
+  private fornecedoresApi = inject(FornecedoresService);
   private produtosApi = inject(ProdutosService);
   private requisicoesApi = inject(RequisicoesService);
   private unidadesApi = inject(UnidadesService);
@@ -33,6 +36,8 @@ export class CotacoesComponent implements OnInit {
   produtos: Produto[] = [];
   unidades: Option[] = [];
   itens: CotacaoItem[] = [];
+  fornecedoresCotacao: CotacaoFornecedor[] = [];
+  fornecedoresDisponiveis: Fornecedor[] = [];
   apoioItens: Record<number, CotacaoItemApoioDecisao> = {};
   apoioExpandido = new Set<number>();
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
@@ -44,6 +49,12 @@ export class CotacoesComponent implements OnInit {
   requisicoesSelecionadas = new Set<number>();
   requisicoesExpandidas = new Set<number>();
   modalRequisicoesAberto = false;
+  modalFornecedorAberto = false;
+  fornecedorEditando: CotacaoFornecedor | null = null;
+  fornecedorSelecionado: number | null = null;
+  fornecedorStatus: CotacaoFornecedorStatus = 'CONVIDADO';
+  fornecedorObservacao = '';
+  fornecedorMotivo = '';
   itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
@@ -90,6 +101,10 @@ export class CotacoesComponent implements OnInit {
 
   get podeEditarItens(): boolean {
     return this.podeEditar && this.atual?.status === 'EM_ELABORACAO';
+  }
+
+  get podeEditarFornecedores(): boolean {
+    return this.podeEditar && !!this.atual && !['APROVADA', 'REJEITADA', 'CANCELADA', 'PEDIDO_GERADO', 'ENCERRADA'].includes(this.atual.status);
   }
 
   loadCotacoes(): void {
@@ -152,6 +167,7 @@ export class CotacoesComponent implements OnInit {
   nova(): void {
     this.atual = null;
     this.itens = [];
+    this.fornecedoresCotacao = [];
     this.limparItem();
     this.form.reset({ loja: null, data_limite_propostas: '', prioridade: 'NORMAL', tipo_compra: 'OUTRO', observacao: '' });
     this.selecionarLojaUnica();
@@ -169,6 +185,7 @@ export class CotacoesComponent implements OnInit {
     });
     this.view = 'form';
     this.loadItens(cotacao.id);
+    this.loadFornecedoresCotacao(cotacao.id);
   }
 
   voltar(): void {
@@ -213,6 +230,76 @@ export class CotacoesComponent implements OnInit {
         this.apoioExpandido.clear();
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar itens.'),
+    });
+  }
+
+  loadFornecedoresCotacao(cotacaoId: number): void {
+    this.api.listarFornecedores(cotacaoId).subscribe({
+      next: resp => this.fornecedoresCotacao = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores da cotação.'),
+    });
+  }
+
+  abrirModalFornecedor(row?: CotacaoFornecedor): void {
+    if (!this.atual || !this.podeEditarFornecedores) return;
+    this.modalFornecedorAberto = true;
+    this.fornecedorEditando = row || null;
+    this.fornecedorSelecionado = row?.fornecedor || null;
+    this.fornecedorStatus = row?.status_participacao || 'CONVIDADO';
+    this.fornecedorObservacao = row?.observacao || '';
+    this.fornecedorMotivo = row?.motivo_desclassificacao || '';
+    if (!row) {
+      this.fornecedoresApi.list({ page_size: 500, ordering: 'nome_fornecedor', ativo: true, utilizavel: true }).subscribe({
+        next: resp => this.fornecedoresDisponiveis = resp.results || [],
+        error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar fornecedores.'),
+      });
+    }
+  }
+
+  fecharModalFornecedor(): void {
+    this.modalFornecedorAberto = false;
+    this.fornecedorEditando = null;
+    this.fornecedorSelecionado = null;
+    this.fornecedorStatus = 'CONVIDADO';
+    this.fornecedorObservacao = '';
+    this.fornecedorMotivo = '';
+  }
+
+  fornecedoresParaAdicionar(): Fornecedor[] {
+    const usados = new Set(this.fornecedoresCotacao.map(f => Number(f.fornecedor)));
+    return this.fornecedoresDisponiveis.filter(f => f.id && !usados.has(Number(f.id)));
+  }
+
+  salvarFornecedor(): void {
+    if (!this.atual || !this.podeEditarFornecedores) return;
+    if (this.fornecedorStatus === 'DESCLASSIFICADO' && !this.fornecedorMotivo.trim()) {
+      this.errorMsg = 'Informe o motivo da desclassificação.';
+      return;
+    }
+    const payload: Partial<CotacaoFornecedor> = {
+      cotacao: this.atual.id,
+      fornecedor: this.fornecedorSelecionado || undefined,
+      status_participacao: this.fornecedorStatus,
+      observacao: this.fornecedorObservacao || '',
+      motivo_desclassificacao: this.fornecedorMotivo || '',
+    };
+    const req = this.fornecedorEditando
+      ? this.api.atualizarFornecedor(this.fornecedorEditando.id, payload)
+      : this.api.adicionarFornecedor(payload);
+    req.subscribe({
+      next: () => {
+        this.fecharModalFornecedor();
+        this.loadFornecedoresCotacao(this.atual!.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao salvar fornecedor.'),
+    });
+  }
+
+  removerFornecedor(row: CotacaoFornecedor): void {
+    if (!this.podeEditarFornecedores) return;
+    this.api.removerFornecedor(row.id).subscribe({
+      next: () => this.loadFornecedoresCotacao(this.atual!.id),
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao remover fornecedor.'),
     });
   }
 
@@ -403,6 +490,17 @@ export class CotacoesComponent implements OnInit {
   tipoLabel(tipo?: string): string {
     const labels: Record<string, string> = { REVENDA: 'Revenda', USO_CONSUMO: 'Uso/Consumo', INSUMO: 'Insumo', SERVICO: 'Serviço', OUTRO: 'Outro' };
     return labels[tipo || 'OUTRO'] || tipo || '';
+  }
+
+  statusFornecedorLabel(status?: string): string {
+    const labels: Record<string, string> = {
+      CONVIDADO: 'Convidado',
+      PROPOSTA_RECEBIDA: 'Proposta recebida',
+      NAO_RESPONDEU: 'Não respondeu',
+      RECUSOU: 'Recusou participar',
+      DESCLASSIFICADO: 'Desclassificado',
+    };
+    return labels[status || 'CONVIDADO'] || status || '';
   }
 
   private errorText(err: any, fallback: string): string {

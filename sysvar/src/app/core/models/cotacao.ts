@@ -12,6 +12,7 @@ export type CotacaoStatus =
 
 export type CotacaoPrioridade = 'NORMAL' | 'URGENTE' | 'EMERGENCIAL';
 export type CotacaoTipoCompra = 'REVENDA' | 'USO_CONSUMO' | 'INSUMO' | 'SERVICO' | 'OUTRO';
+export type CotacaoFornecedorStatus = 'CONVIDADO' | 'PROPOSTA_RECEBIDA' | 'NAO_RESPONDEU' | 'RECUSOU' | 'DESCLASSIFICADO';
 
 export interface Cotacao {
   id: number;
@@ -100,6 +101,18 @@ export interface CotacaoItemApoioDecisao {
   ultimo_preco?: string | number | null;
   preco_medio?: string | number | null;
   quantidade_cotar: string | number;
+}
+
+export interface CotacaoFornecedor {
+  id: number;
+  cotacao: number;
+  fornecedor: number;
+  fornecedor_nome?: string;
+  status_participacao: CotacaoFornecedorStatus;
+  motivo_desclassificacao?: string;
+  observacao?: string;
+  criado_em?: string;
+  atualizado_em?: string;
 }
 
 export interface Paginated<T> {

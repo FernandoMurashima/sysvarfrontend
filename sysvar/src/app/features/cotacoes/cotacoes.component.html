@@ -129,6 +129,41 @@
     </div>
   </section>
 
+  <section class="card form" *ngIf="view === 'form' && atual">
+    <div class="form-title-row">
+      <h3>Fornecedores consultados</h3>
+      <button class="btn" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor()">Adicionar fornecedor</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="fornecedoresCotacao.length; else emptyFornecedores">
+        <thead><tr><th>Fornecedor</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let f of fornecedoresCotacao">
+            <td>{{ f.fornecedor_nome || f.fornecedor }}</td>
+            <td><span class="status-pill">{{ statusFornecedorLabel(f.status_participacao) }}</span><div class="field-hint" *ngIf="f.status_participacao === 'DESCLASSIFICADO' && f.motivo_desclassificacao">{{ f.motivo_desclassificacao }}</div></td>
+            <td>{{ f.observacao || '-' }}</td>
+            <td class="row-actions"><button class="btn sm" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor(f)">Editar status</button><button class="btn sm danger" type="button" [disabled]="!podeEditarFornecedores" (click)="removerFornecedor(f)">Remover</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyFornecedores><div class="empty-hint">Nenhum fornecedor consultado.</div></ng-template>
+    </div>
+  </section>
+
+  <section class="modal-backdrop" *ngIf="modalFornecedorAberto">
+    <div class="modal-large">
+      <div class="form-title-row"><h3>{{ fornecedorEditando ? 'Editar fornecedor' : 'Adicionar fornecedor' }}</h3><button class="btn" type="button" (click)="fecharModalFornecedor()">Voltar</button></div>
+      <div class="grid-12">
+        <label class="input-item col-span-6" *ngIf="!fornecedorEditando">Fornecedor<select [(ngModel)]="fornecedorSelecionado"><option [ngValue]="null">Selecione</option><option *ngFor="let f of fornecedoresParaAdicionar()" [ngValue]="f.id">{{ f.nome_fornecedor }}</option></select></label>
+        <div class="input-item col-span-6" *ngIf="fornecedorEditando"><span>Fornecedor</span><strong>{{ fornecedorEditando.fornecedor_nome || fornecedorEditando.fornecedor }}</strong></div>
+        <label class="input-item col-span-6">Status<select [(ngModel)]="fornecedorStatus"><option value="CONVIDADO">Convidado</option><option value="PROPOSTA_RECEBIDA">Proposta recebida</option><option value="NAO_RESPONDEU">Não respondeu</option><option value="RECUSOU">Recusou participar</option><option value="DESCLASSIFICADO">Desclassificado</option></select></label>
+        <label class="input-item col-span-12" *ngIf="fornecedorStatus === 'DESCLASSIFICADO'">Motivo da desclassificação<textarea rows="2" [(ngModel)]="fornecedorMotivo"></textarea></label>
+        <label class="input-item col-span-12">Observação<textarea rows="3" [(ngModel)]="fornecedorObservacao"></textarea></label>
+      </div>
+      <div class="actions-form"><button class="btn primary" type="button" [disabled]="!fornecedorEditando && !fornecedorSelecionado" (click)="salvarFornecedor()">Salvar</button></div>
+    </div>
+  </section>
+
   <section class="modal-backdrop" *ngIf="modalRequisicoesAberto">
     <div class="modal-large">
       <div class="form-title-row"><h3>Adicionar Requisições</h3><button class="btn" type="button" (click)="fecharModalRequisicoes()">Voltar</button></div>
