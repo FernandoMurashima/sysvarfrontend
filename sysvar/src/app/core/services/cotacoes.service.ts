@@ -86,6 +86,22 @@ export class CotacoesService {
     return this.http.get<CotacaoComparativo>(`${this.base}${cotacao}/comparativo/`);
   }
 
+  selecionarVencedor(cotacao: number, proposta: number, justificativa?: string): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/selecionar-vencedor/`, { proposta, justificativa: justificativa || '' });
+  }
+
+  enviarAprovacao(cotacao: number): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/enviar-aprovacao/`, {});
+  }
+
+  aprovar(cotacao: number): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/aprovar/`, {});
+  }
+
+  rejeitar(cotacao: number, motivo: string): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/rejeitar/`, { motivo });
+  }
+
   apoioDecisaoItem(id: number): Observable<CotacaoItemApoioDecisao> {
     return this.http.get<CotacaoItemApoioDecisao>(`${this.itensBase}${id}/apoio-decisao/`);
   }

@@ -11,6 +11,7 @@ const PROCESSOS = [
     { codigo: 'requisicoes.aprovar', label: 'Aprovar requisição' },
     { codigo: 'requisicoes.atender', label: 'Atender requisição' },
   ] },
+  { grupo: 'Cotação', itens: [{ codigo: 'cotacao.aprovar', label: 'Aprovar cotação' }] },
   { grupo: 'Pedido de Compra', itens: [{ codigo: 'pedido_compra.aprovar', label: 'Aprovar pedido de compra' }] },
   { grupo: 'Vendas', itens: [{ codigo: 'vendas.autorizar_desconto', label: 'Autorizar desconto' }] },
 ];

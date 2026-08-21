@@ -56,6 +56,10 @@
 
     <div class="actions-form">
       <button class="btn" type="button" (click)="voltar()">Voltar</button>
+      <button class="btn" type="button" *ngIf="atual && podeEditar" [disabled]="!atual.proposta_vencedora || atual.status === 'AGUARDANDO_APROVACAO' || atual.status === 'APROVADA' || atual.status === 'REJEITADA'" (click)="enviarAprovacao()">Enviar para aprovação</button>
+      <label class="input-item approval-reject" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao">Motivo rejeição<input [(ngModel)]="motivoRejeicao" /></label>
+      <button class="btn primary" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="aprovarCotacao()">Aprovar</button>
+      <button class="btn danger" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="rejeitarCotacao()">Rejeitar</button>
       <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
     </div>
   </section>
@@ -155,6 +159,7 @@
       <h3>Comparativo de propostas</h3>
       <button class="btn" type="button" (click)="loadComparativo(atual.id)">Atualizar</button>
     </div>
+    <label class="input-item winner-justification" *ngIf="comparativoCotacao?.propostas?.length && podeEditarFornecedores">Justificativa do vencedor<input [(ngModel)]="justificativaVencedor" /></label>
     <div class="table-wrapper" *ngIf="comparativoCotacao?.propostas?.length; else emptyComparativo">
       <table class="table comparativo-table">
         <thead>
@@ -168,6 +173,8 @@
               <div class="field-hint">Validade: {{ p.validade_proposta || '-' }}</div>
               <div class="field-hint">Dif.: {{ p.diferenca_percentual }}%</div>
               <div class="field-hint">Economia: {{ moeda(p.economia_vs_mais_cara) }}</div>
+              <div class="field-hint best" *ngIf="atual?.proposta_vencedora === p.proposta">Selecionada</div>
+              <button class="btn sm" type="button" *ngIf="podeEditarFornecedores" (click)="selecionarVencedor(p)">Selecionar vencedor</button>
             </th>
           </tr>
         </thead>

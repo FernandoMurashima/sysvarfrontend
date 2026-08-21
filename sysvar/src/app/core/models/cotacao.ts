@@ -26,6 +26,14 @@ export interface Cotacao {
   tipo_compra: CotacaoTipoCompra;
   observacao?: string;
   status: CotacaoStatus;
+  proposta_vencedora?: number | null;
+  justificativa_vencedor?: string;
+  aprovado_por?: number | null;
+  aprovado_em?: string | null;
+  rejeitado_por?: number | null;
+  rejeitado_em?: string | null;
+  motivo_rejeicao?: string;
+  snapshot_proposta_aprovada?: any;
   loja_nome?: string;
   responsavel_nome?: string;
   requisicoes_vinculadas?: CotacaoRequisicao[];

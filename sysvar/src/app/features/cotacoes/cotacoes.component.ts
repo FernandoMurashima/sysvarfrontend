@@ -62,6 +62,8 @@ export class CotacoesComponent implements OnInit {
   propostaEditando: CotacaoProposta | null = null;
   propostaHeader: Partial<CotacaoProposta> = {};
   propostaItens: CotacaoPropostaItem[] = [];
+  justificativaVencedor = '';
+  motivoRejeicao = '';
   itemEditando: CotacaoItem | null = null;
   atual: Cotacao | null = null;
   loading = false;
@@ -111,7 +113,11 @@ export class CotacoesComponent implements OnInit {
   }
 
   get podeEditarFornecedores(): boolean {
-    return this.podeEditar && !!this.atual && !['APROVADA', 'REJEITADA', 'CANCELADA', 'PEDIDO_GERADO', 'ENCERRADA'].includes(this.atual.status);
+    return this.podeEditar && !!this.atual && !['AGUARDANDO_APROVACAO', 'APROVADA', 'REJEITADA', 'CANCELADA', 'PEDIDO_GERADO', 'ENCERRADA'].includes(this.atual.status);
+  }
+
+  get podeAprovarCotacao(): boolean {
+    return this.auth.podeProcesso('cotacao.aprovar');
   }
 
   loadCotacoes(): void {
@@ -191,6 +197,8 @@ export class CotacoesComponent implements OnInit {
       tipo_compra: cotacao.tipo_compra || 'OUTRO',
       observacao: cotacao.observacao || '',
     });
+    this.justificativaVencedor = cotacao.justificativa_vencedor || '';
+    this.motivoRejeicao = '';
     this.view = 'form';
     this.loadItens(cotacao.id);
     this.loadFornecedoresCotacao(cotacao.id);
@@ -420,6 +428,65 @@ export class CotacoesComponent implements OnInit {
         this.loadComparativo(this.atual!.id);
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao salvar proposta.'),
+    });
+  }
+
+  justificativaObrigatoria(proposta: CotacaoProposta | any): boolean {
+    const propostas = this.comparativoCotacao?.propostas || [];
+    if (propostas.length <= 1) return true;
+    return !proposta?.menor_total_geral;
+  }
+
+  selecionarVencedor(proposta: any): void {
+    if (!this.atual || !this.podeEditar || this.atual.status === 'AGUARDANDO_APROVACAO' || ['APROVADA', 'REJEITADA', 'CANCELADA', 'PEDIDO_GERADO', 'ENCERRADA'].includes(this.atual.status)) return;
+    if (this.justificativaObrigatoria(proposta) && !this.justificativaVencedor.trim()) {
+      this.errorMsg = 'Informe a justificativa da escolha.';
+      return;
+    }
+    this.api.selecionarVencedor(this.atual.id, proposta.proposta, this.justificativaVencedor).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.justificativaVencedor = cotacao.justificativa_vencedor || '';
+        this.loadComparativo(cotacao.id);
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao selecionar vencedor.'),
+    });
+  }
+
+  enviarAprovacao(): void {
+    if (!this.atual || !this.podeEditar) return;
+    this.api.enviarAprovacao(this.atual.id).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao enviar para aprovação.'),
+    });
+  }
+
+  aprovarCotacao(): void {
+    if (!this.atual || !this.podeAprovarCotacao) return;
+    this.api.aprovar(this.atual.id).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao aprovar cotação.'),
+    });
+  }
+
+  rejeitarCotacao(): void {
+    if (!this.atual || !this.podeAprovarCotacao) return;
+    if (!this.motivoRejeicao.trim()) {
+      this.errorMsg = 'Informe o motivo da rejeição.';
+      return;
+    }
+    this.api.rejeitar(this.atual.id, this.motivoRejeicao).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao rejeitar cotação.'),
     });
   }
 
