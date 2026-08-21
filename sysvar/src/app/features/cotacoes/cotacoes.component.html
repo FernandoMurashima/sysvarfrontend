@@ -55,6 +55,8 @@
     </form>
 
     <div class="actions-form">
+      <span class="status-pill" *ngIf="atual?.pedido_compra_gerado_id">Pedido de Compra gerado: {{ atual?.pedido_compra_gerado_id }}</span>
+      <button class="btn" type="button" *ngIf="atual?.pedido_compra_gerado_id" [routerLink]="['/compras/pedidos']" [queryParams]="{ pedido: atual?.pedido_compra_gerado_id }">Ver Pedido de Compra</button>
       <button class="btn" type="button" (click)="voltar()">Voltar</button>
       <button class="btn" type="button" *ngIf="atual && podeEditar" [disabled]="!atual.proposta_vencedora || atual.status === 'AGUARDANDO_APROVACAO' || atual.status === 'APROVADA' || atual.status === 'REJEITADA'" (click)="enviarAprovacao()">Enviar para aprovação</button>
       <label class="input-item approval-reject" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao">Motivo rejeição<input [(ngModel)]="motivoRejeicao" /></label>

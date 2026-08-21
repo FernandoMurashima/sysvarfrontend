@@ -3,7 +3,7 @@ import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { LojasService } from '../../core/services/lojas.service';
@@ -84,6 +84,7 @@ export class PedidosCompraComponent implements OnInit {
   private lojasApi = inject(LojasService);
   private formasApi = inject(FormasPagamentoService);
   private pedidosApi = inject(PedidosCompraService);
+  private route = inject(ActivatedRoute);
   private fornecedoresApi = inject(FornecedoresService);
   private produtosApi = inject(ProdutosService);
   private coresApi = inject(CoresService);
@@ -325,6 +326,8 @@ export class PedidosCompraComponent implements OnInit {
     this.loadAllCores();
     this.loadPedidos();
     this.setupItemFormRecalc();
+    const pedidoId = Number(this.route.snapshot.queryParamMap.get('pedido') || 0);
+    if (pedidoId) this.pedidosApi.getById(pedidoId).subscribe(p => this.abrirPedido(p, true));
   }
 
   // util
@@ -1642,7 +1645,7 @@ export class PedidosCompraComponent implements OnInit {
     this.carregarRecebimentos(p.id);
     this.setViewForm();
 
-    if (somenteConsulta) {
+    if (somenteConsulta || p.cotacao_origem) {
       this.headerForm.disable({ emitEvent: false });
       this.itemForm.disable({ emitEvent: false });
     }

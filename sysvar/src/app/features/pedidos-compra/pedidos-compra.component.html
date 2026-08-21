@@ -217,6 +217,11 @@
           <input type="text" [value]="pedidoAtual?.status || 'AB'" readonly />
         </label>
 
+        <label class="input-item col-span-2" *ngIf="pedidoAtual?.cotacao_origem">
+          Origem
+          <input type="text" [value]="'Cotação ' + (pedidoAtual?.cotacao_origem_numero || pedidoAtual?.cotacao_origem)" readonly />
+        </label>
+
         <label class="input-item col-span-2">
           Frete
           <input type="number" formControlName="frete" step="0.01" />

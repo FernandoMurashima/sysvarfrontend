@@ -41,7 +41,7 @@ describe('CotacoesComponent', () => {
     api.comparativo.and.returnValue(of({ cotacao: 7, itens: [{ id: 10, descricao: 'Item', quantidade_cotar: '1.000' }], propostas: [{ proposta: 60, cotacao_fornecedor: 50, fornecedor: 40, fornecedor_nome: 'Fornecedor A', total_itens: '19.00', desconto_geral: '0.00', frete: '0.00', outras_despesas: '0.00', total_geral: '19.00', menor_total_geral: true, diferenca_percentual: '0.00', economia_vs_mais_cara: '0.00', prazo_entrega: '5', melhor_prazo: true, condicao_pagamento: '30 dias', validade_proposta: '2026-09-01', itens: [{ cotacao_item: 10, descricao: 'Item', quantidade_cotar: '1.000', sem_oferta: false, quantidade_ofertada: '1.000', preco_unitario: '19.00', desconto_item: '0.00', custo_final_item: '19.00', menor_preco_unitario: true, menor_custo_final: true }] }] } as any));
     api.selecionarVencedor.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', proposta_vencedora: 60, justificativa_vencedor: 'Melhor condição' } as any));
     api.enviarAprovacao.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'AGUARDANDO_APROVACAO', proposta_vencedora: 60 } as any));
-    api.aprovar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'APROVADA', proposta_vencedora: 60 } as any));
+    api.aprovar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'PEDIDO_GERADO', proposta_vencedora: 60, pedido_compra_gerado_id: 99 } as any));
     api.rejeitar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'REJEITADA', proposta_vencedora: 60, motivo_rejeicao: 'Revisar' } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
@@ -335,12 +335,20 @@ describe('CotacoesComponent', () => {
     component.atual = { id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'AGUARDANDO_APROVACAO', proposta_vencedora: 60 } as any;
     component.aprovarCotacao();
     expect(api.aprovar).toHaveBeenCalledWith(7);
-    expect(component.atual?.status).toBe('APROVADA');
+    expect(component.atual?.status).toBe('PEDIDO_GERADO');
     expect(component.podeEditarFornecedores).toBeFalse();
     expect(component.podeEditarItens).toBeFalse();
     component.atual = { ...component.atual, status: 'AGUARDANDO_APROVACAO' } as any;
     component.motivoRejeicao = 'Revisar';
     component.rejeitarCotacao();
     expect(api.rejeitar).toHaveBeenCalledWith(7, 'Revisar');
+  });
+
+  it('mostra pedido gerado e link para pedido de compra', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'PEDIDO_GERADO', pedido_compra_gerado_id: 99 } as any);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Pedido de Compra gerado: 99');
+    expect(text).toContain('Ver Pedido de Compra');
   });
 });

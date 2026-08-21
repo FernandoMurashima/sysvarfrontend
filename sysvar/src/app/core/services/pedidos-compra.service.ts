@@ -19,7 +19,10 @@ export interface PedidoCompra {
   total_itens: string;
   total_desconto: string;
   frete: string;
+  outras_despesas?: string;
   total_pedido: string;
+  cotacao_origem?: number | null;
+  cotacao_origem_numero?: number | null;
   idnatureza?: number | null;
   natureza_label?: string | null;
 }
