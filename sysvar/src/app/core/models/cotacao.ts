@@ -38,6 +38,7 @@ export interface Cotacao {
   motivo_cancelamento?: string;
   snapshot_proposta_aprovada?: any;
   pedido_compra_gerado_id?: number | null;
+  status_operacional?: string;
   loja_nome?: string;
   responsavel_nome?: string;
   requisicoes_vinculadas?: CotacaoRequisicao[];
@@ -152,7 +153,11 @@ export interface CotacaoProposta {
   data_proposta: string;
   validade_proposta?: string | null;
   prazo_entrega?: string;
+  prazo_entrega_dias?: number | null;
   condicao_pagamento?: string;
+  prazo_pagamento?: number | null;
+  prazo_pagamento_descricao?: string;
+  condicao_pagamento_legivel?: string;
   frete?: string | number;
   outras_despesas?: string | number;
   desconto_geral?: string | number;
@@ -195,8 +200,11 @@ export interface CotacaoComparativoProposta {
   diferenca_percentual: string | number;
   economia_vs_mais_cara: string | number;
   prazo_entrega?: string;
+  prazo_entrega_dias?: number | null;
   melhor_prazo?: boolean;
   condicao_pagamento?: string;
+  prazo_pagamento?: number | null;
+  condicao_pagamento_legivel?: string;
   validade_proposta?: string | null;
   itens: CotacaoComparativoItem[];
 }
@@ -212,4 +220,14 @@ export interface Paginated<T> {
   count?: number;
   next?: string | null;
   previous?: string | null;
+}
+
+export interface PrazoPagamento {
+  Idprazo: number;
+  codigo: string;
+  descricao: string;
+  num_parcelas: number;
+  intervalo_dias: number;
+  ativo: boolean;
+  parcelas?: Array<{ ordem: number; dias: number; percentual?: string | number | null }>;
 }

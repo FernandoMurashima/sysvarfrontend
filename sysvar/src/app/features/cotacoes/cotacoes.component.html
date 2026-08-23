@@ -26,7 +26,7 @@
             <td>{{ c.responsavel_nome || c.responsavel }}</td>
             <td>{{ tipoLabel(c.tipo_compra) }}</td>
             <td><span class="status-pill">{{ c.prioridade }}</span></td>
-            <td><span class="status-pill">{{ statusLabel(c.status) }}</span></td>
+            <td><span class="status-pill">{{ statusOperacional(c) }}</span></td>
             <td><button class="btn sm" type="button" (click)="abrir(c)">{{ c.status === 'EM_ELABORACAO' && podeEditar ? 'Editar' : 'Consultar' }}</button></td>
           </tr>
         </tbody>
@@ -67,7 +67,7 @@
       <label class="input-item col-span-3">Tipo de compra<select formControlName="tipo_compra"><option value="REVENDA">Revenda</option><option value="USO_CONSUMO">Uso/Consumo</option><option value="INSUMO">Insumo</option><option value="SERVICO">Serviço</option><option value="OUTRO">Outro</option></select></label>
       <label class="input-item col-span-3">Data limite para propostas<input type="date" formControlName="data_limite_propostas" /></label>
       <label class="input-item col-span-3">Prioridade<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
-      <div class="input-item col-span-3"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status) }}</span></div>
+      <div class="input-item col-span-3"><span>Status</span><span class="status-pill status-readonly">{{ statusOperacional(atual) }}</span></div>
       <label class="input-item col-span-12">Observação geral<textarea rows="3" formControlName="observacao"></textarea></label>
     </form>
   </section>
@@ -177,8 +177,8 @@
             <th *ngFor="let p of comparativoCotacao?.propostas">
               <div>{{ p.fornecedor_nome }}</div>
               <div class="field-hint" [class.best]="p.menor_total_geral">Total: {{ moeda(p.total_geral) }}</div>
-              <div class="field-hint" [class.best]="p.melhor_prazo">Prazo: {{ p.prazo_entrega || '-' }}</div>
-              <div class="field-hint">Pagamento: {{ p.condicao_pagamento || '-' }}</div>
+              <div class="field-hint" [class.best]="p.melhor_prazo">Prazo: {{ p.prazo_entrega_dias ?? p.prazo_entrega ?? '-' }} dias</div>
+              <div class="field-hint">Pagamento: {{ p.condicao_pagamento_legivel || p.condicao_pagamento || '-' }}</div>
               <div class="field-hint">Validade: {{ p.validade_proposta || '-' }}</div>
               <div class="field-hint">Dif.: {{ p.diferenca_percentual }}%</div>
               <div class="field-hint">Economia: {{ moeda(p.economia_vs_mais_cara) }}</div>
@@ -200,7 +200,6 @@
                     <div>Desconto: {{ moeda(oferta.desconto_item) }}</div>
                     <div [class.best]="oferta.menor_custo_final">Custo final: {{ moeda(oferta.custo_final_item) }}</div>
                     <div>{{ oferta.marca || '-' }} / {{ oferta.modelo_referencia || '-' }}</div>
-                    <div>Prazo: {{ oferta.prazo_entrega_item || '-' }}</div>
                     <div>Garantia: {{ oferta.garantia || '-' }}</div>
                   </div>
                 </div>
@@ -242,9 +241,9 @@
       <div class="grid-12">
         <div class="input-item col-span-4"><span>Fornecedor</span><strong>{{ propostaFornecedor?.fornecedor_nome || propostaFornecedor?.fornecedor }}</strong></div>
         <label class="input-item col-span-2">Data da proposta<input type="date" [(ngModel)]="propostaHeader.data_proposta" /></label>
+        <label class="input-item col-span-2">Condição de pagamento<select [(ngModel)]="propostaHeader.prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let p of prazosPagamento" [ngValue]="p.Idprazo">{{ p.descricao }}</option></select><span class="field-hint" *ngIf="!propostaHeader.prazo_pagamento && propostaHeader.condicao_pagamento">Anterior: {{ propostaHeader.condicao_pagamento }}</span></label>
+        <label class="input-item col-span-2">Prazo entrega (dias)<input type="number" min="0" step="1" [(ngModel)]="propostaHeader.prazo_entrega_dias" /></label>
         <label class="input-item col-span-2">Validade<input type="date" [(ngModel)]="propostaHeader.validade_proposta" /></label>
-        <label class="input-item col-span-2">Prazo de entrega<input [(ngModel)]="propostaHeader.prazo_entrega" /></label>
-        <label class="input-item col-span-2">Condição de pagamento<input [(ngModel)]="propostaHeader.condicao_pagamento" /></label>
         <label class="input-item col-span-2">Frete<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.frete" /></label>
         <label class="input-item col-span-2">Outras despesas<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.outras_despesas" /></label>
         <label class="input-item col-span-2">Desconto geral<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.desconto_geral" /></label>
@@ -252,7 +251,7 @@
       </div>
       <div class="table-wrapper itens-table">
         <table class="table">
-          <thead><tr><th>Item da Cotação</th><th>Qtd cotar</th><th>Qtd ofertada</th><th>Preço unit.</th><th>Desconto</th><th>Marca</th><th>Modelo</th><th>Garantia</th><th>Prazo item</th><th>Observação</th><th>Total</th></tr></thead>
+          <thead><tr><th>Item da Cotação</th><th>Qtd cotar</th><th>Qtd ofertada</th><th>Preço unit.</th><th>Desconto</th><th>Marca</th><th>Modelo</th><th>Garantia</th><th>Total</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of propostaItens">
               <td>{{ item.cotacao_item_descricao }}</td>
@@ -263,8 +262,6 @@
               <td><input class="table-input" [(ngModel)]="item.marca" /></td>
               <td><input class="table-input" [(ngModel)]="item.modelo_referencia" /></td>
               <td><input class="table-input" [(ngModel)]="item.garantia" /></td>
-              <td><input class="table-input" [(ngModel)]="item.prazo_entrega_item" /></td>
-              <td><input class="table-input" [(ngModel)]="item.observacao" /></td>
               <td>{{ moeda(totalItemProposta(item)) }}</td>
             </tr>
           </tbody>

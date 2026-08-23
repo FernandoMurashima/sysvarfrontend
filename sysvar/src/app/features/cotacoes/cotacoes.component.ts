@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra } from '../../core/models/cotacao';
+import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra, PrazoPagamento } from '../../core/models/cotacao';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
@@ -38,6 +38,7 @@ export class CotacoesComponent implements OnInit {
   itens: CotacaoItem[] = [];
   fornecedoresCotacao: CotacaoFornecedor[] = [];
   fornecedoresDisponiveis: Fornecedor[] = [];
+  prazosPagamento: PrazoPagamento[] = [];
   propostasPorFornecedor: Record<number, CotacaoProposta> = {};
   comparativoCotacao: CotacaoComparativo | null = null;
   apoioItens: Record<number, CotacaoItemApoioDecisao> = {};
@@ -101,6 +102,7 @@ export class CotacoesComponent implements OnInit {
     this.loadLojas();
     this.loadProdutos();
     this.loadUnidades();
+    this.loadPrazosPagamento();
     this.loadCategoriasMaterial();
     this.loadCotacoes();
   }
@@ -176,6 +178,13 @@ export class CotacoesComponent implements OnInit {
           .filter((u: Option) => !!u.id);
       },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar unidades.'),
+    });
+  }
+
+  loadPrazosPagamento(): void {
+    this.api.listarPrazosPagamento().subscribe({
+      next: resp => this.prazosPagamento = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar condições de pagamento.'),
     });
   }
 
@@ -423,13 +432,17 @@ export class CotacoesComponent implements OnInit {
     this.propostaHeader = this.propostaEditando ? { ...this.propostaEditando } : {
       data_proposta: hoje,
       validade_proposta: null,
-      prazo_entrega: '',
+      prazo_entrega_dias: null,
+      prazo_pagamento: null,
       condicao_pagamento: '',
       frete: 0,
       outras_despesas: 0,
       desconto_geral: 0,
       observacao: '',
     };
+    if (this.propostaEditando && !this.propostaHeader.prazo_entrega_dias && /^\d+$/.test(String(this.propostaHeader.prazo_entrega || ''))) {
+      this.propostaHeader.prazo_entrega_dias = Number(this.propostaHeader.prazo_entrega);
+    }
     const existentes = new Map((this.propostaEditando?.itens || []).map(i => [Number(i.cotacao_item), i]));
     this.propostaItens = this.itens.map(item => {
       const existente = existentes.get(item.id);
@@ -443,7 +456,6 @@ export class CotacoesComponent implements OnInit {
         marca: '',
         modelo_referencia: '',
         garantia: '',
-        prazo_entrega_item: '',
         observacao: '',
       };
     });
@@ -482,7 +494,6 @@ export class CotacoesComponent implements OnInit {
         marca: item.marca || '',
         modelo_referencia: item.modelo_referencia || '',
         garantia: item.garantia || '',
-        prazo_entrega_item: item.prazo_entrega_item || '',
         observacao: item.observacao || '',
       }));
     const payload: Partial<CotacaoProposta> = {
@@ -492,6 +503,8 @@ export class CotacoesComponent implements OnInit {
       frete: this.propostaHeader.frete || 0,
       outras_despesas: this.propostaHeader.outras_despesas || 0,
       desconto_geral: this.propostaHeader.desconto_geral || 0,
+      prazo_entrega_dias: this.propostaHeader.prazo_entrega_dias === null || this.propostaHeader.prazo_entrega_dias === undefined ? null : Number(this.propostaHeader.prazo_entrega_dias),
+      prazo_pagamento: this.propostaHeader.prazo_pagamento || null,
       itens,
     };
     const req = this.propostaEditando ? this.api.atualizarProposta(this.propostaEditando.id, payload) : this.api.criarProposta(payload);
@@ -780,6 +793,15 @@ export class CotacoesComponent implements OnInit {
       ENCERRADA: 'Encerrada',
     };
     return labels[status || 'EM_ELABORACAO'] || status || '';
+  }
+
+  statusOperacional(cotacao?: Cotacao | null): string {
+    return cotacao?.status_operacional || this.statusLabel(cotacao?.status);
+  }
+
+  prazoPagamentoLabel(id?: number | null): string {
+    const prazo = this.prazosPagamento.find(p => Number(p.Idprazo) === Number(id));
+    return prazo ? prazo.descricao : '';
   }
 
   tipoLabel(tipo?: string): string {

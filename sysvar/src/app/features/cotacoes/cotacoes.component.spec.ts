@@ -18,11 +18,12 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao', 'listarPrazosPagamento']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser', 'podeProcesso']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
+    api.listarPrazosPagamento.and.returnValue(of([{ Idprazo: 1, codigo: '30D', descricao: '30 dias', num_parcelas: 1, intervalo_dias: 30, ativo: true } as any]));
     requisicoesApi.lojasPermitidas.and.returnValue(of([{ id: 2, nome_loja: 'Loja A' }]));
     requisicoesApi.listarCategoriasMaterial.and.returnValue(of([{ id: 30, nome: 'Informática' }] as any));
     api.criar.and.returnValue(of({ id: 8, numero: 2, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
@@ -309,9 +310,11 @@ describe('CotacoesComponent', () => {
   it('abre proposta e preenche cabecalho', () => {
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
     component.abrirModalProposta({ id: 50, cotacao: 7, fornecedor: 40, fornecedor_nome: 'Fornecedor A', status_participacao: 'CONVIDADO' } as any);
-    component.propostaHeader.condicao_pagamento = '30 dias';
+    component.propostaHeader.prazo_pagamento = 1;
+    component.propostaHeader.prazo_entrega_dias = 30;
     expect(component.modalPropostaAberto).toBeTrue();
-    expect(component.propostaHeader.condicao_pagamento).toBe('30 dias');
+    expect(component.propostaHeader.prazo_pagamento).toBe(1);
+    expect(component.propostaHeader.prazo_entrega_dias).toBe(30);
   });
 
   it('preenche itens, deixa item sem oferta e calcula total', () => {
@@ -327,10 +330,12 @@ describe('CotacoesComponent', () => {
     component.propostaHeader.frete = 10;
     component.propostaHeader.outras_despesas = 5;
     component.propostaHeader.desconto_geral = 3;
+    component.propostaHeader.prazo_pagamento = 1;
+    component.propostaHeader.prazo_entrega_dias = 15;
     expect(component.totalItemProposta(component.propostaItens[0])).toBe(19);
     expect(component.totalProposta()).toBe(31);
     component.salvarProposta();
-    expect(api.criarProposta).toHaveBeenCalledWith(jasmine.objectContaining({ itens: [jasmine.objectContaining({ cotacao_item: 10 })] }));
+    expect(api.criarProposta).toHaveBeenCalledWith(jasmine.objectContaining({ prazo_pagamento: 1, prazo_entrega_dias: 15, itens: [jasmine.objectContaining({ cotacao_item: 10 })] }));
   });
 
   it('edita proposta existente', () => {

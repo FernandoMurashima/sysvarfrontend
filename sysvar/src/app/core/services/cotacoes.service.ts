@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoRequisicaoDisponivel, Paginated } from '../models/cotacao';
+import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoRequisicaoDisponivel, Paginated, PrazoPagamento } from '../models/cotacao';
 
 @Injectable({ providedIn: 'root' })
 export class CotacoesService {
@@ -11,6 +11,7 @@ export class CotacoesService {
   private itensBase = `${environment.apiBaseUrl}/compras/cotacao-itens/`;
   private fornecedoresBase = `${environment.apiBaseUrl}/compras/cotacao-fornecedores/`;
   private propostasBase = `${environment.apiBaseUrl}/compras/cotacao-propostas/`;
+  private prazosBase = `${environment.apiBaseUrl}/financeiro/prazos/`;
 
   listar(params?: { loja?: number; status?: string; page?: number; page_size?: number }): Observable<Cotacao[] | Paginated<Cotacao>> {
     let hp = new HttpParams();
@@ -72,6 +73,10 @@ export class CotacoesService {
       if (value !== undefined && value !== null) hp = hp.set(key, String(value));
     });
     return this.http.get<CotacaoProposta[] | Paginated<CotacaoProposta>>(this.propostasBase, { params: hp });
+  }
+
+  listarPrazosPagamento(): Observable<PrazoPagamento[] | Paginated<PrazoPagamento>> {
+    return this.http.get<PrazoPagamento[] | Paginated<PrazoPagamento>>(this.prazosBase, { params: new HttpParams().set('ativo', 'true').set('page_size', '500') });
   }
 
   criarProposta(payload: Partial<CotacaoProposta>): Observable<CotacaoProposta> {
