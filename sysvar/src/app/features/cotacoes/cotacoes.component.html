@@ -38,7 +38,24 @@
   <section class="card form" *ngIf="view === 'form'">
     <div class="form-title-row">
       <h3>{{ atual ? ('Cotação ' + atual.numero) : 'Nova Cotação' }}</h3>
-      <button class="btn" type="button" (click)="voltar()">Voltar</button>
+      <div class="cotacao-header-actions">
+        <div class="cotacao-actions-left" *ngIf="atual">
+          <button class="btn" type="button" (click)="abrirModalItensCotacao()">Itens da Cotação</button>
+          <button class="btn" type="button" (click)="abrirModalFornecedoresCotacao()">Fornecedores consultados</button>
+          <button class="btn" type="button" (click)="abrirModalComparativoCotacao()">Comparativo de propostas</button>
+        </div>
+        <div class="cotacao-actions-right">
+          <span class="status-pill" *ngIf="atual?.pedido_compra_gerado_id">Pedido de Compra gerado: {{ atual?.pedido_compra_gerado_id }}</span>
+          <button class="btn" type="button" *ngIf="atual?.pedido_compra_gerado_id" [routerLink]="['/compras/pedidos']" [queryParams]="{ pedido: atual?.pedido_compra_gerado_id }">Ver Pedido de Compra</button>
+          <button class="btn" type="button" *ngIf="atual && podeEditar" [disabled]="!atual.proposta_vencedora || atual.status === 'AGUARDANDO_APROVACAO' || atual.status === 'APROVADA' || atual.status === 'REJEITADA'" (click)="enviarAprovacao()">Enviar para aprovação</button>
+          <button class="btn danger" type="button" *ngIf="atual && podeCancelarCotacao" (click)="abrirModalCancelar()">Cancelar Cotação</button>
+          <label class="input-item approval-reject" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao">Motivo rejeição<input [(ngModel)]="motivoRejeicao" /></label>
+          <button class="btn primary" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="aprovarCotacao()">Aprovar</button>
+          <button class="btn danger" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="rejeitarCotacao()">Rejeitar</button>
+          <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
+          <button class="btn" type="button" (click)="voltar()">Voltar</button>
+        </div>
+      </div>
     </div>
 
     <form [formGroup]="form" class="grid-12">
@@ -53,24 +70,6 @@
       <div class="input-item col-span-3"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status) }}</span></div>
       <label class="input-item col-span-12">Observação geral<textarea rows="3" formControlName="observacao"></textarea></label>
     </form>
-
-    <div class="actions-form">
-      <span class="status-pill" *ngIf="atual?.pedido_compra_gerado_id">Pedido de Compra gerado: {{ atual?.pedido_compra_gerado_id }}</span>
-      <button class="btn" type="button" *ngIf="atual?.pedido_compra_gerado_id" [routerLink]="['/compras/pedidos']" [queryParams]="{ pedido: atual?.pedido_compra_gerado_id }">Ver Pedido de Compra</button>
-      <button class="btn" type="button" (click)="voltar()">Voltar</button>
-      <button class="btn" type="button" *ngIf="atual && podeEditar" [disabled]="!atual.proposta_vencedora || atual.status === 'AGUARDANDO_APROVACAO' || atual.status === 'APROVADA' || atual.status === 'REJEITADA'" (click)="enviarAprovacao()">Enviar para aprovação</button>
-      <button class="btn danger" type="button" *ngIf="atual && podeCancelarCotacao" (click)="abrirModalCancelar()">Cancelar Cotação</button>
-      <label class="input-item approval-reject" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao">Motivo rejeição<input [(ngModel)]="motivoRejeicao" /></label>
-      <button class="btn primary" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="aprovarCotacao()">Aprovar</button>
-      <button class="btn danger" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="rejeitarCotacao()">Rejeitar</button>
-      <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
-    </div>
-
-    <div class="cotacao-action-strip" *ngIf="atual">
-      <button class="btn" type="button" (click)="abrirModalItensCotacao()">Itens da Cotação</button>
-      <button class="btn" type="button" (click)="abrirModalFornecedoresCotacao()">Fornecedores consultados</button>
-      <button class="btn" type="button" (click)="abrirModalComparativoCotacao()">Comparativo de propostas</button>
-    </div>
   </section>
 
   <section class="modal-backdrop" *ngIf="modalItensCotacaoAberto && atual">
