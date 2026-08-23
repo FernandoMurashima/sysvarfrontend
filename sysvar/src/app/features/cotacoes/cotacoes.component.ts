@@ -46,6 +46,9 @@ export class CotacoesComponent implements OnInit {
   necessidades: CotacaoNecessidade[] = [];
   necessidadesExpandidas = new Set<string>();
   modalNecessidadesAberto = false;
+  modalItensCotacaoAberto = false;
+  modalFornecedoresCotacaoAberto = false;
+  modalComparativoCotacaoAberto = false;
   categoriasMaterial: any[] = [];
   filtroNecessidades = { categoria: '', search: '', loja: '', setor: '' };
   requisicoesSelecionadas = new Set<number>();
@@ -215,6 +218,40 @@ export class CotacoesComponent implements OnInit {
     this.view = 'list';
     this.atual = null;
     this.errorMsg = '';
+    this.fecharSobretelasCotacao();
+  }
+
+  abrirModalItensCotacao(): void {
+    if (!this.atual) return;
+    this.modalItensCotacaoAberto = true;
+  }
+
+  fecharModalItensCotacao(): void {
+    this.modalItensCotacaoAberto = false;
+  }
+
+  abrirModalFornecedoresCotacao(): void {
+    if (!this.atual) return;
+    this.modalFornecedoresCotacaoAberto = true;
+  }
+
+  fecharModalFornecedoresCotacao(): void {
+    this.modalFornecedoresCotacaoAberto = false;
+  }
+
+  abrirModalComparativoCotacao(): void {
+    if (!this.atual) return;
+    this.modalComparativoCotacaoAberto = true;
+  }
+
+  fecharModalComparativoCotacao(): void {
+    this.modalComparativoCotacaoAberto = false;
+  }
+
+  private fecharSobretelasCotacao(): void {
+    this.modalItensCotacaoAberto = false;
+    this.modalFornecedoresCotacaoAberto = false;
+    this.modalComparativoCotacaoAberto = false;
   }
 
   salvar(): void {

@@ -348,6 +348,7 @@ describe('CotacoesComponent', () => {
     expect(api.comparativo).toHaveBeenCalledWith(7);
     expect(component.comparativoCotacao?.propostas[0].menor_total_geral).toBeTrue();
     expect(component.comparativoCotacao?.propostas[0].itens[0].menor_preco_unitario).toBeTrue();
+    component.abrirModalComparativoCotacao();
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Comparativo de propostas');
@@ -359,8 +360,40 @@ describe('CotacoesComponent', () => {
   it('mostra Sem oferta no comparativo', () => {
     api.comparativo.and.returnValue(of({ cotacao: 7, itens: [{ id: 10, descricao: 'Item', quantidade_cotar: '1.000' }], propostas: [{ proposta: 60, cotacao_fornecedor: 50, fornecedor: 40, fornecedor_nome: 'Fornecedor A', total_itens: '0.00', desconto_geral: '0.00', frete: '0.00', outras_despesas: '0.00', total_geral: '0.00', menor_total_geral: true, diferenca_percentual: '0.00', economia_vs_mais_cara: '0.00', itens: [{ cotacao_item: 10, descricao: 'Item', quantidade_cotar: '1.000', sem_oferta: true, preco_unitario: null, custo_final_item: null }] }] } as any));
     component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    component.abrirModalComparativoCotacao();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sem oferta');
+  });
+
+  it('abre e fecha sobretelas da cotacao mantendo conteudo fora da tela principal', () => {
+    component.abrir({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any);
+    fixture.detectChanges();
+    let text = fixture.nativeElement.textContent;
+    expect(text).toContain('Itens da Cotação');
+    expect(text).toContain('Fornecedores consultados');
+    expect(text).toContain('Comparativo de propostas');
+    expect(text).not.toContain('Produto cadastrado');
+    expect(text).not.toContain('Registrar proposta');
+
+    component.abrirModalItensCotacao();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Produto cadastrado');
+    expect(fixture.nativeElement.textContent).toContain('Adicionar Item');
+    component.fecharModalItensCotacao();
+
+    component.abrirModalFornecedoresCotacao();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Registrar proposta');
+    component.fecharModalFornecedoresCotacao();
+
+    component.abrirModalComparativoCotacao();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Total: R$');
+    component.fecharModalComparativoCotacao();
+    fixture.detectChanges();
+    text = fixture.nativeElement.textContent;
+    expect(text).not.toContain('Produto cadastrado');
+    expect(text).not.toContain('Registrar proposta');
   });
 
   it('seleciona vencedor exigindo justificativa quando obrigatoria', () => {

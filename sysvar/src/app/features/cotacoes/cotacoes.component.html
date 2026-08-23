@@ -65,12 +65,19 @@
       <button class="btn danger" type="button" *ngIf="atual?.status === 'AGUARDANDO_APROVACAO' && podeAprovarCotacao" (click)="rejeitarCotacao()">Rejeitar</button>
       <button class="btn primary" type="button" [disabled]="!podeEditar || saving || form.invalid || (atual?.status !== 'EM_ELABORACAO' && !!atual)" (click)="salvar()">Salvar</button>
     </div>
+
+    <div class="cotacao-action-strip" *ngIf="atual">
+      <button class="btn" type="button" (click)="abrirModalItensCotacao()">Itens da Cotação</button>
+      <button class="btn" type="button" (click)="abrirModalFornecedoresCotacao()">Fornecedores consultados</button>
+      <button class="btn" type="button" (click)="abrirModalComparativoCotacao()">Comparativo de propostas</button>
+    </div>
   </section>
 
-  <section class="card form" *ngIf="view === 'form' && atual">
+  <section class="modal-backdrop" *ngIf="modalItensCotacaoAberto && atual">
+    <div class="modal-wide form">
     <div class="form-title-row">
       <h3>Itens da Cotação</h3>
-      <div class="title-actions"><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="abrirModalNecessidades()">Ver necessidades</button><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="abrirModalRequisicoes()">Adicionar Requisições</button><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="limparItem()">Limpar</button></div>
+      <div class="title-actions"><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="abrirModalRequisicoes()">Adicionar Requisições</button><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="abrirModalNecessidades()">Ver necessidades</button><button class="btn primary" type="button" [disabled]="!podeEditarItens || itemForm.invalid" (click)="salvarItem()">{{ itemEditando ? 'Gravar item' : 'Adicionar Item' }}</button><button class="btn" type="button" [disabled]="!podeEditarItens" (click)="limparItem()">Limpar</button><button class="btn" type="button" (click)="fecharModalItensCotacao()">Voltar</button></div>
     </div>
 
     <div class="linked-reqs" *ngIf="atual?.requisicoes_vinculadas?.length">
@@ -89,10 +96,6 @@
       <label class="input-item col-span-2">Alternativo<select formControlName="permite_alternativo" [disabled]="!podeEditarItens"><option [ngValue]="true">Sim</option><option [ngValue]="false">Não</option></select></label>
       <label class="input-item col-span-2">Observação<input formControlName="observacao" [readonly]="!podeEditarItens" /></label>
     </form>
-
-    <div class="actions-form">
-      <button class="btn primary" type="button" [disabled]="!podeEditarItens || itemForm.invalid" (click)="salvarItem()">{{ itemEditando ? 'Gravar item' : 'Adicionar item' }}</button>
-    </div>
 
     <div class="table-wrapper itens-table">
       <table class="table" *ngIf="itens.length; else emptyItens">
@@ -134,12 +137,14 @@
       </table>
       <ng-template #emptyItens><div class="empty-hint">Nenhum item informado.</div></ng-template>
     </div>
+    </div>
   </section>
 
-  <section class="card form" *ngIf="view === 'form' && atual">
+  <section class="modal-backdrop" *ngIf="modalFornecedoresCotacaoAberto && atual">
+    <div class="modal-wide form">
     <div class="form-title-row">
       <h3>Fornecedores consultados</h3>
-      <button class="btn" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor()">Adicionar fornecedor</button>
+      <div class="title-actions"><button class="btn" type="button" [disabled]="!podeEditarFornecedores" (click)="abrirModalFornecedor()">Adicionar fornecedor</button><button class="btn" type="button" (click)="fecharModalFornecedoresCotacao()">Voltar</button></div>
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="fornecedoresCotacao.length; else emptyFornecedores">
@@ -155,12 +160,14 @@
       </table>
       <ng-template #emptyFornecedores><div class="empty-hint">Nenhum fornecedor consultado.</div></ng-template>
     </div>
+    </div>
   </section>
 
-  <section class="card form" *ngIf="view === 'form' && atual">
+  <section class="modal-backdrop" *ngIf="modalComparativoCotacaoAberto && atual">
+    <div class="modal-wide form">
     <div class="form-title-row">
       <h3>Comparativo de propostas</h3>
-      <button class="btn" type="button" (click)="loadComparativo(atual.id)">Atualizar</button>
+      <div class="title-actions"><button class="btn" type="button" (click)="loadComparativo(atual.id)">Atualizar</button><button class="btn" type="button" (click)="fecharModalComparativoCotacao()">Voltar</button></div>
     </div>
     <label class="input-item winner-justification" *ngIf="comparativoCotacao?.propostas?.length && podeEditarFornecedores">Justificativa do vencedor<input [(ngModel)]="justificativaVencedor" /></label>
     <div class="table-wrapper" *ngIf="comparativoCotacao?.propostas?.length; else emptyComparativo">
@@ -205,6 +212,7 @@
       </table>
     </div>
     <ng-template #emptyComparativo><div class="empty-hint">Nenhuma proposta registrada para comparar.</div></ng-template>
+    </div>
   </section>
 
   <section class="modal-backdrop" *ngIf="modalCancelarAberto">
