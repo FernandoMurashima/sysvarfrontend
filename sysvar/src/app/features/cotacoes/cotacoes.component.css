@@ -1,7 +1,8 @@
 .cadastro-page { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
-.title-bar, .results-header, .form-title-row, .actions-form { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.cotacao-header-actions { flex: 1 1 680px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.cotacao-actions-left, .cotacao-actions-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title-bar, .results-header, .form-title-row, .actions-form { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.form-title-row { margin-bottom: 16px; }
+.cotacao-header-actions { flex: 1 1 720px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.cotacao-actions-left, .cotacao-actions-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .cotacao-actions-right { justify-content: flex-end; margin-left: auto; }
 .title-left { display: flex; align-items: center; gap: 8px; }
 h1, h3 { margin: 0; }
