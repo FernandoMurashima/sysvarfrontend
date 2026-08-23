@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -15,12 +16,14 @@ describe('CotacoesComponent', () => {
   let api: jasmine.SpyObj<CotacoesService>;
   let requisicoesApi: jasmine.SpyObj<RequisicoesService>;
   let fornecedoresApi: jasmine.SpyObj<FornecedoresService>;
+  let formasPagamentoApi: jasmine.SpyObj<FormasPagamentoService>;
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao', 'listarPrazosPagamento']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
+    formasPagamentoApi = jasmine.createSpyObj<FormasPagamentoService>('FormasPagamentoService', ['list']);
     auth = jasmine.createSpyObj<AuthService>('AuthService', ['podeAcessarModulo', 'getCurrentUser', 'podeProcesso']);
     api.listar.and.returnValue(of([{ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any]));
     api.listarPrazosPagamento.and.returnValue(of([{ Idprazo: 1, codigo: '30D', descricao: '30 dias', num_parcelas: 1, intervalo_dias: 30, ativo: true } as any]));
@@ -46,6 +49,7 @@ describe('CotacoesComponent', () => {
     api.rejeitar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'REJEITADA', proposta_vencedora: 60, motivo_rejeicao: 'Revisar' } as any));
     api.cancelar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'CANCELADA', motivo_cancelamento: 'Compra suspensa' } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
+    formasPagamentoApi.list.and.returnValue(of([{ Idformapagamento: 1, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', num_parcelas: 1, ativo: true } as any]));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
       { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },
@@ -65,6 +69,7 @@ describe('CotacoesComponent', () => {
       providers: [
         { provide: CotacoesService, useValue: api },
         { provide: FornecedoresService, useValue: fornecedoresApi },
+        { provide: FormasPagamentoService, useValue: formasPagamentoApi },
         { provide: RequisicoesService, useValue: requisicoesApi },
         { provide: AuthService, useValue: auth },
         { provide: ProdutosService, useValue: { list: () => of([{ Idproduto: 5, descricao: 'Produto A', unidade: 4 }]) } },
@@ -330,12 +335,13 @@ describe('CotacoesComponent', () => {
     component.propostaHeader.frete = 10;
     component.propostaHeader.outras_despesas = 5;
     component.propostaHeader.desconto_geral = 3;
+    component.propostaHeader.forma_pagamento = 'BOL';
     component.propostaHeader.prazo_pagamento = 1;
     component.propostaHeader.prazo_entrega_dias = 15;
     expect(component.totalItemProposta(component.propostaItens[0])).toBe(19);
     expect(component.totalProposta()).toBe(31);
     component.salvarProposta();
-    expect(api.criarProposta).toHaveBeenCalledWith(jasmine.objectContaining({ prazo_pagamento: 1, prazo_entrega_dias: 15, itens: [jasmine.objectContaining({ cotacao_item: 10 })] }));
+    expect(api.criarProposta).toHaveBeenCalledWith(jasmine.objectContaining({ forma_pagamento: 'BOL', prazo_pagamento: 1, prazo_entrega_dias: 15, itens: [jasmine.objectContaining({ cotacao_item: 10 })] }));
   });
 
   it('edita proposta existente', () => {

@@ -68,6 +68,9 @@
       <label class="input-item col-span-3">Data limite para propostas<input type="date" formControlName="data_limite_propostas" /></label>
       <label class="input-item col-span-3">Prioridade<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
       <div class="input-item col-span-3"><span>Status</span><span class="status-pill status-readonly">{{ statusOperacional(atual) }}</span></div>
+      <div class="input-item col-span-3" *ngIf="atual?.proposta_vencedora"><span>Forma de pagamento</span><strong>{{ atual?.forma_pagamento_vencedora_legivel || atual?.forma_pagamento_vencedora || '-' }}</strong></div>
+      <div class="input-item col-span-3" *ngIf="atual?.proposta_vencedora"><span>Prazo de pagamento</span><strong>{{ atual?.prazo_pagamento_vencedor_legivel || '-' }}</strong></div>
+      <div class="input-item col-span-3" *ngIf="atual?.proposta_vencedora"><span>Prazo de entrega</span><strong>{{ atual?.prazo_entrega_vencedor_dias ?? '-' }} dias</strong></div>
       <label class="input-item col-span-12">Observação geral<textarea rows="3" formControlName="observacao"></textarea></label>
     </form>
   </section>
@@ -178,7 +181,8 @@
               <div>{{ p.fornecedor_nome }}</div>
               <div class="field-hint" [class.best]="p.menor_total_geral">Total: {{ moeda(p.total_geral) }}</div>
               <div class="field-hint" [class.best]="p.melhor_prazo">Prazo: {{ p.prazo_entrega_dias ?? p.prazo_entrega ?? '-' }} dias</div>
-              <div class="field-hint">Pagamento: {{ p.condicao_pagamento_legivel || p.condicao_pagamento || '-' }}</div>
+              <div class="field-hint">Forma: {{ p.forma_pagamento_legivel || p.forma_pagamento || '-' }}</div>
+              <div class="field-hint">Prazo pag.: {{ p.prazo_pagamento_legivel || p.condicao_pagamento_legivel || p.condicao_pagamento || '-' }}</div>
               <div class="field-hint">Validade: {{ p.validade_proposta || '-' }}</div>
               <div class="field-hint">Dif.: {{ p.diferenca_percentual }}%</div>
               <div class="field-hint">Economia: {{ moeda(p.economia_vs_mais_cara) }}</div>
@@ -241,7 +245,8 @@
       <div class="grid-12">
         <div class="input-item col-span-4"><span>Fornecedor</span><strong>{{ propostaFornecedor?.fornecedor_nome || propostaFornecedor?.fornecedor }}</strong></div>
         <label class="input-item col-span-2">Data da proposta<input type="date" [(ngModel)]="propostaHeader.data_proposta" /></label>
-        <label class="input-item col-span-2">Condição de pagamento<select [(ngModel)]="propostaHeader.prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let p of prazosPagamento" [ngValue]="p.Idprazo">{{ p.descricao }}</option></select><span class="field-hint" *ngIf="!propostaHeader.prazo_pagamento && propostaHeader.condicao_pagamento">Anterior: {{ propostaHeader.condicao_pagamento }}</span></label>
+        <label class="input-item col-span-2">Forma de pagamento<select [(ngModel)]="propostaHeader.forma_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let f of formasPagamento" [ngValue]="f.codigo">{{ f.descricao }}</option></select></label>
+        <label class="input-item col-span-2">Prazo de pagamento<select [(ngModel)]="propostaHeader.prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let p of prazosPagamento" [ngValue]="p.Idprazo">{{ p.descricao }}</option></select><span class="field-hint" *ngIf="!propostaHeader.prazo_pagamento && propostaHeader.condicao_pagamento">Anterior: {{ propostaHeader.condicao_pagamento }}</span></label>
         <label class="input-item col-span-2">Prazo entrega (dias)<input type="number" min="0" step="1" [(ngModel)]="propostaHeader.prazo_entrega_dias" /></label>
         <label class="input-item col-span-2">Validade<input type="date" [(ngModel)]="propostaHeader.validade_proposta" /></label>
         <label class="input-item col-span-2">Frete<input type="number" min="0" step="0.01" [(ngModel)]="propostaHeader.frete" /></label>

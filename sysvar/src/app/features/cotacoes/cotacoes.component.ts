@@ -4,10 +4,12 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { Cotacao, CotacaoComparativo, CotacaoFornecedor, CotacaoFornecedorStatus, CotacaoItem, CotacaoItemApoioDecisao, CotacaoNecessidade, CotacaoProposta, CotacaoPropostaItem, CotacaoRequisicaoDisponivel, CotacaoTipoCompra, PrazoPagamento } from '../../core/models/cotacao';
+import { FormaPagamento } from '../../core/models/forma-pagamento';
 import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
 import { CotacoesService } from '../../core/services/cotacoes.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
@@ -25,6 +27,7 @@ export class CotacoesComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(CotacoesService);
   private fornecedoresApi = inject(FornecedoresService);
+  private formasPagamentoApi = inject(FormasPagamentoService);
   private produtosApi = inject(ProdutosService);
   private requisicoesApi = inject(RequisicoesService);
   private unidadesApi = inject(UnidadesService);
@@ -38,6 +41,7 @@ export class CotacoesComponent implements OnInit {
   itens: CotacaoItem[] = [];
   fornecedoresCotacao: CotacaoFornecedor[] = [];
   fornecedoresDisponiveis: Fornecedor[] = [];
+  formasPagamento: FormaPagamento[] = [];
   prazosPagamento: PrazoPagamento[] = [];
   propostasPorFornecedor: Record<number, CotacaoProposta> = {};
   comparativoCotacao: CotacaoComparativo | null = null;
@@ -102,6 +106,7 @@ export class CotacoesComponent implements OnInit {
     this.loadLojas();
     this.loadProdutos();
     this.loadUnidades();
+    this.loadFormasPagamento();
     this.loadPrazosPagamento();
     this.loadCategoriasMaterial();
     this.loadCotacoes();
@@ -185,6 +190,13 @@ export class CotacoesComponent implements OnInit {
     this.api.listarPrazosPagamento().subscribe({
       next: resp => this.prazosPagamento = Array.isArray(resp) ? resp : resp.results || [],
       error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar condições de pagamento.'),
+    });
+  }
+
+  loadFormasPagamento(): void {
+    this.formasPagamentoApi.list({ ativo: true }).subscribe({
+      next: resp => this.formasPagamento = Array.isArray(resp) ? resp : resp.results || [],
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao carregar formas de pagamento.'),
     });
   }
 
@@ -433,6 +445,7 @@ export class CotacoesComponent implements OnInit {
       data_proposta: hoje,
       validade_proposta: null,
       prazo_entrega_dias: null,
+      forma_pagamento: null,
       prazo_pagamento: null,
       condicao_pagamento: '',
       frete: 0,
@@ -504,6 +517,7 @@ export class CotacoesComponent implements OnInit {
       outras_despesas: this.propostaHeader.outras_despesas || 0,
       desconto_geral: this.propostaHeader.desconto_geral || 0,
       prazo_entrega_dias: this.propostaHeader.prazo_entrega_dias === null || this.propostaHeader.prazo_entrega_dias === undefined ? null : Number(this.propostaHeader.prazo_entrega_dias),
+      forma_pagamento: this.propostaHeader.forma_pagamento || null,
       prazo_pagamento: this.propostaHeader.prazo_pagamento || null,
       itens,
     };

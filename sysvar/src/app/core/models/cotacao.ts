@@ -39,6 +39,11 @@ export interface Cotacao {
   snapshot_proposta_aprovada?: any;
   pedido_compra_gerado_id?: number | null;
   status_operacional?: string;
+  forma_pagamento_vencedora?: string;
+  forma_pagamento_vencedora_legivel?: string;
+  prazo_pagamento_vencedor?: number | null;
+  prazo_pagamento_vencedor_legivel?: string;
+  prazo_entrega_vencedor_dias?: number | null;
   loja_nome?: string;
   responsavel_nome?: string;
   requisicoes_vinculadas?: CotacaoRequisicao[];
@@ -154,6 +159,8 @@ export interface CotacaoProposta {
   validade_proposta?: string | null;
   prazo_entrega?: string;
   prazo_entrega_dias?: number | null;
+  forma_pagamento?: string | null;
+  forma_pagamento_descricao?: string;
   condicao_pagamento?: string;
   prazo_pagamento?: number | null;
   prazo_pagamento_descricao?: string;
@@ -202,8 +209,11 @@ export interface CotacaoComparativoProposta {
   prazo_entrega?: string;
   prazo_entrega_dias?: number | null;
   melhor_prazo?: boolean;
+  forma_pagamento?: string | null;
+  forma_pagamento_legivel?: string;
   condicao_pagamento?: string;
   prazo_pagamento?: number | null;
+  prazo_pagamento_legivel?: string;
   condicao_pagamento_legivel?: string;
   validade_proposta?: string | null;
   itens: CotacaoComparativoItem[];
