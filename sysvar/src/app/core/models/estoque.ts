@@ -22,6 +22,26 @@ export interface ProdutoUsoConsumoEstoque {
   atualizado_em?: string;
 }
 
+export interface ProdutoUsoConsumoMovimentacao {
+  id: number;
+  empresa: number;
+  produto: number;
+  produto_descricao: string;
+  produto_referencia: string;
+  produto_tipo: string;
+  loja: number;
+  loja_nome: string;
+  tipo: string;
+  quantidade: number | string;
+  saldo_anterior: number | string;
+  saldo_posterior: number | string;
+  data_movimento: string;
+  documento?: string | null;
+  origem?: string | null;
+  destino?: string | null;
+  motivo?: string | null;
+}
+
 export type TipoMovimentoEstoque = 'ENTRADA' | 'SAIDA' | 'AJUSTE' | 'RESERVA';
 
 export interface EstoqueMovimentacao {

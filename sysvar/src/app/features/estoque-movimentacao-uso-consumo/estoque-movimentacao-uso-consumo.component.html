@@ -1,0 +1,82 @@
+<div class="estoque-page">
+  <header class="toolbar">
+    <h2>Movimentação por Referência Uso/Consumo</h2>
+    <div class="toolbar-actions">
+      <app-search-suggest
+        class="toolbar-search"
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        [showActions]="false"
+        placeholder="Referência ou descrição..."
+        (search)="buscar($event)"
+        (cleared)="clearFilters()"
+      />
+      <select [(ngModel)]="loja">
+        <option value="">Todas as lojas</option>
+        <option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option>
+      </select>
+      <select [(ngModel)]="tipo">
+        <option value="">Todos os tipos</option>
+        <option value="ENTRADA">Entrada</option>
+        <option value="CONSUMO_INTERNO">Consumo interno</option>
+        <option value="AJUSTE_ENTRADA">Ajuste entrada</option>
+        <option value="AJUSTE_SAIDA">Ajuste saída</option>
+      </select>
+      <input type="date" [(ngModel)]="dataInicio" />
+      <input type="date" [(ngModel)]="dataFim" />
+      <div class="toolbar-buttons">
+        <button class="btn primary" (click)="buscar(search)">Buscar</button>
+        <button class="btn" (click)="clearFilters()">Limpar</button>
+        <button class="btn" [routerLink]="['/home']">Home</button>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="panel movimentos-panel">
+    <div class="list-header">
+      <strong>Movimentações de Uso/Consumo</strong>
+      <span *ngIf="loading">Carregando...</span>
+      <span *ngIf="!loading">Total: {{ movimentos.length }}</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table movimentos-table" *ngIf="movimentos.length; else vazioTpl">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Referência</th>
+            <th>Produto</th>
+            <th>Loja</th>
+            <th>Tipo</th>
+            <th class="num">Quantidade</th>
+            <th class="num">Saldo anterior</th>
+            <th class="num">Saldo posterior</th>
+            <th>Documento</th>
+            <th>Origem</th>
+            <th>Destino</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of movimentos">
+            <td>{{ movimentoData(m) }}</td>
+            <td>{{ m.produto_referencia || '-' }}</td>
+            <td>{{ m.produto_descricao }}</td>
+            <td>{{ m.loja_nome }}</td>
+            <td><span class="tipo-badge" [class.entrada]="m.tipo === 'ENTRADA'" [class.saida]="m.tipo === 'AJUSTE_SAIDA' || m.tipo === 'CONSUMO_INTERNO'">{{ tipoLabel(m.tipo) }}</span></td>
+            <td class="num">{{ numero(m.quantidade) }}</td>
+            <td class="num">{{ numero(m.saldo_anterior) }}</td>
+            <td class="num">{{ numero(m.saldo_posterior) }}</td>
+            <td>{{ m.documento || '-' }}</td>
+            <td>{{ m.origem || '-' }}</td>
+            <td>{{ m.destino || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioTpl>
+        <div class="empty" *ngIf="!loading">Nenhuma movimentação de Uso/Consumo encontrada para os filtros informados.</div>
+      </ng-template>
+    </div>
+  </section>
+</div>
