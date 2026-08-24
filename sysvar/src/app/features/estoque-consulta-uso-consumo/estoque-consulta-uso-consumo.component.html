@@ -1,0 +1,70 @@
+<div class="estoque-page">
+  <header class="toolbar">
+    <h2>Consulta por Referência Uso/Consumo</h2>
+    <div class="toolbar-actions">
+      <app-search-suggest
+        class="toolbar-search"
+        [(value)]="search"
+        [suggestions]="searchSuggestions"
+        [showActions]="false"
+        placeholder="Referência, descrição ou EAN..."
+        (search)="buscar($event)"
+        (cleared)="clearFilters()"
+      />
+      <select [(ngModel)]="loja">
+        <option value="">Todas as lojas</option>
+        <option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option>
+      </select>
+      <select [(ngModel)]="filtroSaldo">
+        <option value="todos">Todos os saldos</option>
+        <option value="com_saldo">Somente com saldo</option>
+        <option value="zerados">Somente zerados</option>
+      </select>
+      <div class="toolbar-buttons">
+        <button class="btn primary" (click)="buscar(search)">Buscar</button>
+        <button class="btn" (click)="clearFilters()">Limpar</button>
+        <button class="btn" *ngIf="rows.length" (click)="exportarCsv()">Exportar Excel</button>
+        <button class="btn" [routerLink]="['/home']">Home</button>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="panel matrix-panel">
+    <div class="list-header">
+      <strong>Saldos por loja</strong>
+      <span *ngIf="loading">Carregando...</span>
+      <span *ngIf="!loading && rows.length">Total: {{ totalSaldo }}</span>
+    </div>
+
+    <div class="table-wrapper matrix-wrapper" *ngIf="rows.length; else vazioTpl">
+      <table class="table matrix-table colecao-table">
+        <thead>
+          <tr>
+            <th>Referência</th>
+            <th>Produto</th>
+            <th>Loja</th>
+            <th>Unidade</th>
+            <th class="num total-col">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows">
+            <td>{{ row.referencia }}</td>
+            <td>{{ row.produto }}</td>
+            <td>{{ row.loja }}</td>
+            <td>{{ row.unidade }}</td>
+            <td class="num total-col" [class.zero]="row.saldo === 0">{{ row.saldo }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #vazioTpl>
+      <div class="empty" *ngIf="!loading">
+        Nenhum saldo de Uso/Consumo encontrado para os filtros informados.
+      </div>
+    </ng-template>
+  </section>
+</div>

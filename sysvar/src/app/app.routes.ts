@@ -54,6 +54,7 @@ import { DreGerencialComponent } from './features/dre-gerencial/dre-gerencial.co
 import { MovimentacoesFinanceirasComponent } from './features/movimentacoes-financeiras/movimentacoes-financeiras.component';
 import { ConfigFinanceiraComponent } from './features/config-financeira/config-financeira.component';
 import { EstoqueConsultaComponent } from './features/estoque-consulta/estoque-consulta.component';
+import { EstoqueConsultaUsoConsumoComponent } from './features/estoque-consulta-uso-consumo/estoque-consulta-uso-consumo.component';
 import { EstoqueMovimentacoesComponent } from './features/estoque-movimentacoes/estoque-movimentacoes.component';
 import { EstoqueInventarioComponent } from './features/estoque-inventario/estoque-inventario.component';
 import { EstoqueEtiquetasComponent } from './features/estoque-etiquetas/estoque-etiquetas.component';
@@ -163,6 +164,7 @@ export const routes: Routes = [
       { path: 'financeiro/dre', component: DreGerencialComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'financeiro/vales-troca', component: ValesTrocaComponent, data: { roles: ['Admin'], moduloEmpresa: 'vendas' } },
       { path: 'estoque/consulta-referencia', component: EstoqueConsultaComponent, data: { modo: 'matriz', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
+      { path: 'estoque/consulta-referencia-uso-consumo', component: EstoqueConsultaUsoConsumoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/consulta-movimentacao-referencia', component: EstoqueConsultaComponent, data: { modo: 'movimentos', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/movimentacoes', component: EstoqueMovimentacoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },

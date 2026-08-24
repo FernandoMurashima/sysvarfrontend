@@ -104,6 +104,7 @@ export class ShellComponent {
           label: 'Consultas', icon: 'bi bi-search', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
           children: [
             { label: 'Por Referência', link: '/estoque/consulta-referencia', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
+            { label: 'Por Referência Uso/Consumo', link: '/estoque/consulta-referencia-uso-consumo', icon: 'bi bi-dot', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
             { label: 'Movimentação por Referência', link: '/estoque/consulta-movimentacao-referencia', icon: 'bi bi-arrow-left-right', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
             { label: 'Consulta por Coleção/Estação', link: '/estoque/consulta-colest', icon: 'bi bi-columns-gap', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque' },
           ]

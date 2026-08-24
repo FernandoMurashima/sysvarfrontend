@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Estoque, EstoqueMovimentacao, InventarioEstoque, InventarioEstoqueItem } from '../models/estoque';
+import { Estoque, EstoqueMovimentacao, InventarioEstoque, InventarioEstoqueItem, ProdutoUsoConsumoEstoque } from '../models/estoque';
 
 type ListResp<T> = T[] | { results: T[]; count: number };
 
@@ -17,6 +17,10 @@ export class EstoqueService {
 
   listMovimentacoes(params?: Record<string, string | number | null | undefined>): Observable<ListResp<EstoqueMovimentacao>> {
     return this.http.get<ListResp<EstoqueMovimentacao>>(`${this.base}/estoque-movimentacao/`, { params: this.params(params) });
+  }
+
+  listUsoConsumo(params?: Record<string, string | number | null | undefined>): Observable<ListResp<ProdutoUsoConsumoEstoque>> {
+    return this.http.get<ListResp<ProdutoUsoConsumoEstoque>>(`${this.base}/produto-uso-consumo-estoque/`, { params: this.params(params) });
   }
 
   createMovimentacao(payload: Partial<EstoqueMovimentacao>): Observable<EstoqueMovimentacao> {

@@ -7,6 +7,21 @@ export interface Estoque {
   reserva: number | null;
 }
 
+export interface ProdutoUsoConsumoEstoque {
+  id: number;
+  empresa: number;
+  produto: number;
+  produto_descricao: string;
+  produto_referencia: string;
+  produto_tipo: string;
+  unidade_codigo?: string | null;
+  unidade_descricao?: string | null;
+  loja: number;
+  loja_nome: string;
+  saldo: number | string;
+  atualizado_em?: string;
+}
+
 export type TipoMovimentoEstoque = 'ENTRADA' | 'SAIDA' | 'AJUSTE' | 'RESERVA';
 
 export interface EstoqueMovimentacao {
