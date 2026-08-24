@@ -351,12 +351,6 @@ textarea {
   overflow: auto;
 }
 
-.itens-modal {
-  width: min(1180px, 100%);
-  max-height: 88vh;
-  overflow: auto;
-}
-
 .modal-text {
   margin: 0;
   color: #475569;

@@ -112,7 +112,6 @@ describe('RequisicoesComponent permissoes', () => {
       },
     }];
     component.view = 'form';
-    component.itensModalAberto = true;
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Em processo de compra');
@@ -120,18 +119,17 @@ describe('RequisicoesComponent permissoes', () => {
     expect(component.indicadorClass(component.itens[0])).toBe('inactive');
   });
 
-  it('abre os itens em sobretela pelo botao do cabecalho', () => {
+  it('exibe identificacao com numero e status e itens na tela principal', () => {
     permissoes(['requisicoes.fazer']);
     component.atual = { id: 1, numero: 10, empresa: 1, loja: 1, setor: 1, requisitante: 1, data_requisicao: '2026-08-21', data_necessaria: null, prioridade: 'NORMAL', justificativa: '', observacoes: '', status: 'RASCUNHO' } as any;
+    component.itens = [itemBase()];
     component.view = 'form';
     fixture.detectChanges();
 
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
-    buttons.find(btn => btn.textContent?.trim() === 'Itens')?.click();
-    fixture.detectChanges();
-
-    expect(component.itensModalAberto).toBeTrue();
-    expect(fixture.nativeElement.textContent).toContain('Itens da Requisição');
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Requisição 10 — Não enviada');
+    expect(text).toContain('Caneta azul');
+    expect(text).not.toContain('Itens da Requisição');
   });
 
   it('mostra somente Atender quando disponibilidade e suficiente', () => {

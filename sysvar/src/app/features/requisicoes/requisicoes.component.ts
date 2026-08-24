@@ -62,7 +62,6 @@ export class RequisicoesComponent implements OnInit {
   decisaoModal: { acao: 'aprovar' | 'rejeitar' | 'devolver' | 'cancelar'; titulo: string; motivo: string } | null = null;
   atendimentoModal: { item: RequisicaoItem; quantidade: number; observacao: string; disponivel: number } | null = null;
   historicoModalAberto = false;
-  itensModalAberto = false;
 
   headerForm = this.fb.group({
     loja: [null as number | null, Validators.required],
