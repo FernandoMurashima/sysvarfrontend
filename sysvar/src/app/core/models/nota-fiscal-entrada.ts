@@ -13,6 +13,8 @@ export interface NotaFiscalEntrada {
   valor_frete: string;
   valor_total: string;
   observacoes: string;
+  destino_recebimento?: string | null;
+  loja_estoque_id?: number | null;
   criado_por?: number | null;
   criado_em?: string;
   atualizado_em?: string;

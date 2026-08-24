@@ -193,6 +193,7 @@
     <div class="pedido-context" *ngIf="pedidoSelecionado as pedido">
       <span>Pedido <strong>{{ pedido.id }}</strong></span>
       <span>Loja <strong>{{ labelLoja(pedido.loja) }}</strong></span>
+      <span>Estoque destino <strong>{{ pedido.destino_recebimento || labelLoja(pedido.loja) }}</strong></span>
       <span>Fornecedor <strong>{{ labelFornecedor(pedido.fornecedor) }}</strong></span>
       <span>Tipo <strong>{{ tipoPedidoLabel(pedido.tipo) }}</strong></span>
     </div>

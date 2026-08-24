@@ -223,6 +223,11 @@
         </label>
 
         <label class="input-item col-span-2">
+          Destino recebimento
+          <input type="text" [value]="pedidoAtual?.destino_recebimento || labelLoja(pedidoAtual?.loja)" readonly />
+        </label>
+
+        <label class="input-item col-span-2">
           Frete
           <input type="number" formControlName="frete" step="0.01" />
         </label>

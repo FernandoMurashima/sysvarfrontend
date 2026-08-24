@@ -8,6 +8,8 @@ export interface PedidoCompra {
   id: number;
   tipo: '' | '1' | '2' | '4';
   loja: number;
+  loja_nome?: string | null;
+  destino_recebimento?: string | null;
   fornecedor: number;
   emissao: string;
   previsao_entrega?: string | null;
