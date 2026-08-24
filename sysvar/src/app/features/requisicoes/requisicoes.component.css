@@ -278,6 +278,13 @@ textarea {
   padding-top: 12px;
 }
 
+.item-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .row-actions {
   display: flex;
   gap: 6px;
@@ -341,6 +348,12 @@ textarea {
 .historico-modal {
   width: min(960px, 100%);
   max-height: 82vh;
+  overflow: auto;
+}
+
+.itens-modal {
+  width: min(1180px, 100%);
+  max-height: 88vh;
   overflow: auto;
 }
 

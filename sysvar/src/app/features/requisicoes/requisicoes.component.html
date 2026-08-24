@@ -69,7 +69,10 @@
     <section class="card form">
       <div class="form-title-row">
         <h3>{{ atual ? ('Requisição ' + atual.numero) : 'Nova Requisição' }}</h3>
-        <button class="btn" type="button" (click)="voltar()">Voltar</button>
+        <div class="title-actions">
+          <button class="btn" type="button" [disabled]="!atual" (click)="itensModalAberto = true">Itens</button>
+          <button class="btn" type="button" (click)="voltar()">Voltar</button>
+        </div>
       </div>
 
       <form [formGroup]="headerForm" class="grid-12">
@@ -89,7 +92,60 @@
         <button class="btn primary send-action" type="button" *ngIf="!atual || podeEditarConteudo(atual)" [disabled]="saving" (click)="salvarEEnviar()">Enviar requisição</button>
       </div>
 
-      <section class="section-header item-section-head"><h3>Itens</h3></section>
+      <section class="section-header item-section-head"><h3>Itens</h3><button class="btn" type="button" [disabled]="!atual" (click)="itensModalAberto = true">Itens</button></section>
+      <div class="empty-hint">{{ itens.length || 0 }} item(ns) lançado(s).</div>
+      <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="false && podeEditarConteudo(atual)">
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
+        <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Origem<select formControlName="origem"><option value="PRODUTO">Produto</option><option value="LIVRE">Livre</option></select></label>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Produto<select formControlName="produto"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ p.descricao }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','produto')">{{ msg }}</small></label>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Descrição<input formControlName="descricao" /><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao')">{{ msg }}</small></label>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL'">Finalidade<select formControlName="finalidade_aquisicao"><option [ngValue]="null">Selecione</option><option *ngFor="let f of finalidades" [ngValue]="f.id">{{ f.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','finalidade_aquisicao')">{{ msg }}</small></label>
+        <div class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'"><span>Unidade</span><span class="readonly-field">{{ unidadeProdutoSelecionado() }}</span></div>
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Unidade<select formControlName="unidade"><option [ngValue]="null">Selecione</option><option *ngFor="let u of unidades" [ngValue]="u.id">{{ u.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','unidade')">{{ msg }}</small></label>
+        <label class="input-item" [ngClass]="itemForm.value.origem === 'PRODUTO' ? 'col-span-1' : 'col-span-2'" *ngIf="itemForm.value.tipo === 'MATERIAL'">Quantidade<input type="number" step="0.001" formControlName="qtd_solicitada" /><small class="field-error" *ngFor="let msg of fieldErrors('item','qtd_solicitada')">{{ msg }}</small></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Categoria<select formControlName="categoria_material"><option [ngValue]="null">Selecione</option><option *ngFor="let c of categoriasMaterial" [ngValue]="c.id">{{ c.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','categoria_material')">{{ msg }}</small></label>
+        <label class="input-item col-span-9" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Especificação<textarea rows="2" formControlName="especificacao_tecnica"></textarea></label>
+
+        <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'SERVICO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Categoria<select formControlName="categoria_servico"><option [ngValue]="null">Selecione</option><option *ngFor="let c of categorias" [ngValue]="c.id">{{ c.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','categoria_servico')">{{ msg }}</small></label>
+        <label class="input-item col-span-3" *ngIf="itemForm.value.tipo === 'SERVICO'">Tipo<select formControlName="tipo_servico"><option value="">Selecione</option><option value="PREVENTIVA">Preventiva</option><option value="CORRETIVA">Corretiva</option><option value="INSTALACAO">Instalação</option><option value="REVISAO">Revisão</option><option value="REPARO">Reparo</option><option value="OUTRO">Outro</option></select><small class="field-error" *ngFor="let msg of fieldErrors('item','tipo_servico')">{{ msg }}</small></label>
+        <label class="input-item col-span-4" *ngIf="itemForm.value.tipo === 'SERVICO'">Título<input formControlName="titulo_servico" /></label>
+        <label class="input-item col-span-12" *ngIf="itemForm.value.tipo === 'SERVICO'">Descrição do Serviço<textarea rows="2" formControlName="descricao_servico"></textarea><small class="field-error" *ngFor="let msg of fieldErrors('item','descricao_servico')">{{ msg }}</small></label>
+        <div class="actions-form item-actions col-span-12"><button class="btn primary" type="button" (click)="salvarItem()">Gravar item</button><button class="btn" type="button" (click)="limparItem()">Limpar</button></div>
+      </form>
+
+      <div class="table-wrapper itens-wrapper" *ngIf="false">
+        <table class="table" *ngIf="itens.length; else itensEmpty">
+          <thead><tr><th>Tipo</th><th>Item</th><th>Qtd sol.</th><th>Qtd atend.</th><th>Pendente</th><th>Disponibilidade</th><th>Vínculos</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of itens">
+              <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill" [ngClass]="indicadorClass(item)">{{ indicadorLabel(item) }}</span></td><td>{{ indicadorLinks(item) || '-' }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
+              <td class="row-actions"><button class="btn sm" *ngIf="podeEditarConteudo(atual)" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="podeEditarConteudo(atual)" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && podeAguardarCotacao(item)" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #itensEmpty><div class="empty-hint">Nenhum item lançado.</div></ng-template>
+      </div>
+
+      <section class="actions-form" *ngIf="atual">
+        <button class="btn primary" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('aprovar')">Aprovar</button>
+        <button class="btn" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('devolver')">Devolver</button>
+        <button class="btn danger" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('rejeitar')">Rejeitar</button>
+        <button class="btn danger" type="button" *ngIf="podeEditar && !['CONCLUIDA','CANCELADA'].includes(atual.status)" (click)="abrirDecisao('cancelar')">Cancelar</button>
+        <button class="btn" type="button" (click)="historicoModalAberto = true">Histórico</button>
+      </section>
+    </section>
+  </ng-container>
+
+  <div class="modal-backdrop" *ngIf="itensModalAberto">
+    <section class="modal-card itens-modal">
+      <div class="form-title-row">
+        <h3>Itens da Requisição</h3>
+        <button class="btn" type="button" (click)="itensModalAberto = false">Fechar</button>
+      </div>
+
       <form class="item-form grid-12" [formGroup]="itemForm" *ngIf="podeEditarConteudo(atual)">
         <label class="input-item col-span-2" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'PRODUTO'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
         <label class="input-item col-span-1" *ngIf="itemForm.value.tipo === 'MATERIAL' && itemForm.value.origem === 'LIVRE'">Tipo<select formControlName="tipo"><option value="MATERIAL">Material</option><option value="SERVICO">Serviço</option></select></label>
@@ -113,27 +169,19 @@
       </form>
 
       <div class="table-wrapper itens-wrapper">
-        <table class="table" *ngIf="itens.length; else itensEmpty">
+        <table class="table" *ngIf="itens.length; else itensEmptyModal">
           <thead><tr><th>Tipo</th><th>Item</th><th>Qtd sol.</th><th>Qtd atend.</th><th>Pendente</th><th>Disponibilidade</th><th>Vínculos</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of itens">
               <td>{{ item.tipo }}</td><td>{{ itemTitulo(item) }}</td><td>{{ item.qtd_solicitada }}</td><td>{{ item.qtd_atendida }}</td><td>{{ item.qtd_pendente }}</td><td><span class="status-pill" [ngClass]="indicadorClass(item)">{{ indicadorLabel(item) }}</span></td><td>{{ indicadorLinks(item) || '-' }}</td><td><span class="status-pill">{{ statusLabel(item.status) }}</span></td>
-              <td class="row-actions"><button class="btn sm" *ngIf="podeEditarConteudo(atual)" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="podeEditarConteudo(atual)" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && item.origem === 'PRODUTO' && item.status !== 'ATENDIDO'" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="podeAtender && ['APROVADA','EM_ATENDIMENTO','ATENDIDA_PARCIALMENTE'].includes(atual?.status || '') && podeAguardarCotacao(item)" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
+              <td class="row-actions"><button class="btn sm" *ngIf="podeEditarConteudo(atual)" (click)="editarItem(item)">Editar</button><button class="btn sm danger" *ngIf="podeEditarConteudo(atual)" (click)="removerItem(item)">Excluir</button><button class="btn sm" *ngIf="podeAtenderItem(item)" (click)="abrirAtendimento(item)">Atender</button><button class="btn sm" *ngIf="podeAguardarCotacao(item)" (click)="marcarCotacao(item)">Aguardar Cotação</button></td>
             </tr>
           </tbody>
         </table>
-        <ng-template #itensEmpty><div class="empty-hint">Nenhum item lançado.</div></ng-template>
+        <ng-template #itensEmptyModal><div class="empty-hint">Nenhum item lançado.</div></ng-template>
       </div>
-
-      <section class="actions-form" *ngIf="atual">
-        <button class="btn primary" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('aprovar')">Aprovar</button>
-        <button class="btn" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('devolver')">Devolver</button>
-        <button class="btn danger" type="button" *ngIf="podeAprovar && atual.status === 'AGUARDANDO_APROVACAO'" (click)="abrirDecisao('rejeitar')">Rejeitar</button>
-        <button class="btn danger" type="button" *ngIf="podeEditar && !['CONCLUIDA','CANCELADA'].includes(atual.status)" (click)="abrirDecisao('cancelar')">Cancelar</button>
-        <button class="btn" type="button" (click)="historicoModalAberto = true">Histórico</button>
-      </section>
     </section>
-  </ng-container>
+  </div>
 
   <div class="modal-backdrop" *ngIf="historicoModalAberto">
     <section class="modal-card historico-modal">

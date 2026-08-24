@@ -112,10 +112,93 @@ describe('RequisicoesComponent permissoes', () => {
       },
     }];
     component.view = 'form';
+    component.itensModalAberto = true;
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Em processo de compra');
     expect(text).toContain('Cotação 3 / Pedido 9');
     expect(component.indicadorClass(component.itens[0])).toBe('inactive');
   });
+
+  it('abre os itens em sobretela pelo botao do cabecalho', () => {
+    permissoes(['requisicoes.fazer']);
+    component.atual = { id: 1, numero: 10, empresa: 1, loja: 1, setor: 1, requisitante: 1, data_requisicao: '2026-08-21', data_necessaria: null, prioridade: 'NORMAL', justificativa: '', observacoes: '', status: 'RASCUNHO' } as any;
+    component.view = 'form';
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    buttons.find(btn => btn.textContent?.trim() === 'Itens')?.click();
+    fixture.detectChanges();
+
+    expect(component.itensModalAberto).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Itens da Requisição');
+  });
+
+  it('mostra somente Atender quando disponibilidade e suficiente', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, status: 'APROVADA' } as any;
+    const item = itemBase({ indicador_compra: { codigo: 'DISPONIVEL', estoque_atual: '5.000', cotacoes: [], pedidos: [] } });
+
+    expect(component.podeAtenderItem(item)).toBeTrue();
+    expect(component.podeAguardarCotacao(item)).toBeFalse();
+  });
+
+  it('mostra somente Aguardar Cotacao quando sem estoque e sem compra', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, status: 'APROVADA' } as any;
+    const item = itemBase({ indicador_compra: { codigo: 'SEM_ESTOQUE', estoque_atual: '0.000', cotacoes: [], pedidos: [] } });
+
+    expect(component.podeAtenderItem(item)).toBeFalse();
+    expect(component.podeAguardarCotacao(item)).toBeTrue();
+  });
+
+  it('nao mostra Aguardar Cotacao quando ja existe cotacao ou pedido', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, status: 'APROVADA' } as any;
+    const item = itemBase({ indicador_compra: { codigo: 'EM_PROCESSO_COMPRA', estoque_atual: '0.000', cotacoes: [{ id: 7 }], pedidos: [{ id: 9 }] } });
+
+    expect(component.podeAtenderItem(item)).toBeFalse();
+    expect(component.podeAguardarCotacao(item)).toBeFalse();
+    expect(component.indicadorLinks(item)).toContain('Cotação');
+    expect(component.indicadorLinks(item)).toContain('Pedido');
+  });
+
+  it('nao mostra acoes para item atendido cancelado ou rejeitado', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, status: 'APROVADA' } as any;
+
+    ['ATENDIDO', 'CANCELADO', 'REJEITADO'].forEach(status => {
+      const item = itemBase({ status, indicador_compra: { codigo: 'DISPONIVEL', estoque_atual: '5.000', cotacoes: [], pedidos: [] } });
+      expect(component.podeAtenderItem(item)).toBeFalse();
+      expect(component.podeAguardarCotacao(item)).toBeFalse();
+    });
+  });
 });
+
+function itemBase(overrides: Partial<any> = {}): any {
+  return {
+    id: 5,
+    requisicao: 1,
+    tipo: 'MATERIAL',
+    origem: 'PRODUTO',
+    produto: 8,
+    produto_descricao: 'Caneta azul',
+    descricao: '',
+    categoria: '',
+    categoria_material: null,
+    finalidade: 'USO_CONSUMO',
+    finalidade_aquisicao: null,
+    unidade: 1,
+    especificacao_tecnica: '',
+    titulo_servico: '',
+    descricao_servico: '',
+    categoria_servico: null,
+    tipo_servico: '',
+    qtd_solicitada: '5.000',
+    qtd_atendida: '0.000',
+    qtd_pendente: '5.000',
+    status: 'APROVADO',
+    observacoes: '',
+    ...overrides,
+  };
+}

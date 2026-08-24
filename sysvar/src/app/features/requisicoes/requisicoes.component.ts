@@ -62,6 +62,7 @@ export class RequisicoesComponent implements OnInit {
   decisaoModal: { acao: 'aprovar' | 'rejeitar' | 'devolver' | 'cancelar'; titulo: string; motivo: string } | null = null;
   atendimentoModal: { item: RequisicaoItem; quantidade: number; observacao: string; disponivel: number } | null = null;
   historicoModalAberto = false;
+  itensModalAberto = false;
 
   headerForm = this.fb.group({
     loja: [null as number | null, Validators.required],
@@ -446,10 +447,26 @@ export class RequisicoesComponent implements OnInit {
 
   podeAguardarCotacao(item: RequisicaoItem): boolean {
     const indicador = item.indicador_compra;
-    return !indicador?.cotacoes?.length
+    return this.itemPermiteAcao(item)
+      && !this.podeAtenderItem(item)
+      && !indicador?.cotacoes?.length
       && !indicador?.pedidos?.length
       && indicador?.codigo !== 'EM_PROCESSO_COMPRA'
-      && !['AGUARDANDO_COTACAO', 'EM_COTACAO', 'PEDIDO_GERADO', 'ATENDIDO', 'CANCELADO', 'REJEITADO'].includes(item.status);
+      && !['AGUARDANDO_COTACAO', 'EM_COTACAO', 'PEDIDO_GERADO'].includes(item.status);
+  }
+
+  podeAtenderItem(item: RequisicaoItem): boolean {
+    if (!this.itemPermiteAcao(item) || item.origem !== 'PRODUTO') return false;
+    const indicador = item.indicador_compra;
+    const estoque = Number(indicador?.estoque_atual ?? 0);
+    const pendente = Number(item.qtd_pendente ?? 0);
+    return indicador?.codigo === 'DISPONIVEL' || (pendente > 0 && estoque >= pendente);
+  }
+
+  private itemPermiteAcao(item: RequisicaoItem): boolean {
+    return this.podeAtender
+      && ['APROVADA', 'EM_ATENDIMENTO', 'ATENDIDA_PARCIALMENTE'].includes(this.atual?.status || '')
+      && !['ATENDIDO', 'CANCELADO', 'REJEITADO'].includes(item.status);
   }
 
   recarregarAtual(): void {
