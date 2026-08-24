@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { OrdemServico, Paginated, Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoMatrizResponsabilidade, RequisicaoServicoCategoria, RequisicaoSetor, RequisicaoTipo } from '../models/requisicao';
+import { OrdemServico, OrdemServicoMaterial, Paginated, Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoMatrizResponsabilidade, RequisicaoServicoCategoria, RequisicaoSetor, RequisicaoTipo } from '../models/requisicao';
 
 @Injectable({ providedIn: 'root' })
 export class RequisicoesService {
@@ -11,6 +11,7 @@ export class RequisicoesService {
   private itens = `${environment.apiBaseUrl}/compras/requisicao-itens/`;
   private historico = `${environment.apiBaseUrl}/compras/requisicao-historico/`;
   private ordensServico = `${environment.apiBaseUrl}/compras/ordens-servico/`;
+  private ordensServicoMateriais = `${environment.apiBaseUrl}/compras/ordens-servico-materiais/`;
   private categorias = `${environment.apiBaseUrl}/compras/requisicao-servico-categorias/`;
   private setores = `${environment.apiBaseUrl}/compras/requisicao-setores/`;
   private matriz = `${environment.apiBaseUrl}/compras/requisicao-matriz-responsabilidade/`;
@@ -39,6 +40,22 @@ export class RequisicoesService {
 
   atualizarOrdemServico(id: number, payload: Partial<OrdemServico>): Observable<OrdemServico> {
     return this.http.patch<OrdemServico>(`${this.ordensServico}${id}/`, payload);
+  }
+
+  criarMaterialOrdemServico(payload: Partial<OrdemServicoMaterial>): Observable<OrdemServicoMaterial> {
+    return this.http.post<OrdemServicoMaterial>(this.ordensServicoMateriais, payload);
+  }
+
+  atualizarMaterialOrdemServico(id: number, payload: Partial<OrdemServicoMaterial>): Observable<OrdemServicoMaterial> {
+    return this.http.patch<OrdemServicoMaterial>(`${this.ordensServicoMateriais}${id}/`, payload);
+  }
+
+  removerMaterialOrdemServico(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.ordensServicoMateriais}${id}/`);
+  }
+
+  atenderMaterialOrdemServico(id: number, quantidade: number | string): Observable<OrdemServicoMaterial> {
+    return this.http.post<OrdemServicoMaterial>(`${this.ordensServicoMateriais}${id}/atender/`, { quantidade });
   }
 
   create(payload: Partial<Requisicao>): Observable<Requisicao> {

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
+import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { OrdensServicoComponent } from './ordens-servico.component';
 
@@ -8,15 +9,19 @@ describe('OrdensServicoComponent', () => {
   let fixture: ComponentFixture<OrdensServicoComponent>;
   let component: OrdensServicoComponent;
   let api: jasmine.SpyObj<RequisicoesService>;
+  let produtosApi: jasmine.SpyObj<ProdutosService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['listarOrdensServico', 'getOrdemServico', 'atualizarOrdemServico', 'lojasPermitidas']);
+    api = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['listarOrdensServico', 'getOrdemServico', 'atualizarOrdemServico', 'lojasPermitidas', 'criarMaterialOrdemServico', 'atualizarMaterialOrdemServico', 'removerMaterialOrdemServico', 'atenderMaterialOrdemServico']);
+    produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', ['list']);
     api.listarOrdensServico.and.returnValue(of([]));
     api.lojasPermitidas.and.returnValue(of([]));
+    produtosApi.list.and.returnValue(of([]));
     await TestBed.configureTestingModule({
       imports: [OrdensServicoComponent],
       providers: [
         { provide: RequisicoesService, useValue: api },
+        { provide: ProdutosService, useValue: produtosApi },
         { provide: ActivatedRoute, useValue: {} },
       ],
     }).compileComponents();

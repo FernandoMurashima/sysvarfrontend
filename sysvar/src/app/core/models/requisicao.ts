@@ -166,6 +166,24 @@ export interface OrdemServico {
   data_inicio: string | null;
   data_conclusao: string | null;
   observacoes: string;
+  materiais?: OrdemServicoMaterial[];
+}
+
+export interface OrdemServicoMaterial {
+  id: number;
+  ordem_servico: number;
+  produto: number | null;
+  produto_descricao?: string | null;
+  descricao: string;
+  unidade: number | null;
+  unidade_descricao?: string | null;
+  qtd_necessaria: string | number;
+  qtd_atendida: string | number;
+  qtd_pendente: string | number;
+  status: 'PENDENTE' | 'DISPONIVEL' | 'EM_COMPRA' | 'ATENDIDA' | 'CANCELADA';
+  status_label?: string | null;
+  estoque_disponivel?: string | number;
+  observacoes: string;
 }
 
 export interface Paginated<T> {

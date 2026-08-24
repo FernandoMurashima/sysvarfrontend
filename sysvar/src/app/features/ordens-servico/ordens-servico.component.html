@@ -59,5 +59,41 @@
       <label class="input-item col-span-12">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
       <div class="input-item col-span-3"><span>Conclusão</span><span class="readonly-field">{{ os.data_conclusao ? (os.data_conclusao | date:'short') : '-' }}</span></div>
     </form>
+
+    <div class="form-title-row">
+      <h3>Materiais necessários</h3>
+    </div>
+    <form [formGroup]="materialForm" class="grid-12">
+      <label class="input-item col-span-4">Material<select formControlName="produto"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ produtoLabel(p) }}</option></select></label>
+      <label class="input-item col-span-4">Descrição<input type="text" formControlName="descricao" placeholder="Opcional quando houver produto" /></label>
+      <label class="input-item col-span-2">Quantidade<input type="number" min="0.001" step="0.001" formControlName="qtd_necessaria" /></label>
+      <label class="input-item col-span-2">Observações<input type="text" formControlName="observacoes" /></label>
+      <div class="col-span-12 row-actions">
+        <button class="btn primary" type="button" (click)="salvarMaterial()">{{ editingMaterial ? 'Atualizar material' : 'Adicionar material' }}</button>
+        <button class="btn" type="button" *ngIf="editingMaterial" (click)="cancelarEdicaoMaterial()">Cancelar</button>
+      </div>
+    </form>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="os.materiais?.length; else emptyMateriaisTpl">
+        <thead><tr><th>Material</th><th>Unidade</th><th>Necessário</th><th>Atendido</th><th>Pendente</th><th>Disponível</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let m of os.materiais">
+            <td>{{ m.produto_descricao || m.descricao }}</td>
+            <td>{{ m.unidade_descricao || '-' }}</td>
+            <td>{{ m.qtd_necessaria }}</td>
+            <td>{{ m.qtd_atendida }}</td>
+            <td>{{ m.qtd_pendente }}</td>
+            <td>{{ m.estoque_disponivel || 0 }}</td>
+            <td><span class="status-pill">{{ m.status_label || materialStatusLabel(m.status) }}</span></td>
+            <td class="row-actions">
+              <button class="btn sm" type="button" *ngIf="podeAtenderMaterial(m)" (click)="atenderMaterial(m)">Atender</button>
+              <button class="btn sm" type="button" *ngIf="podeEditarMaterial(m)" (click)="editarMaterial(m)">Editar</button>
+              <button class="btn sm danger" type="button" *ngIf="podeEditarMaterial(m)" (click)="removerMaterial(m)">Remover</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyMateriaisTpl><div class="empty-hint">Nenhum material necessário registrado.</div></ng-template>
+    </div>
   </section>
 </div>
