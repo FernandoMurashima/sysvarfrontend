@@ -265,7 +265,10 @@ textarea {
 .col-span-12 { grid-column: span 12; }
 
 .motivo-field textarea {
-  min-height: 64px;
+  min-height: 34px;
+  height: 36px;
+  max-height: 54px;
+  overflow-y: auto;
 }
 
 .item-actions {

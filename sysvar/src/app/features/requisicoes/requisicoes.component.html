@@ -80,9 +80,8 @@
         <label class="input-item col-span-2">Tipo da Requisição*<select formControlName="tipo_requisicao"><option value="USO_CONSUMO">Uso e Consumo</option><option value="MANUTENCAO">Manutenção</option><option value="TI">TI</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','tipo_requisicao')">{{ msg }}</small></label>
         <div class="input-item col-span-3"><span>Atendimento</span><span class="readonly-field">{{ atendimentoPrevisto || atual?.setor_responsavel_nome || '-' }}</span></div>
         <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
-        <div class="input-item col-span-1" *ngIf="atual?.ordem_servico_id"><span>OS</span><span class="readonly-field">OS {{ atual?.ordem_servico_id }}</span></div>
-        <label class="input-item col-span-10 motivo-field">Motivo da Requisição<textarea rows="2" formControlName="motivo"></textarea></label>
-        <label class="input-item col-span-2">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+        <label class="input-item col-span-1">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+        <label class="input-item col-span-12 motivo-field">Motivo da Requisição<textarea rows="2" formControlName="motivo"></textarea></label>
       </form>
 
       <div class="actions-form" *ngIf="!consultando && podeEditar">
