@@ -39,13 +39,15 @@
       </div>
       <div class="table-wrapper">
         <table class="table" *ngIf="pageRows.length; else emptyTpl">
-          <thead><tr><th>Número</th><th>Data</th><th>Loja</th><th>Setor</th><th>Requisitante</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Número</th><th>Data</th><th>Loja</th><th>Setor</th><th>Tipo</th><th>Atendimento</th><th>Requisitante</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             <tr *ngFor="let r of pageRows" [class.selected]="selected?.id === r.id" (click)="selecionar(r)" (dblclick)="abrir(r, true)">
               <td>{{ r.numero }}</td>
               <td>{{ r.data_requisicao }}</td>
               <td>{{ r.loja_nome || r.loja }}</td>
               <td>{{ r.setor_nome || r.setor }}</td>
+              <td>{{ tipoRequisicaoLabel(r.tipo_requisicao) }}</td>
+              <td>{{ r.setor_responsavel_nome || r.setor_responsavel || '-' }}</td>
               <td>{{ r.requisitante_nome || r.requisitante }}</td>
               <td><span class="status-pill" [ngClass]="r.prioridade === 'NORMAL' ? 'badge-ok' : 'inactive'">{{ r.prioridade }}</span></td>
               <td><span class="status-pill">{{ statusLabel(r.status) }}</span></td>
@@ -73,9 +75,11 @@
       <form [formGroup]="headerForm" class="grid-12">
         <label class="input-item col-span-3">Loja*<select formControlName="loja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','loja')">{{ msg }}</small></label>
         <label class="input-item col-span-3">Setor*<select formControlName="setor"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setores" [ngValue]="s.id">{{ s.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','setor')">{{ msg }}</small></label>
+        <label class="input-item col-span-2">Tipo da Requisição*<select formControlName="tipo_requisicao"><option value="USO_CONSUMO">Uso e Consumo</option><option value="MANUTENCAO">Manutenção</option><option value="TI">TI</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','tipo_requisicao')">{{ msg }}</small></label>
+        <div class="input-item col-span-2"><span>Atendimento</span><span class="readonly-field">{{ atendimentoPrevisto || atual?.setor_responsavel_nome || '-' }}</span></div>
         <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
-        <label class="input-item col-span-2">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
-        <div class="input-item col-span-2"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status || 'RASCUNHO') }}</span></div>
+        <label class="input-item col-span-1">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
+        <div class="input-item col-span-1"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status || 'RASCUNHO') }}</span></div>
         <label class="input-item col-span-12 motivo-field">Motivo da Requisição<textarea rows="2" formControlName="motivo"></textarea></label>
       </form>
 

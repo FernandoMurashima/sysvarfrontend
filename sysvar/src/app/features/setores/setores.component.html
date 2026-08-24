@@ -32,6 +32,10 @@
       <label class="check-line col-span-2"><input type="checkbox" formControlName="ativo" /> Ativo</label>
       <label class="check-line col-span-3"><input type="checkbox" formControlName="pode_fazer_requisicao" /> Pode fazer requisição</label>
       <label class="check-line col-span-3"><input type="checkbox" formControlName="recebe_requisicoes" /> Recebe requisições</label>
+      <label class="check-line col-span-4"><input type="checkbox" formControlName="central_uso_consumo" /> Central de Uso e Consumo</label>
+      <label class="check-line col-span-3"><input type="checkbox" formControlName="central_manutencao" /> Central de Manutenção</label>
+      <label class="check-line col-span-2"><input type="checkbox" formControlName="central_ti" /> Central de TI</label>
+      <label class="check-line col-span-3"><input type="checkbox" formControlName="responsavel_compras" /> Responsável por Compras</label>
       <label class="check-line col-span-4"><input type="checkbox" formControlName="controla_estoque_uso_consumo" /> Controla estoque de uso/consumo</label>
     </form>
   </section>
@@ -42,7 +46,7 @@
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="filtered.length; else emptyTpl">
-        <thead><tr><th>Nome</th><th>Empresa</th><th>Descrição</th><th>Pode fazer</th><th>Recebe</th><th>Controla estoque</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Descrição</th><th>Pode fazer</th><th>Recebe</th><th>Uso/Consumo</th><th>Manutenção</th><th>TI</th><th>Compras</th><th>Ativo</th><th>Ações</th></tr></thead>
         <tbody>
           <tr *ngFor="let s of filtered" [class.selected]="selected?.id === s.id" (click)="selecionar(s)">
             <td>{{ s.nome }}</td>
@@ -50,7 +54,10 @@
             <td>{{ s.descricao || '-' }}</td>
             <td>{{ s.pode_fazer_requisicao ? 'Sim' : 'Não' }}</td>
             <td>{{ s.recebe_requisicoes ? 'Sim' : 'Não' }}</td>
-            <td>{{ s.controla_estoque_uso_consumo ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.central_uso_consumo ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.central_manutencao ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.central_ti ? 'Sim' : 'Não' }}</td>
+            <td>{{ s.responsavel_compras ? 'Sim' : 'Não' }}</td>
             <td><span class="status-pill" [class.inactive]="s.ativo === false">{{ statusLabel(s) }}</span></td>
             <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); consultar(s)">Consultar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); editar(s)">Editar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); alternarAtivo(s)">{{ s.ativo === false ? 'Ativar' : 'Inativar' }}</button></td>
           </tr>

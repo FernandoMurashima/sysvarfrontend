@@ -3,46 +3,39 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { RequisicaoSetor } from '../../core/models/requisicao';
+import { RequisicaoMatrizResponsabilidade, RequisicaoSetor, RequisicaoTipo } from '../../core/models/requisicao';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 
 @Component({
-  selector: 'app-setores',
+  selector: 'app-matriz-requisicao',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './setores.component.html',
-  styleUrls: ['./setores.component.css'],
+  templateUrl: './matriz-requisicao.component.html',
+  styleUrls: ['../setores/setores.component.css'],
 })
-export class SetoresComponent implements OnInit {
+export class MatrizRequisicaoComponent implements OnInit {
   private api = inject(RequisicoesService);
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
 
+  rows: RequisicaoMatrizResponsabilidade[] = [];
   setores: RequisicaoSetor[] = [];
-  filtered: RequisicaoSetor[] = [];
-  selected: RequisicaoSetor | null = null;
+  selected: RequisicaoMatrizResponsabilidade | null = null;
   editingId: number | null = null;
-  consultando = false;
   showForm = false;
+  consultando = false;
   loading = false;
   saving = false;
   submitted = false;
-  search = '';
-  ativo = '';
+  ativo = 'true';
   successMsg = '';
   errorMsg = '';
 
   form = this.fb.group({
-    nome: ['', Validators.required],
-    descricao: [''],
+    tipo_requisicao: ['USO_CONSUMO' as RequisicaoTipo, Validators.required],
+    setor_atendimento: [null as number | null, Validators.required],
+    setor_aquisicao: [null as number | null, Validators.required],
     ativo: [true],
-    pode_fazer_requisicao: [true],
-    recebe_requisicoes: [true],
-    central_uso_consumo: [false],
-    central_manutencao: [false],
-    central_ti: [false],
-    responsavel_compras: [false],
-    controla_estoque_uso_consumo: [false],
   });
 
   get podeEditarModulo(): boolean {
@@ -51,22 +44,21 @@ export class SetoresComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregar();
+    this.api.listarSetoresAdmin({ ativo: 'true' }).subscribe(resp => this.setores = this.arrayOrResults<RequisicaoSetor>(resp));
   }
 
   carregar(): void {
     this.loading = true;
     const params: any = {};
-    if (this.search.trim()) params.search = this.search.trim();
     if (this.ativo) params.ativo = this.ativo;
-    this.api.listarSetoresAdmin(params).subscribe({
+    this.api.listarMatrizResponsabilidade(params).subscribe({
       next: resp => {
-        this.setores = this.arrayOrResults<RequisicaoSetor>(resp);
-        this.filtered = this.setores;
+        this.rows = this.arrayOrResults<RequisicaoMatrizResponsabilidade>(resp);
         this.loading = false;
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = this.extractMessages(err, 'Falha ao carregar setores.').join(' ');
+        this.errorMsg = this.extractMessages(err, 'Falha ao carregar matriz.').join(' ');
       },
     });
   }
@@ -76,35 +68,24 @@ export class SetoresComponent implements OnInit {
     this.consultando = false;
     this.editingId = null;
     this.submitted = false;
-    this.form.reset({ nome: '', descricao: '', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false });
+    this.form.reset({ tipo_requisicao: 'USO_CONSUMO', setor_atendimento: null, setor_aquisicao: null, ativo: true });
     this.form.enable();
   }
 
-  consultar(row: RequisicaoSetor): void {
-    this.abrir(row, true);
-  }
+  consultar(row: RequisicaoMatrizResponsabilidade): void { this.abrir(row, true); }
+  editar(row: RequisicaoMatrizResponsabilidade): void { this.abrir(row, false); }
 
-  editar(row: RequisicaoSetor): void {
-    this.abrir(row, false);
-  }
-
-  abrir(row: RequisicaoSetor, consulta: boolean): void {
+  abrir(row: RequisicaoMatrizResponsabilidade, consulta: boolean): void {
     this.selected = row;
     this.showForm = true;
     this.consultando = consulta;
     this.editingId = row.id;
     this.submitted = false;
     this.form.reset({
-      nome: row.nome,
-      descricao: row.descricao || '',
+      tipo_requisicao: row.tipo_requisicao,
+      setor_atendimento: row.setor_atendimento,
+      setor_aquisicao: row.setor_aquisicao,
       ativo: row.ativo !== false,
-      pode_fazer_requisicao: row.pode_fazer_requisicao !== false,
-      recebe_requisicoes: row.recebe_requisicoes !== false,
-      central_uso_consumo: row.central_uso_consumo === true,
-      central_manutencao: row.central_manutencao === true,
-      central_ti: row.central_ti === true,
-      responsavel_compras: row.responsavel_compras === true,
-      controla_estoque_uso_consumo: row.controla_estoque_uso_consumo === true,
     });
     consulta ? this.form.disable() : this.form.enable();
   }
@@ -113,32 +94,32 @@ export class SetoresComponent implements OnInit {
     this.submitted = true;
     if (this.form.invalid || this.consultando) return;
     this.saving = true;
-    const payload = this.form.getRawValue() as Partial<RequisicaoSetor>;
-    const req = this.editingId ? this.api.atualizarSetor(this.editingId, payload) : this.api.criarSetor(payload);
+    const payload = this.form.getRawValue() as Partial<RequisicaoMatrizResponsabilidade>;
+    const req = this.editingId ? this.api.atualizarMatrizResponsabilidade(this.editingId, payload) : this.api.criarMatrizResponsabilidade(payload);
     req.subscribe({
       next: () => {
         this.saving = false;
         this.showForm = false;
-        this.successMsg = this.editingId ? 'Setor atualizado.' : 'Setor criado.';
+        this.successMsg = this.editingId ? 'Matriz atualizada.' : 'Matriz criada.';
         this.errorMsg = '';
         this.carregar();
       },
       error: err => {
         this.saving = false;
-        this.errorMsg = this.extractMessages(err, 'Falha ao salvar setor.').join(' ');
+        this.errorMsg = this.extractMessages(err, 'Falha ao salvar matriz.').join(' ');
       },
     });
   }
 
-  alternarAtivo(row: RequisicaoSetor): void {
-    const req = row.ativo === false ? this.api.ativarSetor(row.id) : this.api.inativarSetor(row.id);
+  alternarAtivo(row: RequisicaoMatrizResponsabilidade): void {
+    const req = row.ativo === false ? this.api.ativarMatrizResponsabilidade(row.id) : this.api.inativarMatrizResponsabilidade(row.id);
     req.subscribe({
       next: () => {
-        this.successMsg = row.ativo === false ? 'Setor ativado.' : 'Setor inativado.';
+        this.successMsg = row.ativo === false ? 'Matriz ativada.' : 'Matriz inativada.';
         this.errorMsg = '';
         this.carregar();
       },
-      error: err => this.errorMsg = this.extractMessages(err, 'Falha ao alterar status do setor.').join(' '),
+      error: err => this.errorMsg = this.extractMessages(err, 'Falha ao alterar status da matriz.').join(' '),
     });
   }
 
@@ -148,17 +129,17 @@ export class SetoresComponent implements OnInit {
     this.editingId = null;
   }
 
-  selecionar(row: RequisicaoSetor): void {
-    this.selected = row;
+  selecionar(row: RequisicaoMatrizResponsabilidade): void { this.selected = row; }
+
+  tipoLabel(tipo: string): string {
+    return { USO_CONSUMO: 'Uso e Consumo', MANUTENCAO: 'Manutenção', TI: 'TI' }[tipo] || tipo;
   }
+
+  statusLabel(row: RequisicaoMatrizResponsabilidade): string { return row.ativo === false ? 'Inativo' : 'Ativo'; }
 
   isInvalid(field: string): boolean {
     const control = this.form.get(field);
     return !!control && control.invalid && (control.touched || this.submitted);
-  }
-
-  statusLabel(row: RequisicaoSetor): string {
-    return row.ativo === false ? 'Inativo' : 'Ativo';
   }
 
   private arrayOrResults<T>(data: any): T[] {

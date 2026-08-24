@@ -1,0 +1,54 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Matriz de Responsabilidade</h1><button class="info-button" type="button" title="Configure as centrais por tipo de requisição.">i</button></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Nova Matriz</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <section class="filter-bar">
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="ativo" (ngModelChange)="carregar()"><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select></label>
+  </section>
+
+  <section class="card form" *ngIf="showForm">
+    <div class="form-title-row">
+      <h3>{{ consultando ? 'Consultar Matriz' : (editingId ? 'Editar Matriz' : 'Nova Matriz') }}</h3>
+      <div class="title-actions">
+        <button class="btn" type="button" (click)="cancelar()">{{ consultando ? 'Voltar' : 'Cancelar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!consultando && podeEditarModulo" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+      </div>
+    </div>
+    <form [formGroup]="form" class="grid-12">
+      <label class="input-item col-span-3" [class.invalid]="isInvalid('tipo_requisicao')">Tipo*<select formControlName="tipo_requisicao"><option value="USO_CONSUMO">Uso e Consumo</option><option value="MANUTENCAO">Manutenção</option><option value="TI">TI</option></select></label>
+      <label class="input-item col-span-4" [class.invalid]="isInvalid('setor_atendimento')">Responsável pelo atendimento*<select formControlName="setor_atendimento"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setores" [ngValue]="s.id">{{ s.nome }}</option></select></label>
+      <label class="input-item col-span-4" [class.invalid]="isInvalid('setor_aquisicao')">Responsável pela aquisição*<select formControlName="setor_aquisicao"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setores" [ngValue]="s.id">{{ s.nome }}</option></select></label>
+      <label class="check-line col-span-1"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+    </form>
+  </section>
+
+  <section class="results-area table-card">
+    <div class="results-header">
+      <div><strong>Matriz configurada</strong> <span>{{ rows.length }} registro(s) encontrado(s)</span></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="rows.length; else emptyTpl">
+        <thead><tr><th>Tipo</th><th>Responsável pelo atendimento</th><th>Responsável pela aquisição</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of rows" [class.selected]="selected?.id === row.id" (click)="selecionar(row)">
+            <td>{{ row.tipo_requisicao_label || tipoLabel(row.tipo_requisicao) }}</td>
+            <td>{{ row.setor_atendimento_nome || row.setor_atendimento }}</td>
+            <td>{{ row.setor_aquisicao_nome || row.setor_aquisicao }}</td>
+            <td><span class="status-pill" [class.inactive]="row.ativo === false">{{ statusLabel(row) }}</span></td>
+            <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); consultar(row)">Consultar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); editar(row)">Editar</button><button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="$event.stopPropagation(); alternarAtivo(row)">{{ row.ativo === false ? 'Ativar' : 'Inativar' }}</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma matriz encontrada.' }}</div></ng-template>
+    </div>
+  </section>
+</div>

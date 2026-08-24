@@ -4,6 +4,7 @@ export type RequisicaoItemTipo = 'MATERIAL' | 'SERVICO';
 export type RequisicaoItemOrigem = 'PRODUTO' | 'LIVRE' | 'SERVICO';
 export type RequisicaoItemStatus = 'PENDENTE' | 'APROVADO' | 'REJEITADO' | 'EM_SEPARACAO' | 'ATENDIDO' | 'ATENDIDO_PARCIALMENTE' | 'AGUARDANDO_COTACAO' | 'EM_COTACAO' | 'PEDIDO_GERADO' | 'AGUARDANDO_RECEBIMENTO' | 'RECEBIDO' | 'SERVICO_CONTRATACAO' | 'SERVICO_CONCLUIDO' | 'CANCELADO';
 export type RequisicaoItemFinalidade = 'USO_CONSUMO' | 'ALMOXARIFADO' | 'IMOBILIZADO' | 'OUTRO';
+export type RequisicaoTipo = 'USO_CONSUMO' | 'MANUTENCAO' | 'TI';
 
 export interface RequisicaoServicoCategoria {
   id: number;
@@ -21,7 +22,24 @@ export interface RequisicaoSetor {
   ativo: boolean;
   pode_fazer_requisicao: boolean;
   recebe_requisicoes: boolean;
+  central_uso_consumo: boolean;
+  central_manutencao: boolean;
+  central_ti: boolean;
+  responsavel_compras: boolean;
   controla_estoque_uso_consumo: boolean;
+}
+
+export interface RequisicaoMatrizResponsabilidade {
+  id: number;
+  empresa: number;
+  empresa_nome?: string | null;
+  tipo_requisicao: RequisicaoTipo;
+  tipo_requisicao_label?: string | null;
+  setor_atendimento: number;
+  setor_atendimento_nome?: string | null;
+  setor_aquisicao: number;
+  setor_aquisicao_nome?: string | null;
+  ativo: boolean;
 }
 
 export interface RequisicaoMaterialCategoria {
@@ -104,6 +122,9 @@ export interface Requisicao {
   loja_nome?: string | null;
   setor: number;
   setor_nome?: string | null;
+  tipo_requisicao: RequisicaoTipo;
+  setor_responsavel: number | null;
+  setor_responsavel_nome?: string | null;
   requisitante: number;
   requisitante_nome?: string | null;
   data_requisicao: string;

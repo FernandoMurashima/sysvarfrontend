@@ -7,7 +7,7 @@ import { ProdutosService } from '../../core/services/produtos.service';
 import { RequisicoesService } from '../../core/services/requisicoes.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { Produto } from '../../core/models/produto';
-import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoServicoCategoria, RequisicaoSetor } from '../../core/models/requisicao';
+import { Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoServicoCategoria, RequisicaoSetor, RequisicaoTipo } from '../../core/models/requisicao';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
 type Option = { id: number; label: string };
@@ -50,6 +50,7 @@ export class RequisicoesComponent implements OnInit {
   search = '';
   filterStatus = '';
   filterPrioridade = '';
+  atendimentoPrevisto = '';
   visao: RequisicaoVisao = 'minhas';
   viewCounts: Partial<Record<RequisicaoVisao, number>> = {};
   page = 1;
@@ -65,6 +66,7 @@ export class RequisicoesComponent implements OnInit {
   headerForm = this.fb.group({
     loja: [null as number | null, Validators.required],
     setor: [null as number | null, Validators.required],
+    tipo_requisicao: ['USO_CONSUMO' as RequisicaoTipo, Validators.required],
     data_necessaria: [''],
     prioridade: ['NORMAL', Validators.required],
     motivo: [''],
@@ -136,6 +138,7 @@ export class RequisicoesComponent implements OnInit {
     this.itemForm.get('produto')?.valueChanges.subscribe(() => {
       this.syncProdutoUnidade();
     });
+    this.headerForm.get('tipo_requisicao')?.valueChanges.subscribe(tipo => this.resolverAtendimento(tipo as RequisicaoTipo));
   }
 
   private arrayOrResults<T>(data: any): T[] {
@@ -222,7 +225,9 @@ export class RequisicoesComponent implements OnInit {
     this.historico = [];
     this.consultando = false;
     this.selectedItem = null;
-    this.headerForm.reset({ loja: null, setor: null, data_necessaria: '', prioridade: 'NORMAL', motivo: '' });
+    this.atendimentoPrevisto = '';
+    this.headerForm.reset({ loja: null, setor: null, tipo_requisicao: 'USO_CONSUMO', data_necessaria: '', prioridade: 'NORMAL', motivo: '' });
+    this.resolverAtendimento('USO_CONSUMO');
     this.limparItem();
     this.view = 'form';
   }
@@ -234,10 +239,12 @@ export class RequisicoesComponent implements OnInit {
       this.headerForm.reset({
         loja: req.loja,
         setor: req.setor,
+        tipo_requisicao: req.tipo_requisicao || 'USO_CONSUMO',
         data_necessaria: req.data_necessaria || '',
         prioridade: req.prioridade,
         motivo: this.motivoRequisicao(req),
       });
+      this.atendimentoPrevisto = req.setor_responsavel_nome || '';
       this.itens = req.itens || [];
       this.historico = req.historico || [];
       this.selectedItem = null;
@@ -605,6 +612,7 @@ export class RequisicoesComponent implements OnInit {
       setor: raw.setor ? Number(raw.setor) : undefined,
       data_necessaria: raw.data_necessaria || null,
       prioridade: (raw.prioridade || 'NORMAL') as Requisicao['prioridade'],
+      tipo_requisicao: (raw.tipo_requisicao || 'USO_CONSUMO') as RequisicaoTipo,
       justificativa: raw.motivo || '',
       observacoes: '',
     };
@@ -684,8 +692,25 @@ export class RequisicoesComponent implements OnInit {
       descricao_servico: 'Descrição do serviço',
       setor: 'Setor',
       loja: 'Loja',
+      tipo_requisicao: 'Tipo da requisição',
       itens: 'Itens',
     };
     return labels[field] || field;
+  }
+
+  tipoRequisicaoLabel(tipo: string | null | undefined): string {
+    const labels: Record<string, string> = { USO_CONSUMO: 'Uso e Consumo', MANUTENCAO: 'Manutenção', TI: 'TI' };
+    return labels[tipo || 'USO_CONSUMO'] || String(tipo || '');
+  }
+
+  private resolverAtendimento(tipo: RequisicaoTipo): void {
+    if (!tipo) {
+      this.atendimentoPrevisto = '';
+      return;
+    }
+    this.api.resolverResponsabilidade(tipo).subscribe({
+      next: resp => this.atendimentoPrevisto = resp.setor_atendimento_nome,
+      error: () => this.atendimentoPrevisto = '',
+    });
   }
 }

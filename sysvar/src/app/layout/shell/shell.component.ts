@@ -57,6 +57,7 @@ export class ShellComponent {
         { label: 'Fornecedores',        link: '/fornecedores',  icon: 'bi bi-truck',         roles: this.comprasRoles, moduloEmpresa: 'cadastros' },
         { label: 'Funcionários',        link: '/funcionarios',  icon: 'bi bi-person-badge',  roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
         { label: 'Setores',             link: '/setores',       icon: 'bi bi-diagram-3',     roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
+        { label: 'Matriz de Responsabilidade', link: '/matriz-requisicao', icon: 'bi bi-diagram-2', roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
         { label: 'Categorias de Material', link: '/categorias-material', icon: 'bi bi-tags', roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
         { label: 'Finalidades de Aquisição', link: '/finalidades-aquisicao', icon: 'bi bi-ui-checks', roles: this.cadastrosRoles, moduloEmpresa: 'cadastros' },
       ]

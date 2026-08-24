@@ -39,6 +39,7 @@ import { PedidosCompraComponent } from './features/pedidos-compra/pedidos-compra
 import { CotacoesComponent } from './features/cotacoes/cotacoes.component';
 import { RequisicoesComponent } from './features/requisicoes/requisicoes.component';
 import { SetoresComponent } from './features/setores/setores.component';
+import { MatrizRequisicaoComponent } from './features/matriz-requisicao/matriz-requisicao.component';
 import { CategoriasMaterialComponent } from './features/categorias-material/categorias-material.component';
 import { FinalidadesAquisicaoComponent } from './features/finalidades-aquisicao/finalidades-aquisicao.component';
 import { NotasFiscaisEntradaComponent } from './features/notas-fiscais-entrada/notas-fiscais-entrada.component';
@@ -103,6 +104,7 @@ export const routes: Routes = [
       { path: 'funcionarios', component: FuncionariosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'cargos', component: CargosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'setores', component: SetoresComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
+      { path: 'matriz-requisicao', component: MatrizRequisicaoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'categorias-material', component: CategoriasMaterialComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'finalidades-aquisicao', component: FinalidadesAquisicaoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'cadastros' } },
       { path: 'natureza', component: NatLancamentosComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' } },
@@ -136,7 +138,7 @@ export const routes: Routes = [
       { path: 'fiscal/regras-tributarias', component: RegrasTributariasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },
       { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'distribuicao' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
-      { path: 'requisicoes', component: RequisicoesComponent, data: { processoAnyOf: ['requisicoes.fazer', 'requisicoes.aprovar', 'requisicoes.atender'] } },
+      { path: 'requisicoes', component: RequisicoesComponent, data: { moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'], processoAnyOf: ['requisicoes.fazer', 'requisicoes.aprovar', 'requisicoes.atender'] } },
       { path: 'compras/requisicoes', redirectTo: 'requisicoes', pathMatch: 'full' },
       { path: 'compras/pedidos', component: PedidosCompraComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/cotacoes', component: CotacoesComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },

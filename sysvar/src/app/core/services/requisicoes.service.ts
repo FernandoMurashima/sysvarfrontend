@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Paginated, Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoServicoCategoria, RequisicaoSetor } from '../models/requisicao';
+import { Paginated, Requisicao, RequisicaoFinalidadeAquisicao, RequisicaoHistorico, RequisicaoItem, RequisicaoMaterialCategoria, RequisicaoMatrizResponsabilidade, RequisicaoServicoCategoria, RequisicaoSetor, RequisicaoTipo } from '../models/requisicao';
 
 @Injectable({ providedIn: 'root' })
 export class RequisicoesService {
@@ -12,6 +12,7 @@ export class RequisicoesService {
   private historico = `${environment.apiBaseUrl}/compras/requisicao-historico/`;
   private categorias = `${environment.apiBaseUrl}/compras/requisicao-servico-categorias/`;
   private setores = `${environment.apiBaseUrl}/compras/requisicao-setores/`;
+  private matriz = `${environment.apiBaseUrl}/compras/requisicao-matriz-responsabilidade/`;
   private categoriasMaterial = `${environment.apiBaseUrl}/compras/requisicao-material-categorias/`;
   private finalidades = `${environment.apiBaseUrl}/compras/requisicao-finalidades-aquisicao/`;
 
@@ -98,6 +99,30 @@ export class RequisicoesService {
 
   listarSetoresAdmin(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoSetor[] | Paginated<RequisicaoSetor>> {
     return this.http.get<RequisicaoSetor[] | Paginated<RequisicaoSetor>>(this.setores, { params: this.params(params) });
+  }
+
+  listarMatrizResponsabilidade(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoMatrizResponsabilidade[] | Paginated<RequisicaoMatrizResponsabilidade>> {
+    return this.http.get<RequisicaoMatrizResponsabilidade[] | Paginated<RequisicaoMatrizResponsabilidade>>(this.matriz, { params: this.params(params) });
+  }
+
+  resolverResponsabilidade(tipo: RequisicaoTipo): Observable<{ tipo_requisicao: RequisicaoTipo; setor_atendimento: number; setor_atendimento_nome: string; setor_aquisicao: number; setor_aquisicao_nome: string }> {
+    return this.http.get<{ tipo_requisicao: RequisicaoTipo; setor_atendimento: number; setor_atendimento_nome: string; setor_aquisicao: number; setor_aquisicao_nome: string }>(`${this.matriz}resolver/`, { params: new HttpParams().set('tipo_requisicao', tipo) });
+  }
+
+  criarMatrizResponsabilidade(payload: Partial<RequisicaoMatrizResponsabilidade>): Observable<RequisicaoMatrizResponsabilidade> {
+    return this.http.post<RequisicaoMatrizResponsabilidade>(this.matriz, payload);
+  }
+
+  atualizarMatrizResponsabilidade(id: number, payload: Partial<RequisicaoMatrizResponsabilidade>): Observable<RequisicaoMatrizResponsabilidade> {
+    return this.http.patch<RequisicaoMatrizResponsabilidade>(`${this.matriz}${id}/`, payload);
+  }
+
+  ativarMatrizResponsabilidade(id: number): Observable<RequisicaoMatrizResponsabilidade> {
+    return this.http.post<RequisicaoMatrizResponsabilidade>(`${this.matriz}${id}/ativar/`, {});
+  }
+
+  inativarMatrizResponsabilidade(id: number): Observable<RequisicaoMatrizResponsabilidade> {
+    return this.http.post<RequisicaoMatrizResponsabilidade>(`${this.matriz}${id}/inativar/`, {});
   }
 
   listarCategoriasMaterial(params?: Record<string, string | number | boolean | null | undefined>): Observable<RequisicaoMaterialCategoria[] | Paginated<RequisicaoMaterialCategoria>> {
