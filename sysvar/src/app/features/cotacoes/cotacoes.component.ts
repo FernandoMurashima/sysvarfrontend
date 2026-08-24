@@ -50,6 +50,7 @@ export class CotacoesComponent implements OnInit {
   requisicoesDisponiveis: CotacaoRequisicaoDisponivel[] = [];
   necessidades: CotacaoNecessidade[] = [];
   necessidadesExpandidas = new Set<string>();
+  necessidadesSelecionadas = new Set<string>();
   modalNecessidadesAberto = false;
   modalItensCotacaoAberto = false;
   modalFornecedoresCotacaoAberto = false;
@@ -655,6 +656,7 @@ export class CotacoesComponent implements OnInit {
     if (!this.atual) return;
     this.modalNecessidadesAberto = true;
     this.necessidadesExpandidas.clear();
+    this.necessidadesSelecionadas.clear();
     this.loadNecessidades();
   }
 
@@ -682,6 +684,14 @@ export class CotacoesComponent implements OnInit {
     row.requisicoes_ids.forEach(id => this.requisicoesSelecionadas.add(id));
   }
 
+  selecionarNecessidade(row: CotacaoNecessidade): void {
+    this.necessidadesSelecionadas.add(row.key);
+  }
+
+  toggleOrigemNecessidade(origem: CotacaoNecessidade['origens'][number], checked: boolean): void {
+    checked ? this.necessidadesSelecionadas.add(origem.key) : this.necessidadesSelecionadas.delete(origem.key);
+  }
+
   toggleRequisicao(req: CotacaoRequisicaoDisponivel, checked: boolean): void {
     checked ? this.requisicoesSelecionadas.add(req.id) : this.requisicoesSelecionadas.delete(req.id);
   }
@@ -704,6 +714,20 @@ export class CotacoesComponent implements OnInit {
     });
   }
 
+  adicionarNecessidades(): void {
+    if (!this.atual || !this.podeEditarItens || !this.necessidadesSelecionadas.size) return;
+    this.api.adicionarNecessidades(this.atual.id, Array.from(this.necessidadesSelecionadas)).subscribe({
+      next: cotacao => {
+        this.atual = cotacao;
+        this.modalNecessidadesAberto = false;
+        this.necessidadesSelecionadas.clear();
+        this.loadItens(cotacao.id);
+        this.loadCotacoes();
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao adicionar necessidades.'),
+    });
+  }
+
   removerRequisicao(requisicao: number): void {
     if (!this.atual || !this.podeEditarItens) return;
     this.api.removerRequisicao(this.atual.id, requisicao).subscribe({
@@ -720,7 +744,9 @@ export class CotacoesComponent implements OnInit {
   }
 
   origemItem(item: CotacaoItem): string {
-    return item.origem === 'REQUISICAO' ? `REQ-${item.requisicao_origem_numero || item.requisicao_item_origem}` : 'Avulso';
+    if (item.origem === 'REQUISICAO') return `REQ-${item.requisicao_origem_numero || item.requisicao_item_origem}`;
+    if (item.origem === 'OS') return `OS-${item.ordem_servico_origem_id || item.ordem_servico_material_origem}`;
+    return 'Avulso';
   }
 
   produtoSelecionado(): void {

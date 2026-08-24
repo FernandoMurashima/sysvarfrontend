@@ -52,7 +52,7 @@ export interface Cotacao {
 export interface CotacaoItem {
   id: number;
   cotacao: number;
-  origem: 'AVULSO' | 'REQUISICAO';
+  origem: 'AVULSO' | 'REQUISICAO' | 'OS';
   produto?: number | null;
   produto_descricao?: string | null;
   descricao: string;
@@ -66,6 +66,8 @@ export interface CotacaoItem {
   observacao?: string;
   requisicao_item_origem?: number | null;
   requisicao_origem_numero?: number | null;
+  ordem_servico_material_origem?: number | null;
+  ordem_servico_origem_id?: number | null;
 }
 
 export interface CotacaoRequisicao {
@@ -94,17 +96,27 @@ export interface CotacaoNecessidade {
   nome: string;
   quantidade_total_solicitada: string | number;
   quantidade_pendente: string | number;
+  estoque_central: string | number;
+  quantidade_em_compra: string | number;
+  quantidade_sem_cobertura: string | number;
   numero_requisicoes: number;
   requisicoes_ids: number[];
   lojas: string[];
   setores: string[];
   origens: Array<{
-    requisicao: number;
+    key: string;
+    tipo_origem: 'REQ' | 'OS';
+    origem_id: number;
+    documento_origem: string;
+    documento_id: number;
+    requisicao?: number;
     numero: number;
     loja_nome: string;
     setor_nome: string;
-    quantidade_solicitada: string | number;
+    quantidade_total_solicitada: string | number;
     quantidade_pendente: string | number;
+    estoque_central: string | number;
+    quantidade_em_compra: string | number;
   }>;
 }
 

@@ -20,7 +20,7 @@ describe('CotacoesComponent', () => {
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'removerRequisicao', 'listarPrazosPagamento']);
+    api = jasmine.createSpyObj<CotacoesService>('CotacoesService', ['listar', 'criar', 'atualizar', 'listarItens', 'criarItem', 'atualizarItem', 'excluirItem', 'listarFornecedores', 'adicionarFornecedor', 'atualizarFornecedor', 'removerFornecedor', 'listarPropostas', 'criarProposta', 'atualizarProposta', 'comparativo', 'selecionarVencedor', 'enviarAprovacao', 'aprovar', 'rejeitar', 'cancelar', 'apoioDecisaoItem', 'requisicoesDisponiveis', 'necessidades', 'adicionarRequisicoes', 'adicionarNecessidades', 'removerRequisicao', 'listarPrazosPagamento']);
     requisicoesApi = jasmine.createSpyObj<RequisicoesService>('RequisicoesService', ['lojasPermitidas', 'listarCategoriasMaterial']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     formasPagamentoApi = jasmine.createSpyObj<FormasPagamentoService>('FormasPagamentoService', ['list']);
@@ -56,9 +56,10 @@ describe('CotacoesComponent', () => {
       { id: 21, numero: 124, loja: 2, loja_nome: 'Loja A', setor_nome: 'Adm', requisitante_nome: 'maria', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'URGENTE', itens: [] },
     ] as any));
     api.necessidades.and.returnValue(of([
-      { key: 'produto:5', produto: 5, nome: 'Produto A', quantidade_total_solicitada: '3.000', quantidade_pendente: '3.000', numero_requisicoes: 2, requisicoes_ids: [20, 21], lojas: ['Loja A'], setores: ['TI'], origens: [{ requisicao: 20, numero: 123, loja_nome: 'Loja A', setor_nome: 'TI', quantidade_solicitada: '1.000', quantidade_pendente: '1.000' }] },
+      { key: 'produto:5', produto: 5, nome: 'Produto A', quantidade_total_solicitada: '3.000', quantidade_pendente: '3.000', estoque_central: '1.000', quantidade_em_compra: '1.000', quantidade_sem_cobertura: '1.000', numero_requisicoes: 2, requisicoes_ids: [20, 21], lojas: ['Loja A'], setores: ['TI'], origens: [{ key: 'REQ:20', tipo_origem: 'REQ', origem_id: 20, documento_origem: 'REQ 123', documento_id: 20, requisicao: 20, numero: 123, loja_nome: 'Loja A', setor_nome: 'TI', quantidade_total_solicitada: '1.000', quantidade_pendente: '1.000', estoque_central: '0.000', quantidade_em_compra: '0.000' }] },
     ] as any));
     api.adicionarRequisicoes.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [{ id: 1, cotacao: 7, requisicao: 20, requisicao_numero: 123 }] } as any));
+    api.adicionarNecessidades.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO' } as any));
     api.removerRequisicao.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'EM_ELABORACAO', requisicoes_vinculadas: [] } as any));
     auth.podeAcessarModulo.and.returnValue(true);
     auth.podeProcesso.and.returnValue(true);

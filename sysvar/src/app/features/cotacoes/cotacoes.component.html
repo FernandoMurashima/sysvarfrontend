@@ -310,19 +310,19 @@
       </div>
       <div class="table-wrapper">
         <table class="table">
-          <thead><tr><th>Produto/Material</th><th>Total</th><th>Pendente</th><th>Requisições</th><th>Lojas/Setores</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Produto/Material</th><th>Total</th><th>Pendente</th><th>Estoque</th><th>Em compra</th><th>Sem cobertura</th><th>Origem</th><th>Lojas/Setores</th><th>Ações</th></tr></thead>
           <tbody>
             <ng-container *ngFor="let n of necessidades">
               <tr>
-                <td>{{ n.nome }}</td><td>{{ n.quantidade_total_solicitada }}</td><td>{{ n.quantidade_pendente }}</td><td>{{ n.numero_requisicoes }}</td><td>{{ n.lojas.join(', ') }} / {{ n.setores.join(', ') }}</td>
-                <td><button class="btn sm" type="button" (click)="toggleNecessidade(n)">{{ necessidadesExpandidas.has(n.key) ? 'Ocultar' : 'Origens' }}</button><button class="btn sm" type="button" (click)="selecionarRequisicoesDaNecessidade(n)">Selecionar requisições</button></td>
+                <td>{{ n.nome }}</td><td>{{ n.quantidade_total_solicitada }}</td><td>{{ n.quantidade_pendente }}</td><td>{{ n.estoque_central }}</td><td>{{ n.quantidade_em_compra }}</td><td>{{ n.quantidade_sem_cobertura }}</td><td>{{ n.numero_requisicoes ? 'REQ/OS' : 'OS' }}</td><td>{{ n.lojas.join(', ') }} / {{ n.setores.join(', ') }}</td>
+                <td><button class="btn sm" type="button" (click)="toggleNecessidade(n)">{{ necessidadesExpandidas.has(n.key) ? 'Ocultar' : 'Origens' }}</button><button class="btn sm" type="button" (click)="selecionarNecessidade(n)">Selecionar</button></td>
               </tr>
-              <tr *ngIf="necessidadesExpandidas.has(n.key)"><td colspan="6"><div class="req-items"><div *ngFor="let o of n.origens">REQ-{{ o.numero }} - {{ o.setor_nome }} - {{ o.loja_nome }} - {{ o.quantidade_pendente }}</div></div></td></tr>
+              <tr *ngIf="necessidadesExpandidas.has(n.key)"><td colspan="9"><div class="req-items"><label *ngFor="let o of n.origens"><input type="checkbox" [checked]="necessidadesSelecionadas.has(o.key)" (change)="toggleOrigemNecessidade(o, $any($event.target).checked)" /> {{ o.documento_origem }} - {{ o.setor_nome }} - {{ o.loja_nome }} - pendente {{ o.quantidade_pendente }} - estoque {{ o.estoque_central }} - compra {{ o.quantidade_em_compra }}</label></div></td></tr>
             </ng-container>
           </tbody>
         </table>
       </div>
-      <div class="actions-form"><button class="btn primary" type="button" [disabled]="!requisicoesSelecionadas.size" (click)="adicionarRequisicoes()">Adicionar à Cotação</button></div>
+      <div class="actions-form"><button class="btn primary" type="button" [disabled]="!necessidadesSelecionadas.size" (click)="adicionarNecessidades()">Adicionar à Cotação</button></div>
     </div>
   </section>
 </div>

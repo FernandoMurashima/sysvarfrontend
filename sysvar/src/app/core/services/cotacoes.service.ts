@@ -131,6 +131,10 @@ export class CotacoesService {
     return this.http.post<Cotacao>(`${this.base}${cotacao}/adicionar-requisicoes/`, { requisicoes });
   }
 
+  adicionarNecessidades(cotacao: number, necessidades: string[]): Observable<Cotacao> {
+    return this.http.post<Cotacao>(`${this.base}${cotacao}/adicionar-necessidades/`, { necessidades });
+  }
+
   removerRequisicao(cotacao: number, requisicao: number): Observable<Cotacao> {
     return this.http.post<Cotacao>(`${this.base}${cotacao}/remover-requisicao/`, { requisicao });
   }
