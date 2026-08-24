@@ -28,7 +28,8 @@
     </div>
     <form [formGroup]="form" class="grid-12">
       <label class="input-item col-span-4" [class.invalid]="isInvalid('nome')">Nome*<input formControlName="nome" maxlength="80" /><small class="field-error" *ngIf="isInvalid('nome')">Nome do setor é obrigatório.</small></label>
-      <label class="input-item col-span-8">Descrição<input formControlName="descricao" /></label>
+      <label class="input-item col-span-3">Loja física<select formControlName="loja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select></label>
+      <label class="input-item col-span-5">Descrição<input formControlName="descricao" /></label>
       <label class="check-line col-span-2"><input type="checkbox" formControlName="ativo" /> Ativo</label>
       <label class="check-line col-span-3"><input type="checkbox" formControlName="pode_fazer_requisicao" /> Pode fazer requisição</label>
       <label class="check-line col-span-3"><input type="checkbox" formControlName="recebe_requisicoes" /> Recebe requisições</label>
@@ -46,11 +47,12 @@
     </div>
     <div class="table-wrapper">
       <table class="table" *ngIf="filtered.length; else emptyTpl">
-        <thead><tr><th>Nome</th><th>Empresa</th><th>Descrição</th><th>Pode fazer</th><th>Recebe</th><th>Uso/Consumo</th><th>Manutenção</th><th>TI</th><th>Compras</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Empresa</th><th>Loja física</th><th>Descrição</th><th>Pode fazer</th><th>Recebe</th><th>Uso/Consumo</th><th>Manutenção</th><th>TI</th><th>Compras</th><th>Ativo</th><th>Ações</th></tr></thead>
         <tbody>
           <tr *ngFor="let s of filtered" [class.selected]="selected?.id === s.id" (click)="selecionar(s)">
             <td>{{ s.nome }}</td>
             <td>{{ s.empresa_nome || s.empresa }}</td>
+            <td>{{ s.loja_nome || s.loja || '-' }}</td>
             <td>{{ s.descricao || '-' }}</td>
             <td>{{ s.pode_fazer_requisicao ? 'Sim' : 'Não' }}</td>
             <td>{{ s.recebe_requisicoes ? 'Sim' : 'Não' }}</td>

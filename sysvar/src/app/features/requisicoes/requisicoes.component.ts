@@ -444,6 +444,14 @@ export class RequisicoesComponent implements OnInit {
     this.api.aguardarCotacao(item.id).subscribe({ next: () => this.recarregarAtual(), error: err => this.error(err?.error?.detail || 'Erro ao encaminhar item.') });
   }
 
+  podeAguardarCotacao(item: RequisicaoItem): boolean {
+    const indicador = item.indicador_compra;
+    return !indicador?.cotacoes?.length
+      && !indicador?.pedidos?.length
+      && indicador?.codigo !== 'EM_PROCESSO_COMPRA'
+      && !['AGUARDANDO_COTACAO', 'EM_COTACAO', 'PEDIDO_GERADO', 'ATENDIDO', 'CANCELADO', 'REJEITADO'].includes(item.status);
+  }
+
   recarregarAtual(): void {
     if (!this.atual) return;
     this.api.get(this.atual.id).subscribe(req => {

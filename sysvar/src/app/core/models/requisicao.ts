@@ -17,6 +17,8 @@ export interface RequisicaoSetor {
   id: number;
   empresa: number;
   empresa_nome?: string | null;
+  loja: number | null;
+  loja_nome?: string | null;
   nome: string;
   descricao?: string;
   ativo: boolean;

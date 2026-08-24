@@ -19,6 +19,7 @@ export class SetoresComponent implements OnInit {
   private auth = inject(AuthService);
 
   setores: RequisicaoSetor[] = [];
+  lojas: { id: number; label: string }[] = [];
   filtered: RequisicaoSetor[] = [];
   selected: RequisicaoSetor | null = null;
   editingId: number | null = null;
@@ -34,6 +35,7 @@ export class SetoresComponent implements OnInit {
 
   form = this.fb.group({
     nome: ['', Validators.required],
+    loja: [null as number | null],
     descricao: [''],
     ativo: [true],
     pode_fazer_requisicao: [true],
@@ -51,6 +53,9 @@ export class SetoresComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregar();
+    this.api.lojasPermitidas().subscribe(resp => {
+      this.lojas = this.arrayOrResults<any>(resp).map(l => ({ id: Number(l.id ?? l.Idloja), label: l.nome_loja || l.apelido_loja || String(l.id ?? l.Idloja) })).filter(l => !!l.id);
+    });
   }
 
   carregar(): void {
@@ -76,7 +81,7 @@ export class SetoresComponent implements OnInit {
     this.consultando = false;
     this.editingId = null;
     this.submitted = false;
-    this.form.reset({ nome: '', descricao: '', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false });
+    this.form.reset({ nome: '', loja: null, descricao: '', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false });
     this.form.enable();
   }
 
@@ -96,6 +101,7 @@ export class SetoresComponent implements OnInit {
     this.submitted = false;
     this.form.reset({
       nome: row.nome,
+      loja: row.loja || null,
       descricao: row.descricao || '',
       ativo: row.ativo !== false,
       pode_fazer_requisicao: row.pode_fazer_requisicao !== false,
