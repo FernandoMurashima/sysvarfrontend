@@ -127,6 +127,8 @@ export interface Requisicao {
   tipo_requisicao: RequisicaoTipo;
   setor_responsavel: number | null;
   setor_responsavel_nome?: string | null;
+  ordem_servico_id?: number | null;
+  ordem_servico_status?: string | null;
   requisitante: number;
   requisitante_nome?: string | null;
   data_requisicao: string;
@@ -137,6 +139,33 @@ export interface Requisicao {
   status: RequisicaoStatus;
   itens?: RequisicaoItem[];
   historico?: RequisicaoHistorico[];
+}
+
+export interface OrdemServico {
+  id: number;
+  requisicao: number;
+  requisicao_numero?: number | null;
+  empresa: number;
+  loja: number;
+  loja_nome?: string | null;
+  setor_solicitante: number;
+  setor_solicitante_nome?: string | null;
+  setor_responsavel: number;
+  setor_responsavel_nome?: string | null;
+  tipo: 'MANUTENCAO' | 'TI';
+  tipo_label?: string | null;
+  origem: string;
+  descricao: string;
+  status: 'ABERTA' | 'EM_TRIAGEM' | 'EM_ATENDIMENTO' | 'AGUARDANDO_MATERIAL' | 'AGUARDANDO_TERCEIRO' | 'CONCLUIDA' | 'CANCELADA';
+  status_label?: string | null;
+  responsavel: number | null;
+  responsavel_nome?: string | null;
+  diagnostico: string;
+  solucao: string;
+  previsao_atendimento: string | null;
+  data_inicio: string | null;
+  data_conclusao: string | null;
+  observacoes: string;
 }
 
 export interface Paginated<T> {

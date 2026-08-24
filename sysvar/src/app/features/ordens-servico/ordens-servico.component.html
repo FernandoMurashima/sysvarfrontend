@@ -1,0 +1,63 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left"><h1>Ordens de Serviço</h1><button class="info-button" type="button" title="Acompanhe atendimentos técnicos de requisições.">i</button></div>
+    <div class="title-actions">
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="carregar()" [disabled]="loading">Atualizar</button>
+    </div>
+  </section>
+
+  <section class="alert success" *ngIf="successMsg">{{ successMsg }}</section>
+  <section class="alert error" *ngIf="errorMsg">{{ errorMsg }}</section>
+
+  <section class="filter-bar">
+    <label class="inline-filter"><span>Status</span><select [(ngModel)]="filtroStatus" (ngModelChange)="carregar()"><option value="">Todos</option><option value="ABERTA">Aberta</option><option value="EM_TRIAGEM">Em triagem</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="AGUARDANDO_MATERIAL">Aguardando material</option><option value="AGUARDANDO_TERCEIRO">Aguardando terceiro</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option></select></label>
+    <label class="inline-filter"><span>Tipo</span><select [(ngModel)]="filtroTipo" (ngModelChange)="carregar()"><option value="">Todos</option><option value="MANUTENCAO">Manutenção</option><option value="TI">TI</option></select></label>
+    <label class="inline-filter"><span>Loja</span><select [(ngModel)]="filtroLoja" (ngModelChange)="carregar()"><option value="">Todas</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select></label>
+    <label class="inline-filter"><span>Responsável</span><input type="number" [(ngModel)]="filtroResponsavel" (keyup.enter)="carregar()" placeholder="ID" /></label>
+  </section>
+
+  <section class="results-area table-card">
+    <div class="results-header"><div><strong>Ordens cadastradas</strong> <span>{{ rows.length }} registro(s) encontrado(s)</span></div></div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="rows.length; else emptyTpl">
+        <thead><tr><th>OS</th><th>Requisição</th><th>Tipo</th><th>Loja</th><th>Setor responsável</th><th>Responsável</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of rows" [class.selected]="selected?.id === row.id" (click)="abrir(row)">
+            <td>{{ row.id }}</td>
+            <td>REQ {{ row.requisicao_numero || row.requisicao }}</td>
+            <td>{{ row.tipo_label || tipoLabel(row.tipo) }}</td>
+            <td>{{ row.loja_nome || row.loja }}</td>
+            <td>{{ row.setor_responsavel_nome || row.setor_responsavel }}</td>
+            <td>{{ row.responsavel_nome || row.responsavel || '-' }}</td>
+            <td><span class="status-pill">{{ row.status_label || statusLabel(row.status) }}</span></td>
+            <td class="row-actions"><button class="btn sm" type="button" (click)="$event.stopPropagation(); abrir(row)">Abrir</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl><div class="empty-hint">{{ loading ? 'Carregando...' : 'Nenhuma ordem de serviço encontrada.' }}</div></ng-template>
+    </div>
+  </section>
+
+  <section class="card form" *ngIf="selected as os">
+    <div class="form-title-row">
+      <h3>OS {{ os.id }} / REQ {{ os.requisicao_numero || os.requisicao }}</h3>
+      <button class="btn primary" type="button" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+    </div>
+    <form [formGroup]="form" class="grid-12">
+      <div class="input-item col-span-3"><span>Tipo</span><span class="readonly-field">{{ os.tipo_label || tipoLabel(os.tipo) }}</span></div>
+      <div class="input-item col-span-3"><span>Loja solicitante</span><span class="readonly-field">{{ os.loja_nome || os.loja }}</span></div>
+      <div class="input-item col-span-3"><span>Setor solicitante</span><span class="readonly-field">{{ os.setor_solicitante_nome || os.setor_solicitante }}</span></div>
+      <div class="input-item col-span-3"><span>Setor responsável</span><span class="readonly-field">{{ os.setor_responsavel_nome || os.setor_responsavel }}</span></div>
+      <label class="input-item col-span-3">Status<select formControlName="status"><option value="ABERTA">Aberta</option><option value="EM_TRIAGEM">Em triagem</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="AGUARDANDO_MATERIAL">Aguardando material</option><option value="AGUARDANDO_TERCEIRO">Aguardando terceiro</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option></select></label>
+      <label class="input-item col-span-3">Responsável<input type="number" formControlName="responsavel" placeholder="ID do usuário" /></label>
+      <label class="input-item col-span-3">Previsão<input type="datetime-local" formControlName="previsao_atendimento" /></label>
+      <label class="input-item col-span-3">Início<input type="datetime-local" formControlName="data_inicio" /></label>
+      <div class="input-item col-span-12"><span>Requisição de origem</span><span class="readonly-field">{{ os.descricao || '-' }}</span></div>
+      <label class="input-item col-span-6">Diagnóstico<textarea rows="3" formControlName="diagnostico"></textarea></label>
+      <label class="input-item col-span-6">Solução<textarea rows="3" formControlName="solucao"></textarea></label>
+      <label class="input-item col-span-12">Observações<textarea rows="2" formControlName="observacoes"></textarea></label>
+      <div class="input-item col-span-3"><span>Conclusão</span><span class="readonly-field">{{ os.data_conclusao ? (os.data_conclusao | date:'short') : '-' }}</span></div>
+    </form>
+  </section>
+</div>

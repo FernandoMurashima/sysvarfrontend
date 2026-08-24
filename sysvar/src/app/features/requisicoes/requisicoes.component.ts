@@ -551,6 +551,10 @@ export class RequisicoesComponent implements OnInit {
       CONCLUIDA: 'Concluída',
       REJEITADA: 'Rejeitada',
       CANCELADA: 'Cancelada',
+      ABERTA: 'Aberta',
+      EM_TRIAGEM: 'Em triagem',
+      AGUARDANDO_MATERIAL: 'Aguardando material',
+      AGUARDANDO_TERCEIRO: 'Aguardando terceiro',
     };
     return labels[status] || status.replace(/_/g, ' ');
   }

@@ -38,6 +38,7 @@ import { InsumosComponent } from './features/insumos/insumos.component';
 import { PedidosCompraComponent } from './features/pedidos-compra/pedidos-compra.component';
 import { CotacoesComponent } from './features/cotacoes/cotacoes.component';
 import { RequisicoesComponent } from './features/requisicoes/requisicoes.component';
+import { OrdensServicoComponent } from './features/ordens-servico/ordens-servico.component';
 import { SetoresComponent } from './features/setores/setores.component';
 import { MatrizRequisicaoComponent } from './features/matriz-requisicao/matriz-requisicao.component';
 import { CategoriasMaterialComponent } from './features/categorias-material/categorias-material.component';
@@ -139,6 +140,7 @@ export const routes: Routes = [
       { path: 'fiscal/faturamento', component: FaturamentoComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'distribuicao' } },
       { path: 'material', component: MateriaisComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'requisicoes', component: RequisicoesComponent, data: { moduloEmpresaAnyOf: ['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas'], processoAnyOf: ['requisicoes.fazer', 'requisicoes.aprovar', 'requisicoes.atender'] } },
+      { path: 'ordens-servico', component: OrdensServicoComponent, data: { processoAnyOf: ['requisicoes.atender'] } },
       { path: 'compras/requisicoes', redirectTo: 'requisicoes', pathMatch: 'full' },
       { path: 'compras/pedidos', component: PedidosCompraComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },
       { path: 'compras/cotacoes', component: CotacoesComponent, data: { roles: ['Diretor', 'Gerente', 'AssistentePagar'], moduloEmpresa: 'compras' } },

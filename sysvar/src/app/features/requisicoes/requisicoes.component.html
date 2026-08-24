@@ -80,6 +80,7 @@
         <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
         <label class="input-item col-span-1">Prioridade*<select formControlName="prioridade"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option><option value="EMERGENCIAL">Emergencial</option></select></label>
         <div class="input-item col-span-1"><span>Status</span><span class="status-pill status-readonly">{{ statusLabel(atual?.status || 'RASCUNHO') }}</span></div>
+        <div class="input-item col-span-2" *ngIf="atual?.ordem_servico_id"><span>OS vinculada</span><span class="readonly-field">OS {{ atual?.ordem_servico_id }} / {{ statusLabel(atual?.ordem_servico_status || '') }}</span></div>
         <label class="input-item col-span-12 motivo-field">Motivo da Requisição<textarea rows="2" formControlName="motivo"></textarea></label>
       </form>
 

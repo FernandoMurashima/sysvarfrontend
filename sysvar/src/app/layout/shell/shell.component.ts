@@ -95,6 +95,7 @@ export class ShellComponent {
     },
 
     { label: 'Requisições', link: '/requisicoes', icon: 'bi bi-clipboard-check', processoAnyOf: ['requisicoes.fazer', 'requisicoes.aprovar', 'requisicoes.atender'] },
+    { label: 'Ordens de Serviço', link: '/ordens-servico', icon: 'bi bi-tools', processoAnyOf: ['requisicoes.atender'] },
 
     {
       label: 'Estoque', icon: 'bi bi-archive', roles: this.estoqueConsultaRoles, moduloEmpresa: 'estoque',
