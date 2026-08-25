@@ -50,6 +50,10 @@ export class OrdensServicoComponent implements OnInit {
     observacoes: [''],
   });
 
+  get osConcluida(): boolean {
+    return this.selected?.status === 'CONCLUIDA';
+  }
+
   ngOnInit(): void {
     this.carregar();
     this.produtosApi.list({ tipo_produto: '2', ativo: 'true', page_size: 100 }).subscribe(resp => {
@@ -94,6 +98,13 @@ export class OrdensServicoComponent implements OnInit {
           data_inicio: this.toLocalInput(os.data_inicio),
           observacoes: os.observacoes || '',
         });
+        if (os.status === 'CONCLUIDA') {
+          this.form.disable({ emitEvent: false });
+          this.materialForm.disable({ emitEvent: false });
+        } else {
+          this.form.enable({ emitEvent: false });
+          this.materialForm.enable({ emitEvent: false });
+        }
       },
       error: err => this.errorMsg = this.extractMessages(err, 'Falha ao abrir ordem de serviço.').join(' '),
     });
@@ -107,7 +118,7 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   salvar(): void {
-    if (!this.selected) return;
+    if (!this.selected || this.osConcluida) return;
     this.saving = true;
     const raw = this.form.getRawValue();
     this.api.atualizarOrdemServico(this.selected.id, {
@@ -134,7 +145,7 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   salvarMaterial(): void {
-    if (!this.selected) return;
+    if (!this.selected || this.osConcluida) return;
     const raw = this.materialForm.getRawValue();
     const payload: Partial<OrdemServicoMaterial> = {
       ordem_servico: this.selected.id,
@@ -157,6 +168,7 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   editarMaterial(material: OrdemServicoMaterial): void {
+    if (this.osConcluida) return;
     this.editingMaterial = material;
     this.materialForm.reset({
       produto: material.produto,
@@ -167,6 +179,7 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   removerMaterial(material: OrdemServicoMaterial): void {
+    if (this.osConcluida) return;
     this.api.removerMaterialOrdemServico(material.id).subscribe({
       next: () => {
         this.successMsg = 'Material removido.';
@@ -178,6 +191,7 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   atenderMaterial(material: OrdemServicoMaterial): void {
+    if (this.osConcluida) return;
     const disponivel = Math.max(0, this.asNumber(material.estoque_disponivel));
     const pendente = Math.max(0, this.asNumber(material.qtd_pendente));
     const quantidade = Math.min(disponivel, pendente);
@@ -230,11 +244,11 @@ export class OrdensServicoComponent implements OnInit {
   }
 
   podeEditarMaterial(material: OrdemServicoMaterial): boolean {
-    return this.asNumber(material.qtd_atendida) === 0 && !['ATENDIDA', 'CANCELADA'].includes(material.status);
+    return !this.osConcluida && this.asNumber(material.qtd_atendida) === 0 && !['ATENDIDA', 'CANCELADA'].includes(material.status);
   }
 
   podeAtenderMaterial(material: OrdemServicoMaterial): boolean {
-    return !!material.produto && this.asNumber(material.estoque_disponivel) > 0 && this.asNumber(material.qtd_pendente) > 0 && !['ATENDIDA', 'CANCELADA'].includes(material.status);
+    return !this.osConcluida && !!material.produto && this.asNumber(material.estoque_disponivel) > 0 && this.asNumber(material.qtd_pendente) > 0 && !['ATENDIDA', 'CANCELADA'].includes(material.status);
   }
 
   private toLocalInput(value: string | null): string {

@@ -61,9 +61,41 @@ describe('OrdensServicoComponent', () => {
     expect(component.selected).toBeNull();
     expect(api.listarOrdensServico).toHaveBeenCalled();
   });
+
+  it('deixa OS concluida somente leitura e sem acoes operacionais', () => {
+    const concluida = osBase({
+      status: 'CONCLUIDA',
+      status_label: 'Concluída',
+      materiais: [{
+        id: 8,
+        ordem_servico: 3,
+        produto: 1,
+        produto_descricao: 'Cabo',
+        descricao: '',
+        unidade: null,
+        qtd_necessaria: '1.000',
+        qtd_atendida: '0.000',
+        qtd_pendente: '1.000',
+        status: 'DISPONIVEL',
+        estoque_disponivel: '10.000',
+        observacoes: '',
+      }],
+    });
+    api.getOrdemServico.and.returnValue(of(concluida));
+
+    component.abrir(concluida);
+    fixture.detectChanges();
+
+    expect(component.osConcluida).toBeTrue();
+    expect(component.form.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).not.toContain('Salvar');
+    expect(fixture.nativeElement.textContent).not.toContain('Adicionar material');
+    expect(component.podeAtenderMaterial(concluida.materiais[0])).toBeFalse();
+    expect(component.podeEditarMaterial(concluida.materiais[0])).toBeFalse();
+  });
 });
 
-function osBase(): any {
+function osBase(overrides: Partial<any> = {}): any {
   return {
     id: 3,
     requisicao: 16,
@@ -87,5 +119,6 @@ function osBase(): any {
     data_conclusao: null,
     observacoes: '',
     materiais: [],
+    ...overrides,
   };
 }

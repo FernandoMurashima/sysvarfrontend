@@ -45,7 +45,7 @@
       <h3>OS {{ os.id }} / REQ {{ os.requisicao_numero || os.requisicao }}</h3>
       <div class="row-actions">
         <button class="btn" type="button" (click)="fecharSubtela()">Fechar</button>
-        <button class="btn primary" type="button" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+        <button class="btn primary" type="button" *ngIf="!osConcluida" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
       </div>
     </div>
     <form [formGroup]="form" class="grid-12">
@@ -53,7 +53,8 @@
       <div class="input-item col-span-3"><span>Loja solicitante</span><span class="readonly-field">{{ os.loja_nome || os.loja }}</span></div>
       <div class="input-item col-span-3"><span>Setor solicitante</span><span class="readonly-field">{{ os.setor_solicitante_nome || os.setor_solicitante }}</span></div>
       <div class="input-item col-span-3"><span>Setor responsável</span><span class="readonly-field">{{ os.setor_responsavel_nome || os.setor_responsavel }}</span></div>
-      <label class="input-item col-span-3">Status<select formControlName="status"><option value="ABERTA">Aberta</option><option value="EM_TRIAGEM">Em triagem</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="AGUARDANDO_MATERIAL">Aguardando material</option><option value="AGUARDANDO_TERCEIRO">Aguardando terceiro</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option></select></label>
+      <label class="input-item col-span-3" *ngIf="!osConcluida">Status<select formControlName="status"><option value="ABERTA">Aberta</option><option value="EM_TRIAGEM">Em triagem</option><option value="EM_ATENDIMENTO">Em atendimento</option><option value="AGUARDANDO_MATERIAL">Aguardando material</option><option value="AGUARDANDO_TERCEIRO">Aguardando terceiro</option><option value="CONCLUIDA">Concluída</option><option value="CANCELADA">Cancelada</option></select></label>
+      <div class="input-item col-span-3" *ngIf="osConcluida"><span>Status</span><span class="readonly-field">{{ os.status_label || statusLabel(os.status) }}</span></div>
       <label class="input-item col-span-3">Responsável<input type="number" formControlName="responsavel" placeholder="ID do usuário" /></label>
       <label class="input-item col-span-3">Previsão<input type="datetime-local" formControlName="previsao_atendimento" /></label>
       <label class="input-item col-span-3">Início<input type="datetime-local" formControlName="data_inicio" /></label>
@@ -67,7 +68,7 @@
     <div class="form-title-row">
       <h3>Materiais necessários</h3>
     </div>
-    <form [formGroup]="materialForm" class="grid-12">
+    <form [formGroup]="materialForm" class="grid-12" *ngIf="!osConcluida">
       <label class="input-item col-span-4">Material<select formControlName="produto"><option [ngValue]="null">Selecione</option><option *ngFor="let p of produtos" [ngValue]="p.Idproduto">{{ produtoLabel(p) }}</option></select></label>
       <label class="input-item col-span-4">Descrição<input type="text" formControlName="descricao" placeholder="Opcional quando houver produto" /></label>
       <label class="input-item col-span-2">Quantidade<input type="number" min="0.001" step="0.001" formControlName="qtd_necessaria" /></label>
