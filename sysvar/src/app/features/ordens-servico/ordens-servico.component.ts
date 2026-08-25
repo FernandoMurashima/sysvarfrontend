@@ -12,7 +12,7 @@ import { RequisicoesService } from '../../core/services/requisicoes.service';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './ordens-servico.component.html',
-  styleUrls: ['../setores/setores.component.css'],
+  styleUrls: ['../setores/setores.component.css', './ordens-servico.component.css'],
 })
 export class OrdensServicoComponent implements OnInit {
   private api = inject(RequisicoesService);
@@ -97,6 +97,13 @@ export class OrdensServicoComponent implements OnInit {
       },
       error: err => this.errorMsg = this.extractMessages(err, 'Falha ao abrir ordem de serviço.').join(' '),
     });
+  }
+
+  fecharSubtela(): void {
+    this.selected = null;
+    this.editingMaterial = null;
+    this.cancelarEdicaoMaterial();
+    this.carregar();
   }
 
   salvar(): void {

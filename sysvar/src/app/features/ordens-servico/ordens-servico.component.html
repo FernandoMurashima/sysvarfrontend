@@ -39,10 +39,14 @@
     </div>
   </section>
 
-  <section class="card form" *ngIf="selected as os">
+  <section class="os-subscreen" *ngIf="selected as os" role="dialog" aria-modal="true">
+    <div class="card form os-dialog">
     <div class="form-title-row">
       <h3>OS {{ os.id }} / REQ {{ os.requisicao_numero || os.requisicao }}</h3>
-      <button class="btn primary" type="button" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+      <div class="row-actions">
+        <button class="btn" type="button" (click)="fecharSubtela()">Fechar</button>
+        <button class="btn primary" type="button" [disabled]="saving" (click)="salvar()">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+      </div>
     </div>
     <form [formGroup]="form" class="grid-12">
       <div class="input-item col-span-3"><span>Tipo</span><span class="readonly-field">{{ os.tipo_label || tipoLabel(os.tipo) }}</span></div>
@@ -94,6 +98,7 @@
         </tbody>
       </table>
       <ng-template #emptyMateriaisTpl><div class="empty-hint">Nenhum material necessário registrado.</div></ng-template>
+    </div>
     </div>
   </section>
 </div>
