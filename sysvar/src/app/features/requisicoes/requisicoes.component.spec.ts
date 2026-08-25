@@ -143,11 +143,20 @@ describe('RequisicoesComponent permissoes', () => {
 
   it('mostra somente Aguardar Cotacao quando sem estoque e sem compra', () => {
     permissoes(['requisicoes.atender']);
-    component.atual = { id: 1, status: 'APROVADA' } as any;
+    component.atual = { id: 1, status: 'APROVADA', tipo_requisicao: 'USO_CONSUMO' } as any;
     const item = itemBase({ indicador_compra: { codigo: 'SEM_ESTOQUE', estoque_atual: '0.000', cotacoes: [], pedidos: [] } });
 
     expect(component.podeAtenderItem(item)).toBeFalse();
     expect(component.podeAguardarCotacao(item)).toBeTrue();
+  });
+
+  it('nao mostra Aguardar Cotacao em manutencao com OS vinculada', () => {
+    permissoes(['requisicoes.atender']);
+    component.atual = { id: 1, status: 'APROVADA', tipo_requisicao: 'MANUTENCAO', ordem_servico_id: 3 } as any;
+    const item = itemBase({ indicador_compra: { codigo: 'SEM_ESTOQUE', estoque_atual: '0.000', cotacoes: [], pedidos: [] } });
+
+    expect(component.podeAtenderItem(item)).toBeFalse();
+    expect(component.podeAguardarCotacao(item)).toBeFalse();
   });
 
   it('nao mostra Aguardar Cotacao quando ja existe cotacao ou pedido', () => {

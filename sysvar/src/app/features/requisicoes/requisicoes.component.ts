@@ -446,7 +446,9 @@ export class RequisicoesComponent implements OnInit {
 
   podeAguardarCotacao(item: RequisicaoItem): boolean {
     const indicador = item.indicador_compra;
+    const reqComOs = ['MANUTENCAO', 'TI'].includes(this.atual?.tipo_requisicao || '') && !!this.atual?.ordem_servico_id;
     return this.itemPermiteAcao(item)
+      && !reqComOs
       && !this.podeAtenderItem(item)
       && !indicador?.cotacoes?.length
       && !indicador?.pedidos?.length
