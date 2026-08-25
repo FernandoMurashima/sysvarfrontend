@@ -132,6 +132,45 @@ describe('RequisicoesComponent permissoes', () => {
     expect(text).not.toContain('Itens da Requisição');
   });
 
+  it('filtra setores pela loja selecionada e limpa setor de outra loja', () => {
+    permissoes(['requisicoes.fazer']);
+    component.setores = [
+      { id: 1, empresa: 1, loja: 10, nome: 'Fábrica', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false },
+      { id: 2, empresa: 1, loja: 20, nome: 'Tijuca', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false },
+      { id: 3, empresa: 1, loja: 10, nome: 'Inativo', ativo: false, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false },
+    ] as any;
+
+    component.headerForm.patchValue({ loja: 10 });
+    component.headerForm.patchValue({ setor: 1 });
+    expect(component.setoresDisponiveis.map(s => s.id)).toEqual([1]);
+
+    component.headerForm.patchValue({ loja: 20 });
+    (component as any).syncSetorLoja();
+    expect(component.headerForm.value.setor).toBeNull();
+    expect(component.setoresDisponiveis.map(s => s.id)).toEqual([2]);
+  });
+
+  it('informa quando a loja selecionada nao tem setores', () => {
+    permissoes(['requisicoes.fazer']);
+    component.setores = [{ id: 1, empresa: 1, loja: 10, nome: 'Fábrica', ativo: true, pode_fazer_requisicao: true, recebe_requisicoes: true, central_uso_consumo: false, central_manutencao: false, central_ti: false, responsavel_compras: false, controla_estoque_uso_consumo: false }] as any;
+
+    component.headerForm.patchValue({ loja: 20, setor: null });
+
+    expect(component.setoresDisponiveis).toEqual([]);
+    expect(component.lojaSelecionadaSemSetores).toBeTrue();
+  });
+
+  it('mantem rascunho editavel e enviavel apos salvar', () => {
+    permissoes(['requisicoes.fazer']);
+    const req = { id: 1, numero: 10, empresa: 1, loja: 1, setor: 1, requisitante: 1, data_requisicao: '2026-08-21', data_necessaria: null, prioridade: 'NORMAL', justificativa: '', observacoes: '', status: 'RASCUNHO' } as any;
+
+    expect(component.podeEditarConteudo(req)).toBeTrue();
+    component.afterAction(req, 'Salvo');
+
+    expect(component.consultando).toBeFalse();
+    expect(component.podeEditarConteudo(component.atual)).toBeTrue();
+  });
+
   it('mostra somente Atender quando disponibilidade e suficiente', () => {
     permissoes(['requisicoes.atender']);
     component.atual = { id: 1, status: 'APROVADA' } as any;

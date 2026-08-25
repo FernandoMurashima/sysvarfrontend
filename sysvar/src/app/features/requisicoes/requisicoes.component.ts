@@ -125,6 +125,16 @@ export class RequisicoesComponent implements OnInit {
     return this.requisicoes.filter(r => r.prioridade !== 'NORMAL').length;
   }
 
+  get setoresDisponiveis(): RequisicaoSetor[] {
+    const lojaId = Number(this.headerForm.value.loja || 0);
+    if (!lojaId) return [];
+    return this.setores.filter(s => s.ativo && Number(s.loja) === lojaId);
+  }
+
+  get lojaSelecionadaSemSetores(): boolean {
+    return !!this.headerForm.value.loja && this.setoresDisponiveis.length === 0;
+  }
+
   ngOnInit(): void {
     this.syncVisaoDisponivel();
     this.loadLookups();
@@ -139,6 +149,7 @@ export class RequisicoesComponent implements OnInit {
       this.syncProdutoUnidade();
     });
     this.headerForm.get('tipo_requisicao')?.valueChanges.subscribe(tipo => this.resolverAtendimento(tipo as RequisicaoTipo));
+    this.headerForm.get('loja')?.valueChanges.subscribe(() => this.syncSetorLoja());
   }
 
   private arrayOrResults<T>(data: any): T[] {
@@ -162,7 +173,10 @@ export class RequisicoesComponent implements OnInit {
         this.itemForm.patchValue({ finalidade_aquisicao: this.finalidades[0].id }, { emitEvent: false });
       }
     });
-    this.api.listarSetores().subscribe(resp => this.setores = this.arrayOrResults<RequisicaoSetor>(resp));
+    this.api.listarSetores().subscribe(resp => {
+      this.setores = this.arrayOrResults<RequisicaoSetor>(resp);
+      this.syncSetorLoja();
+    });
     this.buscarProdutos();
   }
 
@@ -264,6 +278,7 @@ export class RequisicoesComponent implements OnInit {
     obs.subscribe({
       next: req => {
         this.atual = req;
+        this.consultando = !this.podeEditarConteudo(req);
         this.success('Requisição gravada.');
         this.loadRequisicoes();
         this.saving = false;
@@ -513,6 +528,19 @@ export class RequisicoesComponent implements OnInit {
     if (this.itemForm.value.tipo === 'MATERIAL' && this.itemForm.value.origem === 'PRODUTO') {
       this.itemForm.patchValue({ unidade: this.produtoSelecionado()?.unidade || null }, { emitEvent: false });
     }
+  }
+
+  private syncSetorLoja(): void {
+    if (!this.setores.length) return;
+    const lojaId = Number(this.headerForm.value.loja || 0);
+    const setorId = Number(this.headerForm.value.setor || 0);
+    if (setorId && !this.setorPertenceLoja(setorId, lojaId)) {
+      this.headerForm.patchValue({ setor: null }, { emitEvent: false });
+    }
+  }
+
+  private setorPertenceLoja(setorId: number, lojaId: number): boolean {
+    return this.setores.some(s => Number(s.id) === setorId && s.ativo && Number(s.loja) === lojaId);
   }
 
   private buildItemPayload(requisicaoId: number): Partial<RequisicaoItem> & { requisicao: number } {

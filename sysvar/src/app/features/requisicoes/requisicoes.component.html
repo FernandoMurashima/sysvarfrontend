@@ -76,7 +76,7 @@
 
       <form [formGroup]="headerForm" class="grid-12">
         <label class="input-item col-span-2">Loja*<select formControlName="loja"><option [ngValue]="null">Selecione</option><option *ngFor="let l of lojas" [ngValue]="l.id">{{ l.label }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','loja')">{{ msg }}</small></label>
-        <label class="input-item col-span-2">Setor*<select formControlName="setor"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setores" [ngValue]="s.id">{{ s.nome }}</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','setor')">{{ msg }}</small></label>
+        <label class="input-item col-span-2">Setor*<select formControlName="setor"><option [ngValue]="null">Selecione</option><option *ngFor="let s of setoresDisponiveis" [ngValue]="s.id">{{ s.nome }}</option></select><small class="field-error" *ngIf="lojaSelecionadaSemSetores">Nenhum setor configurado para esta loja.</small><small class="field-error" *ngFor="let msg of fieldErrors('header','setor')">{{ msg }}</small></label>
         <label class="input-item col-span-2">Tipo da Requisição*<select formControlName="tipo_requisicao"><option value="USO_CONSUMO">Uso e Consumo</option><option value="MANUTENCAO">Manutenção</option><option value="TI">TI</option></select><small class="field-error" *ngFor="let msg of fieldErrors('header','tipo_requisicao')">{{ msg }}</small></label>
         <div class="input-item col-span-3"><span>Atendimento</span><span class="readonly-field">{{ atendimentoPrevisto || atual?.setor_responsavel_nome || '-' }}</span></div>
         <label class="input-item col-span-2">Necessário em<input type="date" formControlName="data_necessaria" /></label>
