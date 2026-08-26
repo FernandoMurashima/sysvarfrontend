@@ -14,6 +14,9 @@ describe('NotasFiscaisEntradaComponent', () => {
 
   const nota = {
     id: 1,
+    empresa: 1,
+    loja: 3,
+    fornecedor: 4,
     pedido_compra: 10,
     modelo: '55',
     serie: '1',
@@ -63,6 +66,19 @@ describe('NotasFiscaisEntradaComponent', () => {
     atualizar: jasmine.createSpy('atualizar'),
     fechar: jasmine.createSpy('fechar'),
     cancelar: jasmine.createSpy('cancelar'),
+    importarXml: jasmine.createSpy('importarXml'),
+    listarItensXml: jasmine.createSpy('listarItensXml'),
+    pendenciasXml: jasmine.createSpy('pendenciasXml'),
+    conciliarAutomaticamente: jasmine.createSpy('conciliarAutomaticamente'),
+    resumoConciliacao: jasmine.createSpy('resumoConciliacao'),
+    candidatosItemXml: jasmine.createSpy('candidatosItemXml'),
+    conciliarItemXml: jasmine.createSpy('conciliarItemXml'),
+    conferirItemXml: jasmine.createSpy('conferirItemXml'),
+    conferirItensXml: jasmine.createSpy('conferirItensXml'),
+    resumoConferencia: jasmine.createSpy('resumoConferencia'),
+    divergenciasXml: jasmine.createSpy('divergenciasXml'),
+    resolverDivergenciaXml: jasmine.createSpy('resolverDivergenciaXml'),
+    analisarCancelamento: jasmine.createSpy('analisarCancelamento'),
     itensPedido: jasmine.createSpy('itensPedido'),
     criarItem: jasmine.createSpy('criarItem'),
     atualizarItem: jasmine.createSpy('atualizarItem'),
@@ -81,6 +97,19 @@ describe('NotasFiscaisEntradaComponent', () => {
     notasApi.criarItem.and.returnValue(of({ id: 202, nota: nota.id, pedido_item: itemOutro.pedido_item, qtd_recebida: '2.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '20.00' }));
     notasApi.atualizarItem.and.returnValue(of({ id: 201, nota: nota.id, pedido_item: itemBase.pedido_item, qtd_recebida: '1.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '10.00' }));
     notasApi.removerItem.and.returnValue(of(undefined));
+    notasApi.fechar.and.returnValue(of({ ...nota, status: 'FE' as const, xml_importado: true }));
+    notasApi.cancelar.and.returnValue(of({ ...nota, status: 'CA' as const }));
+    notasApi.importarXml.and.returnValue(of({ ...nota, xml_importado: true, pedido_compra: null }));
+    notasApi.listarItensXml.and.returnValue(of([]));
+    notasApi.resumoConciliacao.and.returnValue(of({ total_itens: 0, itens_conciliados: 0, itens_pendentes: 0, nota_conciliada: false }));
+    notasApi.resumoConferencia.and.returnValue(of({ total_itens: 0, itens_conferidos: 0, itens_nao_conferidos: 0, itens_com_divergencia: 0, quantidade_faltante_total: '0.000000', valor_divergente_total: '0.00', possui_divergencia_pendente: false, conversoes_pendentes: 0, conferencia_completa: false }));
+    notasApi.divergenciasXml.and.returnValue(of([]));
+    notasApi.conciliarAutomaticamente.and.returnValue(of({ resultado: {}, resumo: { total_itens: 1, itens_conciliados: 1, itens_pendentes: 0, nota_conciliada: true } }));
+    notasApi.candidatosItemXml.and.returnValue(of([{ id: 5, referencia: 'REF', descricao: 'Produto', unidade_interna: 'UN' }]));
+    notasApi.conciliarItemXml.and.returnValue(of({ id: 7, nota: 1, numero_item: 1, codigo_produto_fornecedor: 'A', descricao_produto: 'Item', gtin_ean: '', ncm: '', cfop: '', unidade_comercial: 'UN', quantidade_comercial: '1.000000', quantidade_recebida: null, valor_unitario_comercial: '10.00', valor_produto: '10.00', valor_desconto: '0.00', informacoes_adicionais: '', produto: 5, produto_fornecedor: 9, pedido_item: null, origem_conciliacao: 'MANUAL', conciliado: true, conferido: false } as any));
+    notasApi.conferirItemXml.and.returnValue(of({ item: { id: 7, nota: 1, numero_item: 1, codigo_produto_fornecedor: 'A', descricao_produto: 'Item', gtin_ean: '', ncm: '', cfop: '', unidade_comercial: 'UN', quantidade_comercial: '1.000000', quantidade_recebida: '0.000000', valor_unitario_comercial: '10.00', valor_produto: '10.00', valor_desconto: '0.00', informacoes_adicionais: '', produto: 5, produto_fornecedor: 9, pedido_item: null, origem_conciliacao: 'MANUAL', conciliado: true, conferido: true } as any, divergencia: null, resumo: { total_itens: 1, itens_conferidos: 1, itens_nao_conferidos: 0, itens_com_divergencia: 1, quantidade_faltante_total: '1.000000', valor_divergente_total: '10.00', possui_divergencia_pendente: true, conversoes_pendentes: 0, conferencia_completa: true } }));
+    notasApi.conferirItensXml.and.returnValue(of({ itens: [], resumo: { total_itens: 1, itens_conferidos: 1, itens_nao_conferidos: 0, itens_com_divergencia: 0, quantidade_faltante_total: '0.000000', valor_divergente_total: '0.00', possui_divergencia_pendente: false, conversoes_pendentes: 0, conferencia_completa: true } }));
+    notasApi.analisarCancelamento.and.returnValue(of({ pode_cancelar: true, bloqueios: [], avisos: [], pedido: 10, valor_financeiro: '100.00' }));
     pedidosApi.listar.and.returnValue(of({ count: 1, results: [{ id: 10, tipo: '2', loja: 3, fornecedor: 4, emissao: '2026-01-01', status: 'AP', total_itens: '100.00', total_desconto: '0.00', frete: '0.00', total_pedido: '100.00' }] }));
     lojasApi.list.and.returnValue(of({ count: 1, results: [{ id: 3, nome_loja: 'Loja A' }] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, results: [{ id: 4, nome_fornecedor: 'Fornecedor A' }] }));
@@ -430,5 +459,90 @@ describe('NotasFiscaisEntradaComponent', () => {
     component.editar(nota);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-row-actions-menu')).toBeNull();
+  });
+
+  it('importa XML, abre NF importada e exibe erro da API sem object Object', () => {
+    const file = new File(['<xml/>'], 'nfe.xml');
+    component.abrirImportacaoXml();
+    component.importArquivo = file;
+    component.importPedido = null;
+    component.importarXml();
+    expect(notasApi.importarXml).toHaveBeenCalledWith(file, null);
+    expect(component.notaAtual()?.xml_importado).toBeTrue();
+    expect(component.mensagem).toContain('XML importado');
+
+    notasApi.importarXml.and.returnValue(throwError(() => ({ error: { chave_acesso: ['NF-e já importada para esta chave de acesso.'] } })));
+    component.abrirImportacaoXml();
+    component.importArquivo = file;
+    component.importarXml();
+    expect(component.erro).toBe('NF-e já importada para esta chave de acesso.');
+  });
+
+  it('NF XML carrega itens, resumos e mostra item pendente com ação de vínculo', () => {
+    const itemXml = { id: 7, nota: 1, numero_item: 1, codigo_produto_fornecedor: 'A1', descricao_produto: 'Item XML', gtin_ean: '', ncm: '', cfop: '', unidade_comercial: 'CX', quantidade_comercial: '10.000000', quantidade_recebida: null, valor_unitario_comercial: '5.00', valor_produto: '50.00', valor_desconto: '0.00', informacoes_adicionais: '', produto: null, produto_fornecedor: null, pedido_item: null, origem_conciliacao: '', conciliado: false, conferido: false, conversao: { conversao_pendente: true } } as any;
+    notasApi.listarItensXml.and.returnValue(of([itemXml]));
+
+    component.editar({ ...nota, xml_importado: true, pedido_compra: null });
+    fixture.detectChanges();
+
+    expect(notasApi.listarItensXml).toHaveBeenCalledWith(1);
+    expect(notasApi.resumoConciliacao).toHaveBeenCalledWith(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vincular produto');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Conversão de unidade pendente');
+  });
+
+  it('busca candidatos, concilia manualmente e mostra conflito de vínculo', () => {
+    const itemXml = { id: 7, descricao_produto: 'Item XML', codigo_produto_fornecedor: 'A1', gtin_ean: '', unidade_comercial: 'CX' } as any;
+    component.notaAtual.set({ ...nota, xml_importado: true });
+    component.abrirConciliacao(itemXml);
+    expect(notasApi.candidatosItemXml).toHaveBeenCalledWith(1, 7, 'Item XML');
+
+    component.conciliacaoModal!.selecionado = 5;
+    component.confirmarConciliacaoXml();
+    expect(notasApi.conciliarItemXml).toHaveBeenCalledWith(1, 7, 5);
+
+    notasApi.conciliarItemXml.and.returnValue(throwError(() => ({ error: { detail: 'Código externo já vinculado a outro Produto.' } })));
+    component.abrirConciliacao(itemXml);
+    component.conciliacaoModal!.selecionado = 5;
+    component.confirmarConciliacaoXml();
+    expect(component.erro).toContain('Código externo');
+  });
+
+  it('conferencia preserva zero, rejeita acima da fiscal e atualiza divergencia', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true });
+    const itemXml = { id: 7, conciliado: true, conferido: false, quantidade_comercial: '10.000000', quantidade_recebida: null, recebidoInput: 0 } as any;
+    component.conferirItemXml(itemXml);
+    expect(notasApi.conferirItemXml).toHaveBeenCalledWith(1, 7, 0);
+
+    itemXml.recebidoInput = 11;
+    component.conferirItemXml(itemXml);
+    expect(component.erro).toContain('menor ou igual');
+  });
+
+  it('efetivacao bloqueia pendencias e habilita com prontidao do backend', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true });
+    component.resumoConciliacao = { total_itens: 2, itens_conciliados: 1, itens_pendentes: 1, nota_conciliada: false };
+    component.resumoConferencia = { total_itens: 2, itens_conferidos: 2, itens_nao_conferidos: 0, itens_com_divergencia: 1, quantidade_faltante_total: '1', valor_divergente_total: '10.00', possui_divergencia_pendente: true, conversoes_pendentes: 0, conferencia_completa: true };
+    expect(component.podeEfetivarXml()).toBeFalse();
+
+    component.resumoConciliacao = { total_itens: 2, itens_conciliados: 2, itens_pendentes: 0, nota_conciliada: true };
+    expect(component.podeEfetivarXml()).toBeTrue();
+    component.confirmarEfetivacaoXml();
+    expect(notasApi.fechar).toHaveBeenCalledWith(1);
+  });
+
+  it('analisa cancelamento, bloqueia baixa financeira e envia motivo com confirmação de avisos', () => {
+    component.notaAtual.set(notaFechada);
+    notasApi.analisarCancelamento.and.returnValue(of({ pode_cancelar: false, bloqueios: ['O título financeiro vinculado à NF já possui baixa. Reverta/levante a baixa no Financeiro antes de cancelar a NF.'], avisos: [], pedido: 10, valor_financeiro: '100.00' }));
+    component.abrirCancelamentoOperacional();
+    expect(component.podeConfirmarCancelamento()).toBeFalse();
+
+    notasApi.analisarCancelamento.and.returnValue(of({ pode_cancelar: true, bloqueios: [], avisos: [{ tipo: 'SALDO_NEGATIVO' }], pedido: 10, valor_financeiro: '100.00' } as any));
+    component.abrirCancelamentoOperacional();
+    component.motivoCancelamento = 'Erro de lançamento';
+    expect(component.podeConfirmarCancelamento()).toBeFalse();
+    component.confirmacaoAvisosCancelamento = true;
+    component.confirmarCancelamentoOperacional();
+    expect(notasApi.cancelar).toHaveBeenCalledWith(2, 'Erro de lançamento', true);
   });
 });

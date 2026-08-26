@@ -16,12 +16,122 @@ export interface NotaFiscalEntrada {
   valor_frete: string;
   valor_total: string;
   observacoes: string;
+  xml_original?: string;
+  xml_importado?: boolean;
+  natureza_operacao?: string;
+  emitente_documento?: string;
+  emitente_nome?: string;
+  emitente_ie?: string;
+  destinatario_documento?: string;
+  destinatario_nome?: string;
+  protocolo_autorizacao?: string;
+  resumo_conciliacao?: NotaFiscalEntradaResumoConciliacao | null;
+  resumo_conferencia?: NotaFiscalEntradaResumoConferencia | null;
+  cancelado_por?: number | null;
+  cancelado_em?: string | null;
+  motivo_cancelamento?: string;
   destino_recebimento?: string | null;
   loja_estoque_id?: number | null;
   criado_por?: number | null;
   criado_em?: string;
   atualizado_em?: string;
   itens?: NotaFiscalEntradaItem[];
+}
+
+export interface NotaFiscalEntradaResumoConciliacao {
+  total_itens: number;
+  itens_conciliados: number;
+  itens_pendentes: number;
+  nota_conciliada: boolean;
+}
+
+export interface NotaFiscalEntradaResumoConferencia {
+  total_itens: number;
+  itens_conferidos: number;
+  itens_nao_conferidos: number;
+  itens_com_divergencia: number;
+  quantidade_faltante_total: string;
+  valor_divergente_total: string;
+  possui_divergencia_pendente: boolean;
+  conversoes_pendentes: number;
+  conferencia_completa: boolean;
+}
+
+export interface NotaFiscalEntradaItemXml {
+  id: number;
+  nota: number;
+  numero_item: number;
+  codigo_produto_fornecedor: string;
+  descricao_produto: string;
+  gtin_ean: string;
+  ncm: string;
+  cfop: string;
+  unidade_comercial: string;
+  quantidade_comercial: string;
+  quantidade_recebida: string | null;
+  valor_unitario_comercial: string;
+  valor_produto: string;
+  valor_desconto: string;
+  informacoes_adicionais: string;
+  produto: number | null;
+  produto_descricao?: string | null;
+  produto_referencia?: string | null;
+  produto_fornecedor: number | null;
+  produto_fornecedor_codigo?: string | null;
+  pedido_item: number | null;
+  origem_conciliacao: string;
+  unidade_fornecedor_efetivada?: string;
+  fator_conversao_efetivado?: string | null;
+  quantidade_interna_efetivada?: string | null;
+  efetivado_em?: string | null;
+  conciliado: boolean;
+  conferido: boolean;
+  quantidade_faltante?: string | null;
+  valor_divergente?: string | null;
+  quantidade_interna_recebida?: string | null;
+  conversao?: {
+    unidade_fornecedor?: string;
+    unidade_interna?: string;
+    fator_conversao?: string;
+    quantidade_interna?: string | null;
+    conversao_pendente?: boolean;
+  };
+}
+
+export interface NotaFiscalEntradaProdutoCandidato {
+  id: number;
+  referencia: string;
+  descricao: string;
+  unidade_interna: string;
+}
+
+export interface NotaFiscalEntradaDivergenciaXml {
+  id: number;
+  nota: number;
+  item_xml: number;
+  fornecedor: number;
+  produto: number;
+  quantidade_fiscal: string;
+  quantidade_recebida: string;
+  quantidade_faltante: string;
+  valor_divergente: string;
+  status: 'PENDENTE' | 'RESOLVIDA' | 'CANCELADA';
+  resolvido_em?: string | null;
+}
+
+export interface NotaFiscalEntradaAnaliseCancelamento {
+  pode_cancelar: boolean;
+  bloqueios: string[];
+  avisos: Array<{
+    tipo: string;
+    produto?: number | null;
+    codigo?: string | null;
+    saldo_atual?: string;
+    quantidade_estorno?: string;
+    saldo_previsto?: string;
+  }>;
+  pedido: number | null;
+  valor_financeiro: string;
 }
 
 export interface NotaFiscalEntradaItem {

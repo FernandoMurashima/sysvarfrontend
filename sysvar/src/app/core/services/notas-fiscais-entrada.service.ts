@@ -5,8 +5,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   NotaFiscalEntrada,
+  NotaFiscalEntradaAnaliseCancelamento,
+  NotaFiscalEntradaDivergenciaXml,
   NotaFiscalEntradaItem,
+  NotaFiscalEntradaItemXml,
   NotaFiscalEntradaPedidoItem,
+  NotaFiscalEntradaProdutoCandidato,
+  NotaFiscalEntradaResumoConferencia,
+  NotaFiscalEntradaResumoConciliacao,
 } from '../models/nota-fiscal-entrada';
 
 type Paginated<T> = {
@@ -101,12 +107,75 @@ export class NotasFiscaisEntradaService {
     return this.http.patch<NotaFiscalEntrada>(`${this.base}${id}/`, payload);
   }
 
-  fechar(id: number): Observable<NotaFiscalEntrada & { financeiro?: any }> {
-    return this.http.post<NotaFiscalEntrada & { financeiro?: any }>(`${this.base}${id}/fechar/`, {});
+  importarXml(arquivo: File, pedidoCompra?: number | null): Observable<NotaFiscalEntrada> {
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    if (pedidoCompra) form.append('pedido_compra', String(pedidoCompra));
+    return this.http.post<NotaFiscalEntrada>(`${this.base}importar-xml/`, form);
   }
 
-  cancelar(id: number): Observable<NotaFiscalEntrada> {
-    return this.http.post<NotaFiscalEntrada>(`${this.base}${id}/cancelar/`, {});
+  listarItensXml(id: number): Observable<NotaFiscalEntradaItemXml[]> {
+    return this.http.get<NotaFiscalEntradaItemXml[]>(`${this.base}${id}/itens-xml/`);
+  }
+
+  pendenciasXml(id: number): Observable<NotaFiscalEntradaItemXml[]> {
+    return this.http.get<NotaFiscalEntradaItemXml[]>(`${this.base}${id}/pendencias-xml/`);
+  }
+
+  conciliarAutomaticamente(id: number): Observable<{ resultado: unknown; resumo: NotaFiscalEntradaResumoConciliacao }> {
+    return this.http.post<{ resultado: unknown; resumo: NotaFiscalEntradaResumoConciliacao }>(`${this.base}${id}/conciliar-automaticamente/`, {});
+  }
+
+  resumoConciliacao(id: number): Observable<NotaFiscalEntradaResumoConciliacao> {
+    return this.http.get<NotaFiscalEntradaResumoConciliacao>(`${this.base}${id}/resumo-conciliacao/`);
+  }
+
+  candidatosItemXml(id: number, item: number, termo = ''): Observable<NotaFiscalEntradaProdutoCandidato[]> {
+    let params = new HttpParams().set('item', String(item));
+    if (termo) params = params.set('q', termo);
+    return this.http.get<NotaFiscalEntradaProdutoCandidato[]>(`${this.base}${id}/item-xml-candidatos/`, { params });
+  }
+
+  conciliarItemXml(id: number, item: number, produto: number): Observable<NotaFiscalEntradaItemXml> {
+    return this.http.post<NotaFiscalEntradaItemXml>(`${this.base}${id}/item-xml-conciliar/`, { item, produto });
+  }
+
+  conferirItemXml(id: number, item: number, quantidadeRecebida: number | string): Observable<{ item: NotaFiscalEntradaItemXml; divergencia: NotaFiscalEntradaDivergenciaXml | null; resumo: NotaFiscalEntradaResumoConferencia }> {
+    return this.http.post<{ item: NotaFiscalEntradaItemXml; divergencia: NotaFiscalEntradaDivergenciaXml | null; resumo: NotaFiscalEntradaResumoConferencia }>(
+      `${this.base}${id}/item-xml-conferir/`,
+      { item, quantidade_recebida: String(quantidadeRecebida) },
+    );
+  }
+
+  conferirItensXml(id: number, itens: Array<{ item: number; quantidade_recebida: number | string }>): Observable<{ itens: NotaFiscalEntradaItemXml[]; resumo: NotaFiscalEntradaResumoConferencia }> {
+    return this.http.post<{ itens: NotaFiscalEntradaItemXml[]; resumo: NotaFiscalEntradaResumoConferencia }>(`${this.base}${id}/conferir-itens-xml/`, { itens });
+  }
+
+  resumoConferencia(id: number): Observable<NotaFiscalEntradaResumoConferencia> {
+    return this.http.get<NotaFiscalEntradaResumoConferencia>(`${this.base}${id}/resumo-conferencia/`);
+  }
+
+  divergenciasXml(id: number): Observable<NotaFiscalEntradaDivergenciaXml[]> {
+    return this.http.get<NotaFiscalEntradaDivergenciaXml[]>(`${this.base}${id}/divergencias-xml/`);
+  }
+
+  resolverDivergenciaXml(id: number, divergencia: number): Observable<NotaFiscalEntradaDivergenciaXml> {
+    return this.http.post<NotaFiscalEntradaDivergenciaXml>(`${this.base}${id}/resolver-divergencia-xml/`, { divergencia });
+  }
+
+  analisarCancelamento(id: number): Observable<NotaFiscalEntradaAnaliseCancelamento> {
+    return this.http.get<NotaFiscalEntradaAnaliseCancelamento>(`${this.base}${id}/analisar-cancelamento/`);
+  }
+
+  fechar(id: number): Observable<NotaFiscalEntrada & { financeiro?: unknown; estoque?: unknown; recebimento_pedido?: unknown }> {
+    return this.http.post<NotaFiscalEntrada & { financeiro?: unknown; estoque?: unknown; recebimento_pedido?: unknown }>(`${this.base}${id}/fechar/`, {});
+  }
+
+  cancelar(id: number, motivo = '', confirmarAvisos = false): Observable<NotaFiscalEntrada> {
+    return this.http.post<NotaFiscalEntrada>(`${this.base}${id}/cancelar/`, {
+      motivo,
+      confirmar_avisos: confirmarAvisos,
+    });
   }
 
   itensPedido(id: number): Observable<NotaFiscalEntradaPedidoItem[]> {

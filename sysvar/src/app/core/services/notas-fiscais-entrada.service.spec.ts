@@ -74,4 +74,38 @@ describe('NotasFiscaisEntradaService', () => {
     expect(req.request.params.has('page_size')).toBeFalse();
     req.flush({ total: 2, abertas: 2, fechadas: 0, canceladas: 0, valor_total: '100.00' });
   });
+
+  it('importacao XML envia FormData com pedido opcional', () => {
+    const file = new File(['<nfe />'], 'nfe.xml', { type: 'text/xml' });
+    service.importarXml(file).subscribe();
+    let req = http.expectOne(request => request.method === 'POST' && request.url.endsWith('/fiscal/notas-entrada/importar-xml/'));
+    expect(req.request.body instanceof FormData).toBeTrue();
+    expect((req.request.body as FormData).get('arquivo')).toBe(file);
+    expect((req.request.body as FormData).has('pedido_compra')).toBeFalse();
+    req.flush({});
+
+    service.importarXml(file, 10).subscribe();
+    req = http.expectOne(request => request.method === 'POST' && request.url.endsWith('/fiscal/notas-entrada/importar-xml/'));
+    expect((req.request.body as FormData).get('pedido_compra')).toBe('10');
+    req.flush({});
+  });
+
+  it('chama endpoints operacionais XML e cancelamento', () => {
+    service.listarItensXml(1).subscribe();
+    http.expectOne(r => r.method === 'GET' && r.url.endsWith('/fiscal/notas-entrada/1/itens-xml/')).flush([]);
+    service.conciliarAutomaticamente(1).subscribe();
+    http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/conciliar-automaticamente/')).flush({});
+    service.candidatosItemXml(1, 2, 'camisa').subscribe();
+    http.expectOne(r => r.method === 'GET' && r.url.endsWith('/fiscal/notas-entrada/1/item-xml-candidatos/') && r.params.get('item') === '2' && r.params.get('q') === 'camisa').flush([]);
+    service.conciliarItemXml(1, 2, 3).subscribe();
+    http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/item-xml-conciliar/') && r.body.item === 2 && r.body.produto === 3).flush({});
+    service.conferirItemXml(1, 2, 0).subscribe();
+    http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/item-xml-conferir/') && r.body.quantidade_recebida === '0').flush({});
+    service.analisarCancelamento(1).subscribe();
+    http.expectOne(r => r.method === 'GET' && r.url.endsWith('/fiscal/notas-entrada/1/analisar-cancelamento/')).flush({});
+    service.cancelar(1, 'Erro operacional', true).subscribe();
+    const cancelarReq = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/cancelar/') && r.body.motivo === 'Erro operacional' && r.body.confirmar_avisos === true);
+    expect(cancelarReq.request.body.confirmar_avisos).toBeTrue();
+    cancelarReq.flush({});
+  });
 });

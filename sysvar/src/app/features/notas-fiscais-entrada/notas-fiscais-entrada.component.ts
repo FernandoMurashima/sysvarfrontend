@@ -9,7 +9,13 @@ import { NotaFiscalEntradaIndicadores, NotaFiscalEntradaListParams, NotasFiscais
 import { PedidoCompra, PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import {
   NotaFiscalEntrada,
+  NotaFiscalEntradaAnaliseCancelamento,
+  NotaFiscalEntradaDivergenciaXml,
+  NotaFiscalEntradaItemXml,
   NotaFiscalEntradaPedidoItem,
+  NotaFiscalEntradaProdutoCandidato,
+  NotaFiscalEntradaResumoConferencia,
+  NotaFiscalEntradaResumoConciliacao,
 } from '../../core/models/nota-fiscal-entrada';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -24,6 +30,11 @@ type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
   desconto_item: number;
   total_item: number;
   confirmado: boolean;
+};
+
+type ItemXmlUI = NotaFiscalEntradaItemXml & {
+  recebidoInput: number | null;
+  salvando?: boolean;
 };
 
 @Component({
@@ -58,6 +69,17 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     text: string;
     item?: ItemRecebimentoUI;
   } | null = null;
+  importModalAberto = false;
+  importArquivo: File | null = null;
+  importPedido: number | null = null;
+  importandoXml = false;
+  efetivarModalAberto = false;
+  cancelarModalAberto = false;
+  cancelamentoAnalise: NotaFiscalEntradaAnaliseCancelamento | null = null;
+  motivoCancelamento = '';
+  confirmacaoAvisosCancelamento = false;
+  analisandoCancelamento = false;
+  cancelandoNota = false;
 
   search = '';
   filtroStatus = '';
@@ -94,9 +116,17 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   itensPedido: ItemRecebimentoUI[] = [];
   selectedItem: ItemRecebimentoUI | null = null;
   loadingItens = false;
+  itensXml: ItemXmlUI[] = [];
+  resumoConciliacao: NotaFiscalEntradaResumoConciliacao | null = null;
+  resumoConferencia: NotaFiscalEntradaResumoConferencia | null = null;
+  divergenciasXml: NotaFiscalEntradaDivergenciaXml[] = [];
+  loadingXml = false;
+  conciliandoAuto = false;
+  conferindoLote = false;
+  conciliacaoModal: { item: ItemXmlUI; termo: string; candidatos: NotaFiscalEntradaProdutoCandidato[]; selecionado: number | null; loading: boolean; saving: boolean } | null = null;
 
   form: FormGroup = this.fb.group({
-    pedido_compra: [null, Validators.required],
+    pedido_compra: [null],
     modelo: ['55', [Validators.required, Validators.maxLength(2)]],
     serie: [''],
     numero: ['', Validators.required],
@@ -424,7 +454,12 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
     this.view.set('form');
     this.selectedItem = null;
-    this.carregarItensPedido(nota.id);
+    this.itensXml = [];
+    if (nota.xml_importado) {
+      this.carregarFluxoXml(nota.id);
+    } else {
+      this.carregarItensPedido(nota.id);
+    }
   }
 
   rowActions(nota: NotaFiscalEntrada): RowAction[] {
@@ -449,6 +484,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (!this.form.get('pedido_compra')?.value) {
+      this.erro = 'Selecione um Pedido aprovado para o fluxo manual. Para NF-e sem Pedido, use Importar XML.';
       return;
     }
     if (!this.datasValidas()) {
@@ -518,6 +557,194 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.selectedItem = null;
         this.loadingItens = false;
         this.erro = 'Não foi possível carregar os itens do pedido.';
+      },
+    });
+  }
+
+  abrirImportacaoXml(): void {
+    this.importModalAberto = true;
+    this.importArquivo = null;
+    this.importPedido = null;
+    this.erro = '';
+  }
+
+  fecharImportacaoXml(): void {
+    if (this.importandoXml) return;
+    this.importModalAberto = false;
+  }
+
+  onXmlFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.importArquivo = input.files?.[0] || null;
+  }
+
+  importarXml(): void {
+    if (!this.importArquivo || this.importandoXml) return;
+    this.importandoXml = true;
+    this.erro = '';
+    this.notasApi.importarXml(this.importArquivo, this.importPedido).subscribe({
+      next: (nota) => {
+        this.importandoXml = false;
+        this.importModalAberto = false;
+        this.editar(nota);
+        this.mensagem = 'XML importado com sucesso.';
+        this.loadNotas();
+      },
+      error: (err) => {
+        this.importandoXml = false;
+        this.erro = this.errorText(err, 'Não foi possível importar o XML.');
+      },
+    });
+  }
+
+  private carregarFluxoXml(notaId: number): void {
+    this.loadingXml = true;
+    this.notasApi.listarItensXml(notaId).subscribe({
+      next: (itens) => {
+        this.itensXml = itens.map(item => ({ ...item, recebidoInput: item.quantidade_recebida === null ? null : Number(item.quantidade_recebida) }));
+        this.loadingXml = false;
+      },
+      error: (err) => {
+        this.loadingXml = false;
+        this.erro = this.errorText(err, 'Não foi possível carregar os itens XML.');
+      },
+    });
+    this.notasApi.resumoConciliacao(notaId).subscribe({ next: resumo => this.resumoConciliacao = resumo });
+    this.notasApi.resumoConferencia(notaId).subscribe({ next: resumo => this.resumoConferencia = resumo });
+    this.notasApi.divergenciasXml(notaId).subscribe({ next: divs => this.divergenciasXml = divs });
+  }
+
+  origemLabel(nota: NotaFiscalEntrada | null): string {
+    return nota?.xml_importado ? 'XML' : 'Manual';
+  }
+
+  pedidoResumo(nota: NotaFiscalEntrada | null): string {
+    if (!nota) return '';
+    return nota.pedido_compra ? `Pedido #${nota.pedido_compra}` : 'Sem pedido';
+  }
+
+  xmlSomenteLeitura(): boolean {
+    return this.notaAtual()?.status !== 'AB';
+  }
+
+  situacaoXml(): string {
+    if (!this.resumoConciliacao?.nota_conciliada) return 'Aguardando conciliação';
+    if (!this.resumoConferencia?.conferencia_completa) return 'Aguardando conferência';
+    if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) return 'Conversão pendente';
+    return 'Pronta para efetivar';
+  }
+
+  motivosBloqueioEfetivar(): string[] {
+    const motivos: string[] = [];
+    if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
+    if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
+    if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
+    return motivos.filter(m => !m.startsWith('0 '));
+  }
+
+  podeEfetivarXml(): boolean {
+    return this.notaAtual()?.xml_importado === true && this.notaAtual()?.status === 'AB' && this.motivosBloqueioEfetivar().length === 0;
+  }
+
+  reprocessarConciliacao(): void {
+    const nota = this.notaAtual();
+    if (!nota || this.conciliandoAuto) return;
+    this.conciliandoAuto = true;
+    this.notasApi.conciliarAutomaticamente(nota.id).subscribe({
+      next: (resp) => {
+        this.conciliandoAuto = false;
+        this.resumoConciliacao = resp.resumo;
+        this.mensagem = 'Conciliação reprocessada.';
+        this.carregarFluxoXml(nota.id);
+      },
+      error: (err) => {
+        this.conciliandoAuto = false;
+        this.erro = this.errorText(err, 'Não foi possível reprocessar a conciliação.');
+      },
+    });
+  }
+
+  abrirConciliacao(item: ItemXmlUI): void {
+    this.conciliacaoModal = { item, termo: item.descricao_produto || item.codigo_produto_fornecedor || '', candidatos: [], selecionado: null, loading: false, saving: false };
+    this.buscarCandidatosXml();
+  }
+
+  buscarCandidatosXml(): void {
+    const nota = this.notaAtual();
+    const modal = this.conciliacaoModal;
+    if (!nota || !modal) return;
+    modal.loading = true;
+    this.notasApi.candidatosItemXml(nota.id, modal.item.id, modal.termo).subscribe({
+      next: candidatos => { if (this.conciliacaoModal) { this.conciliacaoModal.candidatos = candidatos; this.conciliacaoModal.loading = false; } },
+      error: err => { if (this.conciliacaoModal) this.conciliacaoModal.loading = false; this.erro = this.errorText(err, 'Não foi possível buscar produtos.'); },
+    });
+  }
+
+  confirmarConciliacaoXml(): void {
+    const nota = this.notaAtual();
+    const modal = this.conciliacaoModal;
+    if (!nota || !modal || !modal.selecionado) return;
+    modal.saving = true;
+    this.notasApi.conciliarItemXml(nota.id, modal.item.id, modal.selecionado).subscribe({
+      next: () => {
+        this.conciliacaoModal = null;
+        this.mensagem = 'Produto vinculado ao item XML.';
+        this.carregarFluxoXml(nota.id);
+      },
+      error: err => {
+        if (this.conciliacaoModal) this.conciliacaoModal.saving = false;
+        this.erro = this.errorText(err, 'Não foi possível vincular o produto.');
+      },
+    });
+  }
+
+  conferirItemXml(item: ItemXmlUI): void {
+    const nota = this.notaAtual();
+    if (!nota || this.xmlSomenteLeitura() || item.salvando) return;
+    const qtd = item.recebidoInput;
+    if (qtd === null || qtd === undefined || Number.isNaN(Number(qtd))) {
+      this.erro = 'Informe a quantidade recebida.';
+      return;
+    }
+    if (Number(qtd) < 0 || Number(qtd) > Number(item.quantidade_comercial || 0)) {
+      this.erro = 'Quantidade recebida deve ser maior ou igual a zero e menor ou igual à quantidade fiscal.';
+      return;
+    }
+    item.salvando = true;
+    this.notasApi.conferirItemXml(nota.id, item.id, qtd).subscribe({
+      next: resp => {
+        Object.assign(item, resp.item, { recebidoInput: Number(resp.item.quantidade_recebida), salvando: false });
+        this.resumoConferencia = resp.resumo;
+        this.mensagem = 'Conferência do item gravada.';
+        this.notasApi.divergenciasXml(nota.id).subscribe({ next: divs => this.divergenciasXml = divs });
+      },
+      error: err => {
+        item.salvando = false;
+        this.erro = this.errorText(err, 'Não foi possível conferir o item.');
+      },
+    });
+  }
+
+  preencherQuantidadeFiscal(item: ItemXmlUI): void {
+    item.recebidoInput = Number(item.quantidade_comercial || 0);
+  }
+
+  confirmarQuantidadesFiscais(): void {
+    const nota = this.notaAtual();
+    if (!nota || this.xmlSomenteLeitura() || this.conferindoLote) return;
+    const itens = this.itensXml.filter(i => i.conciliado).map(i => ({ item: i.id, quantidade_recebida: i.quantidade_comercial }));
+    if (!itens.length) return;
+    this.conferindoLote = true;
+    this.notasApi.conferirItensXml(nota.id, itens).subscribe({
+      next: resp => {
+        this.conferindoLote = false;
+        this.resumoConferencia = resp.resumo;
+        this.mensagem = 'Quantidades fiscais confirmadas.';
+        this.carregarFluxoXml(nota.id);
+      },
+      error: err => {
+        this.conferindoLote = false;
+        this.erro = this.errorText(err, 'Não foi possível confirmar as quantidades.');
       },
     });
   }
@@ -699,6 +926,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   fecharNota(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status !== 'AB') return;
+    if (nota.xml_importado) {
+      this.efetivarModalAberto = true;
+      return;
+    }
     this.confirmModal = {
       action: 'fecharNota',
       title: 'Fechar nota fiscal',
@@ -714,7 +945,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.confirmModal = null;
         this.notaAtual.set(n);
         this.form.disable();
-        const fin = n.financeiro;
+        const fin = n.financeiro as { disponivel?: boolean; titulos_atualizados?: number } | undefined;
         const msgFin = fin?.disponivel
           ? ` Financeiro atualizado: ${fin.titulos_atualizados || 0} título(s).`
           : '';
@@ -722,6 +953,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.erro = '';
         this.loadNotas();
         this.loadPedidosAprovados();
+        if (n.xml_importado) this.carregarFluxoXml(n.id);
       },
       error: (err) => {
         this.erro = err?.error?.detail || 'Não foi possível fechar a nota.';
@@ -732,6 +964,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   cancelarNota(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status === 'CA') return;
+    if (nota.status === 'FE') {
+      this.abrirCancelamentoOperacional();
+      return;
+    }
     this.confirmModal = {
       action: 'cancelarNota',
       title: 'Cancelar nota fiscal',
@@ -742,7 +978,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   private executarCancelamentoNota(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status === 'CA') return;
-    this.notasApi.cancelar(nota.id).subscribe({
+    this.notasApi.cancelar(nota.id, 'Cancelamento operacional', false).subscribe({
       next: (n) => {
         this.confirmModal = null;
         this.notaAtual.set(n);
@@ -756,6 +992,74 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.erro = 'Não foi possível cancelar a nota.';
       },
     });
+  }
+
+  confirmarEfetivacaoXml(): void {
+    this.efetivarModalAberto = false;
+    this.executarFechamentoNota();
+  }
+
+  abrirCancelamentoOperacional(): void {
+    const nota = this.notaAtual();
+    if (!nota || this.analisandoCancelamento) return;
+    this.analisandoCancelamento = true;
+    this.cancelamentoAnalise = null;
+    this.motivoCancelamento = '';
+    this.confirmacaoAvisosCancelamento = false;
+    this.notasApi.analisarCancelamento(nota.id).subscribe({
+      next: analise => {
+        this.analisandoCancelamento = false;
+        this.cancelamentoAnalise = analise;
+        this.cancelarModalAberto = true;
+      },
+      error: err => {
+        this.analisandoCancelamento = false;
+        this.erro = this.errorText(err, 'Não foi possível analisar o cancelamento.');
+      },
+    });
+  }
+
+  podeConfirmarCancelamento(): boolean {
+    const motivoOk = this.motivoCancelamento.trim().length > 0;
+    const analise = this.cancelamentoAnalise;
+    if (!motivoOk || !analise || analise.bloqueios.length > 0 || this.cancelandoNota) return false;
+    return analise.avisos.length === 0 || this.confirmacaoAvisosCancelamento;
+  }
+
+  confirmarCancelamentoOperacional(): void {
+    const nota = this.notaAtual();
+    const analise = this.cancelamentoAnalise;
+    if (!nota || !analise || !this.podeConfirmarCancelamento()) return;
+    this.cancelandoNota = true;
+    this.notasApi.cancelar(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0).subscribe({
+      next: n => {
+        this.cancelandoNota = false;
+        this.cancelarModalAberto = false;
+        this.notaAtual.set(n);
+        this.form.disable();
+        this.mensagem = 'Nota cancelada.';
+        this.loadNotas();
+        this.loadPedidosAprovados();
+        if (n.xml_importado) this.carregarFluxoXml(n.id);
+      },
+      error: err => {
+        this.cancelandoNota = false;
+        this.erro = this.errorText(err, 'Não foi possível cancelar a nota.');
+      },
+    });
+  }
+
+  private errorText(err: any, fallback: string): string {
+    const data = err?.error;
+    if (!data) return fallback;
+    if (typeof data === 'string') return data;
+    if (typeof data.detail === 'string') return data.detail;
+    const firstKey = Object.keys(data)[0];
+    const value = firstKey ? data[firstKey] : null;
+    if (Array.isArray(value)) return value.join(' ');
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') return JSON.stringify(value);
+    return fallback;
   }
 
   labelLoja(id: number | null | undefined): string {

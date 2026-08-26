@@ -9,6 +9,7 @@
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
       <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
       <button class="btn" type="button" [disabled]="loading" (click)="loadNotas()">Atualizar</button>
+      <button class="btn primary" type="button" (click)="abrirImportacaoXml()">Importar XML</button>
       <button class="btn primary" type="button" (click)="novo()">+ Nova NF-e</button>
     </div>
   </section>
@@ -23,6 +24,71 @@
       <div class="modal-actions">
         <button class="btn" type="button" (click)="fecharConfirmacao()">Voltar</button>
         <button class="btn danger" type="button" (click)="confirmarAcao()">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="importModalAberto">
+    <section class="modal-card import-modal">
+      <h3>Importar XML</h3>
+      <label class="input-item">Arquivo XML<input type="file" accept=".xml,text/xml,application/xml" (change)="onXmlFileChange($event)" /></label>
+      <label class="input-item">Pedido de Compra (opcional)<select [(ngModel)]="importPedido"><option [ngValue]="null">Sem pedido</option><option *ngFor="let p of pedidosAprovados" [ngValue]="p.id">{{ pedidoLabel(p) }}</option></select></label>
+      <div class="modal-actions">
+        <button class="btn" type="button" [disabled]="importandoXml" (click)="fecharImportacaoXml()">Voltar</button>
+        <button class="btn primary" type="button" [disabled]="!importArquivo || importandoXml" (click)="importarXml()">{{ importandoXml ? 'Processando...' : 'Importar XML' }}</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="efetivarModalAberto && notaAtual() as nota">
+    <section class="modal-card">
+      <h3>Efetivar NF-e</h3>
+      <p class="modal-text">Confirma a efetivação da NF-e {{ nota.numero }} de {{ labelFornecedor(nota.fornecedor) }} no valor de {{ nota.valor_total | number : '1.2-2' }}?</p>
+      <p class="modal-text" *ngIf="resumoConferencia?.possui_divergencia_pendente">Existem divergências de recebimento. A NF será efetivada com a quantidade fisicamente recebida e o Financeiro será alertado.</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" (click)="efetivarModalAberto = false">Voltar</button>
+        <button class="btn primary" type="button" [disabled]="saving" (click)="confirmarEfetivacaoXml()">Efetivar NF-e</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="cancelarModalAberto">
+    <section class="modal-card cancel-modal">
+      <h3>Cancelar NF</h3>
+      <div class="alert error" *ngIf="cancelamentoAnalise?.bloqueios?.length">
+        <div *ngFor="let bloqueio of cancelamentoAnalise?.bloqueios">{{ bloqueio }}</div>
+      </div>
+      <div class="alert warning" *ngIf="cancelamentoAnalise?.avisos?.length">
+        <div *ngFor="let aviso of cancelamentoAnalise?.avisos">{{ aviso.tipo === 'SALDO_NEGATIVO' ? 'O cancelamento poderá deixar o estoque negativo.' : 'Existem movimentações posteriores a esta entrada.' }}</div>
+      </div>
+      <label class="input-item">Motivo do cancelamento<textarea rows="3" [(ngModel)]="motivoCancelamento"></textarea></label>
+      <label class="check-line" *ngIf="cancelamentoAnalise?.avisos?.length"><input type="checkbox" [(ngModel)]="confirmacaoAvisosCancelamento" /> Confirmo os avisos e desejo continuar.</label>
+      <div class="modal-actions">
+        <button class="btn" type="button" [disabled]="cancelandoNota" (click)="cancelarModalAberto = false">Voltar</button>
+        <button class="btn danger" type="button" [disabled]="!podeConfirmarCancelamento()" (click)="confirmarCancelamentoOperacional()">{{ cancelandoNota ? 'Cancelando...' : 'Cancelar NF' }}</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="conciliacaoModal as modal">
+    <section class="modal-card conciliation-modal">
+      <h3>Vincular produto</h3>
+      <div class="xml-doc-grid">
+        <span>Código <strong>{{ modal.item.codigo_produto_fornecedor || '-' }}</strong></span>
+        <span>Descrição <strong>{{ modal.item.descricao_produto }}</strong></span>
+        <span>GTIN <strong>{{ modal.item.gtin_ean || '-' }}</strong></span>
+        <span>Unidade <strong>{{ modal.item.unidade_comercial }}</strong></span>
+      </div>
+      <label class="input-item">Buscar Produto Sysvar<input type="text" [(ngModel)]="modal.termo" (keyup.enter)="buscarCandidatosXml()" /></label>
+      <button class="btn" type="button" [disabled]="modal.loading" (click)="buscarCandidatosXml()">Buscar</button>
+      <div class="candidate-list">
+        <label class="candidate" *ngFor="let c of modal.candidatos"><input type="radio" name="produtoXml" [value]="c.id" [(ngModel)]="modal.selecionado" /> <span>{{ c.referencia || '-' }} - {{ c.descricao }} · {{ c.unidade_interna || '-' }}</span></label>
+        <div class="empty-hint" *ngIf="!modal.loading && !modal.candidatos.length">Nenhum candidato encontrado.</div>
+      </div>
+      <p class="modal-text">Este vínculo será reutilizado nas próximas NF-e deste fornecedor.</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" [disabled]="modal.saving" (click)="conciliacaoModal = null">Voltar</button>
+        <button class="btn primary" type="button" [disabled]="!modal.selecionado || modal.saving" (click)="confirmarConciliacaoXml()">Confirmar vínculo</button>
       </div>
     </section>
   </div>
@@ -78,6 +144,7 @@
       <table class="table" *ngIf="notasPagina.length > 0; else emptyTpl">
         <thead>
           <tr>
+            <th>Origem</th>
             <th>Pedido</th>
             <th>Modelo</th>
             <th>Série</th>
@@ -90,7 +157,8 @@
         </thead>
         <tbody>
           <tr *ngFor="let nota of notasPagina" [class.selected]="notaSelecionada(nota)" (click)="selecionarNota(nota)" (dblclick)="editar(nota)">
-            <td>{{ nota.pedido_compra }}</td>
+            <td><span class="badge badge-light">{{ origemLabel(nota) }}</span></td>
+            <td>{{ pedidoResumo(nota) }}</td>
             <td>{{ nota.modelo }}</td>
             <td>{{ nota.serie || '-' }}</td>
             <td>{{ nota.numero }}</td>
@@ -131,12 +199,26 @@
   <section class="card form" *ngIf="view() === 'form'">
     <div class="form-title">
       <h3>{{ notaAtual() ? 'Nota fiscal de entrada' : 'Nova nota fiscal de entrada' }}</h3>
+      <span class="badge badge-light" *ngIf="notaAtual()">{{ origemLabel(notaAtual()) }}</span>
+      <span class="badge badge-light" *ngIf="notaAtual()">{{ pedidoResumo(notaAtual()) }}</span>
       <span class="badge" *ngIf="notaAtual()" [ngClass]="statusClass(notaAtual()!.status)">
         {{ statusLabel(notaAtual()!.status) }}
       </span>
     </div>
 
-    <form [formGroup]="form" novalidate>
+    <section class="xml-document" *ngIf="notaAtual()?.xml_importado && notaAtual() as nota">
+      <div><small>Número</small><strong>{{ nota.numero }}</strong></div>
+      <div><small>Série</small><strong>{{ nota.serie || '-' }}</strong></div>
+      <div><small>Chave</small><strong>{{ nota.chave_acesso || '-' }}</strong></div>
+      <div><small>Emissão</small><strong>{{ nota.dt_emissao }}</strong></div>
+      <div><small>Entrada</small><strong>{{ nota.dt_entrada }}</strong></div>
+      <div><small>Fornecedor</small><strong>{{ labelFornecedor(nota.fornecedor) }}</strong></div>
+      <div><small>Loja</small><strong>{{ labelLoja(nota.loja) }}</strong></div>
+      <div><small>Total</small><strong>{{ nota.valor_total | number : '1.2-2' }}</strong></div>
+      <div><small>XML</small><strong>{{ nota.xml_original ? 'XML armazenado' : 'XML armazenado' }}</strong></div>
+    </section>
+
+    <form [formGroup]="form" novalidate *ngIf="!notaAtual()?.xml_importado">
       <div class="grid-12">
         <label class="input-item col-span-5">
           Pedido aprovado*
@@ -198,7 +280,7 @@
       <span>Tipo <strong>{{ tipoPedidoLabel(pedido.tipo) }}</strong></span>
     </div>
 
-    <div class="actions-form">
+    <div class="actions-form" *ngIf="!notaAtual()?.xml_importado">
       <button class="btn primary" type="button" (click)="salvarCabecalho()" [disabled]="saving || notaAtual()?.status !== 'AB' && !!notaAtual()">
         Gravar cabeçalho
       </button>
@@ -212,11 +294,62 @@
       <strong>Total: {{ notaAtual()!.valor_total | number : '1.2-2' }}</strong>
     </div>
 
-    <hr class="divider" />
+    <section class="xml-flow" *ngIf="notaAtual()?.xml_importado">
+      <div class="step-summary">
+        <div><small>Conciliação</small><strong>{{ resumoConciliacao?.itens_conciliados || 0 }} de {{ resumoConciliacao?.total_itens || 0 }}</strong></div>
+        <div><small>Conferência</small><strong>{{ resumoConferencia?.itens_conferidos || 0 }} de {{ resumoConferencia?.total_itens || 0 }}</strong></div>
+        <div><small>Divergências</small><strong>{{ resumoConferencia?.itens_com_divergencia || 0 }}</strong></div>
+        <div><small>Situação</small><strong>{{ situacaoXml() }}</strong></div>
+      </div>
+      <div class="actions-form">
+        <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
+        <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
+      </div>
+      <div class="table-wrapper itens-wrapper xml-items">
+        <table class="table" *ngIf="itensXml.length; else xmlEmptyTpl">
+          <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Produto Sysvar</th><th>Conversão</th><th>Recebido</th><th>Situação</th><th>Ação</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of itensXml">
+              <td>{{ item.numero_item }}</td>
+              <td>{{ item.codigo_produto_fornecedor || '-' }}</td>
+              <td>{{ item.descricao_produto }}</td>
+              <td>{{ item.unidade_comercial }}</td>
+              <td>{{ item.quantidade_comercial | number : '1.3-3' }}</td>
+              <td>{{ item.produto_descricao || 'Pendente' }}</td>
+              <td>
+                <span *ngIf="item.conversao && !item.conversao.conversao_pendente">{{ item.unidade_comercial }} → {{ item.conversao.quantidade_interna || '-' }} {{ item.conversao.unidade_interna || '' }}</span>
+                <span class="text-warn" *ngIf="!item.conversao || item.conversao.conversao_pendente">Conversão de unidade pendente</span>
+              </td>
+              <td><input type="number" step="0.001" [(ngModel)]="item.recebidoInput" [disabled]="xmlSomenteLeitura() || !item.conciliado" /></td>
+              <td><span class="badge" [ngClass]="item.conciliado && item.conferido ? 'badge-ok' : 'badge-off'">{{ item.conciliado ? (item.conferido ? 'Conferido' : 'Conciliado') : 'Pendente' }}</span></td>
+              <td>
+                <button class="btn sm" type="button" *ngIf="!item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="abrirConciliacao(item)">Vincular produto</button>
+                <button class="btn sm" type="button" *ngIf="item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="preencherQuantidadeFiscal(item)">Qtd fiscal</button>
+                <button class="btn sm primary" type="button" *ngIf="item.conciliado" [disabled]="xmlSomenteLeitura() || item.salvando" (click)="conferirItemXml(item)">Conferir</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #xmlEmptyTpl><div class="empty-hint">{{ loadingXml ? 'Carregando itens XML...' : 'Nenhum item XML encontrado.' }}</div></ng-template>
+      </div>
+      <section class="divergencias" *ngIf="divergenciasXml.length">
+        <h3>Divergências</h3>
+        <div class="divergencia-row" *ngFor="let div of divergenciasXml">
+          <strong>Item {{ div.item_xml }}</strong>
+          <span>Faltam {{ div.quantidade_faltante | number : '1.3-3' }} · R$ {{ div.valor_divergente | number : '1.2-2' }}</span>
+          <span class="badge badge-off">{{ div.status }}</span>
+        </div>
+      </section>
+      <div class="block-reasons" *ngIf="motivosBloqueioEfetivar().length">
+        <span *ngFor="let motivo of motivosBloqueioEfetivar()">{{ motivo }}</span>
+      </div>
+    </section>
 
-    <h3>Itens do Pedido</h3>
+    <hr class="divider" *ngIf="!notaAtual()?.xml_importado" />
 
-    <div class="table-wrapper itens-wrapper" *ngIf="notaAtual(); else saveFirstTpl">
+    <h3 *ngIf="!notaAtual()?.xml_importado">Itens do Pedido</h3>
+
+    <div class="table-wrapper itens-wrapper" *ngIf="notaAtual() && !notaAtual()?.xml_importado">
       <table class="table" *ngIf="itensPedido.length > 0; else itensEmptyTpl">
         <thead>
           <tr>
@@ -291,10 +424,11 @@
     <ng-template #saveFirstTpl>
       <div class="empty-hint">Grave o cabeçalho para carregar os itens do pedido.</div>
     </ng-template>
+    <div class="empty-hint" *ngIf="!notaAtual()">Grave o cabeçalho para carregar os itens do pedido.</div>
 
     <div class="actions-form end-actions" *ngIf="notaAtual()">
-      <button class="btn primary" type="button" (click)="fecharNota()" [disabled]="notaAtual()?.status !== 'AB'">
-        Fechar NF
+      <button class="btn primary" type="button" (click)="fecharNota()" [disabled]="notaAtual()?.xml_importado ? !podeEfetivarXml() : notaAtual()?.status !== 'AB'">
+        {{ notaAtual()?.xml_importado ? 'Efetivar NF-e' : 'Fechar NF' }}
       </button>
       <button class="btn danger" type="button" (click)="cancelarNota()" [disabled]="notaAtual()?.status === 'CA'">
         Cancelar NF
