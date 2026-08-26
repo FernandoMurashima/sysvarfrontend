@@ -1,6 +1,9 @@
 export interface NotaFiscalEntrada {
   id: number;
-  pedido_compra: number;
+  empresa: number;
+  loja: number;
+  fornecedor: number;
+  pedido_compra: number | null;
   modelo: string;
   serie: string;
   numero: string;
