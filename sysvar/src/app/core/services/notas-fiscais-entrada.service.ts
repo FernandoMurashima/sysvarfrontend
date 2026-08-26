@@ -7,6 +7,7 @@ import {
   NotaFiscalEntrada,
   NotaFiscalEntradaAnaliseCancelamento,
   NotaFiscalEntradaDivergenciaXml,
+  NotaFiscalEntradaEventoFiscal,
   NotaFiscalEntradaItem,
   NotaFiscalEntradaItemXml,
   NotaFiscalEntradaPedidoItem,
@@ -161,6 +162,10 @@ export class NotasFiscaisEntradaService {
 
   resolverDivergenciaXml(id: number, divergencia: number): Observable<NotaFiscalEntradaDivergenciaXml> {
     return this.http.post<NotaFiscalEntradaDivergenciaXml>(`${this.base}${id}/resolver-divergencia-xml/`, { divergencia });
+  }
+
+  eventosFiscais(id: number): Observable<NotaFiscalEntradaEventoFiscal[]> {
+    return this.http.get<NotaFiscalEntradaEventoFiscal[]>(`${this.base}${id}/eventos-fiscais/`);
   }
 
   analisarCancelamento(id: number): Observable<NotaFiscalEntradaAnaliseCancelamento> {

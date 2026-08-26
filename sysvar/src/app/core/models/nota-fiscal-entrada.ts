@@ -25,6 +25,12 @@ export interface NotaFiscalEntrada {
   destinatario_documento?: string;
   destinatario_nome?: string;
   protocolo_autorizacao?: string;
+  situacao_fiscal?: 'DESCONHECIDA' | 'AUTORIZADA' | 'CANCELADA' | 'DENEGADA';
+  ambiente?: string;
+  finalidade_nfe?: string;
+  dh_emissao?: string | null;
+  protocolo_cstat?: string;
+  protocolo_motivo?: string;
   resumo_conciliacao?: NotaFiscalEntradaResumoConciliacao | null;
   resumo_conferencia?: NotaFiscalEntradaResumoConferencia | null;
   cancelado_por?: number | null;
@@ -132,6 +138,22 @@ export interface NotaFiscalEntradaAnaliseCancelamento {
   }>;
   pedido: number | null;
   valor_financeiro: string;
+}
+
+export interface NotaFiscalEntradaEventoFiscal {
+  id: number;
+  nota: number;
+  chave_acesso: string;
+  tipo_evento: string;
+  tipo_evento_descricao: string;
+  sequencia: number;
+  data_hora_evento?: string | null;
+  protocolo: string;
+  cstat: string;
+  xmotivo: string;
+  ambiente: string;
+  situacao_processamento: string;
+  criado_em?: string;
 }
 
 export interface NotaFiscalEntradaItem {

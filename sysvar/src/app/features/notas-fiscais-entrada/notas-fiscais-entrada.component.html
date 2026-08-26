@@ -204,6 +204,9 @@
       <span class="badge" *ngIf="notaAtual()" [ngClass]="statusClass(notaAtual()!.status)">
         {{ statusLabel(notaAtual()!.status) }}
       </span>
+      <span class="badge badge-light" *ngIf="notaAtual()?.xml_importado">
+        Fiscal: {{ situacaoFiscalLabel(notaAtual()?.situacao_fiscal) }}
+      </span>
     </div>
 
     <section class="xml-document" *ngIf="notaAtual()?.xml_importado && notaAtual() as nota">
@@ -215,6 +218,10 @@
       <div><small>Fornecedor</small><strong>{{ labelFornecedor(nota.fornecedor) }}</strong></div>
       <div><small>Loja</small><strong>{{ labelLoja(nota.loja) }}</strong></div>
       <div><small>Total</small><strong>{{ nota.valor_total | number : '1.2-2' }}</strong></div>
+      <div><small>Situação fiscal</small><strong>{{ situacaoFiscalLabel(nota.situacao_fiscal) }}</strong></div>
+      <div><small>Ambiente</small><strong>{{ nota.ambiente === '1' ? 'Produção' : (nota.ambiente === '2' ? 'Homologação' : '-') }}</strong></div>
+      <div><small>Finalidade</small><strong>{{ nota.finalidade_nfe || '-' }}</strong></div>
+      <div><small>Protocolo</small><strong>{{ nota.protocolo_autorizacao || '-' }}</strong></div>
       <div><small>XML</small><strong>{{ nota.xml_original ? 'XML armazenado' : 'XML armazenado' }}</strong></div>
     </section>
 

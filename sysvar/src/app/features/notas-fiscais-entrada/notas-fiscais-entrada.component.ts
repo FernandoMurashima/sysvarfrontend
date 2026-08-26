@@ -636,6 +636,9 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   motivosBloqueioEfetivar(): string[] {
     const motivos: string[] = [];
+    const nota = this.notaAtual();
+    if (nota?.situacao_fiscal && nota.situacao_fiscal !== 'AUTORIZADA') motivos.push(`Situação fiscal ${this.situacaoFiscalLabel(nota.situacao_fiscal)}`);
+    if (nota?.finalidade_nfe && nota.finalidade_nfe !== '1') motivos.push('Finalidade fiscal requer fluxo específico');
     if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
     if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
@@ -1092,6 +1095,16 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (status === 'FE') return 'badge-ok';
     if (status === 'CA') return 'badge-danger';
     return 'badge-off';
+  }
+
+  situacaoFiscalLabel(status: string | null | undefined): string {
+    const labels: Record<string, string> = {
+      AUTORIZADA: 'Autorizada',
+      CANCELADA: 'Cancelada',
+      DENEGADA: 'Denegada',
+      DESCONHECIDA: 'Desconhecida',
+    };
+    return labels[String(status || '')] || String(status || '-');
   }
 
   private normalizeSearch(value: unknown): string {
