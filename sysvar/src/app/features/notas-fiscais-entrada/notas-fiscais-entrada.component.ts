@@ -4,12 +4,14 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { RouterLink } from '@angular/router';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { NotaFiscalEntradaIndicadores, NotaFiscalEntradaListParams, NotasFiscaisEntradaService } from '../../core/services/notas-fiscais-entrada.service';
 import { PedidoCompra, PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import {
   NotaFiscalEntrada,
   NotaFiscalEntradaAnaliseCancelamento,
+  NotaFiscalEntradaCobrancaFinanceira,
   NotaFiscalEntradaDivergenciaXml,
   NotaFiscalEntradaItemXml,
   NotaFiscalEntradaPedidoItem,
@@ -17,6 +19,7 @@ import {
   NotaFiscalEntradaResumoConferencia,
   NotaFiscalEntradaResumoConciliacao,
 } from '../../core/models/nota-fiscal-entrada';
+import { FormaPagamento } from '../../core/models/forma-pagamento';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
@@ -48,6 +51,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   private fb = inject(FormBuilder);
   private notasApi = inject(NotasFiscaisEntradaService);
   private pedidosApi = inject(PedidosCompraService);
+  private formasPagamentoApi = inject(FormasPagamentoService);
   private lojasApi = inject(LojasService);
   private fornecedoresApi = inject(FornecedoresService);
 
@@ -121,6 +125,9 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   resumoConferencia: NotaFiscalEntradaResumoConferencia | null = null;
   divergenciasXml: NotaFiscalEntradaDivergenciaXml[] = [];
   loadingXml = false;
+  cobrancaFinanceira: NotaFiscalEntradaCobrancaFinanceira | null = null;
+  formasPagamento: FormaPagamento[] = [];
+  formaPagamentoModal: { codigoTpag: string; descricaoTpag: string; selecionado: number | null; loading: boolean; saving: boolean } | null = null;
   conciliandoAuto = false;
   conferindoLote = false;
   conciliacaoModal: { item: ItemXmlUI; termo: string; candidatos: NotaFiscalEntradaProdutoCandidato[]; selecionado: number | null; loading: boolean; saving: boolean } | null = null;
@@ -455,6 +462,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.view.set('form');
     this.selectedItem = null;
     this.itensXml = [];
+    this.cobrancaFinanceira = null;
     if (nota.xml_importado) {
       this.carregarFluxoXml(nota.id);
     } else {
@@ -612,6 +620,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.notasApi.resumoConciliacao(notaId).subscribe({ next: resumo => this.resumoConciliacao = resumo });
     this.notasApi.resumoConferencia(notaId).subscribe({ next: resumo => this.resumoConferencia = resumo });
     this.notasApi.divergenciasXml(notaId).subscribe({ next: divs => this.divergenciasXml = divs });
+    this.notasApi.cobrancaFinanceira(notaId).subscribe({ next: cobranca => this.cobrancaFinanceira = cobranca });
   }
 
   origemLabel(nota: NotaFiscalEntrada | null): string {
@@ -639,6 +648,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const nota = this.notaAtual();
     if (nota?.situacao_fiscal && nota.situacao_fiscal !== 'AUTORIZADA') motivos.push(`Situação fiscal ${this.situacaoFiscalLabel(nota.situacao_fiscal)}`);
     if (nota?.finalidade_nfe && nota.finalidade_nfe !== '1') motivos.push('Finalidade fiscal requer fluxo específico');
+    if (!nota?.pedido_compra && this.cobrancaFinanceira?.pendencias?.length) motivos.push(...this.cobrancaFinanceira.pendencias);
     if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
     if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
@@ -647,6 +657,47 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   podeEfetivarXml(): boolean {
     return this.notaAtual()?.xml_importado === true && this.notaAtual()?.status === 'AB' && this.motivosBloqueioEfetivar().length === 0;
+  }
+
+  abrirFormaPagamentoFiscal(): void {
+    const pagamento = this.cobrancaFinanceira?.pagamentos?.[0];
+    if (!pagamento) return;
+    const sugestao = this.cobrancaFinanceira?.sugestoes?.[0];
+    this.formaPagamentoModal = {
+      codigoTpag: pagamento.codigo_tpag,
+      descricaoTpag: pagamento.descricao_tpag,
+      selecionado: sugestao?.id || null,
+      loading: true,
+      saving: false,
+    };
+    this.formasPagamentoApi.list({ ativo: true }).subscribe({
+      next: resp => {
+        this.formasPagamento = this.arrayOrResults<FormaPagamento>(resp);
+        if (this.formaPagamentoModal) this.formaPagamentoModal.loading = false;
+      },
+      error: err => {
+        if (this.formaPagamentoModal) this.formaPagamentoModal.loading = false;
+        this.erro = this.errorText(err, 'Não foi possível carregar as formas de pagamento.');
+      },
+    });
+  }
+
+  confirmarFormaPagamentoFiscal(): void {
+    const nota = this.notaAtual();
+    const modal = this.formaPagamentoModal;
+    if (!nota || !modal?.selecionado || modal.saving) return;
+    modal.saving = true;
+    this.notasApi.vincularFormaPagamentoFiscal(nota.id, modal.codigoTpag, modal.selecionado).subscribe({
+      next: resp => {
+        this.cobrancaFinanceira = resp.cobranca;
+        this.formaPagamentoModal = null;
+        this.mensagem = 'Forma de pagamento fiscal vinculada.';
+      },
+      error: err => {
+        if (this.formaPagamentoModal) this.formaPagamentoModal.saving = false;
+        this.erro = this.errorText(err, 'Não foi possível vincular a forma de pagamento.');
+      },
+    });
   }
 
   reprocessarConciliacao(): void {
@@ -948,9 +999,9 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.confirmModal = null;
         this.notaAtual.set(n);
         this.form.disable();
-        const fin = n.financeiro as { disponivel?: boolean; titulos_atualizados?: number } | undefined;
+        const fin = n.financeiro as { disponivel?: boolean; titulos_atualizados?: number; titulos_criados?: number; parcelas_efetivadas?: number } | undefined;
         const msgFin = fin?.disponivel
-          ? ` Financeiro atualizado: ${fin.titulos_atualizados || 0} título(s).`
+          ? ` Financeiro: ${(fin.titulos_criados || 0) + (fin.titulos_atualizados || 0)} título(s), ${fin.parcelas_efetivadas || 0} parcela(s).`
           : '';
         this.mensagem = `Nota fechada.${msgFin}`;
         this.erro = '';

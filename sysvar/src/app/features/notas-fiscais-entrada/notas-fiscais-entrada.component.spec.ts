@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { NotasFiscaisEntradaService } from '../../core/services/notas-fiscais-entrada.service';
 import { PedidosCompraService } from '../../core/services/pedidos-compra.service';
@@ -83,10 +84,13 @@ describe('NotasFiscaisEntradaComponent', () => {
     criarItem: jasmine.createSpy('criarItem'),
     atualizarItem: jasmine.createSpy('atualizarItem'),
     removerItem: jasmine.createSpy('removerItem'),
+    cobrancaFinanceira: jasmine.createSpy('cobrancaFinanceira'),
+    vincularFormaPagamentoFiscal: jasmine.createSpy('vincularFormaPagamentoFiscal'),
   };
   const pedidosApi = { listar: jasmine.createSpy('pedidosListar') };
   const lojasApi = { list: jasmine.createSpy('lojasList') };
   const fornecedoresApi = { list: jasmine.createSpy('fornecedoresList') };
+  const formasPagamentoApi = { list: jasmine.createSpy('formasPagamentoList') };
 
   beforeEach(async () => {
     localStorage.clear();
@@ -97,6 +101,8 @@ describe('NotasFiscaisEntradaComponent', () => {
     notasApi.criarItem.and.returnValue(of({ id: 202, nota: nota.id, pedido_item: itemOutro.pedido_item, qtd_recebida: '2.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '20.00' }));
     notasApi.atualizarItem.and.returnValue(of({ id: 201, nota: nota.id, pedido_item: itemBase.pedido_item, qtd_recebida: '1.000', preco_unit_nf: '10.0000', desconto_item: '0.00', total_item: '10.00' }));
     notasApi.removerItem.and.returnValue(of(undefined));
+    notasApi.cobrancaFinanceira.and.returnValue(of({ usa_duplicatas: false, valor_fatura: '0.00', parcelas: [], pagamentos: [], sugestoes: [], pendencias: [], forma_pagamento_conciliada: true, forma_pagamento_sysvar_id: null, forma_pagamento_sysvar_codigo: null, forma_pagamento_sysvar_descricao: null, forma_pagamento_sysvar_tipo: null, financeiro_pronto: true }));
+    notasApi.vincularFormaPagamentoFiscal.and.returnValue(of({ cobranca: { usa_duplicatas: true, valor_fatura: '100.00', parcelas: [], pagamentos: [], sugestoes: [], pendencias: [], forma_pagamento_conciliada: true, forma_pagamento_sysvar_id: 8, forma_pagamento_sysvar_codigo: 'BOL', forma_pagamento_sysvar_descricao: 'Boleto', forma_pagamento_sysvar_tipo: 'BOLETO', financeiro_pronto: true } }));
     notasApi.fechar.and.returnValue(of({ ...nota, status: 'FE' as const, xml_importado: true }));
     notasApi.cancelar.and.returnValue(of({ ...nota, status: 'CA' as const }));
     notasApi.importarXml.and.returnValue(of({ ...nota, xml_importado: true, pedido_compra: null }));
@@ -113,6 +119,7 @@ describe('NotasFiscaisEntradaComponent', () => {
     pedidosApi.listar.and.returnValue(of({ count: 1, results: [{ id: 10, tipo: '2', loja: 3, fornecedor: 4, emissao: '2026-01-01', status: 'AP', total_itens: '100.00', total_desconto: '0.00', frete: '0.00', total_pedido: '100.00' }] }));
     lojasApi.list.and.returnValue(of({ count: 1, results: [{ id: 3, nome_loja: 'Loja A' }] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, results: [{ id: 4, nome_fornecedor: 'Fornecedor A' }] }));
+    formasPagamentoApi.list.and.returnValue(of({ count: 1, results: [{ Idformapagamento: 8, id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', num_parcelas: 1, ativo: true }] }));
 
     await TestBed.configureTestingModule({
       imports: [NotasFiscaisEntradaComponent],
@@ -122,6 +129,7 @@ describe('NotasFiscaisEntradaComponent', () => {
         { provide: PedidosCompraService, useValue: pedidosApi },
         { provide: LojasService, useValue: lojasApi },
         { provide: FornecedoresService, useValue: fornecedoresApi },
+        { provide: FormasPagamentoService, useValue: formasPagamentoApi },
       ],
     }).compileComponents();
 
@@ -489,6 +497,59 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(notasApi.resumoConciliacao).toHaveBeenCalledWith(1);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vincular produto');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Conversão de unidade pendente');
+  });
+
+  it('NF XML sem pedido mostra cobrança e bloqueia efetivação até vincular tPag', () => {
+    notasApi.cobrancaFinanceira.and.returnValue(of({
+      usa_duplicatas: true,
+      valor_fatura: '100.00',
+      parcelas: [{ numero: '001', vencimento: '2026-09-25', valor: '100.00' }],
+      pagamentos: [{ codigo_tpag: '15', descricao_tpag: 'Boleto bancário', valor: '100.00' }],
+      sugestoes: [{ id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO' }],
+      pendencias: ['Concilie a forma de pagamento do XML antes de efetivar a NF-e.'],
+      forma_pagamento_conciliada: false,
+      forma_pagamento_sysvar_id: null,
+      forma_pagamento_sysvar_codigo: null,
+      forma_pagamento_sysvar_descricao: null,
+      forma_pagamento_sysvar_tipo: null,
+      financeiro_pronto: false,
+    }));
+
+    component.editar({ ...nota, xml_importado: true, pedido_compra: null });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent || '';
+    expect(text).toContain('Cobrança / Financeiro');
+    expect(text).toContain('Boleto bancário');
+    expect(text).toContain('001');
+    expect(component.motivosBloqueioEfetivar()).toContain('Concilie a forma de pagamento do XML antes de efetivar a NF-e.');
+  });
+
+  it('vincula forma fiscal usando sugestao sem alterar busca de produto', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true, pedido_compra: null });
+    component.cobrancaFinanceira = {
+      usa_duplicatas: true,
+      valor_fatura: '100.00',
+      parcelas: [],
+      pagamentos: [{ codigo_tpag: '15', descricao_tpag: 'Boleto bancário', valor: '100.00' }],
+      sugestoes: [{ id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO' }],
+      pendencias: ['Concilie a forma de pagamento do XML antes de efetivar a NF-e.'],
+      forma_pagamento_conciliada: false,
+      forma_pagamento_sysvar_id: null,
+      forma_pagamento_sysvar_codigo: null,
+      forma_pagamento_sysvar_descricao: null,
+      forma_pagamento_sysvar_tipo: null,
+      financeiro_pronto: false,
+    };
+
+    component.abrirFormaPagamentoFiscal();
+    expect(formasPagamentoApi.list).toHaveBeenCalledWith({ ativo: true });
+    expect(component.formaPagamentoModal?.selecionado).toBe(8);
+
+    component.confirmarFormaPagamentoFiscal();
+    expect(notasApi.vincularFormaPagamentoFiscal).toHaveBeenCalledWith(1, '15', 8);
+    expect(component.formaPagamentoModal).toBeNull();
+    expect(component.cobrancaFinanceira?.forma_pagamento_conciliada).toBeTrue();
   });
 
   it('busca candidatos, concilia manualmente e mostra conflito de vínculo', () => {

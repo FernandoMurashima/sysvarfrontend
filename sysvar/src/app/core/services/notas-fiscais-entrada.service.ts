@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   NotaFiscalEntrada,
   NotaFiscalEntradaAnaliseCancelamento,
+  NotaFiscalEntradaCobrancaFinanceira,
   NotaFiscalEntradaDivergenciaXml,
   NotaFiscalEntradaEventoFiscal,
   NotaFiscalEntradaItem,
@@ -166,6 +167,17 @@ export class NotasFiscaisEntradaService {
 
   eventosFiscais(id: number): Observable<NotaFiscalEntradaEventoFiscal[]> {
     return this.http.get<NotaFiscalEntradaEventoFiscal[]>(`${this.base}${id}/eventos-fiscais/`);
+  }
+
+  cobrancaFinanceira(id: number): Observable<NotaFiscalEntradaCobrancaFinanceira> {
+    return this.http.get<NotaFiscalEntradaCobrancaFinanceira>(`${this.base}${id}/cobranca-financeira/`);
+  }
+
+  vincularFormaPagamentoFiscal(id: number, codigoTpag: string, formaPagamento: number): Observable<{ cobranca: NotaFiscalEntradaCobrancaFinanceira }> {
+    return this.http.post<{ cobranca: NotaFiscalEntradaCobrancaFinanceira }>(`${this.base}${id}/vincular-forma-pagamento-fiscal/`, {
+      codigo_tpag: codigoTpag,
+      forma_pagamento: formaPagamento,
+    });
   }
 
   analisarCancelamento(id: number): Observable<NotaFiscalEntradaAnaliseCancelamento> {

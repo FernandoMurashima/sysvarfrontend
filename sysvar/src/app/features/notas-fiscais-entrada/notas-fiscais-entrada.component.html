@@ -93,6 +93,29 @@
     </section>
   </div>
 
+  <div class="modal-backdrop" *ngIf="formaPagamentoModal as modal">
+    <section class="modal-card payment-modal">
+      <h3>Vincular forma de pagamento</h3>
+      <div class="xml-doc-grid">
+        <span>tPag <strong>{{ modal.codigoTpag }}</strong></span>
+        <span>Descrição fiscal <strong>{{ modal.descricaoTpag || '-' }}</strong></span>
+      </div>
+      <label class="input-item">Forma de Pagamento Sysvar
+        <select [(ngModel)]="modal.selecionado">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let forma of formasPagamento" [ngValue]="forma.Idformapagamento || forma.id">
+            {{ forma.codigo }} - {{ forma.descricao }} - {{ forma.tipo || 'OUTRO' }}
+          </option>
+        </select>
+      </label>
+      <p class="modal-text">Este vínculo será reutilizado nas próximas NF-e desta empresa.</p>
+      <div class="modal-actions">
+        <button class="btn" type="button" [disabled]="modal.saving" (click)="formaPagamentoModal = null">Voltar</button>
+        <button class="btn primary" type="button" [disabled]="!modal.selecionado || modal.loading || modal.saving" (click)="confirmarFormaPagamentoFiscal()">Confirmar vínculo</button>
+      </div>
+    </section>
+  </div>
+
   <section class="indicator-bar" *ngIf="view() === 'list' && indicatorsVisible">
     <div class="indicator"><span class="indicator-icon blue">▣</span><div><strong>{{ indicadores.total }}</strong><small>Total</small></div></div>
     <div class="indicator"><span class="indicator-icon green">✓</span><div><strong>{{ abertas }}</strong><small>Abertas</small></div></div>
@@ -302,6 +325,22 @@
     </div>
 
     <section class="xml-flow" *ngIf="notaAtual()?.xml_importado">
+      <section class="billing-block" *ngIf="cobrancaFinanceira as cobranca">
+        <div class="billing-head">
+          <h3>Cobrança / Financeiro</h3>
+          <button class="btn sm" type="button" *ngIf="!cobranca.forma_pagamento_conciliada && cobranca.pagamentos.length" [disabled]="xmlSomenteLeitura()" (click)="abrirFormaPagamentoFiscal()">Vincular forma de pagamento</button>
+        </div>
+        <div class="xml-doc-grid">
+          <span>Fatura <strong>{{ cobranca.valor_fatura | number : '1.2-2' }}</strong></span>
+          <span>Parcelas <strong>{{ cobranca.parcelas.length || 1 }}</strong></span>
+          <span>Forma fiscal <strong><ng-container *ngIf="cobranca.pagamentos[0] as pagamentoFiscal; else semPagamentoFiscal">{{ pagamentoFiscal.codigo_tpag }} {{ pagamentoFiscal.descricao_tpag }}</ng-container><ng-template #semPagamentoFiscal>-</ng-template></strong></span>
+          <span>Forma Sysvar <strong>{{ cobranca.forma_pagamento_sysvar_codigo ? (cobranca.forma_pagamento_sysvar_codigo + ' - ' + cobranca.forma_pagamento_sysvar_descricao) : 'Pendente' }}</strong></span>
+        </div>
+        <table class="table billing-table" *ngIf="cobranca.parcelas.length">
+          <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th></tr></thead>
+          <tbody><tr *ngFor="let parcela of cobranca.parcelas"><td>{{ parcela.numero }}</td><td>{{ parcela.vencimento }}</td><td>{{ parcela.valor | number : '1.2-2' }}</td></tr></tbody>
+        </table>
+      </section>
       <div class="step-summary">
         <div><small>Conciliação</small><strong>{{ resumoConciliacao?.itens_conciliados || 0 }} de {{ resumoConciliacao?.total_itens || 0 }}</strong></div>
         <div><small>Conferência</small><strong>{{ resumoConferencia?.itens_conferidos || 0 }} de {{ resumoConferencia?.total_itens || 0 }}</strong></div>
@@ -314,7 +353,7 @@
       </div>
       <div class="table-wrapper itens-wrapper xml-items">
         <table class="table" *ngIf="itensXml.length; else xmlEmptyTpl">
-          <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Produto Sysvar</th><th>Conversão</th><th>Recebido</th><th>Situação</th><th>Ação</th></tr></thead>
+          <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Valor unit.</th><th>Total item</th><th>Produto Sysvar</th><th>Conversão</th><th>Recebido</th><th>Situação</th><th>Ação</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of itensXml">
               <td>{{ item.numero_item }}</td>
@@ -322,6 +361,8 @@
               <td>{{ item.descricao_produto }}</td>
               <td>{{ item.unidade_comercial }}</td>
               <td>{{ item.quantidade_comercial | number : '1.3-3' }}</td>
+              <td>{{ item.valor_unitario_comercial | number : '1.4-4' }}</td>
+              <td>{{ item.valor_produto | number : '1.2-2' }}</td>
               <td>{{ item.produto_descricao || 'Pendente' }}</td>
               <td>
                 <span *ngIf="item.conversao && !item.conversao.conversao_pendente">{{ item.unidade_comercial }} → {{ item.conversao.quantidade_interna || '-' }} {{ item.conversao.unidade_interna || '' }}</span>

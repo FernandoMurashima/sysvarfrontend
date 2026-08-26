@@ -104,6 +104,40 @@ export interface NotaFiscalEntradaItemXml {
   };
 }
 
+export interface NotaFiscalEntradaCobrancaParcela {
+  numero: string;
+  vencimento: string;
+  valor: string;
+}
+
+export interface NotaFiscalEntradaPagamentoFiscal {
+  codigo_tpag: string;
+  descricao_tpag: string;
+  valor: string;
+}
+
+export interface NotaFiscalEntradaFormaPagamentoSugestao {
+  id: number;
+  codigo: string;
+  descricao: string;
+  tipo: string;
+}
+
+export interface NotaFiscalEntradaCobrancaFinanceira {
+  usa_duplicatas: boolean;
+  valor_fatura: string;
+  parcelas: NotaFiscalEntradaCobrancaParcela[];
+  pagamentos: NotaFiscalEntradaPagamentoFiscal[];
+  forma_pagamento_conciliada: boolean;
+  forma_pagamento_sysvar_id: number | null;
+  forma_pagamento_sysvar_codigo: string | null;
+  forma_pagamento_sysvar_descricao: string | null;
+  forma_pagamento_sysvar_tipo: string | null;
+  sugestoes: NotaFiscalEntradaFormaPagamentoSugestao[];
+  pendencias: string[];
+  financeiro_pronto: boolean;
+}
+
 export interface NotaFiscalEntradaProdutoCandidato {
   id: number;
   referencia: string;

@@ -103,6 +103,10 @@ describe('NotasFiscaisEntradaService', () => {
     http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/item-xml-conferir/') && r.body.quantidade_recebida === '0').flush({});
     service.analisarCancelamento(1).subscribe();
     http.expectOne(r => r.method === 'GET' && r.url.endsWith('/fiscal/notas-entrada/1/analisar-cancelamento/')).flush({});
+    service.cobrancaFinanceira(1).subscribe();
+    http.expectOne(r => r.method === 'GET' && r.url.endsWith('/fiscal/notas-entrada/1/cobranca-financeira/')).flush({});
+    service.vincularFormaPagamentoFiscal(1, '15', 8).subscribe();
+    http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/vincular-forma-pagamento-fiscal/') && r.body.codigo_tpag === '15' && r.body.forma_pagamento === 8).flush({});
     service.cancelar(1, 'Erro operacional', true).subscribe();
     const cancelarReq = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/cancelar/') && r.body.motivo === 'Erro operacional' && r.body.confirmar_avisos === true);
     expect(cancelarReq.request.body.confirmar_avisos).toBeTrue();
