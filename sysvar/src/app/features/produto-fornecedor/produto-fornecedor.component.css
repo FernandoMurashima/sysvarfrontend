@@ -1,8 +1,53 @@
 .produto-fornecedor-filters {
   display: grid;
-  grid-template-columns: minmax(210px, 280px) minmax(170px, 220px) minmax(140px, 170px) minmax(110px, 130px) auto auto auto;
-  align-items: end;
+  grid-template-columns: minmax(260px, 340px) auto auto auto auto auto auto;
+  align-items: center;
+  justify-content: start;
   gap: 10px;
+}
+
+.produto-fornecedor-filters .main-search {
+  width: 100%;
+}
+
+.produto-fornecedor-filters .inline-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.produto-fornecedor-filters .inline-filter select,
+.produto-fornecedor-filters .inline-filter input {
+  width: auto;
+}
+
+.produto-fornecedor-filters .inline-filter:nth-of-type(1) select {
+  width: 150px;
+}
+
+.produto-fornecedor-filters .inline-filter:nth-of-type(2) input {
+  width: 120px;
+}
+
+.produto-fornecedor-filters .inline-filter:nth-of-type(3) select {
+  width: 96px;
+}
+
+.produto-fornecedor-filters .btn {
+  width: auto;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.produto-fornecedor-page .results-area {
+  margin-top: 14px;
+}
+
+.produto-fornecedor-page .results-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .produto-fornecedor-page .title-bar {
