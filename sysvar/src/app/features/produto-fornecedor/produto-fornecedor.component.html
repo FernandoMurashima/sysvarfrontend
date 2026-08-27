@@ -2,14 +2,13 @@
   <section class="title-bar">
     <div class="title-left">
       <h1>Produto × Fornecedor</h1>
-      <button class="info-button" type="button" aria-label="Informações da tela" title="Manutenção de vínculo e conversão de unidade por fornecedor">i</button>
     </div>
     <div class="title-actions">
-      <button class="btn icon-btn" type="button"><span>?</span>Ajuda</button>
-      <button class="btn icon-btn" type="button" [routerLink]="['/home']"><span>⌂</span>Home</button>
-      <button class="btn icon-btn" type="button" [disabled]="loading" (click)="clearSearch()"><span>×</span>Limpar</button>
-      <button class="btn icon-btn" type="button" [disabled]="loading" (click)="load()"><span>↻</span>Atualizar</button>
-      <button class="btn primary icon-btn" type="button" *ngIf="podeEditarModulo" (click)="novo()"><span>+</span>Novo vínculo</button>
+      <button class="btn" type="button">Ajuda</button>
+      <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">+ Novo vínculo</button>
     </div>
   </section>
 
@@ -43,18 +42,14 @@
       </select>
     </label>
     <button class="btn primary" type="button" [disabled]="loading" (click)="load()">Buscar</button>
+    <button class="btn" type="button" [disabled]="!selected" (click)="selected && editar(selected)">Editar</button>
+    <button class="btn" type="button" [disabled]="!selected || !podeEditarModulo" (click)="selected && alternarAtivo(selected)">
+      {{ selected?.ativo ? 'Inativar' : 'Ativar' }}
+    </button>
   </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
-
-  <section class="context-actions">
-    <span>{{ selected ? '1 vínculo selecionado' : 'Selecione um vínculo' }}</span>
-    <button class="btn sm" type="button" [disabled]="!selected" (click)="selected && editar(selected)">Editar</button>
-    <button class="btn sm" type="button" [disabled]="!selected || !podeEditarModulo" (click)="selected && alternarAtivo(selected)">
-      {{ selected?.ativo ? 'Inativar' : 'Ativar' }}
-    </button>
-  </section>
 
   <section class="results-area">
     <div class="results-header">
