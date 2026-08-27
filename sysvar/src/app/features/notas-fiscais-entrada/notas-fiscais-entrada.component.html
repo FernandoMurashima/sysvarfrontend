@@ -44,10 +44,10 @@
     <section class="modal-card">
       <h3>Efetivar NF-e</h3>
       <p class="modal-text">Confirma a efetivação da NF-e {{ nota.numero }} de {{ labelFornecedor(nota.fornecedor) }} no valor de {{ formatarMoeda(nota.valor_total) }}?</p>
-      <p class="modal-text" *ngIf="resumoConferencia?.possui_divergencia_pendente">Existem divergências de recebimento. A NF será efetivada com a quantidade fisicamente recebida e o Financeiro será alertado.</p>
+      <p class="modal-text" *ngIf="temDivergenciaRecebimento()">Existem {{ formatarQuantidade(quantidadeFaltanteRecebimento()) }} não recebidas, correspondentes a {{ formatarMoeda(valorDivergenciaRecebimento()) }}. Ao continuar, a NF-e será lançada integralmente pela quantidade fiscal e pelo valor fiscal do documento. O Financeiro será alertado para tratar {{ formatarMoeda(valorDivergenciaRecebimento()) }} com o fornecedor.</p>
       <div class="modal-actions">
         <button class="btn" type="button" (click)="efetivarModalAberto = false">Voltar</button>
-        <button class="btn primary" type="button" [disabled]="saving" (click)="confirmarEfetivacaoXml()">Efetivar NF-e</button>
+        <button class="btn primary" type="button" [disabled]="saving" (click)="confirmarEfetivacaoXml()">{{ temDivergenciaRecebimento() ? 'Aceitar e efetivar' : 'Efetivar NF-e' }}</button>
       </div>
     </section>
   </div>
@@ -356,6 +356,7 @@
       <div class="actions-form">
         <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
         <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
+        <button class="btn danger-soft" type="button" [disabled]="xmlSomenteLeitura()" (click)="recusarEntradaXml()">Recusar entrada</button>
       </div>
       <section class="pedido-divergencias" *ngIf="divergenciasPedido().length">
         <h3>Divergências Pedido × NF-e</h3>
@@ -399,9 +400,10 @@
       </div>
       <section class="divergencias" *ngIf="divergenciasXml.length">
         <h3>Divergências</h3>
+        <p class="modal-text">Se a NF-e for aceita, a entrada será lançada pela quantidade fiscal e o Financeiro será alertado para tratar {{ formatarMoeda(valorDivergenciaRecebimento()) }} com o fornecedor. Você também pode recusar esta entrada.</p>
         <div class="divergencia-row" *ngFor="let div of divergenciasXml">
           <strong>{{ divergenciaItemLabel(div) }}</strong>
-          <span>Faltam {{ formatarQuantidade(div.quantidade_faltante) }} · {{ formatarMoeda(div.valor_divergente) }}</span>
+          <span>Fiscal {{ formatarQuantidade(div.quantidade_fiscal) }} · Conferido {{ formatarQuantidade(div.quantidade_recebida) }} · Faltam {{ formatarQuantidade(div.quantidade_faltante) }} · {{ formatarMoeda(div.valor_divergente) }}</span>
           <span class="badge badge-off">{{ div.status }}</span>
         </div>
       </section>

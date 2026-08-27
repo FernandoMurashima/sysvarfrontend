@@ -645,6 +645,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (!this.resumoConferencia?.conferencia_completa) return 'Aguardando conferência';
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) return 'Conversão pendente';
     if (this.bloqueiosPedido().length) return 'Divergência com Pedido';
+    if (this.temDivergenciaRecebimento()) return 'Divergência de recebimento';
     return 'Pronta para efetivar';
   }
 
@@ -664,6 +665,18 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   divergenciaItemLabel(div: NotaFiscalEntradaDivergenciaXml): string {
     return `Item ${div.numero_item || div.item_xml_numero || div.item_xml}${div.produto_descricao ? ' - ' + div.produto_descricao : ''}`;
+  }
+
+  temDivergenciaRecebimento(): boolean {
+    return (this.resumoConferencia?.itens_com_divergencia || 0) > 0 || this.divergenciasXml.length > 0;
+  }
+
+  valorDivergenciaRecebimento(): string {
+    return this.resumoConferencia?.valor_divergente_total || String(this.divergenciasXml.reduce((total, div) => total + Number(div.valor_divergente || 0), 0));
+  }
+
+  quantidadeFaltanteRecebimento(): string {
+    return this.resumoConferencia?.quantidade_faltante_total || String(this.divergenciasXml.reduce((total, div) => total + Number(div.quantidade_faltante || 0), 0));
   }
 
   divergenciasPedido(): NotaFiscalEntradaDivergenciaPedido[] {
@@ -1049,6 +1062,25 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       },
       error: (err) => {
         this.erro = err?.error?.detail || 'Não foi possível fechar a nota.';
+      },
+    });
+  }
+
+  recusarEntradaXml(): void {
+    const nota = this.notaAtual();
+    if (!nota || nota.status !== 'AB' || !nota.xml_importado) return;
+    this.notasApi.cancelar(nota.id, 'Recusa operacional da entrada da NF-e', true).subscribe({
+      next: n => {
+        this.notaAtual.set(n);
+        this.efetivarModalAberto = false;
+        this.mensagem = 'Entrada recusada. XML e histórico foram preservados sem movimentar estoque, financeiro ou pedido.';
+        this.erro = '';
+        this.loadNotas();
+        this.loadPedidosAprovados();
+        this.carregarFluxoXml(n.id);
+      },
+      error: err => {
+        this.erro = this.errorText(err, 'Não foi possível recusar a entrada.');
       },
     });
   }
