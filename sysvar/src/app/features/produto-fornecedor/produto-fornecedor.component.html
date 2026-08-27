@@ -1,0 +1,158 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Produto × Fornecedor</h1>
+      <button class="info-button" type="button" title="Manutenção de vínculo e conversão de unidade por fornecedor">i</button>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
+      <button class="btn" type="button" [disabled]="loading" (click)="load()">Atualizar</button>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" (click)="novo()">Novo vínculo</button>
+    </div>
+  </section>
+
+  <section class="filter-bar">
+    <app-search-suggest
+      class="main-search"
+      [(value)]="search"
+      [suggestions]="sugestoesBusca"
+      [showActions]="false"
+      placeholder="Buscar por produto, referência ou fornecedor"
+      (search)="load()"
+      (cleared)="clearSearch()"
+    />
+    <label class="inline-filter">
+      <span>Fornecedor</span>
+      <select [(ngModel)]="filterFornecedor" (ngModelChange)="load()">
+        <option value="">Todos</option>
+        <option *ngFor="let fornecedor of fornecedores" [ngValue]="fornecedor.id">{{ fornecedor.nome_fornecedor }}</option>
+      </select>
+    </label>
+    <label class="inline-filter">
+      <span>Código</span>
+      <input type="text" [(ngModel)]="filterCodigo" (keyup.enter)="load()" />
+    </label>
+    <label class="inline-filter">
+      <span>Ativo</span>
+      <select [(ngModel)]="filterAtivo" (ngModelChange)="load()">
+        <option value="">Todos</option>
+        <option value="true">Ativos</option>
+        <option value="false">Inativos</option>
+      </select>
+    </label>
+    <button class="btn primary" type="button" [disabled]="loading" (click)="load()">Buscar</button>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="action-bar">
+    <button class="btn" type="button" [disabled]="!selected" (click)="selected && editar(selected)">Editar</button>
+    <button class="btn" type="button" *ngIf="podeEditarModulo" [disabled]="!selected" (click)="selected && alternarAtivo(selected)">
+      {{ selected?.ativo ? 'Inativar' : 'Ativar' }}
+    </button>
+  </section>
+
+  <section class="card form form-panel">
+    <div class="form-title">
+      <div>
+        <h3>{{ editando ? 'Editar vínculo' : 'Novo vínculo' }}</h3>
+        <p>{{ expressao(editando) }}</p>
+      </div>
+      <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="saving || form.invalid" (click)="salvar()">
+        {{ saving ? 'Salvando...' : 'Salvar' }}
+      </button>
+    </div>
+    <form [formGroup]="form">
+      <div class="form-grid">
+        <label>Fornecedor*
+          <select formControlName="fornecedor">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let fornecedor of fornecedores" [ngValue]="fornecedor.id">{{ fornecedor.nome_fornecedor }}</option>
+          </select>
+        </label>
+        <label>Produto Sysvar*
+          <select formControlName="produto">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let produto of produtos" [ngValue]="produto.Idproduto">{{ produtoLabel(produto) }}</option>
+          </select>
+        </label>
+        <label>Código fornecedor*
+          <input type="text" formControlName="codigo_produto_fornecedor" />
+        </label>
+        <label>Descrição fornecedor/XML
+          <input type="text" formControlName="descricao_fornecedor" />
+        </label>
+        <label>GTIN/EAN
+          <input type="text" formControlName="gtin_ean" />
+        </label>
+        <label>Unidade interna
+          <input type="text" [value]="unidadeInternaForm()" readonly />
+        </label>
+        <label>Unidade fornecedor*
+          <input type="text" formControlName="unidade_fornecedor" placeholder="PCT" />
+        </label>
+        <label>Fator de conversão*
+          <input type="number" min="0.000001" step="0.000001" formControlName="fator_conversao" />
+        </label>
+        <label class="checkbox-line">
+          <input type="checkbox" formControlName="ativo" /> Ativo
+        </label>
+      </div>
+      <div class="form-pending" *ngIf="form.invalid && form.touched">
+        <strong>Pendências</strong>
+        <ul>
+          <li *ngIf="form.get('fornecedor')?.invalid">Informe o fornecedor.</li>
+          <li *ngIf="form.get('produto')?.invalid">Informe o produto Sysvar.</li>
+          <li *ngIf="form.get('codigo_produto_fornecedor')?.invalid">Informe o código do fornecedor.</li>
+          <li *ngIf="form.get('unidade_fornecedor')?.invalid">Informe a unidade do fornecedor.</li>
+          <li *ngIf="form.get('fator_conversao')?.invalid">Fator deve ser maior que zero.</li>
+        </ul>
+      </div>
+    </form>
+  </section>
+
+  <section class="results-area">
+    <div class="results-header">
+      <div><strong>Vínculos cadastrados</strong><span>{{ vinculos.length }} registro(s) encontrado(s)</span></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="table" *ngIf="vinculos.length; else emptyTpl">
+        <thead>
+          <tr>
+            <th class="select-col"></th>
+            <th>Fornecedor</th>
+            <th>Código fornecedor</th>
+            <th>Descrição fornecedor/XML</th>
+            <th>Produto Sysvar</th>
+            <th>Referência</th>
+            <th>Unidade interna</th>
+            <th>Unidade fornecedor</th>
+            <th>Fator</th>
+            <th>Conversão</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of vinculos" [class.selected]="selected?.id === row.id" (click)="selecionar(row)" (dblclick)="editar(row)">
+            <td class="select-col"><input type="checkbox" [checked]="selected?.id === row.id" (click)="$event.stopPropagation(); selecionar(row)" /></td>
+            <td>{{ row.fornecedor_nome || fornecedorNome(row.fornecedor) }}</td>
+            <td>{{ row.codigo_produto_fornecedor }}</td>
+            <td>{{ row.descricao_fornecedor || '-' }}</td>
+            <td>{{ row.produto_descricao || row.produto }}</td>
+            <td>{{ row.produto_referencia || '-' }}</td>
+            <td>{{ row.unidade_interna || '-' }}</td>
+            <td>{{ row.unidade_fornecedor || '-' }}</td>
+            <td>{{ row.fator_conversao }}</td>
+            <td><strong>{{ expressao(row) }}</strong></td>
+            <td><span class="status-pill" [class.inactive]="!row.ativo">• {{ row.ativo ? 'Ativo' : 'Inativo' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #emptyTpl>
+        <div class="empty-hint" *ngIf="!loading">Nenhum vínculo encontrado.</div>
+        <div class="loading" *ngIf="loading">Carregando...</div>
+      </ng-template>
+    </div>
+  </section>
+</div>

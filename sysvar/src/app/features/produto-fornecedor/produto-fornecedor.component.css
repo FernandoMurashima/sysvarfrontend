@@ -1,0 +1,17 @@
+.form-panel {
+  margin-bottom: 16px;
+}
+
+.form-title p {
+  color: #475569;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+
+.table td strong {
+  white-space: nowrap;
+}
+
+.status-pill.inactive {
+  opacity: .65;
+}

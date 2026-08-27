@@ -24,6 +24,7 @@ import { GradesComponent } from './features/Grade/grades.component';
 // usuários
 import { UsuariosComponent } from './features/usuarios/usuarios.component';
 import { ProdutosComponent } from './features/Produtos/produtos.component';
+import { ProdutoFornecedorComponent } from './features/produto-fornecedor/produto-fornecedor.component';
 // import { ProdutoLookupComponent } from './features/Produtos/produto-lookup/produto-lookup.component';
 import { TabelaprecoComponent } from './features/TabelasPreco/tabelapreco.component';
 import { NcmsComponent } from './features/Ncms/ncms.component';
@@ -119,6 +120,7 @@ export const routes: Routes = [
       { path: 'packs', component: PacksComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'grades', component: GradesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos', component: ProdutosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
+      { path: 'produtos-fornecedor', component: ProdutoFornecedorComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'insumos', component: InsumosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
