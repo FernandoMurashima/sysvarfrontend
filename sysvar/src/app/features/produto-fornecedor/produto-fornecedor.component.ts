@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { Fornecedor } from '../../core/models/fornecedor';
 import { Produto } from '../../core/models/produto';
-import { ProdutoFornecedor, ProdutoFornecedorPayload } from '../../core/models/produto-fornecedor';
+import { ProdutoFornecedor } from '../../core/models/produto-fornecedor';
 import { AuthService } from '../../core/auth.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
@@ -15,7 +16,7 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
 @Component({
   selector: 'app-produto-fornecedor',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SearchSuggestComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SearchSuggestComponent],
   templateUrl: './produto-fornecedor.component.html',
   styleUrls: ['./produto-fornecedor.component.css'],
 })
@@ -36,6 +37,7 @@ export class ProdutoFornecedorComponent implements OnInit {
   filterAtivo: 'true' | 'false' | '' = 'true';
   selected: ProdutoFornecedor | null = null;
   editando: ProdutoFornecedor | null = null;
+  modalAberto = false;
 
   vinculos: ProdutoFornecedor[] = [];
   fornecedores: Fornecedor[] = [];
@@ -122,6 +124,7 @@ export class ProdutoFornecedorComponent implements OnInit {
       fator_conversao: 1,
       ativo: true,
     });
+    this.modalAberto = true;
   }
 
   editar(row: ProdutoFornecedor): void {
@@ -137,6 +140,13 @@ export class ProdutoFornecedorComponent implements OnInit {
       fator_conversao: Number(row.fator_conversao || 1),
       ativo: row.ativo,
     });
+    this.modalAberto = true;
+  }
+
+  fecharModal(): void {
+    this.modalAberto = false;
+    this.editando = null;
+    this.form.markAsUntouched();
   }
 
   salvar(): void {
@@ -144,25 +154,26 @@ export class ProdutoFornecedorComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const raw = this.form.value;
-    const payload: ProdutoFornecedorPayload = {
-      fornecedor: Number(raw.fornecedor),
+    const raw = this.form.getRawValue();
+    const base = {
       codigo_produto_fornecedor: String(raw.codigo_produto_fornecedor || '').trim(),
-      descricao_fornecedor: this.blankToNull(raw.descricao_fornecedor),
-      gtin_ean: this.blankToNull(raw.gtin_ean),
-      produto: Number(raw.produto),
+      descricao_fornecedor: this.blankToEmpty(raw.descricao_fornecedor),
+      gtin_ean: this.blankToEmpty(raw.gtin_ean),
       unidade_fornecedor: String(raw.unidade_fornecedor || '').trim().toUpperCase(),
       fator_conversao: String(raw.fator_conversao),
       ativo: !!raw.ativo,
     };
     this.saving = true;
-    const req = this.editando?.id ? this.api.update(this.editando.id, payload) : this.api.create(payload);
+    const req = this.editando?.id
+      ? this.api.update(this.editando.id, base)
+      : this.api.create({ ...base, fornecedor: Number(raw.fornecedor), produto: Number(raw.produto) });
     req.subscribe({
       next: saved => {
         this.saving = false;
-        this.successMsg = 'Vínculo salvo.';
+        this.successMsg = this.editando?.id ? 'Vínculo atualizado com sucesso.' : 'Vínculo criado com sucesso.';
+        this.upsertVinculo(saved);
         this.editando = saved;
-        this.load();
+        this.modalAberto = false;
       },
       error: err => {
         this.saving = false;
@@ -225,12 +236,41 @@ export class ProdutoFornecedorComponent implements OnInit {
     return Array.isArray(res) ? res : (res?.results ?? []);
   }
 
-  private blankToNull(value: unknown): string | null {
-    const text = String(value ?? '').trim();
-    return text ? text : null;
+  private blankToEmpty(value: unknown): string {
+    return String(value ?? '').trim();
   }
 
-  private formatFator(value: string | number): string {
+  private upsertVinculo(saved: ProdutoFornecedor): void {
+    const index = this.vinculos.findIndex(v => v.id === saved.id);
+    if (index >= 0) {
+      this.vinculos = this.vinculos.map(v => v.id === saved.id ? saved : v);
+    } else {
+      this.vinculos = [saved, ...this.vinculos];
+    }
+    this.selected = saved;
+  }
+
+  fieldError(field: string): string {
+    const control = this.form.get(field);
+    if (!control || !control.invalid || !control.touched) return '';
+    if (control.errors?.['required']) return `${this.fieldLabel(field)} é obrigatório.`;
+    if (control.errors?.['min']) return 'Fator de conversão deve ser maior que zero.';
+    if (control.errors?.['maxlength']) return `${this.fieldLabel(field)} excede o tamanho permitido.`;
+    return `${this.fieldLabel(field)} inválido.`;
+  }
+
+  private fieldLabel(field: string): string {
+    const labels: Record<string, string> = {
+      fornecedor: 'Fornecedor',
+      produto: 'Produto',
+      codigo_produto_fornecedor: 'Código do fornecedor',
+      unidade_fornecedor: 'Unidade do fornecedor',
+      fator_conversao: 'Fator de conversão',
+    };
+    return labels[field] || field;
+  }
+
+  formatFator(value: string | number): string {
     return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 6 }).format(Number(value || 0));
   }
 
@@ -239,8 +279,19 @@ export class ProdutoFornecedorComponent implements OnInit {
     if (!data) return fallback;
     if (typeof data === 'string') return data;
     if (data.detail) return data.detail;
-    const first = Object.values(data)[0];
-    if (Array.isArray(first)) return String(first[0]);
-    return String(first || fallback);
+    const labels: Record<string, string> = {
+      fornecedor: 'Fornecedor',
+      produto: 'Produto',
+      codigo_produto_fornecedor: 'Código do fornecedor',
+      descricao_fornecedor: 'Descrição fornecedor/XML',
+      gtin_ean: 'GTIN/EAN',
+      unidade_fornecedor: 'Unidade do fornecedor',
+      fator_conversao: 'Fator de conversão',
+      ativo: 'Status',
+    };
+    const firstKey = Object.keys(data)[0];
+    const first = firstKey ? data[firstKey] : null;
+    const text = Array.isArray(first) ? String(first[0]) : String(first || fallback);
+    return firstKey ? `${labels[firstKey] || firstKey}: ${text}` : text;
   }
 }

@@ -23,11 +23,20 @@ export interface ProdutoFornecedor {
 export interface ProdutoFornecedorPayload {
   fornecedor: number;
   codigo_produto_fornecedor: string;
-  descricao_fornecedor?: string | null;
-  gtin_ean?: string | null;
+  descricao_fornecedor?: string;
+  gtin_ean?: string;
   produto: number;
   unidade_fornecedor: string;
   fator_conversao: string | number;
+  ativo?: boolean;
+}
+
+export interface ProdutoFornecedorUpdatePayload {
+  codigo_produto_fornecedor?: string;
+  descricao_fornecedor?: string;
+  gtin_ean?: string;
+  unidade_fornecedor?: string;
+  fator_conversao?: string | number;
   ativo?: boolean;
 }
 

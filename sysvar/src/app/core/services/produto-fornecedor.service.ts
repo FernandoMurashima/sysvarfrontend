@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { PaginatedProdutoFornecedor, ProdutoFornecedor, ProdutoFornecedorPayload } from '../models/produto-fornecedor';
+import { PaginatedProdutoFornecedor, ProdutoFornecedor, ProdutoFornecedorPayload, ProdutoFornecedorUpdatePayload } from '../models/produto-fornecedor';
 
 @Injectable({ providedIn: 'root' })
 export class ProdutoFornecedorService {
@@ -31,7 +31,7 @@ export class ProdutoFornecedorService {
     return this.http.post<ProdutoFornecedor>(this.base, payload);
   }
 
-  update(id: number, payload: Partial<ProdutoFornecedorPayload>): Observable<ProdutoFornecedor> {
+  update(id: number, payload: ProdutoFornecedorUpdatePayload): Observable<ProdutoFornecedor> {
     return this.http.patch<ProdutoFornecedor>(`${this.base}${id}/`, payload);
   }
 
