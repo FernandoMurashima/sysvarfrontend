@@ -69,7 +69,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   selectedNota: NotaFiscalEntrada | null = null;
   private readonly viewPrefsKey = 'sysvar.ui.preferences.notas-entrada';
   confirmModal: {
-    action: 'removerItem' | 'fecharNota' | 'cancelarNota';
+    action: 'removerItem' | 'fecharNota' | 'cancelarNota' | 'recusarEntrada';
     title: string;
     text: string;
     item?: ItemRecebimentoUI;
@@ -1001,6 +1001,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     }
     if (modal.action === 'cancelarNota') {
       this.executarCancelamentoNota();
+      return;
+    }
+    if (modal.action === 'recusarEntrada') {
+      this.executarRecusaEntradaXml();
     }
   }
 
@@ -1069,15 +1073,24 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   recusarEntradaXml(): void {
     const nota = this.notaAtual();
     if (!nota || nota.status !== 'AB' || !nota.xml_importado) return;
-    this.notasApi.cancelar(nota.id, 'Recusa operacional da entrada da NF-e', true).subscribe({
-      next: n => {
-        this.notaAtual.set(n);
+    this.confirmModal = {
+      action: 'recusarEntrada',
+      title: 'Recusar entrada',
+      text: 'Deseja abandonar esta entrada? A importação será descartada e esta chave de NF-e poderá ser utilizada novamente em uma nova importação.',
+    };
+  }
+
+  private executarRecusaEntradaXml(): void {
+    const nota = this.notaAtual();
+    if (!nota || nota.status !== 'AB' || !nota.xml_importado) return;
+    this.notasApi.recusar(nota.id).subscribe({
+      next: () => {
+        this.confirmModal = null;
         this.efetivarModalAberto = false;
-        this.mensagem = 'Entrada recusada. XML e histórico foram preservados sem movimentar estoque, financeiro ou pedido.';
+        this.mensagem = 'Entrada recusada. O XML poderá ser importado novamente.';
         this.erro = '';
-        this.loadNotas();
+        this.voltarLista();
         this.loadPedidosAprovados();
-        this.carregarFluxoXml(n.id);
       },
       error: err => {
         this.erro = this.errorText(err, 'Não foi possível recusar a entrada.');

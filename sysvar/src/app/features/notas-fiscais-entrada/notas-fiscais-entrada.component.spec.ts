@@ -67,6 +67,7 @@ describe('NotasFiscaisEntradaComponent', () => {
     atualizar: jasmine.createSpy('atualizar'),
     fechar: jasmine.createSpy('fechar'),
     cancelar: jasmine.createSpy('cancelar'),
+    recusar: jasmine.createSpy('recusar'),
     importarXml: jasmine.createSpy('importarXml'),
     listarItensXml: jasmine.createSpy('listarItensXml'),
     pendenciasXml: jasmine.createSpy('pendenciasXml'),
@@ -105,6 +106,7 @@ describe('NotasFiscaisEntradaComponent', () => {
     notasApi.vincularFormaPagamentoFiscal.and.returnValue(of({ cobranca: { usa_duplicatas: true, valor_fatura: '100.00', parcelas: [], pagamentos: [], sugestoes: [], pendencias: [], forma_pagamento_conciliada: true, forma_pagamento_sysvar_id: 8, forma_pagamento_sysvar_codigo: 'BOL', forma_pagamento_sysvar_descricao: 'Boleto', forma_pagamento_sysvar_tipo: 'BOLETO', financeiro_pronto: true } }));
     notasApi.fechar.and.returnValue(of({ ...nota, status: 'FE' as const, xml_importado: true }));
     notasApi.cancelar.and.returnValue(of({ ...nota, status: 'CA' as const }));
+    notasApi.recusar.and.returnValue(of({ detail: 'Entrada recusada. O XML poderá ser importado novamente.', id: nota.id, chave_acesso: nota.chave_acesso }));
     notasApi.importarXml.and.returnValue(of({ ...nota, xml_importado: true, pedido_compra: null }));
     notasApi.listarItensXml.and.returnValue(of([]));
     notasApi.resumoConciliacao.and.returnValue(of({ total_itens: 0, itens_conciliados: 0, itens_pendentes: 0, nota_conciliada: false }));
@@ -590,6 +592,21 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(component.podeEfetivarXml()).toBeTrue();
     component.confirmarEfetivacaoXml();
     expect(notasApi.fechar).toHaveBeenCalledWith(1);
+  });
+
+  it('recusa entrada XML aberta pelo endpoint proprio e volta para a lista', () => {
+    notasApi.cancelar.calls.reset();
+    component.notaAtual.set({ ...nota, xml_importado: true });
+    component.view.set('form');
+    component.recusarEntradaXml();
+    expect(component.confirmModal?.text).toContain('poderá ser utilizada novamente');
+
+    component.confirmarAcao();
+    expect(notasApi.recusar).toHaveBeenCalledWith(1);
+    expect(notasApi.cancelar).not.toHaveBeenCalled();
+    expect(component.view()).toBe('list');
+    expect(component.notaAtual()).toBeNull();
+    expect(component.mensagem).toContain('O XML poderá ser importado novamente');
   });
 
   it('analisa cancelamento, bloqueia baixa financeira e envia motivo com confirmação de avisos', () => {

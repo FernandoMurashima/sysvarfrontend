@@ -195,6 +195,10 @@ export class NotasFiscaisEntradaService {
     });
   }
 
+  recusar(id: number): Observable<{ detail: string; id: number; chave_acesso: string }> {
+    return this.http.post<{ detail: string; id: number; chave_acesso: string }>(`${this.base}${id}/recusar/`, {});
+  }
+
   itensPedido(id: number): Observable<NotaFiscalEntradaPedidoItem[]> {
     return this.http.get<NotaFiscalEntradaPedidoItem[]>(`${this.base}${id}/itens-pedido/`);
   }
