@@ -1,5 +1,18 @@
 .produto-fornecedor-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.35fr) minmax(220px, 1fr) minmax(160px, .8fr) minmax(130px, .6fr) auto;
   align-items: end;
+}
+
+.produto-fornecedor-page .title-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.produto-fornecedor-page .title-actions {
+  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .table-wrapper {
@@ -7,17 +20,26 @@
 }
 
 .table {
-  min-width: 1180px;
+  min-width: 1080px;
 }
 
 .table td strong {
   white-space: nowrap;
 }
 
-.row-actions {
+.context-actions {
   display: flex;
-  gap: 6px;
-  white-space: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 40px;
+  margin: 10px 0;
+}
+
+.context-actions span {
+  margin-right: auto;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .status-pill.inactive {
@@ -135,6 +157,21 @@
 }
 
 @media (max-width: 820px) {
+  .produto-fornecedor-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .produto-fornecedor-page .title-bar,
+  .produto-fornecedor-page .title-actions,
+  .context-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .context-actions span {
+    margin-right: 0;
+  }
+
   .modal-grid,
   .modal-grid.two {
     grid-template-columns: 1fr;

@@ -357,6 +357,14 @@
         <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
         <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
       </div>
+      <section class="pedido-divergencias" *ngIf="divergenciasPedido().length">
+        <h3>Divergências Pedido × NF-e</h3>
+        <div class="divergencia-row" *ngFor="let div of divergenciasPedido()">
+          <strong>Item {{ div.numero_item }}{{ div.produto_descricao ? ' - ' + div.produto_descricao : '' }}</strong>
+          <span>{{ div.mensagem }}</span>
+          <span class="badge badge-off">{{ div.titulo }}</span>
+        </div>
+      </section>
       <div class="table-wrapper itens-wrapper xml-items">
         <table class="table" *ngIf="itensXml.length; else xmlEmptyTpl">
           <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Valor unit.</th><th>Total item</th><th>Produto Sysvar</th><th>Conversão</th><th>Recebido</th><th>Situação</th><th>Ação</th></tr></thead>
@@ -375,7 +383,10 @@
                 <span class="text-warn" *ngIf="!item.conversao || item.conversao.conversao_pendente">Conversão de unidade pendente</span>
               </td>
               <td><input type="number" step="0.001" [(ngModel)]="item.recebidoInput" [disabled]="xmlSomenteLeitura() || !item.conciliado" /></td>
-              <td><span class="badge" [ngClass]="item.conciliado && item.conferido ? 'badge-ok' : 'badge-off'">{{ item.conciliado ? (item.conferido ? 'Conferido' : 'Conciliado') : 'Pendente' }}</span></td>
+              <td>
+                <span class="badge" [ngClass]="item.conciliado && item.conferido ? 'badge-ok' : 'badge-off'">{{ item.conciliado ? (item.conferido ? 'Conferido' : 'Conciliado') : 'Pendente' }}</span>
+                <span class="badge badge-off pedido-badge" *ngIf="divergenciasPedidoItem(item)[0] as div" [title]="div.mensagem">{{ div.titulo }}</span>
+              </td>
               <td>
                 <button class="btn sm" type="button" *ngIf="!item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="abrirConciliacao(item)">Vincular produto</button>
                 <button class="btn sm" type="button" *ngIf="item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="preencherQuantidadeFiscal(item)">Qtd fiscal</button>

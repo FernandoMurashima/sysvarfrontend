@@ -143,6 +143,7 @@ select {
 .badge-off { background: #64748b; }
 .badge-danger { background: #dc2626; }
 .badge-light { background: #e2e8f0; color: #334155; min-width: auto; }
+.pedido-badge { display: inline-flex; margin-left: 4px; background: #b45309; }
 
 .alert {
   padding: 10px 12px;
@@ -363,7 +364,8 @@ select {
   margin-top: 8px;
 }
 
-.divergencias {
+.divergencias,
+.pedido-divergencias {
   margin-top: 12px;
 }
 

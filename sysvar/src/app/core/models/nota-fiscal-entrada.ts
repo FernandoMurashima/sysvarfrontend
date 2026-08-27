@@ -49,6 +49,26 @@ export interface NotaFiscalEntradaResumoConciliacao {
   itens_conciliados: number;
   itens_pendentes: number;
   nota_conciliada: boolean;
+  divergencias_pedido?: NotaFiscalEntradaDivergenciaPedido[];
+  divergencias_pedido_count?: number;
+  bloqueios_pedido_count?: number;
+  possui_divergencia_pedido?: boolean;
+}
+
+export interface NotaFiscalEntradaDivergenciaPedido {
+  item_xml?: number | null;
+  numero_item?: number | null;
+  pedido_item?: number | null;
+  produto?: number | null;
+  produto_descricao?: string | null;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  bloqueia: boolean;
+  preco_nf?: string;
+  preco_pedido?: string;
+  quantidade_nf?: string;
+  saldo_pedido?: string;
 }
 
 export interface NotaFiscalEntradaResumoConferencia {
@@ -95,6 +115,7 @@ export interface NotaFiscalEntradaItemXml {
   quantidade_faltante?: string | null;
   valor_divergente?: string | null;
   quantidade_interna_recebida?: string | null;
+  divergencias_pedido?: NotaFiscalEntradaDivergenciaPedido[];
   conversao?: {
     unidade_fornecedor?: string;
     unidade_interna?: string;

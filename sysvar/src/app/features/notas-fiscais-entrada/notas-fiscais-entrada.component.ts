@@ -12,6 +12,7 @@ import {
   NotaFiscalEntrada,
   NotaFiscalEntradaAnaliseCancelamento,
   NotaFiscalEntradaCobrancaFinanceira,
+  NotaFiscalEntradaDivergenciaPedido,
   NotaFiscalEntradaDivergenciaXml,
   NotaFiscalEntradaItemXml,
   NotaFiscalEntradaPedidoItem,
@@ -643,6 +644,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (!this.resumoConciliacao?.nota_conciliada) return 'Aguardando conciliação';
     if (!this.resumoConferencia?.conferencia_completa) return 'Aguardando conferência';
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) return 'Conversão pendente';
+    if (this.bloqueiosPedido().length) return 'Divergência com Pedido';
     return 'Pronta para efetivar';
   }
 
@@ -664,6 +666,20 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     return `Item ${div.numero_item || div.item_xml_numero || div.item_xml}${div.produto_descricao ? ' - ' + div.produto_descricao : ''}`;
   }
 
+  divergenciasPedido(): NotaFiscalEntradaDivergenciaPedido[] {
+    const resumo = this.resumoConciliacao?.divergencias_pedido || [];
+    if (resumo.length) return resumo;
+    return this.itensXml.flatMap(item => item.divergencias_pedido || []);
+  }
+
+  bloqueiosPedido(): NotaFiscalEntradaDivergenciaPedido[] {
+    return this.divergenciasPedido().filter(div => div.bloqueia);
+  }
+
+  divergenciasPedidoItem(item: NotaFiscalEntradaItemXml): NotaFiscalEntradaDivergenciaPedido[] {
+    return item.divergencias_pedido || this.divergenciasPedido().filter(div => div.item_xml === item.id || div.numero_item === item.numero_item);
+  }
+
   motivosBloqueioEfetivar(): string[] {
     const motivos: string[] = [];
     const nota = this.notaAtual();
@@ -673,6 +689,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
     if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
+    motivos.push(...this.bloqueiosPedido().map(div => div.mensagem));
     return motivos.filter(m => !m.startsWith('0 '));
   }
 

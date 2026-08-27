@@ -48,6 +48,14 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <section class="context-actions">
+    <span>{{ selected ? '1 vínculo selecionado' : 'Selecione um vínculo' }}</span>
+    <button class="btn sm" type="button" [disabled]="!selected" (click)="selected && editar(selected)">Editar</button>
+    <button class="btn sm" type="button" [disabled]="!selected || !podeEditarModulo" (click)="selected && alternarAtivo(selected)">
+      {{ selected?.ativo ? 'Inativar' : 'Ativar' }}
+    </button>
+  </section>
+
   <section class="results-area">
     <div class="results-header">
       <div><strong>Vínculos cadastrados</strong><span>{{ vinculos.length }} registro(s) encontrado(s)</span></div>
@@ -67,7 +75,6 @@
             <th>Fator</th>
             <th>Conversão</th>
             <th>Status</th>
-            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -83,10 +90,6 @@
             <td>{{ formatFator(row.fator_conversao) }}</td>
             <td><strong>{{ expressao(row) }}</strong></td>
             <td><span class="status-pill" [class.inactive]="!row.ativo">• {{ row.ativo ? 'Ativo' : 'Inativo' }}</span></td>
-            <td class="row-actions" (click)="$event.stopPropagation()">
-              <button class="btn sm" type="button" (click)="editar(row)">Editar</button>
-              <button class="btn sm" type="button" *ngIf="podeEditarModulo" (click)="alternarAtivo(row)">{{ row.ativo ? 'Inativar' : 'Ativar' }}</button>
-            </td>
           </tr>
         </tbody>
       </table>
