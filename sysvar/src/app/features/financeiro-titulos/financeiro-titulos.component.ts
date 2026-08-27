@@ -91,6 +91,8 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
     desconto: number;
   } | null = null;
   cancelarModal: ParcelaFinanceira | null = null;
+  reabrirModal: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira } | null = null;
+  detalheModal: TituloFinanceiro | null = null;
   excluirModal: TituloFinanceiro | null = null;
 
   get podeEditarModulo(): boolean {
@@ -428,15 +430,36 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
   }
 
   reabrirParcela(parcela: ParcelaFinanceira): void {
+    const row = this.selectedLinha;
+    if (!row || this.parcelaId(row.parcela) !== this.parcelaId(parcela)) return;
+    this.reabrirModal = row;
+  }
+
+  confirmarReaberturaParcela(): void {
+    const parcela = this.reabrirModal?.parcela;
+    if (!parcela) return;
     const id = this.parcelaId(parcela);
     if (!id) return;
     this.api.reabrirParcela(this.tipo, id, 'Reaberto pela tela financeira').subscribe({
       next: () => {
         this.successMsg = 'Parcela reaberta.';
+        this.reabrirModal = null;
         this.load();
       },
-      error: () => this.errorMsg = 'Falha ao reabrir parcela.'
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao reabrir parcela.')
     });
+  }
+
+  fecharReaberturaParcela(): void {
+    this.reabrirModal = null;
+  }
+
+  abrirDetalheTitulo(titulo: TituloFinanceiro): void {
+    this.detalheModal = titulo;
+  }
+
+  fecharDetalheTitulo(): void {
+    this.detalheModal = null;
   }
 
   excluir(titulo: TituloFinanceiro): void {
@@ -495,6 +518,10 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   reabrirSelecionada(): void {
     if (this.selectedLinha) this.reabrirParcela(this.selectedLinha.parcela);
+  }
+
+  detalharSelecionado(): void {
+    if (this.selectedLinha) this.abrirDetalheTitulo(this.selectedLinha.titulo);
   }
 
   excluirSelecionado(): void {
@@ -574,6 +601,18 @@ export class FinanceiroTitulosComponent implements OnInit, OnDestroy {
 
   statusClass(status: string): string {
     return `status-${status.toLowerCase()}`;
+  }
+
+  podeReabrirParcela(parcela: ParcelaFinanceira | null | undefined): boolean {
+    return !!parcela && parcela.status === 'BAIXADO';
+  }
+
+  divergenciaTitulo(titulo: TituloFinanceiro | null | undefined): boolean {
+    return this.tipo === 'pagar' && !!titulo?.alerta_divergencia_mercadoria;
+  }
+
+  valorDivergenciaTitulo(titulo: TituloFinanceiro | null | undefined): number {
+    return Number(titulo?.valor_divergencia_mercadoria || 0);
   }
 
   rowKey(row: { titulo: TituloFinanceiro; parcela: ParcelaFinanceira }): string {

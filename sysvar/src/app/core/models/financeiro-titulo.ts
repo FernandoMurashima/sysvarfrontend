@@ -40,6 +40,8 @@ export interface TituloFinanceiro {
   pedido_compra?: number | null;
   pedido_venda?: number | null;
   nfe_id?: number | null;
+  alerta_divergencia_mercadoria?: boolean;
+  valor_divergencia_mercadoria?: string | number;
   data_cadastro?: string;
   itens?: ParcelaFinanceira[];
 }

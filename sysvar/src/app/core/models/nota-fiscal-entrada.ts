@@ -149,6 +149,9 @@ export interface NotaFiscalEntradaDivergenciaXml {
   id: number;
   nota: number;
   item_xml: number;
+  item_xml_numero?: number;
+  numero_item?: number;
+  produto_descricao?: string | null;
   fornecedor: number;
   produto: number;
   quantidade_fiscal: string;

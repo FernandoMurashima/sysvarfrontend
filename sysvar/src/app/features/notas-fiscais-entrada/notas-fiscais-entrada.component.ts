@@ -637,10 +637,31 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   situacaoXml(): string {
+    const status = this.notaAtual()?.status;
+    if (status === 'FE') return 'Efetivada';
+    if (status === 'CA') return 'Cancelada';
     if (!this.resumoConciliacao?.nota_conciliada) return 'Aguardando conciliação';
     if (!this.resumoConferencia?.conferencia_completa) return 'Aguardando conferência';
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) return 'Conversão pendente';
     return 'Pronta para efetivar';
+  }
+
+  formatarDataPtBr(data: string | null | undefined): string {
+    if (!data) return '-';
+    const [ano, mes, dia] = String(data).slice(0, 10).split('-');
+    return ano && mes && dia ? `${dia}/${mes}/${ano}` : String(data);
+  }
+
+  formatarMoeda(valor: string | number | null | undefined): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor || 0));
+  }
+
+  formatarQuantidade(valor: string | number | null | undefined): string {
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(Number(valor || 0));
+  }
+
+  divergenciaItemLabel(div: NotaFiscalEntradaDivergenciaXml): string {
+    return `Item ${div.numero_item || div.item_xml_numero || div.item_xml}${div.produto_descricao ? ' - ' + div.produto_descricao : ''}`;
   }
 
   motivosBloqueioEfetivar(): string[] {
@@ -1063,7 +1084,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.notasApi.analisarCancelamento(nota.id).subscribe({
       next: analise => {
         this.analisandoCancelamento = false;
-        this.cancelamentoAnalise = analise;
+        this.cancelamentoAnalise = {
+          ...analise,
+          bloqueios: this.consolidarBloqueiosCancelamento(analise.bloqueios),
+        };
         this.cancelarModalAberto = true;
       },
       error: err => {
@@ -1071,6 +1095,16 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.erro = this.errorText(err, 'Não foi possível analisar o cancelamento.');
       },
     });
+  }
+
+  private consolidarBloqueiosCancelamento(bloqueios: string[]): string[] {
+    const baixa = bloqueios.find(b => b.includes('possui baixa'));
+    const mov = bloqueios.find(b => b.includes('movimentação financeira ativa'));
+    if (!baixa || !mov) return Array.from(new Set(bloqueios));
+    return [
+      baixa,
+      ...bloqueios.filter(b => b !== baixa && b !== mov),
+    ];
   }
 
   podeConfirmarCancelamento(): boolean {

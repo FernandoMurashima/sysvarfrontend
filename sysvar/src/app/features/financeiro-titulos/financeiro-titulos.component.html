@@ -73,7 +73,8 @@
   <section class="action-bar">
     <button class="btn icon-btn" type="button" [disabled]="!selectedLinha || !podeEditarModulo || selectedLinha.parcela.status === 'BAIXADO' || selectedLinha.parcela.status === 'CANCELADO'" (click)="baixarSelecionada()"><span>✓</span>Baixar</button>
     <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedLinha || !podeEditarModulo || selectedLinha.parcela.status === 'BAIXADO' || selectedLinha.parcela.status === 'CANCELADO'" (click)="cancelarSelecionada()"><span>×</span>Cancelar parcela</button>
-    <button class="btn icon-btn" type="button" [disabled]="!selectedLinha || !podeEditarModulo || selectedLinha.parcela.status !== 'CANCELADO'" (click)="reabrirSelecionada()"><span>↻</span>Reabrir</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedLinha" (click)="detalharSelecionado()"><span>⌕</span>Detalhes</button>
+    <button class="btn icon-btn" type="button" [disabled]="!selectedLinha || !podeEditarModulo || !podeReabrirParcela(selectedLinha.parcela)" (click)="reabrirSelecionada()"><span>↻</span>Reabrir</button>
     <button class="btn danger-soft icon-btn" type="button" [disabled]="!selectedLinha || !podeEditarModulo" (click)="excluirSelecionado()"><span>⌫</span>Excluir título</button>
   </section>
 
@@ -106,6 +107,48 @@
       <div class="overlay-actions">
         <button class="btn" type="button" (click)="fecharCancelamentoParcela()">Voltar</button>
         <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarCancelamentoParcela()">Cancelar parcela</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="overlay" *ngIf="reabrirModal as modal">
+    <section class="overlay-card">
+      <h4>Reabrir parcela</h4>
+      <p>Reabrir esta parcela e estornar a baixa financeira?</p>
+      <div class="modal-grid">
+        <span>Título <strong>{{ tituloBase(modal.titulo) }}</strong></span>
+        <span>Parcela <strong>{{ modal.parcela.parcela_n }}</strong></span>
+        <span>Valor baixado <strong>{{ modal.parcela.valor_baixa | currency:'BRL' }}</strong></span>
+        <span>Data da baixa <strong>{{ modal.parcela.data_baixa | date:'dd/MM/yyyy' }}</strong></span>
+      </div>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharReaberturaParcela()">Voltar</button>
+        <button class="btn primary" *ngIf="podeEditarModulo" type="button" (click)="confirmarReaberturaParcela()">Reabrir</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="overlay" *ngIf="detalheModal as titulo">
+    <section class="overlay-card detail-modal">
+      <h4>Detalhes do título</h4>
+      <div class="modal-grid">
+        <span>Número <strong>{{ tituloBase(titulo) }}</strong></span>
+        <span>Documento <strong>{{ titulo.Documento || '-' }}</strong></span>
+        <span>{{ parceiroLabel }} <strong>{{ parceiroNome(titulo) }}</strong></span>
+        <span>Loja <strong>{{ lojaNome(titulo.idloja) }}</strong></span>
+        <span>Emissão <strong>{{ titulo.Data_emissao | date:'dd/MM/yyyy' }}</strong></span>
+        <span>Valor total <strong>{{ titulo.Valor_total | currency:'BRL' }}</strong></span>
+        <span>Forma <strong>{{ titulo.FormaPagamento || '-' }}</strong></span>
+        <span>Natureza <strong>{{ titulo.Idnatureza || '-' }}</strong></span>
+        <span>NF-e / Pedido <strong>{{ titulo.nfe_id ? ('NF-e #' + titulo.nfe_id) : (titulo.pedido_compra ? ('Pedido #' + titulo.pedido_compra) : '-') }}</strong></span>
+      </div>
+      <div class="alert warning" *ngIf="divergenciaTitulo(titulo)">Divergência de mercadoria: {{ valorDivergenciaTitulo(titulo) | currency:'BRL' }}</div>
+      <table class="table small">
+        <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Data baixa</th><th>Valor baixa</th></tr></thead>
+        <tbody><tr *ngFor="let parcela of titulo.itens || []"><td>{{ parcela.parcela_n }}</td><td>{{ parcela.Data_vencimento | date:'dd/MM/yyyy' }}</td><td>{{ parcela.valor_parcela | currency:'BRL' }}</td><td>{{ parcela.status }}</td><td>{{ parcela.data_baixa ? (parcela.data_baixa | date:'dd/MM/yyyy') : '-' }}</td><td>{{ parcela.valor_baixa ? (parcela.valor_baixa | currency:'BRL') : '-' }}</td></tr></tbody>
+      </table>
+      <div class="overlay-actions">
+        <button class="btn" type="button" (click)="fecharDetalheTitulo()">Fechar</button>
       </div>
     </section>
   </div>
@@ -200,7 +243,7 @@
         <tbody>
           <tr *ngFor="let row of linhasPaginadas" [class.selected]="isSelected(row)" (click)="selecionarLinha(row)">
             <td class="select-col" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="isSelected(row)" (change)="selecionarLinha(row)" /></td>
-            <td><strong>{{ tituloBase(row.titulo) }}</strong><small>{{ row.titulo.Documento || 'Sem documento' }}</small></td>
+            <td><strong class="link-like" (click)="$event.stopPropagation(); abrirDetalheTitulo(row.titulo)">{{ tituloBase(row.titulo) }}</strong><small>{{ row.titulo.Documento || 'Sem documento' }}</small><small class="text-warn" *ngIf="divergenciaTitulo(row.titulo)">Divergência: {{ valorDivergenciaTitulo(row.titulo) | currency:'BRL' }}</small></td>
             <td *ngIf="visibleColumn('parceiro')">{{ parceiroNome(row.titulo) }}</td>
             <td *ngIf="visibleColumn('loja')">{{ lojaNome(row.titulo.idloja) }}</td>
             <td *ngIf="visibleColumn('emissao')">{{ row.titulo.Data_emissao | date:'dd/MM/yyyy' }}</td>
