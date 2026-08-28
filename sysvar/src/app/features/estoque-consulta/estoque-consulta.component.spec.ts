@@ -27,7 +27,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
-      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'Venda', data_movimento: '2026-08-25T10:00:00Z' } as any,
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
       { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: '1.000', saldo_anterior: '6.000', saldo_posterior: '7.000', origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
     ] }));
     lojasApi.list.and.returnValue(of({ count: 2, results: [

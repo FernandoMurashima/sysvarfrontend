@@ -227,7 +227,16 @@ export class EstoqueConsultaComponent implements OnInit {
   }
 
   movimentoOrigem(item: EstoqueMovimentacao): string {
-    return item.origem || '-';
+    const labels: Record<string, string> = {
+      NFE: 'NF-e',
+      VENDA: 'Venda',
+      DEVOLUCAO: 'Devolução',
+      TRANSFERENCIA: 'Transferência',
+      INVENTARIO: 'Inventário',
+      PRODUCAO: 'Produção',
+      AJUSTE_MANUAL: 'Ajuste manual'
+    };
+    return item.origem ? (labels[item.origem] || item.origem) : '-';
   }
 
   movimentoData(item: EstoqueMovimentacao): string {
