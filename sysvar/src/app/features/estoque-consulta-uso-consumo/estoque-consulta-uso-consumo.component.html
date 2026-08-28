@@ -52,7 +52,10 @@
         <tbody>
           <tr *ngFor="let row of rows">
             <td>{{ row.referencia }}</td>
-            <td>{{ row.produto }}</td>
+            <td>
+              {{ row.produto }}
+              <span class="status-pill inactive" *ngIf="row.produtoAtivo === false">INATIVO</span>
+            </td>
             <td>{{ row.loja }}</td>
             <td>{{ row.unidade }}</td>
             <td class="num total-col" [class.zero]="row.saldo === 0">{{ row.saldo }}</td>

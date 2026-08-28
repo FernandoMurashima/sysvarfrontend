@@ -19,6 +19,7 @@ interface UsoConsumoRow {
   loja: string;
   unidade: string;
   saldo: number;
+  produtoAtivo: boolean | null;
 }
 
 @Component({
@@ -116,7 +117,8 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
       saldoPorProdutoLoja.set(key, (saldoPorProdutoLoja.get(key) || 0) + Number(e.saldo || 0));
     });
 
-    this.rows = this.produtos.flatMap(produto => lojasConsulta.map(loja => {
+    const produtoIdsAtivos = new Set(this.produtos.map(produto => Number(produto.Idproduto || 0)));
+    const rowsAtivos = this.produtos.flatMap(produto => lojasConsulta.map(loja => {
       const saldo = saldoPorProdutoLoja.get(`${produto.Idproduto}|${loja.id}`) || 0;
       return {
         referencia: produto.referencia || '-',
@@ -125,9 +127,31 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
         lojaId: Number(loja.id || 0),
         loja: loja.nome_loja || `Loja #${loja.id}`,
         unidade: this.unidadeLabel(produto),
-        saldo
+        saldo,
+        produtoAtivo: produto.ativo ?? true
       };
-    }))
+    }));
+
+    const lojaPorId = new Map(this.lojas.map(loja => [Number(loja.id || 0), loja]));
+    const rowsSomenteEstoque = this.estoques
+      .filter(e => !produtoIdsAtivos.has(Number(e.produto || 0)))
+      .filter(e => !this.loja || Number(e.loja || 0) === Number(this.loja))
+      .map(e => {
+        const loja = lojaPorId.get(Number(e.loja || 0));
+        return {
+          referencia: e.produto_referencia || '-',
+          produto: e.produto_descricao || '',
+          produtoId: Number(e.produto || 0),
+          lojaId: Number(e.loja || 0),
+          loja: e.loja_nome || loja?.nome_loja || `Loja #${e.loja}`,
+          unidade: e.unidade_codigo || e.unidade_descricao || '-',
+          saldo: Number(e.saldo || 0),
+          produtoAtivo: e.produto_ativo ?? null
+        };
+      })
+      .filter(row => row.saldo !== 0 || row.produtoAtivo !== false);
+
+    this.rows = [...rowsAtivos, ...rowsSomenteEstoque]
       .filter(row => this.passaFiltroSaldo(row.saldo))
       .sort((a, b) => this.ordenarTexto(a.referencia, b.referencia) || this.ordenarTexto(a.loja, b.loja));
     this.totalSaldo = this.rows.reduce((sum, row) => sum + row.saldo, 0);

@@ -26,9 +26,18 @@ describe('EstoqueConsultaUsoConsumoComponent', () => {
       { Idproduto: 10, tipo_produto: '2', referencia: 'USO-000010', descricao: 'Papel A4', unidade: 'UN' } as any,
       { Idproduto: 20, tipo_produto: '1', referencia: '26-01-01001', descricao: 'Produto venda', unidade: 'UN' } as any
     ] }));
-    estoqueApi.listUsoConsumo.and.returnValue(of({ count: 1, results: [
-      { id: 1, produto: 10, produto_tipo: '2', produto_referencia: 'USO-000010', produto_descricao: 'Papel A4', loja: 1, loja_nome: 'Matriz', saldo: '7.000' } as any
-    ] }));
+    const estoques = [
+      { id: 1, produto: 10, produto_tipo: '2', produto_ativo: true, produto_referencia: 'USO-000010', produto_descricao: 'Papel A4', loja: 1, loja_nome: 'Matriz', saldo: '7.000' } as any,
+      { id: 2, produto: 30, produto_tipo: '2', produto_ativo: false, produto_referencia: 'USO-000030', produto_descricao: 'Tonner', loja: 1, loja_nome: 'Matriz', saldo: '3.000' } as any,
+      { id: 3, produto: 20, produto_tipo: '1', produto_ativo: true, produto_referencia: '26-01-01001', produto_descricao: 'Produto venda', loja: 1, loja_nome: 'Matriz', saldo: '99.000' } as any
+    ];
+    estoqueApi.listUsoConsumo.and.callFake((params: any) => {
+      const search = String(params?.search || '').trim().toLowerCase();
+      const results = search
+        ? estoques.filter(e => String(e.produto_referencia).toLowerCase().includes(search) || String(e.produto_descricao).toLowerCase().includes(search))
+        : estoques;
+      return of({ count: results.length, results });
+    });
 
     await TestBed.configureTestingModule({
       imports: [EstoqueConsultaUsoConsumoComponent],
@@ -50,6 +59,20 @@ describe('EstoqueConsultaUsoConsumoComponent', () => {
     expect(component.rows.some(row => row.referencia === '26-01-01001')).toBeFalse();
   });
 
+  it('inclui produto inativo com saldo vindo do estoque', () => {
+    const row = component.rows.find(item => item.referencia === 'USO-000030');
+
+    expect(row).toBeTruthy();
+    expect(row?.saldo).toBe(3);
+    expect(row?.produtoAtivo).toBeFalse();
+  });
+
+  it('identifica produto inativo visualmente', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('INATIVO');
+  });
+
   it('filtra por loja', () => {
     component.loja = '1';
     component.load();
@@ -62,8 +85,7 @@ describe('EstoqueConsultaUsoConsumoComponent', () => {
     component.filtroSaldo = 'com_saldo';
     component.load();
 
-    expect(component.rows.length).toBe(1);
-    expect(component.rows[0].saldo).toBe(7);
+    expect(component.rows.map(row => row.referencia).sort()).toEqual(['USO-000010', 'USO-000030']);
   });
 
   it('filtra zerados', () => {

@@ -233,6 +233,26 @@ select {
   color: #991b1b;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  min-height: 22px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.status-pill.inactive {
+  background: #e2e8f0;
+  color: #475569;
+}
+
 .btn {
   height: 36px;
   padding: 0 12px;

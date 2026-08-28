@@ -14,6 +14,7 @@ export interface ProdutoUsoConsumoEstoque {
   produto_descricao: string;
   produto_referencia: string;
   produto_tipo: string;
+  produto_ativo?: boolean | null;
   unidade_codigo?: string | null;
   unidade_descricao?: string | null;
   loja: number;
