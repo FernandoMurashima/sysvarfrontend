@@ -188,6 +188,135 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(component.matrizTotalGeral).toEqual({ fisico: 9, reservado: 1, disponivel: 8 });
   });
 
+  it('filtra coleções pela estação selecionada', () => {
+    component.modo = 'colecao';
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Inverno', Estacao: '02' } as any
+    ];
+
+    component.estacao = '01';
+
+    expect(component.colecoesFiltradas.map(c => c.Idcolecao)).toEqual([1]);
+  });
+
+  it('filtra referências pela coleção selecionada', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.colecao = '1';
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Inverno', Estacao: '02' } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 2 } as any
+    ];
+
+    component.onColecaoChange();
+
+    expect(component.produtosColecao.map(p => p.referencia)).toEqual(['REF-A']);
+  });
+
+  it('limpa coleção e referência incompatíveis ao trocar estação', () => {
+    component.modo = 'colecao';
+    component.estacao = '02';
+    component.colecao = '1';
+    component.produtoReferencia = 'REF-A';
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Inverno', Estacao: '02' } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 2 } as any
+    ];
+
+    component.onEstacaoChange();
+
+    expect(component.colecao).toBe('');
+    expect(component.produtoReferencia).toBe('');
+    expect(component.produtosColecao.map(p => p.referencia)).toEqual(['REF-B']);
+  });
+
+  it('limpa referência incompatível ao trocar coleção', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.colecao = '2';
+    component.produtoReferencia = 'REF-A';
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão A', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Verão B', Estacao: '01' } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 2 } as any
+    ];
+
+    component.onColecaoChange();
+
+    expect(component.produtoReferencia).toBe('');
+    expect(component.produtosColecao.map(p => p.referencia)).toEqual(['REF-B']);
+  });
+
+  it('monta matriz de coleção com filtros parciais e preserva loja e saldo', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.loja = '1';
+    component.filtroSaldo = 'com_saldo';
+    component.lojas = [
+      { id: 1, nome_loja: 'Matriz' } as any,
+      { id: 2, nome_loja: 'Filial' } as any
+    ];
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão A', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Verão B', Estacao: '01' } as any,
+      { Idcolecao: 3, Codigo: '26', Descricao: 'Inverno', Estacao: '02' } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 2 } as any,
+      { Idproduto: 3, referencia: 'REF-C', descricao: 'Produto C', colecao: 3 } as any
+    ];
+    component.estoques = [
+      { Idloja: 1, referencia: 'REF-A', Estoque: 5, reserva: 1 } as any,
+      { Idloja: 1, referencia: 'REF-B', Estoque: 0, reserva: 0 } as any,
+      { Idloja: 2, referencia: 'REF-A', Estoque: 7, reserva: 0 } as any,
+      { Idloja: 1, referencia: 'REF-C', Estoque: 9, reserva: 0 } as any
+    ];
+
+    (component as any).montarMatrizColecao();
+
+    expect(component.colecaoRows.map(row => row.referencia)).toEqual(['REF-A']);
+    expect(component.colecaoLojaIds).toEqual([1]);
+    expect(component.colecaoTotalGeral).toBe(4);
+  });
+
+  it('monta matriz de coleção com estação coleção e referência', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.colecao = '1';
+    component.produtoReferencia = 'REF-A';
+    component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão A', Estacao: '01' } as any,
+      { Idcolecao: 2, Codigo: '26', Descricao: 'Verão B', Estacao: '01' } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 1 } as any
+    ];
+    component.estoques = [
+      { Idloja: 1, referencia: 'REF-A', Estoque: 5, reserva: 0 } as any,
+      { Idloja: 1, referencia: 'REF-B', Estoque: 7, reserva: 0 } as any
+    ];
+
+    (component as any).montarMatrizColecao();
+
+    expect(component.colecaoRows.map(row => row.referencia)).toEqual(['REF-A']);
+    expect(component.colecaoTotalGeral).toBe(5);
+  });
+
   it('exibe saldo anterior e posterior vindos da API', () => {
     const text = fixture.nativeElement.textContent;
 

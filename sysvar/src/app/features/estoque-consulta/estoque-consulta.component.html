@@ -12,14 +12,18 @@
         (search)="buscar($event)"
         (cleared)="clearFilters()"
       />
+      <select *ngIf="isColecao()" [(ngModel)]="estacao" (change)="onEstacaoChange()">
+        <option value="">Todas as estações</option>
+        <option *ngFor="let est of estacoesColecao" [value]="est">{{ est }}</option>
+      </select>
       <select *ngIf="isColecao()" [(ngModel)]="colecao" (change)="onColecaoChange()">
-        <option value="">Selecione a coleção</option>
-        <option *ngFor="let c of colecoes" [value]="c.Idcolecao">
+        <option value="">Todas as coleções</option>
+        <option *ngFor="let c of colecoesFiltradas" [value]="c.Idcolecao">
           {{ c.Codigo }} - {{ c.Descricao }}
         </option>
       </select>
       <select *ngIf="isColecao() && produtosColecao.length" [(ngModel)]="produtoReferencia">
-        <option value="">Todos os produtos da coleção</option>
+        <option value="">Todas as referências</option>
         <option *ngFor="let p of produtosColecao" [value]="p.referencia">
           {{ p.referencia }} - {{ p.descricao_reduzida || p.descricao }}
         </option>

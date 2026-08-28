@@ -115,6 +115,17 @@ export class EstoqueConsultaComponent implements OnInit {
     return Array.from(new Set(valores));
   }
 
+  get estacoesColecao(): string[] {
+    return Array.from(new Set(this.colecoes.map(c => c.Estacao || '').filter(Boolean)))
+      .sort((a, b) => this.ordenarTexto(a, b));
+  }
+
+  get colecoesFiltradas(): Colecao[] {
+    return this.colecoes
+      .filter(c => !this.estacao || c.Estacao === this.estacao)
+      .sort((a, b) => this.ordenarTexto(a.Codigo || '', b.Codigo || '') || this.ordenarTexto(a.Descricao || '', b.Descricao || ''));
+  }
+
   buscar(valor?: string): void {
     const termo = String(valor ?? this.search ?? '').trim();
     this.search = this.normalizarBuscaReferencia(termo);
@@ -162,6 +173,7 @@ export class EstoqueConsultaComponent implements OnInit {
         this.skus = this.unwrap<ProdutoSku>(res.skus);
         this.cores = this.unwrap<Cor>(res.cores);
         this.tamanhos = this.unwrap<TamanhoModel>(res.tamanhos);
+        this.produtosColecao = this.produtosDaColecaoSelecionada();
         this.montarMatrizReferencia();
         this.montarMatrizColecao();
         this.loading = false;
@@ -330,9 +342,22 @@ export class EstoqueConsultaComponent implements OnInit {
     return row.saldos[lojaId] || 0;
   }
 
-  onColecaoChange(): void {
-    this.produtoReferencia = '';
+  onEstacaoChange(): void {
+    if (this.colecao && !this.colecoesFiltradas.some(c => c.Idcolecao === Number(this.colecao))) {
+      this.colecao = '';
+      this.produtoReferencia = '';
+    }
     this.produtosColecao = this.produtosDaColecaoSelecionada();
+    if (this.produtoReferencia && !this.produtosColecao.some(p => p.referencia === this.produtoReferencia)) {
+      this.produtoReferencia = '';
+    }
+  }
+
+  onColecaoChange(): void {
+    this.produtosColecao = this.produtosDaColecaoSelecionada();
+    if (this.produtoReferencia && !this.produtosColecao.some(p => p.referencia === this.produtoReferencia)) {
+      this.produtoReferencia = '';
+    }
   }
 
   exportarCsv(): void {
@@ -482,7 +507,7 @@ export class EstoqueConsultaComponent implements OnInit {
     this.colecaoTotaisLoja = {};
     this.colecaoTotalGeral = 0;
 
-    if (this.modo !== 'colecao' || !this.colecao) return;
+    if (this.modo !== 'colecao' || (!this.estacao && !this.colecao)) return;
 
     this.produtosColecao = this.produtosDaColecaoSelecionada();
 
@@ -571,10 +596,14 @@ export class EstoqueConsultaComponent implements OnInit {
 
   private produtosDaColecaoSelecionada(): Produto[] {
     const colecaoId = Number(this.colecao || 0);
-    if (!colecaoId) return [];
 
     return this.produtos
-      .filter(p => Number(p.colecao || 0) === colecaoId && !!p.referencia)
+      .filter(p => {
+        if (!p.referencia) return false;
+        if (colecaoId) return Number(p.colecao || 0) === colecaoId;
+        const colecao = this.colecoes.find(c => c.Idcolecao === Number(p.colecao || 0));
+        return !this.estacao || colecao?.Estacao === this.estacao;
+      })
       .sort((a, b) => this.ordenarTexto(a.referencia || '', b.referencia || ''));
   }
 
