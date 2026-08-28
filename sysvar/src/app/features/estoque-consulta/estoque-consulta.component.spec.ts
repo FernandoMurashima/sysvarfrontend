@@ -15,15 +15,21 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   let fixture: ComponentFixture<EstoqueConsultaComponent>;
   let component: EstoqueConsultaComponent;
   let estoqueApi: jasmine.SpyObj<EstoqueService>;
+  let lojasApi: jasmine.SpyObj<LojasService>;
+  let produtosApi: jasmine.SpyObj<ProdutosService>;
+  let colecoesApi: jasmine.SpyObj<ColecoesService>;
+  let skusApi: jasmine.SpyObj<ProdutoDetalheService>;
+  let coresApi: jasmine.SpyObj<CoresService>;
+  let tamanhosApi: jasmine.SpyObj<TamanhosService>;
 
   beforeEach(async () => {
     estoqueApi = jasmine.createSpyObj<EstoqueService>('EstoqueService', ['list', 'listMovimentacoes']);
-    const lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
-    const produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', ['list']);
-    const colecoesApi = jasmine.createSpyObj<ColecoesService>('ColecoesService', ['list']);
-    const skusApi = jasmine.createSpyObj<ProdutoDetalheService>('ProdutoDetalheService', ['list']);
-    const coresApi = jasmine.createSpyObj<CoresService>('CoresService', ['list']);
-    const tamanhosApi = jasmine.createSpyObj<TamanhosService>('TamanhosService', ['list']);
+    lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
+    produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', ['list']);
+    colecoesApi = jasmine.createSpyObj<ColecoesService>('ColecoesService', ['list']);
+    skusApi = jasmine.createSpyObj<ProdutoDetalheService>('ProdutoDetalheService', ['list']);
+    coresApi = jasmine.createSpyObj<CoresService>('CoresService', ['list']);
+    tamanhosApi = jasmine.createSpyObj<TamanhosService>('TamanhosService', ['list']);
 
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
@@ -86,6 +92,56 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       data_inicio: '2026-08-24',
       data_fim: '2026-08-26'
     }));
+  });
+
+  it('modo movimentação não carrega dados desnecessários de matriz', () => {
+    expect(estoqueApi.list).not.toHaveBeenCalled();
+    expect(produtosApi.list).not.toHaveBeenCalled();
+    expect(colecoesApi.list).not.toHaveBeenCalled();
+    expect(coresApi.list).not.toHaveBeenCalled();
+    expect(tamanhosApi.list).not.toHaveBeenCalled();
+    expect(estoqueApi.listMovimentacoes).toHaveBeenCalledWith(jasmine.objectContaining({ page_size: 1000 }));
+  });
+
+  it('modo Consulta por Referência não carrega movimentações', () => {
+    estoqueApi.list.calls.reset();
+    estoqueApi.listMovimentacoes.calls.reset();
+    produtosApi.list.calls.reset();
+    colecoesApi.list.calls.reset();
+    skusApi.list.calls.reset();
+
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.load();
+
+    expect(estoqueApi.listMovimentacoes).not.toHaveBeenCalled();
+    expect(colecoesApi.list).not.toHaveBeenCalled();
+    expect(estoqueApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
+    expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 500 }));
+    expect(skusApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
+  });
+
+  it('modo Coleção/Estação carrega apenas dados necessários e preserva filtros', () => {
+    estoqueApi.list.calls.reset();
+    estoqueApi.listMovimentacoes.calls.reset();
+    produtosApi.list.calls.reset();
+    colecoesApi.list.calls.reset();
+    skusApi.list.calls.reset();
+    coresApi.list.calls.reset();
+    tamanhosApi.list.calls.reset();
+
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.loja = '2';
+    component.load();
+
+    expect(estoqueApi.listMovimentacoes).not.toHaveBeenCalled();
+    expect(skusApi.list).not.toHaveBeenCalled();
+    expect(coresApi.list).not.toHaveBeenCalled();
+    expect(tamanhosApi.list).not.toHaveBeenCalled();
+    expect(colecoesApi.list).toHaveBeenCalled();
+    expect(estoqueApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ estacao: '01', loja: '2', page_size: 1000 }));
+    expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ ativo: 'true', page_size: 1000 }));
   });
 
   it('mantém referência exata na consulta', () => {

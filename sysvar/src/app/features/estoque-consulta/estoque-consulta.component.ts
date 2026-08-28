@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { Colecao } from '../../core/models/colecao';
 import { Cor } from '../../core/models/cor';
 import { Estoque, EstoqueMovimentacao } from '../../core/models/estoque';
@@ -141,28 +141,31 @@ export class EstoqueConsultaComponent implements OnInit {
 
   load(): void {
     this.loading = true;
+    const colecaoSelecionada = this.colecoes.find(c => c.Idcolecao === Number(this.colecao || 0));
     const estoqueParams = this.isColecao()
-      ? { loja: this.loja, page_size: 5000 }
-      : this.isMovimentos()
-        ? { search: this.search, loja: this.loja, page_size: 5000 }
-        : { search: this.search, loja: this.loja, colecao: this.colecao, estacao: this.estacao, page_size: 5000 };
+      ? { loja: this.loja, colecao: colecaoSelecionada?.Codigo || '', estacao: this.estacao, page_size: 1000 }
+      : { search: this.search, loja: this.loja, colecao: this.colecao, estacao: this.estacao, page_size: 1000 };
+    const produtoParams = this.isColecao()
+      ? { ativo: 'true' as const, colecao: this.colecao, page_size: 1000 }
+      : { ativo: 'true' as const, search: this.search, page_size: 500 };
+    const skuParams = { search: this.search, page_size: 1000 };
 
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
-      estoque: this.api.list(estoqueParams),
-      movimentos: this.api.listMovimentacoes({
+      estoque: this.isMovimentos() ? of([]) : this.api.list(estoqueParams),
+      movimentos: this.isMovimentos() ? this.api.listMovimentacoes({
         search: this.search,
         loja: this.loja,
         tipo: this.tipo,
         data_inicio: this.dataInicio,
         data_fim: this.dataFim,
-        page_size: 5000
-      }),
-      produtos: this.produtosApi.list({ ativo: 'true', page_size: 5000 }),
-      colecoes: this.colecoesApi.list(),
-      skus: this.skusApi.list({ page_size: 5000 }),
-      cores: this.coresApi.list({ page_size: 2000, ordering: 'Descricao' }),
-      tamanhos: this.tamanhosApi.list({ ordering: 'Tamanho' })
+        page_size: 1000
+      }) : of([]),
+      produtos: this.isMovimentos() ? of([]) : this.produtosApi.list(produtoParams),
+      colecoes: this.isColecao() ? this.colecoesApi.list() : of([]),
+      skus: this.isColecao() ? of([]) : this.skusApi.list(skuParams),
+      cores: this.isMatriz() ? this.coresApi.list({ page_size: 1000, ordering: 'Descricao' }) : of([]),
+      tamanhos: this.isMatriz() ? this.tamanhosApi.list({ ordering: 'Tamanho' }) : of([])
     }).subscribe({
       next: res => {
         this.lojas = this.unwrap<Loja>(res.lojas);
