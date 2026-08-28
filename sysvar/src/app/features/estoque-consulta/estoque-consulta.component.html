@@ -119,6 +119,8 @@
             <th>Referência</th>
             <th>EAN</th>
             <th class="num">Quantidade</th>
+            <th class="num">Saldo anterior</th>
+            <th class="num">Saldo posterior</th>
             <th>Documento</th>
             <th>Observação</th>
           </tr>
@@ -135,6 +137,8 @@
             <td>{{ m.referencia || '-' }}</td>
             <td>{{ m.CodigodeBarra }}</td>
             <td class="num">{{ movimentoQuantidade(m) }}</td>
+            <td class="num">{{ movimentoSaldo(m.saldo_anterior) }}</td>
+            <td class="num">{{ movimentoSaldo(m.saldo_posterior) }}</td>
             <td>{{ m.documento || '-' }}</td>
             <td>{{ m.observacao || '-' }}</td>
           </tr>

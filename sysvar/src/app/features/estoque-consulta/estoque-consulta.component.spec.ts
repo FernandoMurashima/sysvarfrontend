@@ -27,7 +27,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
-      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', tipo: 'SAIDA', quantidade: '2.000', data_movimento: '2026-08-25T10:00:00Z' } as any
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', data_movimento: '2026-08-25T10:00:00Z' } as any
     ] }));
     lojasApi.list.and.returnValue(of({ count: 2, results: [
       { id: 1, nome_loja: 'Matriz' } as any,
@@ -85,6 +85,15 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       data_inicio: '2026-08-24',
       data_fim: '2026-08-26'
     }));
+  });
+
+  it('exibe saldo anterior e posterior vindos da API', () => {
+    const text = fixture.nativeElement.textContent;
+
+    expect(text).toContain('Saldo anterior');
+    expect(text).toContain('Saldo posterior');
+    expect(text).toContain('8');
+    expect(text).toContain('6');
   });
 
   it('limpa todos os filtros da movimentação por referência', () => {

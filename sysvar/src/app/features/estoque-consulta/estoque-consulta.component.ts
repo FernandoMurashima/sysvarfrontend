@@ -222,6 +222,10 @@ export class EstoqueConsultaComponent implements OnInit {
     return Number(item.quantidade || 0);
   }
 
+  movimentoSaldo(value: number | string | null | undefined): number {
+    return Number(value || 0);
+  }
+
   movimentoData(item: EstoqueMovimentacao): string {
     if (!item.data_movimento) return '';
     return new Date(item.data_movimento).toLocaleString('pt-BR');
