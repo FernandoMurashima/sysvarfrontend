@@ -27,7 +27,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
-      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
       { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: '1.000', saldo_anterior: '6.000', saldo_posterior: '7.000', origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
     ] }));
     lojasApi.list.and.returnValue(of({ count: 2, results: [
@@ -99,10 +99,21 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('exibe origem vinda da API e usa fallback quando não houver origem', () => {
     const text = fixture.nativeElement.textContent;
-    const origemCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(9)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+    const origemCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(11)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
 
     expect(text).toContain('Origem');
     expect(origemCells).toEqual(['Venda', '-']);
+  });
+
+  it('exibe cor e tamanho vindos da API e usa fallback quando vazio', () => {
+    const text = fixture.nativeElement.textContent;
+    const corCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(6)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+    const tamanhoCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(7)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+
+    expect(text).toContain('Cor');
+    expect(text).toContain('Tamanho');
+    expect(corCells).toEqual(['Azul', '-']);
+    expect(tamanhoCells).toEqual(['M', '-']);
   });
 
   it('limpa todos os filtros da movimentação por referência', () => {

@@ -49,6 +49,8 @@ export interface EstoqueMovimentacao {
   Idloja: number;
   CodigodeBarra: string;
   referencia?: string;
+  cor?: string | null;
+  tamanho?: string | null;
   tipo: TipoMovimentoEstoque;
   quantidade: number;
   custo_unitario?: number | string;

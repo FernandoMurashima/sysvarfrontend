@@ -118,6 +118,8 @@
             <th>Tipo</th>
             <th>Referência</th>
             <th>EAN</th>
+            <th>Cor</th>
+            <th>Tamanho</th>
             <th class="num">Quantidade</th>
             <th class="num">Saldo anterior</th>
             <th class="num">Saldo posterior</th>
@@ -137,6 +139,8 @@
             </td>
             <td>{{ m.referencia || '-' }}</td>
             <td>{{ m.CodigodeBarra }}</td>
+            <td>{{ movimentoCor(m) }}</td>
+            <td>{{ movimentoTamanho(m) }}</td>
             <td class="num">{{ movimentoQuantidade(m) }}</td>
             <td class="num">{{ movimentoSaldo(m.saldo_anterior) }}</td>
             <td class="num">{{ movimentoSaldo(m.saldo_posterior) }}</td>

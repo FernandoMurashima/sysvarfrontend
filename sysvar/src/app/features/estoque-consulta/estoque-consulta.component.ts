@@ -239,6 +239,18 @@ export class EstoqueConsultaComponent implements OnInit {
     return item.origem ? (labels[item.origem] || item.origem) : '-';
   }
 
+  movimentoCor(item: EstoqueMovimentacao): string {
+    if (item.cor) return item.cor;
+    const sku = this.skus.find(s => s.ean13 === item.CodigodeBarra);
+    return sku?.cor_descricao || '-';
+  }
+
+  movimentoTamanho(item: EstoqueMovimentacao): string {
+    if (item.tamanho) return item.tamanho;
+    const sku = this.skus.find(s => s.ean13 === item.CodigodeBarra);
+    return sku?.tamanho_descricao || '-';
+  }
+
   movimentoData(item: EstoqueMovimentacao): string {
     if (!item.data_movimento) return '';
     return new Date(item.data_movimento).toLocaleString('pt-BR');
