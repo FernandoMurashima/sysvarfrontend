@@ -56,6 +56,7 @@ export interface EstoqueMovimentacao {
   custo_medio_apos?: number | string;
   saldo_anterior?: number;
   saldo_posterior?: number;
+  origem?: string | null;
   documento?: string | null;
   observacao?: string | null;
   data_movimento?: string;

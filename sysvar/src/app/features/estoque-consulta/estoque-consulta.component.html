@@ -121,6 +121,7 @@
             <th class="num">Quantidade</th>
             <th class="num">Saldo anterior</th>
             <th class="num">Saldo posterior</th>
+            <th>Origem</th>
             <th>Documento</th>
             <th>Observação</th>
           </tr>
@@ -139,6 +140,7 @@
             <td class="num">{{ movimentoQuantidade(m) }}</td>
             <td class="num">{{ movimentoSaldo(m.saldo_anterior) }}</td>
             <td class="num">{{ movimentoSaldo(m.saldo_posterior) }}</td>
+            <td>{{ movimentoOrigem(m) }}</td>
             <td>{{ m.documento || '-' }}</td>
             <td>{{ m.observacao || '-' }}</td>
           </tr>

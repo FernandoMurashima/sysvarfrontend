@@ -226,6 +226,10 @@ export class EstoqueConsultaComponent implements OnInit {
     return Number(value || 0);
   }
 
+  movimentoOrigem(item: EstoqueMovimentacao): string {
+    return item.origem || '-';
+  }
+
   movimentoData(item: EstoqueMovimentacao): string {
     if (!item.data_movimento) return '';
     return new Date(item.data_movimento).toLocaleString('pt-BR');
