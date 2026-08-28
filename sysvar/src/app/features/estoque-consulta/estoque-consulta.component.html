@@ -34,8 +34,12 @@
         <option value="com_saldo">Somente com saldo</option>
         <option value="zerados">Somente zerados</option>
       </select>
-      <input *ngIf="isMatriz()" type="text" placeholder="Coleção" [(ngModel)]="colecao" />
-      <input *ngIf="isMatriz()" type="text" placeholder="Estação" [(ngModel)]="estacao" />
+      <select *ngIf="isMatriz()" [(ngModel)]="colecao">
+        <option value="">Todas as coleções</option>
+        <option *ngFor="let c of colecoes" [value]="c.Idcolecao">
+          {{ c.Codigo }} - {{ c.Descricao }}
+        </option>
+      </select>
       <select *ngIf="isMovimentos()" [(ngModel)]="tipo">
         <option value="">Todos os tipos</option>
         <option value="ENTRADA">Entrada</option>

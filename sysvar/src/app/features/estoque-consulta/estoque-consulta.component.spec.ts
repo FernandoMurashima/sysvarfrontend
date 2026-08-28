@@ -121,11 +121,45 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     component.load();
 
     expect(estoqueApi.listMovimentacoes).not.toHaveBeenCalled();
-    expect(colecoesApi.list).not.toHaveBeenCalled();
+    expect(colecoesApi.list).toHaveBeenCalled();
     expect(estoqueApi.list).not.toHaveBeenCalled();
-    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', loja: '', saldo: 'todos' }));
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', loja: '', saldo: 'todos', colecao: '' }));
     expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 500 }));
     expect(skusApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
+  });
+
+  it('carrega coleções e exibe select com opção todas na consulta por referência', () => {
+    component.modo = 'matriz';
+    component.colecoes = [
+      { Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any
+    ];
+
+    fixture.detectChanges();
+    const options = Array.from(fixture.nativeElement.querySelectorAll('select option') as NodeListOf<HTMLOptionElement>).map(option => option.textContent?.trim());
+
+    expect(options).toContain('Todas as coleções');
+    expect(options).toContain('26 - Verão');
+  });
+
+  it('envia coleção somente ao clicar em Buscar na consulta por referência', () => {
+    estoqueApi.consultaReferencia.calls.reset();
+    component.modo = 'matriz';
+    component.colecao = '1';
+
+    fixture.detectChanges();
+    expect(estoqueApi.consultaReferencia).not.toHaveBeenCalled();
+
+    component.buscar(component.search);
+
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ colecao: '1' }));
+  });
+
+  it('não exibe filtro Estação na consulta por referência', () => {
+    component.modo = 'matriz';
+    fixture.detectChanges();
+
+    const inputs = Array.from(fixture.nativeElement.querySelectorAll('input') as NodeListOf<HTMLInputElement>).map(el => el.placeholder || el.type);
+    expect(inputs).not.toContain('Estação');
   });
 
   it('modo Coleção/Estação carrega apenas dados necessários e preserva filtros', () => {

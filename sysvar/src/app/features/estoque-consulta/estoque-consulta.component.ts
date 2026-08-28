@@ -106,7 +106,7 @@ export class EstoqueConsultaComponent implements OnInit {
   colecaoTotalGeral: MatrizSaldo = this.saldoVazio();
 
   get searchSuggestions(): string[] {
-    if (this.loja && this.isMatriz()) {
+    if (this.isMatriz() && (this.loja || this.colecao)) {
       const valoresLoja = [
         ...this.estoques.flatMap(e => [
           e.referencia,
@@ -167,7 +167,7 @@ export class EstoqueConsultaComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    const consultaReferenciaParams = { search: this.search, loja: this.loja, saldo: this.filtroSaldo };
+    const consultaReferenciaParams = { search: this.search, loja: this.loja, saldo: this.filtroSaldo, colecao: this.colecao };
     const consultaColecaoParams = {
       estacao: this.estacao,
       colecao: this.colecao,
@@ -182,7 +182,7 @@ export class EstoqueConsultaComponent implements OnInit {
 
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
-      estoque: this.isMatriz() && !!this.loja ? this.api.list({ loja: this.loja, search: this.search, page_size: 500 }) : of([]),
+      estoque: this.isMatriz() && !!this.loja ? this.api.list({ loja: this.loja, search: this.search, colecao: this.colecao, page_size: 500 }) : of([]),
       consultaReferencia: this.isMatriz() ? this.api.consultaReferencia(consultaReferenciaParams) : of([]),
       consultaColecao: this.isColecao() ? this.api.consultaColecao(consultaColecaoParams) : of([]),
       movimentos: this.isMovimentos() ? this.api.listMovimentacoes({
@@ -194,7 +194,7 @@ export class EstoqueConsultaComponent implements OnInit {
         page_size: 1000
       }) : of([]),
       produtos: this.isMovimentos() ? of([]) : this.produtosApi.list(produtoParams),
-      colecoes: this.isColecao() ? this.colecoesApi.list() : of([]),
+      colecoes: !this.isMovimentos() ? this.colecoesApi.list() : of([]),
       skus: this.isColecao() ? of([]) : this.skusApi.list(skuParams),
       cores: this.isMatriz() ? this.coresApi.list({ page_size: 1000, ordering: 'Descricao' }) : of([]),
       tamanhos: this.isMatriz() ? this.tamanhosApi.list({ ordering: 'Tamanho' }) : of([])
