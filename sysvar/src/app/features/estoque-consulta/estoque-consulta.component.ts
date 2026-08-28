@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
+import * as XLSX from 'xlsx';
 import { Colecao } from '../../core/models/colecao';
 import { Cor } from '../../core/models/cor';
 import { Estoque, EstoqueConsultaColecaoItem, EstoqueConsultaReferenciaItem, EstoqueMovimentacao } from '../../core/models/estoque';
@@ -43,6 +44,15 @@ interface ColecaoReferenciaRow {
   produto: string;
   saldos: Record<number, MatrizSaldo>;
   total: MatrizSaldo;
+}
+
+type ExcelCell = string | number;
+
+interface ExcelExportData {
+  headers: ExcelCell[];
+  rows: ExcelCell[][];
+  filename: string;
+  sheetName: string;
 }
 
 @Component({
@@ -373,14 +383,51 @@ export class EstoqueConsultaComponent implements OnInit {
     }
   }
 
-  exportarCsv(): void {
-    const isColecao = this.isColecao();
-    const headers = isColecao
-      ? ['Referencia', 'Produto', ...this.colecaoLojaIds.flatMap(id => [`${this.lojaNome(id)} Físico`, `${this.lojaNome(id)} Reservado`, `${this.lojaNome(id)} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível']
-      : ['Loja', 'Cor', ...this.matrizTamanhos.flatMap(t => [`${t.label} Físico`, `${t.label} Reservado`, `${t.label} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'];
+  exportarExcel(): void {
+    const exportData = this.montarDadosExportacaoExcel();
+    if (!exportData.rows.length) return;
 
-    const rows = isColecao
-      ? this.colecaoRows.map(row => [
+    const worksheet = XLSX.utils.aoa_to_sheet([exportData.headers, ...exportData.rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, exportData.sheetName);
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportData.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private montarDadosExportacaoExcel(): ExcelExportData {
+    if (this.isMovimentos()) {
+      return {
+        headers: ['Data', 'Loja', 'Tipo', 'Referência', 'EAN', 'Cor', 'Tamanho', 'Quantidade', 'Saldo anterior', 'Saldo posterior', 'Origem', 'Documento', 'Observação'],
+        rows: this.movimentos.map(m => [
+          this.movimentoData(m),
+          this.lojaNome(m.Idloja),
+          m.tipo,
+          m.referencia || '-',
+          m.CodigodeBarra || '-',
+          this.movimentoCor(m),
+          this.movimentoTamanho(m),
+          this.movimentoQuantidade(m),
+          this.movimentoSaldo(m.saldo_anterior),
+          this.movimentoSaldo(m.saldo_posterior),
+          this.movimentoOrigem(m),
+          m.documento || '-',
+          m.observacao || '-'
+        ]),
+        filename: 'estoque-movimentacao.xlsx',
+        sheetName: 'Movimentacoes'
+      };
+    }
+
+    if (this.isColecao()) {
+      return {
+        headers: ['Referencia', 'Produto', ...this.colecaoLojaIds.flatMap(id => [`${this.lojaNome(id)} Físico`, `${this.lojaNome(id)} Reservado`, `${this.lojaNome(id)} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'],
+        rows: this.colecaoRows.map(row => [
           row.referencia,
           row.produto,
           ...this.colecaoLojaIds.flatMap(lojaId => {
@@ -390,31 +437,28 @@ export class EstoqueConsultaComponent implements OnInit {
           row.total.fisico,
           row.total.reservado,
           row.total.disponivel
-        ])
-      : this.matrizRows.map(row => [
-          row.loja,
-          row.cor,
-          ...this.matrizTamanhos.flatMap(t => {
-            const saldo = this.matrizSaldo(row, t.id);
-            return [saldo.fisico, saldo.reservado, saldo.disponivel];
-          }),
-          row.total.fisico,
-          row.total.reservado,
-          row.total.disponivel
-        ]);
+        ]),
+        filename: 'estoque-colecao.xlsx',
+        sheetName: 'Colecao'
+      };
+    }
 
-    if (!rows.length) return;
-
-    const csv = [headers, ...rows]
-      .map(row => row.map(value => this.csvCell(value)).join(';'))
-      .join('\r\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${isColecao ? 'estoque-colecao' : 'estoque-referencia'}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    return {
+      headers: ['Loja', 'Cor', ...this.matrizTamanhos.flatMap(t => [`${t.label} Físico`, `${t.label} Reservado`, `${t.label} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'],
+      rows: this.matrizRows.map(row => [
+        row.loja,
+        row.cor,
+        ...this.matrizTamanhos.flatMap(t => {
+          const saldo = this.matrizSaldo(row, t.id);
+          return [saldo.fisico, saldo.reservado, saldo.disponivel];
+        }),
+        row.total.fisico,
+        row.total.reservado,
+        row.total.disponivel
+      ]),
+      filename: 'estoque-referencia.xlsx',
+      sheetName: 'Referencia'
+    };
   }
 
   private montarMatrizReferencia(): void {
@@ -592,11 +636,6 @@ export class EstoqueConsultaComponent implements OnInit {
       reservado: a.reservado + (b?.reservado || 0),
       disponivel: a.disponivel + (b?.disponivel || 0)
     };
-  }
-
-  private csvCell(value: string | number): string {
-    const text = String(value ?? '');
-    return `"${text.replace(/"/g, '""')}"`;
   }
 
   private produtosDaColecaoSelecionada(): Produto[] {

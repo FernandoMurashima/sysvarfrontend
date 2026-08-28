@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import * as XLSX from 'xlsx';
 import { ColecoesService } from '../../core/services/colecoes.service';
 import { CoresService } from '../../core/services/cores.service';
 import { EstoqueService } from '../../core/services/estoque.service';
@@ -432,6 +433,71 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(component.colecaoTotaisLoja[1]).toEqual({ fisico: 12, reservado: 3, disponivel: 9 });
     expect(component.colecaoTotaisLoja[2]).toEqual({ fisico: 5, reservado: 1, disponivel: 4 });
     expect(component.colecaoTotalGeral).toEqual({ fisico: 17, reservado: 4, disponivel: 13 });
+  });
+
+  it('exporta consulta por referência como workbook XLSX real', () => {
+    component.modo = 'matriz';
+    component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
+    component.consultaReferenciaRows = [
+      { loja: 1, loja_nome: 'Matriz', ean: '789', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 8, reservado: 2, disponivel: 6 } as any
+    ];
+    (component as any).montarMatrizReferencia();
+    const link = { href: '', download: '', click: jasmine.createSpy('click') } as any;
+    const aoaSpy = spyOn(XLSX.utils, 'aoa_to_sheet').and.callThrough();
+    spyOn(document, 'createElement').and.returnValue(link);
+    spyOn(URL, 'createObjectURL').and.callFake((blob: Blob) => {
+      expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      return 'blob:xlsx';
+    });
+    spyOn(URL, 'revokeObjectURL');
+
+    component.exportarExcel();
+
+    expect(aoaSpy).toHaveBeenCalledWith([
+      ['Loja', 'Cor', 'M Físico', 'M Reservado', 'M Disponível', 'Total Físico', 'Total Reservado', 'Total Disponível'],
+      ['Matriz', 'Azul', 8, 2, 6, 8, 2, 6]
+    ]);
+    expect(link.download).toBe('estoque-referencia.xlsx');
+    expect(link.download.endsWith('.csv')).toBeFalse();
+    expect(link.click).toHaveBeenCalled();
+  });
+
+  it('exporta consulta por coleção estação com colunas de físico reservado e disponível', () => {
+    component.modo = 'colecao';
+    component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
+    component.colecoes = [{ Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any];
+    component.produtos = [{ Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any];
+    component.consultaColecaoRowsApi = [
+      { loja: 1, referencia: 'REF-A', produto: 'Produto A', fisico: 5, reservado: 1, disponivel: 4 } as any
+    ];
+    component.estacao = '01';
+    (component as any).montarMatrizColecao();
+    const link = { href: '', download: '', click: jasmine.createSpy('click') } as any;
+    const aoaSpy = spyOn(XLSX.utils, 'aoa_to_sheet').and.callThrough();
+    spyOn(document, 'createElement').and.returnValue(link);
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:xlsx');
+    spyOn(URL, 'revokeObjectURL');
+
+    component.exportarExcel();
+
+    expect(aoaSpy).toHaveBeenCalledWith([
+      ['Referencia', 'Produto', 'Matriz Físico', 'Matriz Reservado', 'Matriz Disponível', 'Total Físico', 'Total Reservado', 'Total Disponível'],
+      ['REF-A', 'Produto A', 5, 1, 4, 5, 1, 4]
+    ]);
+    expect(link.download).toBe('estoque-colecao.xlsx');
+  });
+
+  it('exporta movimentação por referência quando houver dados na tela', () => {
+    const link = { href: '', download: '', click: jasmine.createSpy('click') } as any;
+    const aoaSpy = spyOn(XLSX.utils, 'aoa_to_sheet').and.callThrough();
+    spyOn(document, 'createElement').and.returnValue(link);
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:xlsx');
+    spyOn(URL, 'revokeObjectURL');
+
+    component.exportarExcel();
+
+    expect(aoaSpy.calls.mostRecent().args[0][0]).toEqual(['Data', 'Loja', 'Tipo', 'Referência', 'EAN', 'Cor', 'Tamanho', 'Quantidade', 'Saldo anterior', 'Saldo posterior', 'Origem', 'Documento', 'Observação']);
+    expect(link.download).toBe('estoque-movimentacao.xlsx');
   });
 
   it('exibe saldo anterior e posterior vindos da API', () => {
