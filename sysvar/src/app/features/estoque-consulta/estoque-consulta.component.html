@@ -59,7 +59,9 @@
           {{ referenciasMatriz.join(', ') }}
         </span>
       </div>
-      <span *ngIf="matrizTemDados()">Total disponível: {{ matrizTotalGeral }}</span>
+      <span *ngIf="matrizTemDados()">
+        Físico: {{ matrizTotalGeral.fisico }} | Reservado: {{ matrizTotalGeral.reservado }} | Disponível: {{ matrizTotalGeral.disponivel }}
+      </span>
     </div>
 
     <div class="table-wrapper matrix-wrapper" *ngIf="matrizTemDados(); else matrizVaziaTpl">
@@ -79,17 +81,39 @@
             <td
               *ngFor="let t of matrizTamanhos"
               class="num"
-              [class.zero]="matrizSaldo(row, t.id) === 0">
-              {{ matrizSaldo(row, t.id) }}
+              [class.zero]="matrizSaldo(row, t.id).disponivel === 0">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ matrizSaldo(row, t.id).fisico }}</span>
+                <span><small>Reservado</small>{{ matrizSaldo(row, t.id).reservado }}</span>
+                <strong><small>Disponível</small>{{ matrizSaldo(row, t.id).disponivel }}</strong>
+              </div>
             </td>
-            <td class="num total-col">{{ row.total }}</td>
+            <td class="num total-col">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ row.total.fisico }}</span>
+                <span><small>Reservado</small>{{ row.total.reservado }}</span>
+                <strong><small>Disponível</small>{{ row.total.disponivel }}</strong>
+              </div>
+            </td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
             <th colspan="2">Total</th>
-            <th *ngFor="let t of matrizTamanhos" class="num">{{ matrizTotais[t.id] || 0 }}</th>
-            <th class="num total-col">{{ matrizTotalGeral }}</th>
+            <th *ngFor="let t of matrizTamanhos" class="num">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ matrizTotais[t.id].fisico || 0 }}</span>
+                <span><small>Reservado</small>{{ matrizTotais[t.id].reservado || 0 }}</span>
+                <strong><small>Disponível</small>{{ matrizTotais[t.id].disponivel || 0 }}</strong>
+              </div>
+            </th>
+            <th class="num total-col">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ matrizTotalGeral.fisico }}</span>
+                <span><small>Reservado</small>{{ matrizTotalGeral.reservado }}</span>
+                <strong><small>Disponível</small>{{ matrizTotalGeral.disponivel }}</strong>
+              </div>
+            </th>
           </tr>
         </tfoot>
       </table>

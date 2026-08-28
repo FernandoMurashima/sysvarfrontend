@@ -173,8 +173,8 @@ select {
 }
 
 .matrix-table .num {
-  min-width: 72px;
-  width: 72px;
+  min-width: 118px;
+  width: 118px;
   text-align: center;
 }
 
@@ -201,7 +201,29 @@ select {
 .total-col {
   background: #f8fafc;
   font-weight: 700;
-  min-width: 86px;
+  min-width: 128px;
+}
+
+.saldo-stack {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.saldo-stack span,
+.saldo-stack strong {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.saldo-stack small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
 }
 
 .movimentos-table th,

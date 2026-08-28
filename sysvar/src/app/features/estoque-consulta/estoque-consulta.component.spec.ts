@@ -141,6 +141,53 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(component.load).toHaveBeenCalled();
   });
 
+  it('mostra estoque físico reservado e disponível na matriz por loja cor e tamanho', () => {
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
+    component.cores = [{ Idcor: 1, Descricao: 'Azul' } as any];
+    component.tamanhos = [{ Idtamanho: 1, Tamanho: 'M' } as any];
+    component.skus = [{ ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any];
+    component.estoques = [
+      { Idestoque: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', Estoque: 8, reserva: 2 } as any
+    ];
+
+    (component as any).montarMatrizReferencia();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Físico');
+    expect(text).toContain('Reservado');
+    expect(text).toContain('Disponível');
+    expect(component.matrizSaldo(component.matrizRows[0], 1)).toEqual({ fisico: 8, reservado: 2, disponivel: 6 });
+    expect(component.matrizTotalGeral).toEqual({ fisico: 8, reservado: 2, disponivel: 6 });
+  });
+
+  it('calcula disponível com reserva zero mantendo a matriz por tamanho', () => {
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
+    component.cores = [{ Idcor: 1, Descricao: 'Azul' } as any];
+    component.tamanhos = [
+      { Idtamanho: 1, Tamanho: 'M' } as any,
+      { Idtamanho: 2, Tamanho: 'G' } as any
+    ];
+    component.skus = [
+      { ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any,
+      { ean13: '7890000000002', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 2 } as any
+    ];
+    component.estoques = [
+      { Idestoque: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', Estoque: 5, reserva: 0 } as any,
+      { Idestoque: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', Estoque: 4, reserva: 1 } as any
+    ];
+
+    (component as any).montarMatrizReferencia();
+
+    expect(component.matrizTamanhos.map(t => t.label)).toEqual(['G', 'M']);
+    expect(component.matrizRows.length).toBe(1);
+    expect(component.matrizTotalGeral).toEqual({ fisico: 9, reservado: 1, disponivel: 8 });
+  });
+
   it('exibe saldo anterior e posterior vindos da API', () => {
     const text = fixture.nativeElement.textContent;
 

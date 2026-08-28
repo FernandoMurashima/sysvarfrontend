@@ -23,13 +23,19 @@ interface MatrizTamanho {
   label: string;
 }
 
+interface MatrizSaldo {
+  fisico: number;
+  reservado: number;
+  disponivel: number;
+}
+
 interface MatrizRow {
   lojaId: number;
   loja: string;
   corId: number;
   cor: string;
-  saldos: Record<number, number>;
-  total: number;
+  saldos: Record<number, MatrizSaldo>;
+  total: MatrizSaldo;
 }
 
 interface ColecaoReferenciaRow {
@@ -75,8 +81,8 @@ export class EstoqueConsultaComponent implements OnInit {
   tamanhos: TamanhoModel[] = [];
   matrizTamanhos: MatrizTamanho[] = [];
   matrizRows: MatrizRow[] = [];
-  matrizTotais: Record<number, number> = {};
-  matrizTotalGeral = 0;
+  matrizTotais: Record<number, MatrizSaldo> = {};
+  matrizTotalGeral: MatrizSaldo = this.saldoVazio();
   referenciasMatriz: string[] = [];
   modo: 'matriz' | 'movimentos' | 'colecao' = 'matriz';
   produtoReferencia = '';
@@ -226,6 +232,14 @@ export class EstoqueConsultaComponent implements OnInit {
     return Number(item.Estoque || 0) - Number(item.reserva || 0);
   }
 
+  saldoFisico(item: Estoque): number {
+    return Number(item.Estoque || 0);
+  }
+
+  saldoReservado(item: Estoque): number {
+    return Number(item.reserva || 0);
+  }
+
   movimentoQuantidade(item: EstoqueMovimentacao): number {
     return Number(item.quantidade || 0);
   }
@@ -275,8 +289,8 @@ export class EstoqueConsultaComponent implements OnInit {
     return this.tamanhos.find(t => t.Idtamanho === id)?.Tamanho || `Tam #${id}`;
   }
 
-  matrizSaldo(row: MatrizRow, tamanhoId: number): number {
-    return row.saldos[tamanhoId] || 0;
+  matrizSaldo(row: MatrizRow, tamanhoId: number): MatrizSaldo {
+    return row.saldos[tamanhoId] || this.saldoVazio();
   }
 
   matrizTemDados(): boolean {
@@ -325,7 +339,7 @@ export class EstoqueConsultaComponent implements OnInit {
     const isColecao = this.isColecao();
     const headers = isColecao
       ? ['Referencia', 'Produto', ...this.colecaoLojaIds.map(id => this.lojaNome(id)), 'Total']
-      : ['Loja', 'Cor', ...this.matrizTamanhos.map(t => t.label), 'Total'];
+      : ['Loja', 'Cor', ...this.matrizTamanhos.flatMap(t => [`${t.label} Físico`, `${t.label} Reservado`, `${t.label} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'];
 
     const rows = isColecao
       ? this.colecaoRows.map(row => [
@@ -337,8 +351,13 @@ export class EstoqueConsultaComponent implements OnInit {
       : this.matrizRows.map(row => [
           row.loja,
           row.cor,
-          ...this.matrizTamanhos.map(t => this.matrizSaldo(row, t.id)),
-          row.total
+          ...this.matrizTamanhos.flatMap(t => {
+            const saldo = this.matrizSaldo(row, t.id);
+            return [saldo.fisico, saldo.reservado, saldo.disponivel];
+          }),
+          row.total.fisico,
+          row.total.reservado,
+          row.total.disponivel
         ]);
 
     if (!rows.length) return;
@@ -359,7 +378,7 @@ export class EstoqueConsultaComponent implements OnInit {
     this.matrizTamanhos = [];
     this.matrizRows = [];
     this.matrizTotais = {};
-    this.matrizTotalGeral = 0;
+    this.matrizTotalGeral = this.saldoVazio();
     this.referenciasMatriz = [];
 
     const termo = this.search.trim().toLowerCase();
@@ -408,9 +427,9 @@ export class EstoqueConsultaComponent implements OnInit {
           corId,
           cor: this.corNome(corId),
           saldos: {},
-          total: 0
+          total: this.saldoVazio()
         };
-        this.matrizTamanhos.forEach(t => row!.saldos[t.id] = 0);
+        this.matrizTamanhos.forEach(t => row!.saldos[t.id] = this.saldoVazio());
         rowMap.set(key, row);
       }
       return row;
@@ -429,26 +448,31 @@ export class EstoqueConsultaComponent implements OnInit {
       if (!this.matrizTamanhos.some(t => t.id === tamanhoId)) {
         this.matrizTamanhos.push({ id: tamanhoId, label: this.tamanhoNome(tamanhoId) });
         this.matrizTamanhos.sort((a, b) => this.ordenarTexto(a.label, b.label));
-        rowMap.forEach(row => row.saldos[tamanhoId] = row.saldos[tamanhoId] || 0);
+        rowMap.forEach(row => row.saldos[tamanhoId] = row.saldos[tamanhoId] || this.saldoVazio());
       }
 
       const row = garantirRow(e.Idloja, corId);
-      row.saldos[tamanhoId] = (row.saldos[tamanhoId] || 0) + this.saldoDisponivel(e);
+      const saldo = row.saldos[tamanhoId] || this.saldoVazio();
+      row.saldos[tamanhoId] = {
+        fisico: saldo.fisico + this.saldoFisico(e),
+        reservado: saldo.reservado + this.saldoReservado(e),
+        disponivel: saldo.disponivel + this.saldoDisponivel(e)
+      };
     });
 
     this.matrizRows = Array.from(rowMap.values())
       .map(row => {
-        row.total = this.matrizTamanhos.reduce((sum, t) => sum + (row.saldos[t.id] || 0), 0);
+        row.total = this.matrizTamanhos.reduce((sum, t) => this.somarSaldos(sum, row.saldos[t.id]), this.saldoVazio());
         return row;
       })
-      .filter(row => this.passaFiltroSaldo(row.total))
+      .filter(row => this.passaFiltroSaldo(row.total.disponivel))
       .sort((a, b) => this.ordenarTexto(a.loja, b.loja) || this.ordenarTexto(a.cor, b.cor));
 
     this.matrizTotais = {};
     this.matrizTamanhos.forEach(t => {
-      this.matrizTotais[t.id] = this.matrizRows.reduce((sum, row) => sum + (row.saldos[t.id] || 0), 0);
+      this.matrizTotais[t.id] = this.matrizRows.reduce((sum, row) => this.somarSaldos(sum, row.saldos[t.id]), this.saldoVazio());
     });
-    this.matrizTotalGeral = this.matrizRows.reduce((sum, row) => sum + row.total, 0);
+    this.matrizTotalGeral = this.matrizRows.reduce((sum, row) => this.somarSaldos(sum, row.total), this.saldoVazio());
   }
 
   private montarMatrizColecao(): void {
@@ -526,6 +550,18 @@ export class EstoqueConsultaComponent implements OnInit {
     if (this.filtroSaldo === 'com_saldo') return total > 0;
     if (this.filtroSaldo === 'zerados') return total === 0;
     return true;
+  }
+
+  private saldoVazio(): MatrizSaldo {
+    return { fisico: 0, reservado: 0, disponivel: 0 };
+  }
+
+  private somarSaldos(a: MatrizSaldo, b?: MatrizSaldo): MatrizSaldo {
+    return {
+      fisico: a.fisico + (b?.fisico || 0),
+      reservado: a.reservado + (b?.reservado || 0),
+      disponivel: a.disponivel + (b?.disponivel || 0)
+    };
   }
 
   private csvCell(value: string | number): string {
