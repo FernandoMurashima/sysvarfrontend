@@ -62,6 +62,9 @@ export class EstoqueConsultaComponent implements OnInit {
   loja = '';
   colecao = '';
   estacao = '';
+  tipo = '';
+  dataInicio = '';
+  dataFim = '';
   estoques: Estoque[] = [];
   movimentos: EstoqueMovimentacao[] = [];
   lojas: Loja[] = [];
@@ -123,12 +126,21 @@ export class EstoqueConsultaComponent implements OnInit {
     this.loading = true;
     const estoqueParams = this.isColecao()
       ? { loja: this.loja, page_size: 5000 }
-      : { search: this.search, loja: this.loja, colecao: this.colecao, estacao: this.estacao, page_size: 5000 };
+      : this.isMovimentos()
+        ? { search: this.search, loja: this.loja, page_size: 5000 }
+        : { search: this.search, loja: this.loja, colecao: this.colecao, estacao: this.estacao, page_size: 5000 };
 
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
       estoque: this.api.list(estoqueParams),
-      movimentos: this.api.listMovimentacoes({ search: this.search, loja: this.loja, page_size: 500 }),
+      movimentos: this.api.listMovimentacoes({
+        search: this.search,
+        loja: this.loja,
+        tipo: this.tipo,
+        data_inicio: this.dataInicio,
+        data_fim: this.dataFim,
+        page_size: 5000
+      }),
       produtos: this.produtosApi.list({ ativo: 'true', page_size: 5000 }),
       colecoes: this.colecoesApi.list(),
       skus: this.skusApi.list({ page_size: 5000 }),
@@ -160,6 +172,9 @@ export class EstoqueConsultaComponent implements OnInit {
     this.loja = '';
     this.colecao = '';
     this.estacao = '';
+    this.tipo = '';
+    this.dataInicio = '';
+    this.dataFim = '';
     this.filtroSaldo = 'todos';
     this.load();
   }

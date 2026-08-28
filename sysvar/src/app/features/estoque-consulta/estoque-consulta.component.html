@@ -25,13 +25,22 @@
         </option>
       </select>
       <select [(ngModel)]="loja"><option value="">Todas as lojas</option><option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option></select>
-      <select [(ngModel)]="filtroSaldo">
+      <select *ngIf="!isMovimentos()" [(ngModel)]="filtroSaldo">
         <option value="todos">Todos os saldos</option>
         <option value="com_saldo">Somente com saldo</option>
         <option value="zerados">Somente zerados</option>
       </select>
-      <input *ngIf="!isColecao()" type="text" placeholder="Coleção" [(ngModel)]="colecao" />
-      <input *ngIf="!isColecao()" type="text" placeholder="Estação" [(ngModel)]="estacao" />
+      <input *ngIf="isMatriz()" type="text" placeholder="Coleção" [(ngModel)]="colecao" />
+      <input *ngIf="isMatriz()" type="text" placeholder="Estação" [(ngModel)]="estacao" />
+      <select *ngIf="isMovimentos()" [(ngModel)]="tipo">
+        <option value="">Todos os tipos</option>
+        <option value="ENTRADA">Entrada</option>
+        <option value="SAIDA">Saída</option>
+        <option value="AJUSTE">Ajuste</option>
+        <option value="RESERVA">Reserva</option>
+      </select>
+      <input *ngIf="isMovimentos()" type="date" [(ngModel)]="dataInicio" />
+      <input *ngIf="isMovimentos()" type="date" [(ngModel)]="dataFim" />
       <div class="toolbar-buttons">
         <button class="btn primary" (click)="isColecao() ? load() : buscar(search)">Buscar</button>
         <button class="btn" (click)="clearFilters()">Limpar</button>
@@ -93,7 +102,7 @@
     </ng-template>
   </section>
 
-  <section class="panel movimentos-panel" *ngIf="isMovimentos() && search.trim()">
+  <section class="panel movimentos-panel" *ngIf="isMovimentos()">
     <div class="list-header">
       <strong>Movimentações da referência</strong>
       <span *ngIf="loading">Carregando...</span>
@@ -132,7 +141,7 @@
         </tbody>
       </table>
       <ng-template #vazioTpl>
-        <div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada para essa referência.</div>
+        <div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada para os filtros informados.</div>
       </ng-template>
     </div>
   </section>
