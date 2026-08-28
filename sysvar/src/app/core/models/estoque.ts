@@ -65,6 +65,29 @@ export interface EstoqueMovimentacao {
   data_movimento?: string;
 }
 
+export interface EstoqueConsultaReferenciaItem {
+  referencia: string;
+  produto: string;
+  loja: number;
+  loja_nome: string;
+  cor: string;
+  tamanho: string;
+  ean: string;
+  fisico: number | string;
+  reservado: number | string;
+  disponivel: number | string;
+}
+
+export interface EstoqueConsultaColecaoItem {
+  referencia: string;
+  produto: string;
+  loja: number;
+  loja_nome: string;
+  fisico: number | string;
+  reservado: number | string;
+  disponivel: number | string;
+}
+
 export interface InventarioEstoque {
   Idinventario?: number;
   Idloja: number;

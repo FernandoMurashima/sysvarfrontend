@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Estoque, EstoqueMovimentacao, InventarioEstoque, InventarioEstoqueItem, ProdutoUsoConsumoEstoque, ProdutoUsoConsumoMovimentacao } from '../models/estoque';
+import { Estoque, EstoqueConsultaColecaoItem, EstoqueConsultaReferenciaItem, EstoqueMovimentacao, InventarioEstoque, InventarioEstoqueItem, ProdutoUsoConsumoEstoque, ProdutoUsoConsumoMovimentacao } from '../models/estoque';
 
 type ListResp<T> = T[] | { results: T[]; count: number };
 
@@ -17,6 +17,14 @@ export class EstoqueService {
 
   listMovimentacoes(params?: Record<string, string | number | null | undefined>): Observable<ListResp<EstoqueMovimentacao>> {
     return this.http.get<ListResp<EstoqueMovimentacao>>(`${this.base}/estoque-movimentacao/`, { params: this.params(params) });
+  }
+
+  consultaReferencia(params?: Record<string, string | number | null | undefined>): Observable<ListResp<EstoqueConsultaReferenciaItem>> {
+    return this.http.get<ListResp<EstoqueConsultaReferenciaItem>>(`${this.base}/estoque/consulta-referencia/`, { params: this.params(params) });
+  }
+
+  consultaColecao(params?: Record<string, string | number | null | undefined>): Observable<ListResp<EstoqueConsultaColecaoItem>> {
+    return this.http.get<ListResp<EstoqueConsultaColecaoItem>>(`${this.base}/estoque/consulta-colecao/`, { params: this.params(params) });
   }
 
   listUsoConsumo(params?: Record<string, string | number | null | undefined>): Observable<ListResp<ProdutoUsoConsumoEstoque>> {

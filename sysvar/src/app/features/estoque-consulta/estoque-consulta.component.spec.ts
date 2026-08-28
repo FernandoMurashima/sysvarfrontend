@@ -23,7 +23,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   let tamanhosApi: jasmine.SpyObj<TamanhosService>;
 
   beforeEach(async () => {
-    estoqueApi = jasmine.createSpyObj<EstoqueService>('EstoqueService', ['list', 'listMovimentacoes']);
+    estoqueApi = jasmine.createSpyObj<EstoqueService>('EstoqueService', ['list', 'listMovimentacoes', 'consultaReferencia', 'consultaColecao']);
     lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
     produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', ['list']);
     colecoesApi = jasmine.createSpyObj<ColecoesService>('ColecoesService', ['list']);
@@ -32,6 +32,8 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     tamanhosApi = jasmine.createSpyObj<TamanhosService>('TamanhosService', ['list']);
 
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
+    estoqueApi.consultaReferencia.and.returnValue(of({ count: 0, results: [] }));
+    estoqueApi.consultaColecao.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
       { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
       { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: '1.000', saldo_anterior: '6.000', saldo_posterior: '7.000', origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
@@ -96,6 +98,8 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('modo movimentação não carrega dados desnecessários de matriz', () => {
     expect(estoqueApi.list).not.toHaveBeenCalled();
+    expect(estoqueApi.consultaReferencia).not.toHaveBeenCalled();
+    expect(estoqueApi.consultaColecao).not.toHaveBeenCalled();
     expect(produtosApi.list).not.toHaveBeenCalled();
     expect(colecoesApi.list).not.toHaveBeenCalled();
     expect(coresApi.list).not.toHaveBeenCalled();
@@ -105,6 +109,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('modo Consulta por Referência não carrega movimentações', () => {
     estoqueApi.list.calls.reset();
+    estoqueApi.consultaReferencia.calls.reset();
     estoqueApi.listMovimentacoes.calls.reset();
     produtosApi.list.calls.reset();
     colecoesApi.list.calls.reset();
@@ -116,13 +121,15 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
     expect(estoqueApi.listMovimentacoes).not.toHaveBeenCalled();
     expect(colecoesApi.list).not.toHaveBeenCalled();
-    expect(estoqueApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
+    expect(estoqueApi.list).not.toHaveBeenCalled();
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', loja: '', saldo: 'todos' }));
     expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 500 }));
     expect(skusApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
   });
 
   it('modo Coleção/Estação carrega apenas dados necessários e preserva filtros', () => {
     estoqueApi.list.calls.reset();
+    estoqueApi.consultaColecao.calls.reset();
     estoqueApi.listMovimentacoes.calls.reset();
     produtosApi.list.calls.reset();
     colecoesApi.list.calls.reset();
@@ -140,7 +147,8 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(coresApi.list).not.toHaveBeenCalled();
     expect(tamanhosApi.list).not.toHaveBeenCalled();
     expect(colecoesApi.list).toHaveBeenCalled();
-    expect(estoqueApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ estacao: '01', loja: '2', page_size: 1000 }));
+    expect(estoqueApi.list).not.toHaveBeenCalled();
+    expect(estoqueApi.consultaColecao).toHaveBeenCalledWith(jasmine.objectContaining({ estacao: '01', loja: '2' }));
     expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ ativo: 'true', page_size: 1000 }));
   });
 
@@ -204,8 +212,8 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     component.cores = [{ Idcor: 1, Descricao: 'Azul' } as any];
     component.tamanhos = [{ Idtamanho: 1, Tamanho: 'M' } as any];
     component.skus = [{ ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any];
-    component.estoques = [
-      { Idestoque: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', Estoque: 8, reserva: 2 } as any
+    component.consultaReferenciaRows = [
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 8, reservado: 2, disponivel: 6 } as any
     ];
 
     (component as any).montarMatrizReferencia();
@@ -232,9 +240,9 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       { ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any,
       { ean13: '7890000000002', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 2 } as any
     ];
-    component.estoques = [
-      { Idestoque: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', Estoque: 5, reserva: 0 } as any,
-      { Idestoque: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', Estoque: 4, reserva: 1 } as any
+    component.consultaReferenciaRows = [
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 5, reservado: 0, disponivel: 5 } as any,
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000002', referencia: 'REF-A', cor: 'Azul', tamanho: 'G', fisico: 4, reservado: 1, disponivel: 3 } as any
     ];
 
     (component as any).montarMatrizReferencia();
@@ -334,11 +342,11 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 2 } as any,
       { Idproduto: 3, referencia: 'REF-C', descricao: 'Produto C', colecao: 3 } as any
     ];
-    component.estoques = [
-      { Idloja: 1, referencia: 'REF-A', Estoque: 5, reserva: 1 } as any,
-      { Idloja: 1, referencia: 'REF-B', Estoque: 0, reserva: 0 } as any,
-      { Idloja: 2, referencia: 'REF-A', Estoque: 7, reserva: 0 } as any,
-      { Idloja: 1, referencia: 'REF-C', Estoque: 9, reserva: 0 } as any
+    component.consultaColecaoRowsApi = [
+      { loja: 1, referencia: 'REF-A', fisico: 5, reservado: 1, disponivel: 4 } as any,
+      { loja: 1, referencia: 'REF-B', fisico: 0, reservado: 0, disponivel: 0 } as any,
+      { loja: 2, referencia: 'REF-A', fisico: 7, reservado: 0, disponivel: 7 } as any,
+      { loja: 1, referencia: 'REF-C', fisico: 9, reservado: 0, disponivel: 9 } as any
     ];
 
     (component as any).montarMatrizColecao();
@@ -362,9 +370,9 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
       { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 1 } as any
     ];
-    component.estoques = [
-      { Idloja: 1, referencia: 'REF-A', Estoque: 5, reserva: 0 } as any,
-      { Idloja: 1, referencia: 'REF-B', Estoque: 7, reserva: 0 } as any
+    component.consultaColecaoRowsApi = [
+      { loja: 1, referencia: 'REF-A', fisico: 5, reservado: 0, disponivel: 5 } as any,
+      { loja: 1, referencia: 'REF-B', fisico: 7, reservado: 0, disponivel: 7 } as any
     ];
 
     (component as any).montarMatrizColecao();
@@ -383,9 +391,9 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     ];
     component.colecoes = [{ Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any];
     component.produtos = [{ Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any];
-    component.estoques = [
-      { Idloja: 1, referencia: 'REF-A', Estoque: 8, reserva: 2 } as any,
-      { Idloja: 2, referencia: 'REF-A', Estoque: 3, reserva: 0 } as any
+    component.consultaColecaoRowsApi = [
+      { loja: 1, referencia: 'REF-A', fisico: 8, reservado: 2, disponivel: 6 } as any,
+      { loja: 2, referencia: 'REF-A', fisico: 3, reservado: 0, disponivel: 3 } as any
     ];
 
     (component as any).montarMatrizColecao();
@@ -412,11 +420,11 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
       { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
       { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 1 } as any
     ];
-    component.estoques = [
-      { Idloja: 1, referencia: 'REF-A', Estoque: 8, reserva: 2 } as any,
-      { Idloja: 2, referencia: 'REF-A', Estoque: 3, reserva: 0 } as any,
-      { Idloja: 1, referencia: 'REF-B', Estoque: 4, reserva: 1 } as any,
-      { Idloja: 2, referencia: 'REF-B', Estoque: 2, reserva: 1 } as any
+    component.consultaColecaoRowsApi = [
+      { loja: 1, referencia: 'REF-A', fisico: 8, reservado: 2, disponivel: 6 } as any,
+      { loja: 2, referencia: 'REF-A', fisico: 3, reservado: 0, disponivel: 3 } as any,
+      { loja: 1, referencia: 'REF-B', fisico: 4, reservado: 1, disponivel: 3 } as any,
+      { loja: 2, referencia: 'REF-B', fisico: 2, reservado: 1, disponivel: 1 } as any
     ];
 
     (component as any).montarMatrizColecao();

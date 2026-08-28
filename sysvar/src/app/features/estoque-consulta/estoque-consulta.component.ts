@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { Colecao } from '../../core/models/colecao';
 import { Cor } from '../../core/models/cor';
-import { Estoque, EstoqueMovimentacao } from '../../core/models/estoque';
+import { Estoque, EstoqueConsultaColecaoItem, EstoqueConsultaReferenciaItem, EstoqueMovimentacao } from '../../core/models/estoque';
 import { Loja } from '../../core/models/loja';
 import { Produto } from '../../core/models/produto';
 import { TamanhoModel } from '../../core/models/tamanho';
@@ -72,6 +72,8 @@ export class EstoqueConsultaComponent implements OnInit {
   dataInicio = '';
   dataFim = '';
   estoques: Estoque[] = [];
+  consultaReferenciaRows: EstoqueConsultaReferenciaItem[] = [];
+  consultaColecaoRowsApi: EstoqueConsultaColecaoItem[] = [];
   movimentos: EstoqueMovimentacao[] = [];
   lojas: Loja[] = [];
   produtos: Produto[] = [];
@@ -141,10 +143,14 @@ export class EstoqueConsultaComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    const colecaoSelecionada = this.colecoes.find(c => c.Idcolecao === Number(this.colecao || 0));
-    const estoqueParams = this.isColecao()
-      ? { loja: this.loja, colecao: colecaoSelecionada?.Codigo || '', estacao: this.estacao, page_size: 1000 }
-      : { search: this.search, loja: this.loja, colecao: this.colecao, estacao: this.estacao, page_size: 1000 };
+    const consultaReferenciaParams = { search: this.search, loja: this.loja, saldo: this.filtroSaldo };
+    const consultaColecaoParams = {
+      estacao: this.estacao,
+      colecao: this.colecao,
+      referencia: this.produtoReferencia,
+      loja: this.loja,
+      saldo: this.filtroSaldo
+    };
     const produtoParams = this.isColecao()
       ? { ativo: 'true' as const, colecao: this.colecao, page_size: 1000 }
       : { ativo: 'true' as const, search: this.search, page_size: 500 };
@@ -152,7 +158,9 @@ export class EstoqueConsultaComponent implements OnInit {
 
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
-      estoque: this.isMovimentos() ? of([]) : this.api.list(estoqueParams),
+      estoque: of([]),
+      consultaReferencia: this.isMatriz() ? this.api.consultaReferencia(consultaReferenciaParams) : of([]),
+      consultaColecao: this.isColecao() ? this.api.consultaColecao(consultaColecaoParams) : of([]),
       movimentos: this.isMovimentos() ? this.api.listMovimentacoes({
         search: this.search,
         loja: this.loja,
@@ -170,6 +178,8 @@ export class EstoqueConsultaComponent implements OnInit {
       next: res => {
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.estoques = this.unwrap<Estoque>(res.estoque);
+        this.consultaReferenciaRows = this.unwrap<EstoqueConsultaReferenciaItem>(res.consultaReferencia);
+        this.consultaColecaoRowsApi = this.unwrap<EstoqueConsultaColecaoItem>(res.consultaColecao);
         this.movimentos = this.unwrap<EstoqueMovimentacao>(res.movimentos);
         this.produtos = this.unwrap<Produto>(res.produtos);
         this.colecoes = this.unwrap<Colecao>(res.colecoes);
@@ -414,38 +424,28 @@ export class EstoqueConsultaComponent implements OnInit {
     this.matrizTotalGeral = this.saldoVazio();
     this.referenciasMatriz = [];
 
-    const termo = this.search.trim().toLowerCase();
-    if (!termo) return;
-
-    const estoqueFiltrado = this.estoques.filter(e => (e.referencia || '').toLowerCase().includes(termo));
-    const eansEstoque = new Set(estoqueFiltrado.map(e => e.CodigodeBarra));
-    const skusDaReferencia = this.skus.filter(s =>
-      eansEstoque.has(s.ean13) ||
-      (s.codigo_item_ref || '').toLowerCase().includes(termo)
-    );
-
-    const skuPorEan = new Map(this.skus.map(s => [s.ean13, s]));
     const tamanhoIds = new Set<number>();
     const corIds = new Set<number>();
-    skusDaReferencia.forEach(s => {
-      if (s.idtamanho) tamanhoIds.add(s.idtamanho);
-      if (s.idcor) corIds.add(s.idcor);
-    });
-    estoqueFiltrado.forEach(e => {
-      const sku = skuPorEan.get(e.CodigodeBarra);
-      if (sku?.idtamanho) tamanhoIds.add(sku.idtamanho);
-      if (sku?.idcor) corIds.add(sku.idcor);
+    const corKeyPorNome = new Map<string, number>();
+    const tamanhoKeyPorNome = new Map<string, number>();
+    this.consultaReferenciaRows.forEach(e => {
+      const corNome = e.cor || 'Sem cor';
+      const tamanhoNome = e.tamanho || 'Sem tamanho';
+      if (!corKeyPorNome.has(corNome)) corKeyPorNome.set(corNome, corKeyPorNome.size + 1);
+      if (!tamanhoKeyPorNome.has(tamanhoNome)) tamanhoKeyPorNome.set(tamanhoNome, tamanhoKeyPorNome.size + 1);
+      corIds.add(corKeyPorNome.get(corNome)!);
+      tamanhoIds.add(tamanhoKeyPorNome.get(tamanhoNome)!);
     });
 
-    this.referenciasMatriz = Array.from(new Set(estoqueFiltrado.map(e => e.referencia).filter(Boolean))).sort();
-    this.matrizTamanhos = Array.from(tamanhoIds)
-      .map(id => ({ id, label: this.tamanhoNome(id) }))
+    this.referenciasMatriz = Array.from(new Set(this.consultaReferenciaRows.map(e => e.referencia).filter(Boolean))).sort();
+    this.matrizTamanhos = Array.from(tamanhoKeyPorNome.entries())
+      .map(([label, id]) => ({ id, label }))
       .sort((a, b) => this.ordenarTexto(a.label, b.label));
 
     const lojaIds = this.loja
       ? [Number(this.loja)]
       : Array.from(new Set([
-          ...estoqueFiltrado.map(e => e.Idloja),
+          ...this.consultaReferenciaRows.map(e => e.loja),
           ...this.lojas.map(l => l.id).filter((id): id is number => id != null)
         ]));
 
@@ -458,7 +458,7 @@ export class EstoqueConsultaComponent implements OnInit {
           lojaId,
           loja: this.lojaNome(lojaId),
           corId,
-          cor: this.corNome(corId),
+          cor: Array.from(corKeyPorNome.entries()).find(([, id]) => id === corId)?.[0] || 'Sem cor',
           saldos: {},
           total: this.saldoVazio()
         };
@@ -472,24 +472,15 @@ export class EstoqueConsultaComponent implements OnInit {
       corIds.forEach(corId => garantirRow(lojaId, corId));
     });
 
-    estoqueFiltrado.forEach(e => {
-      const sku = skuPorEan.get(e.CodigodeBarra);
-      const tamanhoId = sku?.idtamanho || 0;
-      const corId = sku?.idcor || 0;
-      if (!tamanhoId) return;
-
-      if (!this.matrizTamanhos.some(t => t.id === tamanhoId)) {
-        this.matrizTamanhos.push({ id: tamanhoId, label: this.tamanhoNome(tamanhoId) });
-        this.matrizTamanhos.sort((a, b) => this.ordenarTexto(a.label, b.label));
-        rowMap.forEach(row => row.saldos[tamanhoId] = row.saldos[tamanhoId] || this.saldoVazio());
-      }
-
-      const row = garantirRow(e.Idloja, corId);
+    this.consultaReferenciaRows.forEach(e => {
+      const tamanhoId = tamanhoKeyPorNome.get(e.tamanho || 'Sem tamanho') || 0;
+      const corId = corKeyPorNome.get(e.cor || 'Sem cor') || 0;
+      const row = garantirRow(e.loja, corId);
       const saldo = row.saldos[tamanhoId] || this.saldoVazio();
       row.saldos[tamanhoId] = {
-        fisico: saldo.fisico + this.saldoFisico(e),
-        reservado: saldo.reservado + this.saldoReservado(e),
-        disponivel: saldo.disponivel + this.saldoDisponivel(e)
+        fisico: saldo.fisico + Number(e.fisico || 0),
+        reservado: saldo.reservado + Number(e.reservado || 0),
+        disponivel: saldo.disponivel + Number(e.disponivel || 0)
       };
     });
 
@@ -519,23 +510,24 @@ export class EstoqueConsultaComponent implements OnInit {
 
     this.produtosColecao = this.produtosDaColecaoSelecionada();
 
-    const referenciasPermitidas = new Set(this.produtosColecao.map(p => p.referencia || ''));
     const referenciaFiltro = this.produtoReferencia || '';
-    const estoquesColecao = this.estoques.filter(e =>
-      referenciasPermitidas.has(e.referencia || '') &&
-      (!this.loja || e.Idloja === Number(this.loja)) &&
-      (!referenciaFiltro || e.referencia === referenciaFiltro)
+    const produtoMetaPorRef = new Map(this.produtos.map(p => [p.referencia || '', p]));
+    const estoquesColecao = this.consultaColecaoRowsApi.filter(e =>
+      (!this.loja || e.loja === Number(this.loja)) &&
+      (!referenciaFiltro || e.referencia === referenciaFiltro) &&
+      this.produtoCompatívelComFiltrosColecao(produtoMetaPorRef.get(e.referencia || ''))
     );
 
     this.colecaoLojaIds = this.loja
       ? [Number(this.loja)]
       : Array.from(new Set([
           ...this.lojas.map(l => l.id).filter((id): id is number => id != null),
-          ...estoquesColecao.map(e => e.Idloja)
+          ...estoquesColecao.map(e => e.loja)
         ]))
           .sort((a, b) => this.ordenarTexto(this.lojaNome(a), this.lojaNome(b)));
 
     const produtoPorRef = new Map(this.produtosColecao.map(p => [p.referencia || '', p]));
+    const produtoApiPorRef = new Map(estoquesColecao.map(e => [e.referencia || '', e.produto || '']));
     const rowMap = new Map<string, ColecaoReferenciaRow>();
 
     const referencias = Array.from(new Set([
@@ -547,7 +539,7 @@ export class EstoqueConsultaComponent implements OnInit {
       const produto = produtoPorRef.get(ref);
       const row: ColecaoReferenciaRow = {
         referencia: ref,
-        produto: produto?.descricao_reduzida || produto?.descricao || '',
+        produto: produto?.descricao_reduzida || produto?.descricao || produtoApiPorRef.get(ref) || '',
         saldos: {},
         total: this.saldoVazio()
       };
@@ -558,11 +550,11 @@ export class EstoqueConsultaComponent implements OnInit {
     estoquesColecao.forEach(e => {
       const row = rowMap.get(e.referencia || '');
       if (!row) return;
-      const saldo = row.saldos[e.Idloja] || this.saldoVazio();
-      row.saldos[e.Idloja] = {
-        fisico: saldo.fisico + this.saldoFisico(e),
-        reservado: saldo.reservado + this.saldoReservado(e),
-        disponivel: saldo.disponivel + this.saldoDisponivel(e)
+      const saldo = row.saldos[e.loja] || this.saldoVazio();
+      row.saldos[e.loja] = {
+        fisico: saldo.fisico + Number(e.fisico || 0),
+        reservado: saldo.reservado + Number(e.reservado || 0),
+        disponivel: saldo.disponivel + Number(e.disponivel || 0)
       };
     });
 
@@ -618,6 +610,14 @@ export class EstoqueConsultaComponent implements OnInit {
         return !this.estacao || colecao?.Estacao === this.estacao;
       })
       .sort((a, b) => this.ordenarTexto(a.referencia || '', b.referencia || ''));
+  }
+
+  private produtoCompatívelComFiltrosColecao(produto?: Produto): boolean {
+    if (!produto) return true;
+    if (this.colecao && Number(produto.colecao || 0) !== Number(this.colecao)) return false;
+    if (!this.estacao) return true;
+    const colecao = this.colecoes.find(c => c.Idcolecao === Number(produto.colecao || 0));
+    return colecao?.Estacao === this.estacao;
   }
 
   private unwrap<T>(res: any): T[] {
