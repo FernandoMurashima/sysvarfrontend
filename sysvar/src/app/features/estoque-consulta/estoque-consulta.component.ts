@@ -106,6 +106,20 @@ export class EstoqueConsultaComponent implements OnInit {
   colecaoTotalGeral: MatrizSaldo = this.saldoVazio();
 
   get searchSuggestions(): string[] {
+    if (this.loja && this.isMatriz()) {
+      const valoresLoja = [
+        ...this.estoques.flatMap(e => [
+          e.referencia,
+          e.CodigodeBarra
+        ]),
+        ...this.consultaReferenciaRows.flatMap(e => [
+          e.referencia,
+          e.ean
+        ])
+      ].filter((v): v is string => !!v);
+      return Array.from(new Set(valoresLoja));
+    }
+
     const valores = [
       ...this.produtos.flatMap(p => [
         this.produtoSugestao(p)
@@ -168,7 +182,7 @@ export class EstoqueConsultaComponent implements OnInit {
 
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
-      estoque: of([]),
+      estoque: this.isMatriz() && !!this.loja ? this.api.list({ loja: this.loja, search: this.search, page_size: 500 }) : of([]),
       consultaReferencia: this.isMatriz() ? this.api.consultaReferencia(consultaReferenciaParams) : of([]),
       consultaColecao: this.isColecao() ? this.api.consultaColecao(consultaColecaoParams) : of([]),
       movimentos: this.isMovimentos() ? this.api.listMovimentacoes({
@@ -199,6 +213,11 @@ export class EstoqueConsultaComponent implements OnInit {
         this.produtosColecao = this.produtosDaColecaoSelecionada();
         this.montarMatrizReferencia();
         this.montarMatrizColecao();
+        if (this.isMatriz() && this.loja && this.search && !this.referenciaExisteNaLojaSelecionada()) {
+          this.search = '';
+          this.load();
+          return;
+        }
         this.loading = false;
       },
       error: () => {
@@ -217,6 +236,10 @@ export class EstoqueConsultaComponent implements OnInit {
     this.dataInicio = '';
     this.dataFim = '';
     this.filtroSaldo = 'todos';
+    this.load();
+  }
+
+  onLojaChange(): void {
     this.load();
   }
 
@@ -636,6 +659,25 @@ export class EstoqueConsultaComponent implements OnInit {
       reservado: a.reservado + (b?.reservado || 0),
       disponivel: a.disponivel + (b?.disponivel || 0)
     };
+  }
+
+  private referenciaExisteNaLojaSelecionada(): boolean {
+    if (!this.loja || !this.search.trim()) return true;
+    const lojaId = Number(this.loja);
+    const termo = this.normalizarTexto(this.search);
+    return [...this.estoques, ...this.consultaReferenciaRows.map(row => ({
+      referencia: row.referencia,
+      CodigodeBarra: row.ean,
+      Idloja: row.loja,
+      Estoque: row.fisico,
+      reserva: row.reservado
+    } as Estoque))].some(item =>
+      Number(item.Idloja) === lojaId &&
+      (
+        this.normalizarTexto(item.referencia) === termo ||
+        this.normalizarTexto(item.CodigodeBarra) === termo
+      )
+    );
   }
 
   private produtosDaColecaoSelecionada(): Produto[] {

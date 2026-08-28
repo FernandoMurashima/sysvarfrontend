@@ -81,6 +81,56 @@ describe('EstoqueConsultaUsoConsumoComponent', () => {
     expect(component.rows.every(row => row.lojaId === 1)).toBeTrue();
   });
 
+  it('filtra sugestões de Uso/Consumo pela loja selecionada', () => {
+    component.loja = '1';
+    component.load();
+
+    expect(component.searchSuggestions).toContain('USO-000010 - Papel A4');
+    expect(component.searchSuggestions).toContain('USO-000030 - Tonner');
+    expect(component.searchSuggestions).not.toContain('26-01-01001 - Produto venda');
+  });
+
+  it('não mantém produto de outra loja nas sugestões de Uso/Consumo', () => {
+    estoqueApi.listUsoConsumo.and.callFake((params: any) => {
+      const loja = String(params?.loja || '');
+      const results = [
+        { id: 1, produto: 10, produto_tipo: '2', produto_ativo: true, produto_referencia: 'USO-000010', produto_descricao: 'Papel A4', loja: 1, loja_nome: 'Matriz', saldo: '7.000' } as any,
+        { id: 2, produto: 40, produto_tipo: '2', produto_ativo: true, produto_referencia: 'USO-000040', produto_descricao: 'Somente filial', loja: 2, loja_nome: 'Filial', saldo: '5.000' } as any
+      ].filter(e => !loja || String(e.loja) === loja);
+      return of({ count: results.length, results });
+    });
+    component.loja = '1';
+
+    component.load();
+
+    expect(component.searchSuggestions).toContain('USO-000010 - Papel A4');
+    expect(component.searchSuggestions).not.toContain('USO-000040 - Somente filial');
+  });
+
+  it('limpa referência incompatível ao trocar loja em Uso/Consumo', () => {
+    component.search = 'USO-000040';
+    component.loja = '1';
+    estoqueApi.listUsoConsumo.and.returnValues(
+      of({ count: 0, results: [] }),
+      of({ count: 1, results: [
+        { id: 1, produto: 10, produto_tipo: '2', produto_ativo: true, produto_referencia: 'USO-000010', produto_descricao: 'Papel A4', loja: 1, loja_nome: 'Matriz', saldo: '7.000' } as any
+      ] })
+    );
+
+    component.onLojaChange();
+
+    expect(estoqueApi.listUsoConsumo).toHaveBeenCalledWith(jasmine.objectContaining({ loja: '1', search: 'USO-000040' }));
+    expect(component.search).toBe('');
+  });
+
+  it('mantém produto inativo com saldo da loja nas sugestões', () => {
+    component.loja = '1';
+    component.load();
+
+    expect(component.rows.some(row => row.referencia === 'USO-000030' && row.produtoAtivo === false)).toBeTrue();
+    expect(component.searchSuggestions).toContain('USO-000030 - Tonner');
+  });
+
   it('filtra somente com saldo', () => {
     component.filtroSaldo = 'com_saldo';
     component.load();

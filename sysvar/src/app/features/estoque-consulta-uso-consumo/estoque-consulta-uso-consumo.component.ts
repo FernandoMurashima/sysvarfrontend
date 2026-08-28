@@ -46,11 +46,10 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
   totalSaldo = 0;
 
   get searchSuggestions(): string[] {
-    const valores = this.produtos.flatMap(p => [
-      this.produtoSugestao(p),
-      p.referencia || '',
-      p.descricao || '',
-      p.descricao_reduzida || ''
+    const valores = this.rows.flatMap(row => [
+      row.produto ? `${row.referencia} - ${row.produto}` : row.referencia,
+      row.referencia,
+      row.produto
     ]).filter(Boolean) as string[];
     return Array.from(new Set(valores));
   }
@@ -71,6 +70,10 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
     this.load();
   }
 
+  onLojaChange(): void {
+    this.load();
+  }
+
   load(): void {
     this.loading = true;
     this.errorMsg = '';
@@ -84,6 +87,11 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
         this.produtos = this.unwrap<Produto>(res.produtos).filter(p => String(p.tipo_produto) === '2');
         this.estoques = this.unwrap<ProdutoUsoConsumoEstoque>(res.estoques).filter(e => String(e.produto_tipo) === '2');
         this.montarRows();
+        if (this.loja && this.search && !this.referenciaExisteNaLojaSelecionada()) {
+          this.search = '';
+          this.load();
+          return;
+        }
         this.loading = false;
       },
       error: () => {
@@ -118,9 +126,11 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
     });
 
     const produtoIdsAtivos = new Set(this.produtos.map(produto => Number(produto.Idproduto || 0)));
-    const rowsAtivos = this.produtos.flatMap(produto => lojasConsulta.map(loja => {
-      const saldo = saldoPorProdutoLoja.get(`${produto.Idproduto}|${loja.id}`) || 0;
-      return {
+    const rowsAtivos = this.produtos.flatMap(produto => lojasConsulta.flatMap(loja => {
+      const key = `${produto.Idproduto}|${loja.id}`;
+      if (this.loja && !saldoPorProdutoLoja.has(key)) return [];
+      const saldo = saldoPorProdutoLoja.get(key) || 0;
+      const row: UsoConsumoRow = {
         referencia: produto.referencia || '-',
         produto: produto.descricao_reduzida || produto.descricao || '',
         produtoId: Number(produto.Idproduto || 0),
@@ -130,6 +140,7 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
         saldo,
         produtoAtivo: produto.ativo ?? true
       };
+      return [row];
     }));
 
     const lojaPorId = new Map(this.lojas.map(loja => [Number(loja.id || 0), loja]));
@@ -167,12 +178,12 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
   private normalizarBusca(valor: string): string {
     const termo = String(valor || '').includes(' - ') ? String(valor).split(' - ')[0].trim() : String(valor || '').trim();
     const normalizado = this.normalizarTexto(termo);
-    const produto = this.produtos.find(p =>
-      this.normalizarTexto(p.referencia).includes(normalizado) ||
-      this.normalizarTexto(p.descricao).includes(normalizado) ||
-      this.normalizarTexto(p.descricao_reduzida).includes(normalizado)
+    if (!normalizado) return '';
+    const row = this.rows.find(item =>
+      this.normalizarTexto(item.referencia) === normalizado ||
+      this.normalizarTexto(item.produto) === normalizado
     );
-    return produto?.referencia || termo;
+    return row?.referencia || termo;
   }
 
   private unidadeLabel(produto: Produto): string {
@@ -193,6 +204,19 @@ export class EstoqueConsultaUsoConsumoComponent implements OnInit {
 
   private ordenarTexto(a: string, b: string): number {
     return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  }
+
+  private referenciaExisteNaLojaSelecionada(): boolean {
+    if (!this.loja || !this.search.trim()) return true;
+    const lojaId = Number(this.loja);
+    const termo = this.normalizarTexto(this.search);
+    return this.estoques.some(e =>
+      Number(e.loja || 0) === lojaId &&
+      (
+        this.normalizarTexto(e.produto_referencia) === termo ||
+        this.normalizarTexto(e.produto_descricao) === termo
+      )
+    );
   }
 
   private csvCell(value: string | number): string {

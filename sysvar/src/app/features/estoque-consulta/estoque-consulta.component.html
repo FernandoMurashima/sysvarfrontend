@@ -28,7 +28,7 @@
           {{ p.referencia }} - {{ p.descricao_reduzida || p.descricao }}
         </option>
       </select>
-      <select [(ngModel)]="loja"><option value="">Todas as lojas</option><option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option></select>
+      <select [(ngModel)]="loja" (ngModelChange)="onLojaChange()"><option value="">Todas as lojas</option><option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option></select>
       <select *ngIf="!isMovimentos()" [(ngModel)]="filtroSaldo">
         <option value="todos">Todos os saldos</option>
         <option value="com_saldo">Somente com saldo</option>

@@ -206,6 +206,44 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(component.load).toHaveBeenCalled();
   });
 
+  it('filtra sugestões da consulta por referência pela loja selecionada', () => {
+    component.modo = 'matriz';
+    component.loja = '1';
+    component.estoques = [
+      { Idloja: 1, referencia: 'REF-LOJA-1', CodigodeBarra: '7891', Estoque: 2, reserva: 0 } as any
+    ];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-LOJA-2', descricao: 'Outra loja' } as any
+    ];
+
+    expect(component.searchSuggestions).toContain('REF-LOJA-1');
+    expect(component.searchSuggestions).toContain('7891');
+    expect(component.searchSuggestions).not.toContain('REF-LOJA-2');
+  });
+
+  it('limpa referência incompatível ao trocar loja na consulta por referência', () => {
+    estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
+    estoqueApi.consultaReferencia.and.returnValue(of({ count: 0, results: [] }));
+    component.modo = 'matriz';
+    component.search = 'REF-OUTRA';
+    component.loja = '2';
+
+    component.onLojaChange();
+
+    expect(estoqueApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ loja: '2', search: 'REF-OUTRA' }));
+    expect(component.search).toBe('');
+  });
+
+  it('mantém comportamento global permitido quando nenhuma loja está selecionada', () => {
+    component.modo = 'matriz';
+    component.loja = '';
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-GLOBAL', descricao: 'Produto global' } as any
+    ];
+
+    expect(component.searchSuggestions).toContain('REF-GLOBAL - Produto global');
+  });
+
   it('mostra estoque físico reservado e disponível na matriz por loja cor e tamanho', () => {
     component.modo = 'matriz';
     component.search = 'REF-A';

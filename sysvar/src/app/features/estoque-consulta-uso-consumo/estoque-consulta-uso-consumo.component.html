@@ -11,7 +11,7 @@
         (search)="buscar($event)"
         (cleared)="clearFilters()"
       />
-      <select [(ngModel)]="loja">
+      <select [(ngModel)]="loja" (ngModelChange)="onLojaChange()">
         <option value="">Todas as lojas</option>
         <option *ngFor="let l of lojas" [value]="l.id">{{ l.nome_loja }}</option>
       </select>
