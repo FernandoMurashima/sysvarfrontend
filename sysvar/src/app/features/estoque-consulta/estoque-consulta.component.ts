@@ -41,8 +41,8 @@ interface MatrizRow {
 interface ColecaoReferenciaRow {
   referencia: string;
   produto: string;
-  saldos: Record<number, number>;
-  total: number;
+  saldos: Record<number, MatrizSaldo>;
+  total: MatrizSaldo;
 }
 
 @Component({
@@ -90,8 +90,8 @@ export class EstoqueConsultaComponent implements OnInit {
   produtosColecao: Produto[] = [];
   colecaoRows: ColecaoReferenciaRow[] = [];
   colecaoLojaIds: number[] = [];
-  colecaoTotaisLoja: Record<number, number> = {};
-  colecaoTotalGeral = 0;
+  colecaoTotaisLoja: Record<number, MatrizSaldo> = {};
+  colecaoTotalGeral: MatrizSaldo = this.saldoVazio();
 
   get searchSuggestions(): string[] {
     const valores = [
@@ -338,8 +338,8 @@ export class EstoqueConsultaComponent implements OnInit {
     return this.colecaoRows.length > 0 && this.colecaoLojaIds.length > 0;
   }
 
-  colecaoSaldo(row: ColecaoReferenciaRow, lojaId: number): number {
-    return row.saldos[lojaId] || 0;
+  colecaoSaldo(row: ColecaoReferenciaRow, lojaId: number): MatrizSaldo {
+    return row.saldos[lojaId] || this.saldoVazio();
   }
 
   onEstacaoChange(): void {
@@ -363,15 +363,20 @@ export class EstoqueConsultaComponent implements OnInit {
   exportarCsv(): void {
     const isColecao = this.isColecao();
     const headers = isColecao
-      ? ['Referencia', 'Produto', ...this.colecaoLojaIds.map(id => this.lojaNome(id)), 'Total']
+      ? ['Referencia', 'Produto', ...this.colecaoLojaIds.flatMap(id => [`${this.lojaNome(id)} Físico`, `${this.lojaNome(id)} Reservado`, `${this.lojaNome(id)} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível']
       : ['Loja', 'Cor', ...this.matrizTamanhos.flatMap(t => [`${t.label} Físico`, `${t.label} Reservado`, `${t.label} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'];
 
     const rows = isColecao
       ? this.colecaoRows.map(row => [
           row.referencia,
           row.produto,
-          ...this.colecaoLojaIds.map(lojaId => this.colecaoSaldo(row, lojaId)),
-          row.total
+          ...this.colecaoLojaIds.flatMap(lojaId => {
+            const saldo = this.colecaoSaldo(row, lojaId);
+            return [saldo.fisico, saldo.reservado, saldo.disponivel];
+          }),
+          row.total.fisico,
+          row.total.reservado,
+          row.total.disponivel
         ])
       : this.matrizRows.map(row => [
           row.loja,
@@ -505,7 +510,7 @@ export class EstoqueConsultaComponent implements OnInit {
     this.colecaoRows = [];
     this.colecaoLojaIds = [];
     this.colecaoTotaisLoja = {};
-    this.colecaoTotalGeral = 0;
+    this.colecaoTotalGeral = this.saldoVazio();
 
     if (this.modo !== 'colecao' || (!this.estacao && !this.colecao)) return;
 
@@ -541,30 +546,35 @@ export class EstoqueConsultaComponent implements OnInit {
         referencia: ref,
         produto: produto?.descricao_reduzida || produto?.descricao || '',
         saldos: {},
-        total: 0
+        total: this.saldoVazio()
       };
-      this.colecaoLojaIds.forEach(lojaId => row.saldos[lojaId] = 0);
+      this.colecaoLojaIds.forEach(lojaId => row.saldos[lojaId] = this.saldoVazio());
       rowMap.set(ref, row);
     });
 
     estoquesColecao.forEach(e => {
       const row = rowMap.get(e.referencia || '');
       if (!row) return;
-      row.saldos[e.Idloja] = (row.saldos[e.Idloja] || 0) + this.saldoDisponivel(e);
+      const saldo = row.saldos[e.Idloja] || this.saldoVazio();
+      row.saldos[e.Idloja] = {
+        fisico: saldo.fisico + this.saldoFisico(e),
+        reservado: saldo.reservado + this.saldoReservado(e),
+        disponivel: saldo.disponivel + this.saldoDisponivel(e)
+      };
     });
 
     this.colecaoRows = Array.from(rowMap.values())
       .map(row => {
-        row.total = this.colecaoLojaIds.reduce((sum, lojaId) => sum + (row.saldos[lojaId] || 0), 0);
+        row.total = this.colecaoLojaIds.reduce((sum, lojaId) => this.somarSaldos(sum, row.saldos[lojaId]), this.saldoVazio());
         return row;
       })
-      .filter(row => this.passaFiltroSaldo(row.total))
+      .filter(row => this.passaFiltroSaldo(row.total.disponivel))
       .sort((a, b) => this.ordenarTexto(a.referencia, b.referencia));
 
     this.colecaoLojaIds.forEach(lojaId => {
-      this.colecaoTotaisLoja[lojaId] = this.colecaoRows.reduce((sum, row) => sum + (row.saldos[lojaId] || 0), 0);
+      this.colecaoTotaisLoja[lojaId] = this.colecaoRows.reduce((sum, row) => this.somarSaldos(sum, row.saldos[lojaId]), this.saldoVazio());
     });
-    this.colecaoTotalGeral = this.colecaoRows.reduce((sum, row) => sum + row.total, 0);
+    this.colecaoTotalGeral = this.colecaoRows.reduce((sum, row) => this.somarSaldos(sum, row.total), this.saldoVazio());
   }
 
   private ordenarTexto(a: string, b: string): number {

@@ -190,7 +190,9 @@
         <strong>Matriz da coleção</strong>
         <span class="muted" *ngIf="colecaoSelecionadaLabel()">{{ colecaoSelecionadaLabel() }}</span>
       </div>
-      <span *ngIf="colecaoTemDados()">Total disponível: {{ colecaoTotalGeral }}</span>
+      <span *ngIf="colecaoTemDados()">
+        Físico: {{ colecaoTotalGeral.fisico }} | Reservado: {{ colecaoTotalGeral.reservado }} | Disponível: {{ colecaoTotalGeral.disponivel }}
+      </span>
     </div>
 
     <div class="table-wrapper matrix-wrapper" *ngIf="colecaoTemDados(); else colecaoVaziaTpl">
@@ -210,17 +212,39 @@
             <td
               *ngFor="let lojaId of colecaoLojaIds"
               class="num"
-              [class.zero]="colecaoSaldo(row, lojaId) === 0">
-              {{ colecaoSaldo(row, lojaId) }}
+              [class.zero]="colecaoSaldo(row, lojaId).disponivel === 0">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ colecaoSaldo(row, lojaId).fisico }}</span>
+                <span><small>Reservado</small>{{ colecaoSaldo(row, lojaId).reservado }}</span>
+                <strong><small>Disponível</small>{{ colecaoSaldo(row, lojaId).disponivel }}</strong>
+              </div>
             </td>
-            <td class="num total-col">{{ row.total }}</td>
+            <td class="num total-col">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ row.total.fisico }}</span>
+                <span><small>Reservado</small>{{ row.total.reservado }}</span>
+                <strong><small>Disponível</small>{{ row.total.disponivel }}</strong>
+              </div>
+            </td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
             <th colspan="2">Total</th>
-            <th *ngFor="let lojaId of colecaoLojaIds" class="num">{{ colecaoTotaisLoja[lojaId] || 0 }}</th>
-            <th class="num total-col">{{ colecaoTotalGeral }}</th>
+            <th *ngFor="let lojaId of colecaoLojaIds" class="num">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ colecaoTotaisLoja[lojaId].fisico || 0 }}</span>
+                <span><small>Reservado</small>{{ colecaoTotaisLoja[lojaId].reservado || 0 }}</span>
+                <strong><small>Disponível</small>{{ colecaoTotaisLoja[lojaId].disponivel || 0 }}</strong>
+              </div>
+            </th>
+            <th class="num total-col">
+              <div class="saldo-stack">
+                <span><small>Físico</small>{{ colecaoTotalGeral.fisico }}</span>
+                <span><small>Reservado</small>{{ colecaoTotalGeral.reservado }}</span>
+                <strong><small>Disponível</small>{{ colecaoTotalGeral.disponivel }}</strong>
+              </div>
+            </th>
           </tr>
         </tfoot>
       </table>

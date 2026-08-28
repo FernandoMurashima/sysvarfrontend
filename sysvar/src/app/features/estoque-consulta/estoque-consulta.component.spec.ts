@@ -289,7 +289,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
     expect(component.colecaoRows.map(row => row.referencia)).toEqual(['REF-A']);
     expect(component.colecaoLojaIds).toEqual([1]);
-    expect(component.colecaoTotalGeral).toBe(4);
+    expect(component.colecaoTotalGeral).toEqual({ fisico: 5, reservado: 1, disponivel: 4 });
   });
 
   it('monta matriz de coleção com estação coleção e referência', () => {
@@ -314,7 +314,60 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     (component as any).montarMatrizColecao();
 
     expect(component.colecaoRows.map(row => row.referencia)).toEqual(['REF-A']);
-    expect(component.colecaoTotalGeral).toBe(5);
+    expect(component.colecaoTotalGeral).toEqual({ fisico: 5, reservado: 0, disponivel: 5 });
+  });
+
+  it('mostra físico reservado e disponível por referência e loja na matriz de coleção', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.colecao = '1';
+    component.lojas = [
+      { id: 1, nome_loja: 'Matriz' } as any,
+      { id: 2, nome_loja: 'Filial' } as any
+    ];
+    component.colecoes = [{ Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any];
+    component.produtos = [{ Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any];
+    component.estoques = [
+      { Idloja: 1, referencia: 'REF-A', Estoque: 8, reserva: 2 } as any,
+      { Idloja: 2, referencia: 'REF-A', Estoque: 3, reserva: 0 } as any
+    ];
+
+    (component as any).montarMatrizColecao();
+    fixture.detectChanges();
+
+    const row = component.colecaoRows[0];
+    expect(component.colecaoSaldo(row, 1)).toEqual({ fisico: 8, reservado: 2, disponivel: 6 });
+    expect(component.colecaoSaldo(row, 2)).toEqual({ fisico: 3, reservado: 0, disponivel: 3 });
+    expect(row.total).toEqual({ fisico: 11, reservado: 2, disponivel: 9 });
+    expect(fixture.nativeElement.textContent).toContain('Físico');
+    expect(fixture.nativeElement.textContent).toContain('Reservado');
+    expect(fixture.nativeElement.textContent).toContain('Disponível');
+  });
+
+  it('calcula totais por loja e total geral na matriz de coleção', () => {
+    component.modo = 'colecao';
+    component.estacao = '01';
+    component.lojas = [
+      { id: 1, nome_loja: 'Matriz' } as any,
+      { id: 2, nome_loja: 'Filial' } as any
+    ];
+    component.colecoes = [{ Idcolecao: 1, Codigo: '26', Descricao: 'Verão', Estacao: '01' } as any];
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A', colecao: 1 } as any,
+      { Idproduto: 2, referencia: 'REF-B', descricao: 'Produto B', colecao: 1 } as any
+    ];
+    component.estoques = [
+      { Idloja: 1, referencia: 'REF-A', Estoque: 8, reserva: 2 } as any,
+      { Idloja: 2, referencia: 'REF-A', Estoque: 3, reserva: 0 } as any,
+      { Idloja: 1, referencia: 'REF-B', Estoque: 4, reserva: 1 } as any,
+      { Idloja: 2, referencia: 'REF-B', Estoque: 2, reserva: 1 } as any
+    ];
+
+    (component as any).montarMatrizColecao();
+
+    expect(component.colecaoTotaisLoja[1]).toEqual({ fisico: 12, reservado: 3, disponivel: 9 });
+    expect(component.colecaoTotaisLoja[2]).toEqual({ fisico: 5, reservado: 1, disponivel: 4 });
+    expect(component.colecaoTotalGeral).toEqual({ fisico: 17, reservado: 4, disponivel: 13 });
   });
 
   it('exibe saldo anterior e posterior vindos da API', () => {
