@@ -187,19 +187,27 @@ export class EstoqueConsultaComponent implements OnInit {
   }
 
   private normalizarBuscaReferencia(valor: string): string {
-    const termo = valor.includes(' - ') ? valor.split(' - ')[0].trim() : valor;
+    const termo = (valor.includes(' - ') ? valor.split(' - ')[0] : valor).trim();
     const normalizado = this.normalizarTexto(termo);
-    const produto = this.produtos.find(p =>
-      this.normalizarTexto(p.referencia).includes(normalizado) ||
-      this.normalizarTexto(p.descricao).includes(normalizado) ||
-      this.normalizarTexto(p.descricao_reduzida).includes(normalizado)
-    );
+    if (!normalizado) return '';
+
+    const produto = this.produtos.find(p => this.normalizarTexto(p.referencia) === normalizado);
     if (produto?.referencia) return produto.referencia;
-    const sku = this.skus.find(s =>
-      this.normalizarTexto(s.ean13).includes(normalizado) ||
-      this.normalizarTexto(s.codigo_item_ref).includes(normalizado)
+
+    const skuPorEan = this.skus.find(s => this.normalizarTexto(s.ean13) === normalizado);
+    if (skuPorEan?.ean13) return skuPorEan.ean13;
+
+    const skuPorCodigo = this.skus.find(s => this.normalizarTexto(s.codigo_item_ref) === normalizado);
+    if (skuPorCodigo?.codigo_item_ref) return skuPorCodigo.codigo_item_ref;
+
+    const estoque = this.estoques.find(e =>
+      this.normalizarTexto(e.referencia) === normalizado ||
+      this.normalizarTexto(e.CodigodeBarra) === normalizado
     );
-    return sku?.codigo_item_ref || termo;
+    if (estoque?.referencia && this.normalizarTexto(estoque.referencia) === normalizado) return estoque.referencia;
+    if (estoque?.CodigodeBarra && this.normalizarTexto(estoque.CodigodeBarra) === normalizado) return estoque.CodigodeBarra;
+
+    return termo;
   }
 
   private normalizarTexto(valor: unknown): string {

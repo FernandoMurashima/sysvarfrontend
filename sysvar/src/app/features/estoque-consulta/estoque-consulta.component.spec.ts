@@ -88,6 +88,59 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     }));
   });
 
+  it('mantém referência exata na consulta', () => {
+    spyOn(component, 'load');
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A' } as any,
+      { Idproduto: 2, referencia: 'REF-AB', descricao: 'Produto AB' } as any
+    ];
+
+    component.buscar('REF-A');
+
+    expect(component.search).toBe('REF-A');
+    expect(component.load).toHaveBeenCalled();
+  });
+
+  it('mantém EAN exato na consulta', () => {
+    spyOn(component, 'load');
+    component.skus = [
+      { ean13: '7890000000001', codigo_item_ref: '00001' } as any,
+      { ean13: '7890000000002', codigo_item_ref: '00002' } as any
+    ];
+
+    component.buscar('7890000000002');
+
+    expect(component.search).toBe('7890000000002');
+    expect(component.load).toHaveBeenCalled();
+  });
+
+  it('não escolhe automaticamente a primeira referência semelhante em busca parcial ambígua', () => {
+    spyOn(component, 'load');
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A' } as any,
+      { Idproduto: 2, referencia: 'REF-AB', descricao: 'Produto AB' } as any
+    ];
+
+    component.buscar('REF');
+
+    expect(component.search).toBe('REF');
+    expect(component.search).not.toBe('REF-A');
+    expect(component.load).toHaveBeenCalled();
+  });
+
+  it('usa determinísticamente a referência da sugestão selecionada', () => {
+    spyOn(component, 'load');
+    component.produtos = [
+      { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A' } as any,
+      { Idproduto: 2, referencia: 'REF-AB', descricao: 'Produto AB' } as any
+    ];
+
+    component.buscar('REF-AB - Produto AB');
+
+    expect(component.search).toBe('REF-AB');
+    expect(component.load).toHaveBeenCalled();
+  });
+
   it('exibe saldo anterior e posterior vindos da API', () => {
     const text = fixture.nativeElement.textContent;
 
