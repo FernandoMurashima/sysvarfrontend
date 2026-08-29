@@ -3,6 +3,7 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild, inject } from '
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import * as XLSX from 'xlsx';
 import { InventarioEstoque, InventarioEstoqueItem } from '../../core/models/estoque';
 import { Loja } from '../../core/models/loja';
 import { EstoqueService } from '../../core/services/estoque.service';
@@ -274,6 +275,48 @@ export class EstoqueInventarioComponent implements OnInit {
   gerarSelecionado(): void { if (this.selecionado) this.gerarItens(this.selecionado); }
   validarSelecionado(): void { if (this.selecionado) this.validar(this.selecionado); }
   finalizarSelecionado(): void { if (this.selecionado) this.fechar(this.selecionado); }
+  exportarInventarioXlsx(): void {
+    const inv = this.selecionado;
+    if (!inv) return;
+    const loja = this.lojaNome(inv.Idloja);
+    const resumo = this.indicadoresInventario(inv);
+    const headers = ['EAN', 'Referência', 'Descrição', 'Cor', 'Tamanho', 'Saldo Original', 'Quantidade Contada', 'Diferença', 'Situação'];
+    const rows = (inv.itens || []).map(item => [
+      item.CodigodeBarra,
+      item.referencia || '',
+      item.produto_descricao || '',
+      item.cor || '',
+      item.tamanho || '',
+      Number(item.saldo_sistema || 0),
+      item.contado ? Number(item.saldo_contado || 0) : '',
+      Number(item.diferenca || 0),
+      this.situacaoFinalItem(item),
+    ]);
+    const sheetRows = [
+      ['Inventário', inv.Idinventario || '', 'Loja', loja],
+      ['Descrição', inv.descricao || '', 'Status', this.statusLabel(inv.status)],
+      ['Data de abertura', inv.data_abertura || '', 'Data de fechamento', inv.data_fechamento || ''],
+      [],
+      ['Total de SKUs', resumo.total, 'Contados', resumo.contados],
+      ['Sem divergência', resumo.semDivergencia, 'Sobras', resumo.sobra],
+      ['Faltas', resumo.falta, 'Total de divergências', resumo.divergencias],
+      [],
+      headers,
+      ...rows,
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventario');
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.nomeArquivoInventario(inv, loja);
+    link.click();
+    URL.revokeObjectURL(url);
+    this.exportOpen = false;
+  }
   visibleColumn(key: string): boolean { return this.columns.find(c => c.key === key)?.visible !== false; }
   toggleColumn(key: string, checked: boolean): void {
     const col = this.columns.find(c => c.key === key);
@@ -305,6 +348,13 @@ export class EstoqueInventarioComponent implements OnInit {
   situacaoItem(item: InventarioEstoqueItem): 'Pendente' | 'Divergente' | 'Contado' {
     if (!item.contado) return 'Pendente';
     return Number(item.diferenca || 0) !== 0 ? 'Divergente' : 'Contado';
+  }
+  situacaoFinalItem(item: InventarioEstoqueItem): 'pendente' | 'correto' | 'sobra' | 'falta' {
+    if (!item.contado) return 'pendente';
+    const diff = Number(item.diferenca || 0);
+    if (diff > 0) return 'sobra';
+    if (diff < 0) return 'falta';
+    return 'correto';
   }
   classeSituacaoItem(item: InventarioEstoqueItem): 'pending' | 'shortage' | 'surplus' | 'ok' {
     if (!item.contado) return 'pending';
@@ -384,6 +434,11 @@ export class EstoqueInventarioComponent implements OnInit {
   }
   private normalize(value: any): string {
     return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+  private nomeArquivoInventario(inv: InventarioEstoque, loja: string): string {
+    const id = inv.Idinventario || 'sem-id';
+    const lojaSlug = this.normalize(loja).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'loja';
+    return `inventario-${id}-${lojaSlug}.xlsx`;
   }
   private aplicarItemAtualizado(item: InventarioEstoqueItem): void {
     if (!this.selecionado) return;

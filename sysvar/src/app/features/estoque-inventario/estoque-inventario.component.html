@@ -12,7 +12,7 @@
         <button class="btn" type="button" (click)="exportOpen = !exportOpen; columnsOpen = false">Exportar</button>
         <div class="floating-menu" *ngIf="exportOpen">
           <button type="button" disabled>CSV</button>
-          <button type="button" disabled>Excel</button>
+          <button type="button" [disabled]="!selecionado" (click)="exportarInventarioXlsx()">Excel</button>
           <button type="button" disabled>PDF</button>
         </div>
       </div>
@@ -64,6 +64,7 @@
 
   <section class="action-bar">
     <button class="btn" type="button" [disabled]="!selecionado">⌕ Consultar</button>
+    <button class="btn" type="button" [disabled]="!selecionado" (click)="exportarInventarioXlsx()">⇩ Exportar XLSX</button>
     <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="gerarSelecionado()">☷ Gerar itens</button>
     <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="validarSelecionado()">✓ Validar</button>
     <button class="btn danger-soft" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'VALIDADO' || indicadoresInventario(selecionado).pendentes > 0" (click)="finalizarSelecionado()">⏹ Finalizar</button>
@@ -145,6 +146,11 @@
     <div class="results-header">
       <div><strong>Itens - {{ selecionado.descricao }}</strong><span>Pendentes: {{ pendentes(selecionado) }}</span></div>
       <div class="detail-summary">
+        <span>Nº: <strong>{{ selecionado.Idinventario }}</strong></span>
+        <span>Loja: <strong>{{ lojaNome(selecionado.Idloja) }}</strong></span>
+        <span>Status: <strong>{{ statusLabel(selecionado.status) }}</strong></span>
+        <span>Abertura: <strong>{{ selecionado.data_abertura | date:'dd/MM/yyyy' }}</strong></span>
+        <span>Fechamento: <strong>{{ selecionado.data_fechamento ? (selecionado.data_fechamento | date:'dd/MM/yyyy') : '-' }}</strong></span>
         <span>Sistema: <strong>{{ moneyLike(selecionado.saldo_sistema_total) }}</strong></span>
         <span>Contado: <strong>{{ moneyLike(selecionado.saldo_contado_total) }}</strong></span>
         <span>Diferença: <strong>{{ moneyLike(selecionado.diferenca_total) }}</strong></span>
