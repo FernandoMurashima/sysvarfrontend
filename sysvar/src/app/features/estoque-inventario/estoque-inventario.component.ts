@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -20,6 +20,7 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
   styleUrls: ['./estoque-inventario.component.css']
 })
 export class EstoqueInventarioComponent implements OnInit {
+  @ViewChild('scannerInput') scannerInput?: ElementRef<HTMLInputElement>;
   private fb = inject(FormBuilder);
   private api = inject(EstoqueService);
   private lojasApi = inject(LojasService);
@@ -32,6 +33,10 @@ export class EstoqueInventarioComponent implements OnInit {
   filterStatus = '';
   itemSearch = '';
   itemSituacao: 'todos' | 'pendentes' | 'contados' | 'divergentes' = 'todos';
+  scannerEan = '';
+  scannerMode: 'incremental' | 'quantidade' = 'incremental';
+  scannerQuantidade: number | null = null;
+  scannerItem: InventarioEstoqueItem | null = null;
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
@@ -98,6 +103,78 @@ export class EstoqueInventarioComponent implements OnInit {
     });
   }
   cancelarFechamento(): void { this.fecharModal = null; }
+  lerScanner(): void {
+    const inv = this.selecionado;
+    const ean = this.scannerEan.replace(/\D/g, '');
+    if (!inv?.Idinventario || !this.podeContar(inv)) {
+      this.errorMsg = 'Inventário fechado não aceita leitura.';
+      this.limparScanner(true);
+      return;
+    }
+    if (ean.length !== 13) {
+      this.errorMsg = 'Informe um EAN-13 válido.';
+      this.limparScanner(true);
+      return;
+    }
+    if (this.scannerMode === 'incremental') {
+      this.api.lerEanInventario(inv.Idinventario, { ean, modo: 'incremental' }).subscribe({
+        next: item => {
+          this.aplicarItemAtualizado(item);
+          this.itemSearch = ean;
+          this.itemSituacao = 'todos';
+          this.successMsg = `Leitura registrada: ${ean}.`;
+          this.limparScanner(true);
+        },
+        error: err => {
+          this.errorMsg = this.errorText(err, 'Falha ao ler EAN.');
+          this.limparScanner(true);
+        },
+      });
+      return;
+    }
+    const existente = (inv.itens || []).find(item => item.CodigodeBarra === ean);
+    if (existente) {
+      this.prepararQuantidadeScanner(existente, ean);
+      return;
+    }
+    this.api.createInventarioItem({ inventario: inv.Idinventario, CodigodeBarra: ean }).subscribe({
+      next: item => {
+        this.aplicarItemAtualizado(item);
+        this.prepararQuantidadeScanner(item, ean);
+      },
+      error: err => {
+        this.errorMsg = this.errorText(err, 'Falha ao localizar EAN.');
+        this.limparScanner(true);
+      },
+    });
+  }
+  salvarQuantidadeScanner(): void {
+    const inv = this.selecionado;
+    const item = this.scannerItem;
+    const quantidade = Number(this.scannerQuantidade);
+    if (!inv?.Idinventario || !this.podeContar(inv)) {
+      this.errorMsg = 'Inventário fechado não aceita leitura.';
+      this.limparScanner(true);
+      return;
+    }
+    if (!item?.Idinventarioitem || !Number.isFinite(quantidade) || quantidade < 0) {
+      this.errorMsg = 'Informe uma quantidade válida.';
+      return;
+    }
+    this.api.lerEanInventario(inv.Idinventario, { ean: item.CodigodeBarra, modo: 'quantidade', quantidade }).subscribe({
+      next: atualizado => {
+        this.aplicarItemAtualizado(atualizado);
+        this.successMsg = `Quantidade registrada: ${item.CodigodeBarra}.`;
+        this.scannerItem = null;
+        this.scannerQuantidade = null;
+        this.limparScanner(true);
+      },
+      error: err => {
+        this.errorMsg = this.errorText(err, 'Falha ao salvar quantidade.');
+        this.focarScanner();
+      },
+    });
+  }
   atualizarItem(item: InventarioEstoqueItem): void {
     if (!this.podeEditarModulo) return;
     if (!item.Idinventarioitem) return;
@@ -141,6 +218,7 @@ export class EstoqueInventarioComponent implements OnInit {
     this.selecionado = this.selecionado?.Idinventario === inv.Idinventario ? null : inv;
     this.itemSearch = '';
     this.itemSituacao = 'todos';
+    this.limparScanner(false);
   }
   isSelected(inv: InventarioEstoque): boolean { return this.selecionado?.Idinventario === inv.Idinventario; }
   consultarSelecionado(): void { if (this.selecionado) this.selecionado = this.selecionado; }
@@ -236,6 +314,34 @@ export class EstoqueInventarioComponent implements OnInit {
   }
   private normalize(value: any): string {
     return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+  private aplicarItemAtualizado(item: InventarioEstoqueItem): void {
+    if (!this.selecionado) return;
+    const itens = this.selecionado.itens || [];
+    const idx = itens.findIndex(row => row.Idinventarioitem === item.Idinventarioitem || row.CodigodeBarra === item.CodigodeBarra);
+    if (idx >= 0) {
+      itens[idx] = { ...itens[idx], ...item };
+    } else {
+      itens.push(item);
+      this.selecionado.itens = itens;
+      this.selecionado.total_itens = Number(this.selecionado.total_itens || 0) + 1;
+    }
+    this.atualizarTotaisSelecionado();
+  }
+  private prepararQuantidadeScanner(item: InventarioEstoqueItem, ean: string): void {
+    this.scannerItem = item;
+    this.scannerQuantidade = Number(item.saldo_contado || 0);
+    this.itemSearch = ean;
+    this.itemSituacao = 'todos';
+    this.successMsg = `SKU localizado: ${ean}.`;
+    this.scannerEan = '';
+  }
+  private limparScanner(focus: boolean): void {
+    this.scannerEan = '';
+    if (focus) this.focarScanner();
+  }
+  private focarScanner(): void {
+    setTimeout(() => this.scannerInput?.nativeElement?.focus(), 0);
   }
   private atualizarTotaisSelecionado(): void {
     if (!this.selecionado?.itens) return;

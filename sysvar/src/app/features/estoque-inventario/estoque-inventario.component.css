@@ -33,6 +33,61 @@
   color: #0f172a;
 }
 
+.scanner-panel {
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  background: #f8fafc;
+}
+
+.scanner-head,
+.scanner-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.scanner-head {
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-toggle button {
+  border: 0;
+  background: #fff;
+  color: #334155;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.mode-toggle button.active {
+  background: #0f766e;
+  color: #fff;
+}
+
+.scanner-input {
+  flex: 1 1 340px;
+}
+
+.qty-input {
+  width: 150px;
+}
+
+.scanner-current {
+  color: #475569;
+  font-size: 13px;
+  padding-bottom: 8px;
+}
+
 .detail-filters {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(180px, 240px);

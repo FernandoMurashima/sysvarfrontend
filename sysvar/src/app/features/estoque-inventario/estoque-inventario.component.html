@@ -150,6 +150,26 @@
         <span>Diferença: <strong>{{ moneyLike(selecionado.diferenca_total) }}</strong></span>
       </div>
     </div>
+    <div class="scanner-panel" *ngIf="podeContar(selecionado)">
+      <div class="scanner-head">
+        <strong>Leitura por EAN</strong>
+        <div class="mode-toggle" role="group" aria-label="Modo de leitura">
+          <button type="button" [class.active]="scannerMode === 'incremental'" (click)="scannerMode = 'incremental'; scannerItem = null; scannerQuantidade = null">Incremental</button>
+          <button type="button" [class.active]="scannerMode === 'quantidade'" (click)="scannerMode = 'quantidade'">Quantidade</button>
+        </div>
+      </div>
+      <form class="scanner-form" (ngSubmit)="lerScanner()">
+        <label class="input-item scanner-input">EAN
+          <input #scannerInput name="scannerEan" inputmode="numeric" autocomplete="off" maxlength="13" [(ngModel)]="scannerEan" placeholder="Leia ou digite o EAN e pressione Enter" />
+        </label>
+        <button class="btn primary" type="submit">Ler</button>
+        <label class="input-item qty-input" *ngIf="scannerMode === 'quantidade'">Quantidade
+          <input name="scannerQuantidade" type="number" min="0" step="0.001" [(ngModel)]="scannerQuantidade" [disabled]="!scannerItem" />
+        </label>
+        <button class="btn" *ngIf="scannerMode === 'quantidade'" type="button" [disabled]="!scannerItem" (click)="salvarQuantidadeScanner()">Salvar quantidade</button>
+        <span class="scanner-current" *ngIf="scannerItem">SKU {{ scannerItem.CodigodeBarra }} selecionado</span>
+      </form>
+    </div>
     <div class="detail-filters">
       <app-search-suggest class="main-search" [(value)]="itemSearch" [suggestions]="[]" [showActions]="false" placeholder="Buscar item por EAN, referência, descrição, cor ou tamanho..." />
       <label class="inline-filter">

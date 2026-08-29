@@ -63,6 +63,14 @@ export class EstoqueService {
     return this.http.post<InventarioEstoque>(`${this.base}/inventario-estoque/${id}/finalizar/`, {});
   }
 
+  lerEanInventario(id: number, payload: { ean: string; modo?: 'incremental' | 'quantidade'; quantidade?: number | string }): Observable<InventarioEstoqueItem & { created?: boolean }> {
+    return this.http.post<InventarioEstoqueItem & { created?: boolean }>(`${this.base}/inventario-estoque/${id}/ler-ean/`, payload);
+  }
+
+  createInventarioItem(payload: Partial<InventarioEstoqueItem>): Observable<InventarioEstoqueItem> {
+    return this.http.post<InventarioEstoqueItem>(`${this.base}/inventario-estoque-item/`, payload);
+  }
+
   updateInventarioItem(id: number, payload: Partial<InventarioEstoqueItem>): Observable<InventarioEstoqueItem> {
     return this.http.patch<InventarioEstoqueItem>(`${this.base}/inventario-estoque-item/${id}/`, payload);
   }
