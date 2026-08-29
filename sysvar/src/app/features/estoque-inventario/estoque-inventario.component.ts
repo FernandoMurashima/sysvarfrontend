@@ -244,7 +244,7 @@ export class EstoqueInventarioComponent implements OnInit {
       { key: 'ver', label: 'Consultar', icon: '⌕' },
       { key: 'gerar', label: 'Gerar itens', icon: '☷', visible: this.podeEditarModulo && inv.status === 'ABERTO' },
       { key: 'validar', label: 'Validar', icon: '✓', visible: this.podeEditarModulo && inv.status === 'ABERTO' },
-      { key: 'finalizar', label: 'Finalizar', icon: '⏹', danger: true, visible: this.podeEditarModulo && inv.status === 'VALIDADO' },
+      { key: 'finalizar', label: 'Finalizar', icon: '⏹', danger: true, visible: this.podeEditarModulo && inv.status === 'VALIDADO' && this.indicadoresInventario(inv).pendentes === 0 },
     ];
   }
   executarAcao(action: string, inv: InventarioEstoque): void {

@@ -244,7 +244,7 @@
 <div class="overlay" *ngIf="fecharModal as inventario">
   <div class="overlay-card">
     <h4>Revisar inventário</h4>
-    <p>Revise os totais do inventário <strong>{{ inventario.descricao }}</strong> antes de finalizar.</p>
+    <p>Revise os totais do inventário <strong>{{ inventario.descricao }}</strong> antes de finalizar. A finalização ajusta o estoque dos SKUs divergentes.</p>
     <div class="review-grid">
       <span>Total: <strong>{{ indicadoresInventario(inventario).total }}</strong></span>
       <span>Contados: <strong>{{ indicadoresInventario(inventario).contados }}</strong></span>
