@@ -112,6 +112,9 @@ export interface InventarioEstoqueItem {
   inventario: number;
   CodigodeBarra: string;
   referencia: string;
+  produto_descricao?: string;
+  cor?: string;
+  tamanho?: string;
   saldo_sistema: number;
   saldo_contado: number;
   diferenca?: number;

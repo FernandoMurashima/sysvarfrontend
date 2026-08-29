@@ -30,6 +30,8 @@ export class EstoqueInventarioComponent implements OnInit {
   search = '';
   filterLoja = '';
   filterStatus = '';
+  itemSearch = '';
+  itemSituacao: 'todos' | 'pendentes' | 'contados' | 'divergentes' = 'todos';
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
@@ -96,7 +98,23 @@ export class EstoqueInventarioComponent implements OnInit {
     });
   }
   cancelarFechamento(): void { this.fecharModal = null; }
-  atualizarItem(item: InventarioEstoqueItem): void { if (!this.podeEditarModulo) return; if (!item.Idinventarioitem) return; this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: Number(item.saldo_contado), observacao: item.observacao }).subscribe({ next: atualizado => { Object.assign(item, atualizado); this.successMsg = 'Contagem atualizada.'; }, error: err => this.errorMsg = this.errorText(err, 'Falha ao atualizar item.') }); }
+  atualizarItem(item: InventarioEstoqueItem): void {
+    if (!this.podeEditarModulo) return;
+    if (!item.Idinventarioitem) return;
+    const quantidade = Number(item.saldo_contado);
+    if (!Number.isFinite(quantidade) || quantidade < 0) {
+      this.errorMsg = 'Informe uma quantidade válida.';
+      return;
+    }
+    this.api.updateInventarioItem(item.Idinventarioitem, { saldo_contado: quantidade, observacao: item.observacao }).subscribe({
+      next: atualizado => {
+        Object.assign(item, atualizado);
+        this.atualizarTotaisSelecionado();
+        this.successMsg = 'Contagem atualizada.';
+      },
+      error: err => this.errorMsg = this.errorText(err, 'Falha ao atualizar item.')
+    });
+  }
   rowActions(inv: InventarioEstoque): RowAction[] {
     return [
       { key: 'ver', label: 'Consultar', icon: '⌕' },
@@ -119,7 +137,11 @@ export class EstoqueInventarioComponent implements OnInit {
   prevPage(): void { if (this.page > 1) this.page--; }
   nextPage(): void { if (this.page < this.totalPages) this.page++; }
   lastPage(): void { this.page = this.totalPages; }
-  selecionarInventario(inv: InventarioEstoque): void { this.selecionado = this.selecionado?.Idinventario === inv.Idinventario ? null : inv; }
+  selecionarInventario(inv: InventarioEstoque): void {
+    this.selecionado = this.selecionado?.Idinventario === inv.Idinventario ? null : inv;
+    this.itemSearch = '';
+    this.itemSituacao = 'todos';
+  }
   isSelected(inv: InventarioEstoque): boolean { return this.selecionado?.Idinventario === inv.Idinventario; }
   consultarSelecionado(): void { if (this.selecionado) this.selecionado = this.selecionado; }
   gerarSelecionado(): void { if (this.selecionado) this.gerarItens(this.selecionado); }
@@ -153,6 +175,34 @@ export class EstoqueInventarioComponent implements OnInit {
   }
   podeContar(inv?: InventarioEstoque | null): boolean { return !!inv && inv.status === 'ABERTO' && this.podeEditarModulo; }
   pendentes(inv: InventarioEstoque): number { return Number(inv.total_itens || inv.itens?.length || 0) - Number(inv.total_contados || 0); }
+  situacaoItem(item: InventarioEstoqueItem): 'Pendente' | 'Divergente' | 'Contado' {
+    if (!item.contado) return 'Pendente';
+    return Number(item.diferenca || 0) !== 0 ? 'Divergente' : 'Contado';
+  }
+  recalcularItem(item: InventarioEstoqueItem): void {
+    const contado = Number(item.saldo_contado || 0);
+    const sistema = Number(item.saldo_sistema || 0);
+    item.diferenca = Number((contado - sistema).toFixed(3));
+  }
+  get itensSelecionadosFiltrados(): InventarioEstoqueItem[] {
+    const term = this.normalize(this.itemSearch);
+    return (this.selecionado?.itens || []).filter(item => {
+      const matchesSearch = !term || [
+        item.CodigodeBarra,
+        item.referencia,
+        item.produto_descricao,
+        item.cor,
+        item.tamanho,
+      ].some(v => this.normalize(v).includes(term));
+      const diff = Number(item.diferenca || 0);
+      const matchesSituacao =
+        this.itemSituacao === 'todos'
+        || (this.itemSituacao === 'pendentes' && !item.contado)
+        || (this.itemSituacao === 'contados' && !!item.contado)
+        || (this.itemSituacao === 'divergentes' && !!item.contado && diff !== 0);
+      return matchesSearch && matchesSituacao;
+    });
+  }
   get totalInventarios(): number { return this.inventarios.length; }
   get abertos(): number { return this.inventarios.filter(i => i.status === 'ABERTO').length; }
   get validados(): number { return this.inventarios.filter(i => i.status === 'VALIDADO').length; }
@@ -186,6 +236,13 @@ export class EstoqueInventarioComponent implements OnInit {
   }
   private normalize(value: any): string {
     return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+  private atualizarTotaisSelecionado(): void {
+    if (!this.selecionado?.itens) return;
+    this.selecionado.total_contados = this.selecionado.itens.filter(item => item.contado).length;
+    this.selecionado.total_divergencias = this.selecionado.itens.filter(item => item.contado && Number(item.diferenca || 0) !== 0).length;
+    this.selecionado.saldo_contado_total = this.selecionado.itens.reduce((total, item) => total + Number(item.saldo_contado || 0), 0);
+    this.selecionado.diferenca_total = this.selecionado.itens.reduce((total, item) => total + Number(item.diferenca || 0), 0);
   }
   private loadColumnsPreference(): void {
     const size = Number(localStorage.getItem('sysvar.list.estoque-inventario.pageSize'));

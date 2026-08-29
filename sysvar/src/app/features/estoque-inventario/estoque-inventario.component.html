@@ -150,23 +150,39 @@
         <span>Diferença: <strong>{{ moneyLike(selecionado.diferenca_total) }}</strong></span>
       </div>
     </div>
+    <div class="detail-filters">
+      <app-search-suggest class="main-search" [(value)]="itemSearch" [suggestions]="[]" [showActions]="false" placeholder="Buscar item por EAN, referência, descrição, cor ou tamanho..." />
+      <label class="inline-filter">
+        <span>Situação</span>
+        <select [(ngModel)]="itemSituacao">
+          <option value="todos">Todos</option>
+          <option value="pendentes">Pendentes</option>
+          <option value="contados">Contados</option>
+          <option value="divergentes">Divergentes</option>
+        </select>
+      </label>
+    </div>
     <div class="table-wrapper">
       <table class="table detail-table">
         <thead>
-          <tr><th>Referência</th><th>EAN</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Status</th><th class="save-col">Ação</th></tr>
+          <tr><th>EAN</th><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tamanho</th><th>Saldo original</th><th>Qtd. contada</th><th>Diferença</th><th>Situação</th><th class="save-col">Ação</th></tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of selecionado.itens || []">
-            <td>{{ item.referencia }}</td>
+          <tr *ngFor="let item of itensSelecionadosFiltrados">
             <td>{{ item.CodigodeBarra }}</td>
+            <td>{{ item.referencia }}</td>
+            <td>{{ item.produto_descricao || '-' }}</td>
+            <td>{{ item.cor || '-' }}</td>
+            <td>{{ item.tamanho || '-' }}</td>
             <td class="num">{{ item.saldo_sistema }}</td>
-            <td><input class="count-input" type="number" step="0.001" [(ngModel)]="item.saldo_contado" [disabled]="!podeContar(selecionado)" /></td>
+            <td><input class="count-input" type="number" min="0" step="0.001" [(ngModel)]="item.saldo_contado" (ngModelChange)="recalcularItem(item)" [disabled]="!podeContar(selecionado)" /></td>
             <td class="num" [class.negative]="(item.diferenca || 0) < 0" [class.positive]="(item.diferenca || 0) > 0">{{ item.diferenca }}</td>
-            <td><span class="status-pill" [class.inactive]="!item.contado">• {{ item.contado ? 'Contado' : 'Pendente' }}</span></td>
+            <td><span class="status-pill" [class.inactive]="!item.contado" [class.validated]="item.contado && (item.diferenca || 0) === 0" [class.closed]="item.contado && (item.diferenca || 0) !== 0">• {{ situacaoItem(item) }}</span></td>
             <td class="save-col"><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
           </tr>
         </tbody>
       </table>
+      <div class="empty-hint" *ngIf="!itensSelecionadosFiltrados.length">Nenhum item encontrado para os filtros.</div>
     </div>
   </section>
 </div>
