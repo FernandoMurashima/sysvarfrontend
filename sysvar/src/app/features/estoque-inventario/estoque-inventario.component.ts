@@ -85,7 +85,7 @@ export class EstoqueInventarioComponent implements OnInit {
     const raw = this.form.value; this.saving = true;
     this.api.createInventario({ Idloja: Number(raw.Idloja), descricao: String(raw.descricao), data_abertura: String(raw.data_abertura), observacao: String(raw.observacao || '') || null, status: 'ABERTO' }).subscribe({
       next: inv => { this.saving = false; this.showForm = false; this.successMsg = 'Inventário criado.'; this.selecionado = inv; this.load(); },
-      error: () => { this.saving = false; this.errorMsg = 'Falha ao criar inventário.'; }
+      error: err => { this.saving = false; this.errorMsg = this.errorText(err, 'Falha ao criar inventário.'); }
     });
   }
   gerarItens(inv: InventarioEstoque): void { if (!this.podeEditarModulo) return; if (!inv.Idinventario) return; this.api.gerarItensInventario(inv.Idinventario).subscribe({ next: res => { this.successMsg = `${res.created || 0} item(ns) gerado(s).`; this.load(); }, error: err => this.errorMsg = this.errorText(err, 'Falha ao gerar itens.') }); }

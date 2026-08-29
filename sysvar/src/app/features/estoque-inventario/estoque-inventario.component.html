@@ -78,7 +78,7 @@
       <div><h3>Novo inventário</h3><p>Preencha os dados para abrir a contagem.</p></div>
       <div class="form-title-actions">
         <button class="btn ghost" type="button" (click)="showForm=false">Cancelar</button>
-        <button class="btn primary" *ngIf="podeEditarModulo" [disabled]="saving || form.invalid">Salvar</button>
+        <button class="btn primary" type="button" *ngIf="podeEditarModulo" [disabled]="saving || form.invalid" (click)="salvar()">Salvar</button>
       </div>
     </div>
     <form [formGroup]="form" (ngSubmit)="salvar()">
