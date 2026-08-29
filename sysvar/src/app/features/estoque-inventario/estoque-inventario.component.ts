@@ -37,6 +37,9 @@ export class EstoqueInventarioComponent implements OnInit {
   scannerMode: 'incremental' | 'quantidade' = 'incremental';
   scannerQuantidade: number | null = null;
   scannerItem: InventarioEstoqueItem | null = null;
+  importFile: File | null = null;
+  importPreview: any = null;
+  importing = false;
   advancedOpen = false;
   columnsOpen = false;
   exportOpen = false;
@@ -175,6 +178,46 @@ export class EstoqueInventarioComponent implements OnInit {
       },
     });
   }
+  onImportFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.importFile = input.files?.[0] || null;
+    this.importPreview = null;
+  }
+  validarImportacao(): void {
+    const inv = this.selecionado;
+    if (!inv?.Idinventario || !this.podeContar(inv) || !this.importFile) return;
+    this.importing = true;
+    this.api.previewImportacaoInventario(inv.Idinventario, this.importFile).subscribe({
+      next: preview => {
+        this.importPreview = preview;
+        this.importing = false;
+        this.successMsg = 'Arquivo validado.';
+      },
+      error: err => {
+        this.importing = false;
+        this.errorMsg = this.errorText(err, 'Falha ao validar arquivo.');
+      },
+    });
+  }
+  confirmarImportacao(): void {
+    const inv = this.selecionado;
+    const validas = this.importPreview?.validas || [];
+    if (!inv?.Idinventario || !this.podeContar(inv) || !validas.length) return;
+    this.importing = true;
+    this.api.aplicarImportacaoInventario(inv.Idinventario, validas).subscribe({
+      next: res => {
+        this.importing = false;
+        this.importPreview = null;
+        this.importFile = null;
+        this.successMsg = `Importação aplicada: ${res?.linhas_validas || 0} SKU(s).`;
+        this.load();
+      },
+      error: err => {
+        this.importing = false;
+        this.errorMsg = this.errorText(err, 'Falha ao aplicar importação.');
+      },
+    });
+  }
   atualizarItem(item: InventarioEstoqueItem): void {
     if (!this.podeEditarModulo) return;
     if (!item.Idinventarioitem) return;
@@ -218,6 +261,8 @@ export class EstoqueInventarioComponent implements OnInit {
     this.selecionado = this.selecionado?.Idinventario === inv.Idinventario ? null : inv;
     this.itemSearch = '';
     this.itemSituacao = 'todos';
+    this.importFile = null;
+    this.importPreview = null;
     this.limparScanner(false);
   }
   isSelected(inv: InventarioEstoque): boolean { return this.selecionado?.Idinventario === inv.Idinventario; }
@@ -280,6 +325,9 @@ export class EstoqueInventarioComponent implements OnInit {
         || (this.itemSituacao === 'divergentes' && !!item.contado && diff !== 0);
       return matchesSearch && matchesSituacao;
     });
+  }
+  get importInvalidasPreview(): Array<{ linha: number; ean: string; erros: string[] }> {
+    return (this.importPreview?.invalidas || []).slice(0, 6);
   }
   get totalInventarios(): number { return this.inventarios.length; }
   get abertos(): number { return this.inventarios.filter(i => i.status === 'ABERTO').length; }

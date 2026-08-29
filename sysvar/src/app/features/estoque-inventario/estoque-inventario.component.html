@@ -170,6 +170,31 @@
         <span class="scanner-current" *ngIf="scannerItem">SKU {{ scannerItem.CodigodeBarra }} selecionado</span>
       </form>
     </div>
+    <div class="import-panel" *ngIf="podeContar(selecionado)">
+      <div class="scanner-head">
+        <strong>Importar TXT/CSV</strong>
+        <span class="scanner-current">Formato: EAN,QUANTIDADE</span>
+      </div>
+      <div class="scanner-form">
+        <label class="btn upload-btn">Selecionar arquivo
+          <input type="file" accept=".txt,.csv,text/plain,text/csv" (change)="onImportFileChange($event)" />
+        </label>
+        <span class="scanner-current" *ngIf="importFile">{{ importFile.name }}</span>
+        <button class="btn primary" type="button" [disabled]="!importFile || importing" (click)="validarImportacao()">Validar</button>
+        <button class="btn" type="button" [disabled]="!importPreview?.validas?.length || importing" (click)="confirmarImportacao()">Confirmar importação</button>
+      </div>
+      <div class="import-preview" *ngIf="importPreview">
+        <span>Total: <strong>{{ importPreview.total_linhas }}</strong></span>
+        <span>Válidas: <strong>{{ importPreview.linhas_validas }}</strong></span>
+        <span>Inválidas: <strong>{{ importPreview.linhas_invalidas }}</strong></span>
+        <span>Inexistentes: <strong>{{ importPreview.eans_inexistentes?.length || 0 }}</strong></span>
+        <span>Outra empresa: <strong>{{ importPreview.eans_outra_empresa?.length || 0 }}</strong></span>
+        <span>Duplicados consolidados: <strong>{{ importPreview.duplicidades?.length || 0 }}</strong></span>
+      </div>
+      <div class="import-errors" *ngIf="importPreview?.invalidas?.length">
+        <div *ngFor="let row of importInvalidasPreview">Linha {{ row.linha }} - {{ row.ean || '-' }}: {{ row.erros.join(' ') }}</div>
+      </div>
+    </div>
     <div class="detail-filters">
       <app-search-suggest class="main-search" [(value)]="itemSearch" [suggestions]="[]" [showActions]="false" placeholder="Buscar item por EAN, referência, descrição, cor ou tamanho..." />
       <label class="inline-filter">

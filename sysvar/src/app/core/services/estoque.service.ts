@@ -67,6 +67,16 @@ export class EstoqueService {
     return this.http.post<InventarioEstoqueItem & { created?: boolean }>(`${this.base}/inventario-estoque/${id}/ler-ean/`, payload);
   }
 
+  previewImportacaoInventario(id: number, arquivo: File): Observable<any> {
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    return this.http.post<any>(`${this.base}/inventario-estoque/${id}/importar-preview/`, form);
+  }
+
+  aplicarImportacaoInventario(id: number, validas: Array<{ ean: string; quantidade: string | number }>): Observable<any> {
+    return this.http.post<any>(`${this.base}/inventario-estoque/${id}/importar-aplicar/`, { validas });
+  }
+
   createInventarioItem(payload: Partial<InventarioEstoqueItem>): Observable<InventarioEstoqueItem> {
     return this.http.post<InventarioEstoqueItem>(`${this.base}/inventario-estoque-item/`, payload);
   }
