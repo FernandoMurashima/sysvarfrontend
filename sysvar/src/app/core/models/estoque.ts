@@ -99,7 +99,11 @@ export interface InventarioEstoque {
   itens?: InventarioEstoqueItem[];
   total_itens?: number;
   total_contados?: number;
+  total_pendentes?: number;
+  total_sem_divergencia?: number;
   total_divergencias?: number;
+  total_sobra?: number;
+  total_falta?: number;
   saldo_sistema_total?: number | string;
   saldo_contado_total?: number | string;
   diferenca_total?: number | string;

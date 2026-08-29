@@ -100,6 +100,10 @@ export class EstoqueInventarioComponent implements OnInit {
     if (!this.podeEditarModulo) return;
     const inv = this.fecharModal;
     if (!inv?.Idinventario) return;
+    if (this.indicadoresInventario(inv).pendentes > 0) {
+      this.errorMsg = `Resolva ${this.indicadoresInventario(inv).pendentes} pendência(s) antes de finalizar.`;
+      return;
+    }
     this.api.finalizarInventario(inv.Idinventario).subscribe({
       next: res => { this.fecharModal = null; this.successMsg = `Inventário finalizado. ${res.movimentos_gerados || 0} ajuste(s) gerado(s).`; this.load(); },
       error: err => this.errorMsg = this.errorText(err, 'Falha ao finalizar inventário.')
@@ -302,6 +306,24 @@ export class EstoqueInventarioComponent implements OnInit {
     if (!item.contado) return 'Pendente';
     return Number(item.diferenca || 0) !== 0 ? 'Divergente' : 'Contado';
   }
+  classeSituacaoItem(item: InventarioEstoqueItem): 'pending' | 'shortage' | 'surplus' | 'ok' {
+    if (!item.contado) return 'pending';
+    const diff = Number(item.diferenca || 0);
+    if (diff > 0) return 'surplus';
+    if (diff < 0) return 'shortage';
+    return 'ok';
+  }
+  indicadoresInventario(inv: InventarioEstoque | null): { total: number; contados: number; pendentes: number; semDivergencia: number; sobra: number; falta: number; divergencias: number } {
+    const itens = inv?.itens || [];
+    const total = Number(inv?.total_itens ?? itens.length);
+    const contados = Number(inv?.total_contados ?? itens.filter(item => item.contado).length);
+    const pendentes = Number(inv?.total_pendentes ?? itens.filter(item => !item.contado).length);
+    const semDivergencia = Number(inv?.total_sem_divergencia ?? itens.filter(item => item.contado && Number(item.diferenca || 0) === 0).length);
+    const sobra = Number(inv?.total_sobra ?? itens.filter(item => item.contado && Number(item.diferenca || 0) > 0).length);
+    const falta = Number(inv?.total_falta ?? itens.filter(item => item.contado && Number(item.diferenca || 0) < 0).length);
+    const divergencias = Number(inv?.total_divergencias ?? sobra + falta);
+    return { total, contados, pendentes, semDivergencia, sobra, falta, divergencias };
+  }
   recalcularItem(item: InventarioEstoqueItem): void {
     const contado = Number(item.saldo_contado || 0);
     const sistema = Number(item.saldo_sistema || 0);
@@ -394,7 +416,11 @@ export class EstoqueInventarioComponent implements OnInit {
   private atualizarTotaisSelecionado(): void {
     if (!this.selecionado?.itens) return;
     this.selecionado.total_contados = this.selecionado.itens.filter(item => item.contado).length;
-    this.selecionado.total_divergencias = this.selecionado.itens.filter(item => item.contado && Number(item.diferenca || 0) !== 0).length;
+    this.selecionado.total_pendentes = this.selecionado.itens.filter(item => !item.contado).length;
+    this.selecionado.total_sem_divergencia = this.selecionado.itens.filter(item => item.contado && Number(item.diferenca || 0) === 0).length;
+    this.selecionado.total_sobra = this.selecionado.itens.filter(item => item.contado && Number(item.diferenca || 0) > 0).length;
+    this.selecionado.total_falta = this.selecionado.itens.filter(item => item.contado && Number(item.diferenca || 0) < 0).length;
+    this.selecionado.total_divergencias = Number(this.selecionado.total_sobra) + Number(this.selecionado.total_falta);
     this.selecionado.saldo_contado_total = this.selecionado.itens.reduce((total, item) => total + Number(item.saldo_contado || 0), 0);
     this.selecionado.diferenca_total = this.selecionado.itens.reduce((total, item) => total + Number(item.diferenca || 0), 0);
   }

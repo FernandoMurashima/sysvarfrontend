@@ -66,7 +66,7 @@
     <button class="btn" type="button" [disabled]="!selecionado">⌕ Consultar</button>
     <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="gerarSelecionado()">☷ Gerar itens</button>
     <button class="btn" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'ABERTO'" (click)="validarSelecionado()">✓ Validar</button>
-    <button class="btn danger-soft" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'VALIDADO'" (click)="finalizarSelecionado()">⏹ Finalizar</button>
+    <button class="btn danger-soft" type="button" [disabled]="!selecionado || !podeEditarModulo || selecionado.status !== 'VALIDADO' || indicadoresInventario(selecionado).pendentes > 0" (click)="finalizarSelecionado()">⏹ Finalizar</button>
   </section>
 
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
@@ -150,6 +150,15 @@
         <span>Diferença: <strong>{{ moneyLike(selecionado.diferenca_total) }}</strong></span>
       </div>
     </div>
+    <div class="inventory-summary">
+      <div><strong>{{ indicadoresInventario(selecionado).total }}</strong><span>Total de SKUs</span></div>
+      <div><strong>{{ indicadoresInventario(selecionado).contados }}</strong><span>Contados</span></div>
+      <div class="pending"><strong>{{ indicadoresInventario(selecionado).pendentes }}</strong><span>Pendentes</span></div>
+      <div class="ok"><strong>{{ indicadoresInventario(selecionado).semDivergencia }}</strong><span>Sem divergência</span></div>
+      <div class="surplus"><strong>{{ indicadoresInventario(selecionado).sobra }}</strong><span>Com sobra</span></div>
+      <div class="shortage"><strong>{{ indicadoresInventario(selecionado).falta }}</strong><span>Com falta</span></div>
+    </div>
+    <div class="alert error" *ngIf="selecionado.status === 'VALIDADO' && indicadoresInventario(selecionado).pendentes > 0">Resolva {{ indicadoresInventario(selecionado).pendentes }} pendência(s) antes de finalizar.</div>
     <div class="scanner-panel" *ngIf="podeContar(selecionado)">
       <div class="scanner-head">
         <strong>Leitura por EAN</strong>
@@ -213,7 +222,7 @@
           <tr><th>EAN</th><th>Referência</th><th>Descrição</th><th>Cor</th><th>Tamanho</th><th>Saldo original</th><th>Qtd. contada</th><th>Diferença</th><th>Situação</th><th class="save-col">Ação</th></tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of itensSelecionadosFiltrados">
+          <tr *ngFor="let item of itensSelecionadosFiltrados" [class.pending-row]="classeSituacaoItem(item) === 'pending'" [class.surplus-row]="classeSituacaoItem(item) === 'surplus'" [class.shortage-row]="classeSituacaoItem(item) === 'shortage'">
             <td>{{ item.CodigodeBarra }}</td>
             <td>{{ item.referencia }}</td>
             <td>{{ item.produto_descricao || '-' }}</td>
@@ -222,7 +231,7 @@
             <td class="num">{{ item.saldo_sistema }}</td>
             <td><input class="count-input" type="number" min="0" step="0.001" [(ngModel)]="item.saldo_contado" (ngModelChange)="recalcularItem(item)" [disabled]="!podeContar(selecionado)" /></td>
             <td class="num" [class.negative]="(item.diferenca || 0) < 0" [class.positive]="(item.diferenca || 0) > 0">{{ item.diferenca }}</td>
-            <td><span class="status-pill" [class.inactive]="!item.contado" [class.validated]="item.contado && (item.diferenca || 0) === 0" [class.closed]="item.contado && (item.diferenca || 0) !== 0">• {{ situacaoItem(item) }}</span></td>
+            <td><span class="status-pill" [class.inactive]="classeSituacaoItem(item) === 'pending'" [class.validated]="classeSituacaoItem(item) === 'ok'" [class.closed]="classeSituacaoItem(item) === 'surplus'" [class.shortage]="classeSituacaoItem(item) === 'shortage'">• {{ situacaoItem(item) }}</span></td>
             <td class="save-col"><button class="btn sm" *ngIf="podeContar(selecionado)" (click)="atualizarItem(item)">Salvar</button></td>
           </tr>
         </tbody>
@@ -234,11 +243,21 @@
 
 <div class="overlay" *ngIf="fecharModal as inventario">
   <div class="overlay-card">
-    <h4>Finalizar inventário</h4>
-    <p>Confirma a finalização do inventário <strong>{{ inventario.descricao }}</strong> e a geração dos ajustes de estoque?</p>
+    <h4>Revisar inventário</h4>
+    <p>Revise os totais do inventário <strong>{{ inventario.descricao }}</strong> antes de finalizar.</p>
+    <div class="review-grid">
+      <span>Total: <strong>{{ indicadoresInventario(inventario).total }}</strong></span>
+      <span>Contados: <strong>{{ indicadoresInventario(inventario).contados }}</strong></span>
+      <span>Pendentes: <strong>{{ indicadoresInventario(inventario).pendentes }}</strong></span>
+      <span>Sem divergência: <strong>{{ indicadoresInventario(inventario).semDivergencia }}</strong></span>
+      <span>Sobras: <strong>{{ indicadoresInventario(inventario).sobra }}</strong></span>
+      <span>Faltas: <strong>{{ indicadoresInventario(inventario).falta }}</strong></span>
+      <span>Divergências: <strong>{{ indicadoresInventario(inventario).divergencias }}</strong></span>
+    </div>
+    <div class="alert error" *ngIf="indicadoresInventario(inventario).pendentes > 0">Existem {{ indicadoresInventario(inventario).pendentes }} pendência(s). Finalização bloqueada.</div>
     <div class="overlay-actions">
       <button class="btn" type="button" (click)="cancelarFechamento()">Voltar</button>
-      <button class="btn danger" *ngIf="podeEditarModulo" type="button" (click)="confirmarFechamento()">Finalizar</button>
+      <button class="btn danger" *ngIf="podeEditarModulo" type="button" [disabled]="indicadoresInventario(inventario).pendentes > 0" (click)="confirmarFechamento()">Finalizar</button>
     </div>
   </div>
 </div>

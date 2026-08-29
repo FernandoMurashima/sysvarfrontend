@@ -17,6 +17,11 @@
   color: #15803d;
 }
 
+.status-pill.shortage {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .detail-area {
   margin-top: 0;
 }
@@ -40,6 +45,76 @@
   padding: 12px;
   margin: 12px 0;
   background: #f8fafc;
+}
+
+.inventory-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.inventory-summary div,
+.review-grid span {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+}
+
+.inventory-summary strong {
+  display: block;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.inventory-summary span,
+.review-grid span {
+  color: #475569;
+  font-size: 12px;
+}
+
+.inventory-summary .pending {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.inventory-summary .ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.inventory-summary .surplus {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.inventory-summary .shortage {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.pending-row {
+  background: #fff7ed;
+}
+
+.surplus-row {
+  background: #eff6ff;
+}
+
+.shortage-row {
+  background: #fef2f2;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.review-grid strong {
+  color: #0f172a;
 }
 
 .scanner-head,
@@ -157,10 +232,19 @@
   .inventario-filter {
     grid-template-columns: 1fr;
   }
+
+  .inventory-summary {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
   .detail-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-summary,
+  .review-grid {
     grid-template-columns: 1fr;
   }
 
