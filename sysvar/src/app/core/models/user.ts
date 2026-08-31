@@ -21,6 +21,7 @@ export interface User {
   perfil_principal_id?: number | null;
   is_platform_superuser?: boolean;
   is_company_master?: boolean;
+  is_full_company_administrator?: boolean;
   contrato?: {
     status: string;
     limite_usuarios: number;

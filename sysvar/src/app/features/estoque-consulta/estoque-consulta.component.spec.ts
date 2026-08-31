@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { ColecoesService } from '../../core/services/colecoes.service';
 import { CoresService } from '../../core/services/cores.service';
@@ -24,7 +24,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   let tamanhosApi: jasmine.SpyObj<TamanhosService>;
 
   beforeEach(async () => {
-    estoqueApi = jasmine.createSpyObj<EstoqueService>('EstoqueService', ['list', 'listMovimentacoes', 'consultaReferencia', 'consultaColecao']);
+    estoqueApi = jasmine.createSpyObj<EstoqueService>('EstoqueService', ['list', 'listMovimentacoes', 'movimentacoesReferencia', 'sugestoesReferencia', 'consultaReferencia', 'consultaColecao']);
     lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
     produtosApi = jasmine.createSpyObj<ProdutosService>('ProdutosService', ['list']);
     colecoesApi = jasmine.createSpyObj<ColecoesService>('ColecoesService', ['list']);
@@ -35,6 +35,11 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     estoqueApi.list.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.consultaReferencia.and.returnValue(of({ count: 0, results: [] }));
     estoqueApi.consultaColecao.and.returnValue(of({ count: 0, results: [] }));
+    estoqueApi.sugestoesReferencia.and.returnValue(of({ count: 0, results: [] }));
+    estoqueApi.movimentacoesReferencia.and.returnValue(of({ count: 1, results: [
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
+      { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: '1.000', saldo_anterior: '6.000', saldo_posterior: '7.000', origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
+    ] }));
     estoqueApi.listMovimentacoes.and.returnValue(of({ count: 1, results: [
       { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: '2.000', saldo_anterior: '8.000', saldo_posterior: '6.000', origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
       { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: '1.000', saldo_anterior: '6.000', saldo_posterior: '7.000', origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
@@ -81,15 +86,17 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   });
 
   it('envia filtros de referência loja tipo e datas para o backend', () => {
-    component.search = 'REF-A';
+    component.movimentoReferenciaSelecionada = 'REF-A';
+    component.search = 'REF-A - Produto A';
     component.loja = '2';
     component.tipo = 'SAIDA';
+    component.tipoProduto = '3';
     component.dataInicio = '2026-08-24';
     component.dataFim = '2026-08-26';
     component.load();
 
-    expect(estoqueApi.listMovimentacoes).toHaveBeenCalledWith(jasmine.objectContaining({
-      search: 'REF-A',
+    expect(estoqueApi.movimentacoesReferencia).toHaveBeenCalledWith(jasmine.objectContaining({
+      referencia: 'REF-A',
       loja: '2',
       tipo: 'SAIDA',
       data_inicio: '2026-08-24',
@@ -105,8 +112,170 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(colecoesApi.list).not.toHaveBeenCalled();
     expect(coresApi.list).not.toHaveBeenCalled();
     expect(tamanhosApi.list).not.toHaveBeenCalled();
-    expect(estoqueApi.listMovimentacoes).toHaveBeenCalledWith(jasmine.objectContaining({ page_size: 1000 }));
+    expect(estoqueApi.movimentacoesReferencia).not.toHaveBeenCalled();
   });
+
+  it('sem referência selecionada não executa consulta geral de movimentações', () => {
+    estoqueApi.movimentacoesReferencia.calls.reset();
+    component.search = 'REF';
+    component.movimentoReferenciaSelecionada = '';
+
+    component.load();
+
+    expect(estoqueApi.movimentacoesReferencia).not.toHaveBeenCalled();
+    expect(component.movimentos).toEqual([]);
+  });
+
+  it('digitação parcial busca sugestões com debounce e não seleciona automaticamente', fakeAsync(() => {
+    estoqueApi.sugestoesReferencia.and.returnValue(of({ count: 1, results: [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans Wide Leg Serena', label: '27-01-01003 - Calça Jeans Wide Leg Serena' }
+    ] as any }));
+
+    component.onSearchTextChange('cal');
+    tick(299);
+    expect(estoqueApi.sugestoesReferencia).not.toHaveBeenCalled();
+
+    tick(1);
+    expect(estoqueApi.sugestoesReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'cal', loja: '' }));
+    expect(component.movimentoReferenciaSelecionada).toBe('');
+    expect(component.searchSuggestions).toContain('27-01-01003 - Calça Jeans Wide Leg Serena');
+  }));
+
+  it('selecionar sugestão por descrição grava referência correta e Atualizar filtro usa referência selecionada', () => {
+    estoqueApi.movimentacoesReferencia.calls.reset();
+    component.movimentoSugestoes = [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans Wide Leg Serena', label: '27-01-01003 - Calça Jeans Wide Leg Serena' }
+    ];
+
+    component.buscar('27-01-01003 - Calça Jeans Wide Leg Serena');
+
+    expect(component.movimentoReferenciaSelecionada).toBe('27-01-01003');
+    expect(estoqueApi.movimentacoesReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ referencia: '27-01-01003' }));
+  });
+
+  it('selecionar sugestão por EAN usa a referência do produto', () => {
+    estoqueApi.movimentacoesReferencia.calls.reset();
+    component.movimentoSugestoes = [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', ean: '7892701000310', label: '27-01-01003 - Calça Jeans - EAN 7892701000310' }
+    ];
+
+    component.buscar('27-01-01003 - Calça Jeans - EAN 7892701000310');
+
+    expect(component.movimentoReferenciaSelecionada).toBe('27-01-01003');
+    expect(estoqueApi.movimentacoesReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ referencia: '27-01-01003' }));
+  });
+
+  it('alteração manual do texto limpa seleção anterior', () => {
+    component.movimentoReferenciaSelecionada = '27-01-01003';
+    component.movimentoSugestoes = [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', label: '27-01-01003 - Calça Jeans' }
+    ];
+    component.movimentos = [{ referencia: '27-01-01003' } as any];
+
+    component.onSearchTextChange('vestido');
+
+    expect(component.movimentoReferenciaSelecionada).toBe('');
+    expect(component.movimentos).toEqual([]);
+  });
+
+  it('preenchimento de sugestão não limpa referência selecionada antes do evento search', () => {
+    component.movimentoReferenciaSelecionada = '27-01-01003';
+    component.movimentoSugestoes = [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', label: '27-01-01003 - Calça Jeans' }
+    ];
+    component.movimentos = [{ referencia: '27-01-01003' } as any];
+
+    component.onSearchTextChange('27-01-01003 - Calça Jeans');
+
+    expect(component.movimentoReferenciaSelecionada).toBe('27-01-01003');
+    expect(component.movimentos.length).toBe(1);
+  });
+
+  it('evento atrasado de sugestões após seleção não limpa referência nem tabela', fakeAsync(() => {
+    const sugestoes$ = new Subject<any>();
+    estoqueApi.sugestoesReferencia.and.returnValue(sugestoes$);
+    component.movimentoSugestoes = [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', label: '27-01-01003 - Calça Jeans' }
+    ];
+    component.onSearchTextChange('cal');
+    tick(300);
+
+    component.buscar('27-01-01003 - Calça Jeans');
+    component.movimentos = [{ referencia: '27-01-01003' } as any];
+    sugestoes$.next({ count: 1, results: [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', label: '27-01-01003 - Calça Jeans' }
+    ] });
+
+    expect(component.movimentoReferenciaSelecionada).toBe('27-01-01003');
+    expect(component.movimentos.length).toBe(1);
+  }));
+
+  it('resposta antiga de consulta não sobrescreve resultado mais recente', () => {
+    const consultaA$ = new Subject<any>();
+    const consultaB$ = new Subject<any>();
+    estoqueApi.movimentacoesReferencia.and.returnValues(consultaA$, consultaB$);
+    component.movimentoReferenciaSelecionada = 'REF-A';
+
+    component.load();
+    component.movimentoReferenciaSelecionada = 'REF-B';
+    component.load();
+    consultaB$.next({ count: 1, results: [{ referencia: 'REF-B', documento: 'B' }] });
+    consultaB$.complete();
+    consultaA$.next({ count: 1, results: [{ referencia: 'REF-A', documento: 'A' }] });
+    consultaA$.complete();
+
+    expect(component.movimentos.map(m => m.referencia)).toEqual(['REF-B']);
+  });
+
+  it('tabela permanece preenchida sem nova ação após ticks pendentes', fakeAsync(() => {
+    component.movimentoReferenciaSelecionada = 'REF-A';
+    component.movimentoSugestoes = [{ referencia: 'REF-A', descricao: 'Produto A', label: 'REF-A - Produto A' }];
+    component.buscar('REF-A - Produto A');
+
+    tick(600);
+
+    expect(component.movimentoReferenciaSelecionada).toBe('REF-A');
+    expect(component.movimentos.length).toBe(2);
+  }));
+
+  it('troca de loja não limpa referência selecionada indevidamente', () => {
+    component.movimentoReferenciaSelecionada = 'REF-A';
+    component.search = 'REF-A - Produto A';
+
+    component.loja = '2';
+    component.onLojaChange();
+
+    expect(component.movimentoReferenciaSelecionada).toBe('REF-A');
+    expect(estoqueApi.movimentacoesReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ referencia: 'REF-A', loja: '2' }));
+  });
+
+  it('autocomplete não chama endpoint de movimentação por referência sozinho', fakeAsync(() => {
+    estoqueApi.movimentacoesReferencia.calls.reset();
+
+    component.onSearchTextChange('cal');
+    tick(300);
+
+    expect(estoqueApi.sugestoesReferencia).toHaveBeenCalled();
+    expect(estoqueApi.movimentacoesReferencia).not.toHaveBeenCalled();
+  }));
+
+  it('fluxo real de digitar selecionar atualizar e processar debounce mantém resultado', fakeAsync(() => {
+    const sugestoes$ = new Subject<any>();
+    estoqueApi.sugestoesReferencia.and.returnValue(sugestoes$);
+    estoqueApi.movimentacoesReferencia.calls.reset();
+
+    component.onSearchTextChange('27-01');
+    tick(300);
+    sugestoes$.next({ count: 1, results: [
+      { referencia: '27-01-01003', descricao: 'Calça Jeans', label: '27-01-01003 - Calça Jeans' }
+    ] });
+    component.buscar('27-01-01003 - Calça Jeans');
+    tick(600);
+
+    expect(component.movimentoReferenciaSelecionada).toBe('27-01-01003');
+    expect(component.movimentos.map(m => m.referencia)).toEqual(['REF-A', 'REF-A']);
+    expect(estoqueApi.movimentacoesReferencia).not.toHaveBeenCalledWith(jasmine.objectContaining({ referencia: '' }));
+  }));
 
   it('modo Consulta por Referência não carrega movimentações', () => {
     estoqueApi.list.calls.reset();
@@ -123,7 +292,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(estoqueApi.listMovimentacoes).not.toHaveBeenCalled();
     expect(colecoesApi.list).toHaveBeenCalled();
     expect(estoqueApi.list).not.toHaveBeenCalled();
-    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', loja: '', saldo: 'todos', colecao: '' }));
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', loja: '', saldo: 'todos', colecao: '', tipo_produto: '' }));
     expect(produtosApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 500 }));
     expect(skusApi.list).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'REF-A', page_size: 1000 }));
   });
@@ -144,6 +313,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   it('envia coleção somente ao clicar em Buscar na consulta por referência', () => {
     estoqueApi.consultaReferencia.calls.reset();
     component.modo = 'matriz';
+    component.search = 'REF-A';
     component.colecao = '1';
 
     fixture.detectChanges();
@@ -152,6 +322,48 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     component.buscar(component.search);
 
     expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ colecao: '1' }));
+  });
+
+  it('envia filtro Revenda somente ao clicar em Atualizar filtro', () => {
+    estoqueApi.consultaReferencia.calls.reset();
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.tipoProduto = '1';
+
+    fixture.detectChanges();
+    expect(estoqueApi.consultaReferencia).not.toHaveBeenCalled();
+
+    component.buscar(component.search);
+
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ tipo_produto: '1' }));
+  });
+
+  it('envia filtro Coleção própria somente ao clicar em Atualizar filtro', () => {
+    estoqueApi.consultaReferencia.calls.reset();
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.tipoProduto = '3';
+
+    fixture.detectChanges();
+    expect(estoqueApi.consultaReferencia).not.toHaveBeenCalled();
+
+    component.buscar(component.search);
+
+    expect(estoqueApi.consultaReferencia).toHaveBeenCalledWith(jasmine.objectContaining({ tipo_produto: '3' }));
+  });
+
+  it('não renderiza resultado da consulta por referência sem referência digitada', () => {
+    component.modo = 'matriz';
+    component.search = '';
+    component.tipoProduto = '1';
+    component.consultaReferenciaRows = [
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 8, reservado: 2, disponivel: 6 } as any
+    ];
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.referencia-grade-table')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Informe uma referência ou EAN');
   });
 
   it('não exibe filtro Estação na consulta por referência', () => {
@@ -229,6 +441,7 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('usa determinísticamente a referência da sugestão selecionada', () => {
     spyOn(component, 'load');
+    component.modo = 'matriz';
     component.produtos = [
       { Idproduto: 1, referencia: 'REF-A', descricao: 'Produto A' } as any,
       { Idproduto: 2, referencia: 'REF-AB', descricao: 'Produto AB' } as any
@@ -268,61 +481,91 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     expect(component.search).toBe('');
   });
 
-  it('mantém comportamento global permitido quando nenhuma loja está selecionada', () => {
+  it('não carrega lista geral de produtos quando nenhuma referência está selecionada', () => {
+    produtosApi.list.calls.reset();
+    skusApi.list.calls.reset();
     component.modo = 'matriz';
-    component.loja = '';
-    component.produtos = [
-      { Idproduto: 1, referencia: 'REF-GLOBAL', descricao: 'Produto global' } as any
-    ];
+    component.search = '';
 
-    expect(component.searchSuggestions).toContain('REF-GLOBAL - Produto global');
+    component.load();
+
+    expect(produtosApi.list).not.toHaveBeenCalled();
+    expect(skusApi.list).not.toHaveBeenCalled();
   });
 
-  it('mostra estoque físico reservado e disponível na matriz por loja cor e tamanho', () => {
+  it('renderiza consulta por referência agrupada por loja e cor com tamanhos em colunas', () => {
     component.modo = 'matriz';
     component.search = 'REF-A';
     component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
-    component.cores = [{ Idcor: 1, Descricao: 'Azul' } as any];
-    component.tamanhos = [{ Idtamanho: 1, Tamanho: 'M' } as any];
-    component.skus = [{ ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any];
     component.consultaReferenciaRows = [
-      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 8, reservado: 2, disponivel: 6 } as any
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'P', tamanho_id: 1, fisico: 8, reservado: 2, disponivel: 6 } as any,
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000002', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tamanho_id: 2, fisico: 5, reservado: 0, disponivel: 5 } as any
     ];
 
-    (component as any).montarMatrizReferencia();
+    (component as any).montarGradeReferencia();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Físico');
-    expect(text).toContain('Reservado');
-    expect(text).toContain('Disponível');
-    expect(component.matrizSaldo(component.matrizRows[0], 1)).toEqual({ fisico: 8, reservado: 2, disponivel: 6 });
-    expect(component.matrizTotalGeral).toEqual({ fisico: 8, reservado: 2, disponivel: 6 });
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('.referencia-grade-table thead th') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+    expect(headers).toEqual(['Referência', 'Loja', 'Cor', 'P', 'M']);
+    expect(component.referenciaGradeRows.length).toBe(1);
+    expect(text).toContain('REF-A');
+    expect(text).toContain('Matriz');
+    expect(text).toContain('Azul');
+    expect(text).toContain('6');
+    expect(text).toContain('5');
+    expect(text).toContain('TOTAL');
+    expect(text).not.toContain('Físico');
+    expect(text).not.toContain('Reservado');
+    expect(fixture.nativeElement.querySelector('.matrix-table')).toBeNull();
   });
 
-  it('calcula disponível com reserva zero mantendo a matriz por tamanho', () => {
+  it('checkboxes físico e reservado mostram e escondem colunas sem nova consulta', () => {
     component.modo = 'matriz';
     component.search = 'REF-A';
     component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
-    component.cores = [{ Idcor: 1, Descricao: 'Azul' } as any];
-    component.tamanhos = [
-      { Idtamanho: 1, Tamanho: 'M' } as any,
-      { Idtamanho: 2, Tamanho: 'G' } as any
-    ];
-    component.skus = [
-      { ean13: '7890000000001', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 1 } as any,
-      { ean13: '7890000000002', codigo_item_ref: 'REF-A', idcor: 1, idtamanho: 2 } as any
-    ];
     component.consultaReferenciaRows = [
-      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 5, reservado: 0, disponivel: 5 } as any,
-      { loja: 1, loja_nome: 'Matriz', ean: '7890000000002', referencia: 'REF-A', cor: 'Azul', tamanho: 'G', fisico: 4, reservado: 1, disponivel: 3 } as any
+      { loja: 1, loja_nome: 'Matriz', ean: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tamanho_id: 1, fisico: 5, reservado: 1, disponivel: 4 } as any
+    ];
+    estoqueApi.consultaReferencia.calls.reset();
+
+    (component as any).montarGradeReferencia();
+    fixture.detectChanges();
+    component.mostrarFisicoReferencia = true;
+    component.mostrarReservadoReferencia = true;
+    fixture.detectChanges();
+
+    let cellText = fixture.nativeElement.querySelector('.referencia-grade-table tbody td.size-col')?.textContent || '';
+    expect(cellText).toContain('D: 4');
+    expect(cellText).toContain('F: 5');
+    expect(cellText).toContain('R: 1');
+    expect(estoqueApi.consultaReferencia).not.toHaveBeenCalled();
+
+    component.mostrarFisicoReferencia = false;
+    component.mostrarReservadoReferencia = false;
+    fixture.detectChanges();
+
+    cellText = fixture.nativeElement.querySelector('.referencia-grade-table tbody td.size-col')?.textContent || '';
+    expect(cellText).toContain('4');
+    expect(cellText).not.toContain('F: 5');
+    expect(cellText).not.toContain('R: 1');
+  });
+
+  it('mantém célula vazia para combinação sem SKU e soma total por tamanho', () => {
+    component.modo = 'matriz';
+    component.search = 'REF-A';
+    component.consultaReferenciaRows = [
+      { loja: 1, loja_nome: 'Matriz', ean: '789', referencia: 'REF-A', cor: 'Azul', tamanho: 'P', tamanho_id: 1, fisico: 5, reservado: 1, disponivel: 4 } as any,
+      { loja: 1, loja_nome: 'Matriz', ean: '790', referencia: 'REF-A', cor: 'Preto', tamanho: 'M', tamanho_id: 2, fisico: 3, reservado: 0, disponivel: 3 } as any
     ];
 
-    (component as any).montarMatrizReferencia();
+    (component as any).montarGradeReferencia();
+    fixture.detectChanges();
 
-    expect(component.matrizTamanhos.map(t => t.label)).toEqual(['G', 'M']);
-    expect(component.matrizRows.length).toBe(1);
-    expect(component.matrizTotalGeral).toEqual({ fisico: 9, reservado: 1, disponivel: 8 });
+    const firstRowCells = Array.from(fixture.nativeElement.querySelectorAll('.referencia-grade-table tbody tr:first-child td.size-col') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+    const totalCells = Array.from(fixture.nativeElement.querySelectorAll('.referencia-grade-table tfoot th.size-col') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
+    expect(firstRowCells).toEqual(['4', '-']);
+    expect(totalCells).toEqual(['4', '3']);
   });
 
   it('filtra coleções pela estação selecionada', () => {
@@ -509,11 +752,13 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('exporta consulta por referência como workbook XLSX real', () => {
     component.modo = 'matriz';
+    component.search = 'REF-A';
     component.lojas = [{ id: 1, nome_loja: 'Matriz' } as any];
     component.consultaReferenciaRows = [
-      { loja: 1, loja_nome: 'Matriz', ean: '789', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', fisico: 8, reservado: 2, disponivel: 6 } as any
+      { loja: 1, loja_nome: 'Matriz', ean: '789', referencia: 'REF-A', cor: 'Azul', tamanho: 'P', tamanho_id: 1, fisico: 8, reservado: 2, disponivel: 6 } as any,
+      { loja: 1, loja_nome: 'Matriz', ean: '790', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tamanho_id: 2, fisico: 3, reservado: 1, disponivel: 2 } as any
     ];
-    (component as any).montarMatrizReferencia();
+    (component as any).montarGradeReferencia();
     const link = { href: '', download: '', click: jasmine.createSpy('click') } as any;
     const aoaSpy = spyOn(XLSX.utils, 'aoa_to_sheet').and.callThrough();
     spyOn(document, 'createElement').and.returnValue(link);
@@ -526,8 +771,9 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     component.exportarExcel();
 
     expect(aoaSpy).toHaveBeenCalledWith([
-      ['Loja', 'Cor', 'M Físico', 'M Reservado', 'M Disponível', 'Total Físico', 'Total Reservado', 'Total Disponível'],
-      ['Matriz', 'Azul', 8, 2, 6, 8, 2, 6]
+      ['Referência', 'Loja', 'Cor', 'P', 'M'],
+      ['REF-A', 'Matriz', 'Azul', 6, 2],
+      ['TOTAL', '', '', 6, 2]
     ]);
     expect(link.download).toBe('estoque-referencia.xlsx');
     expect(link.download.endsWith('.csv')).toBeFalse();
@@ -560,6 +806,9 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   });
 
   it('exporta movimentação por referência quando houver dados na tela', () => {
+    component.movimentos = [
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: 2, saldo_anterior: 8, saldo_posterior: 6, origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any
+    ];
     const link = { href: '', download: '', click: jasmine.createSpy('click') } as any;
     const aoaSpy = spyOn(XLSX.utils, 'aoa_to_sheet').and.callThrough();
     spyOn(document, 'createElement').and.returnValue(link);
@@ -573,6 +822,10 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   });
 
   it('exibe saldo anterior e posterior vindos da API', () => {
+    component.movimentos = [
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: 2, saldo_anterior: 8, saldo_posterior: 6, origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any
+    ];
+    fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
 
     expect(text).toContain('Saldo anterior');
@@ -582,6 +835,11 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   });
 
   it('exibe origem vinda da API e usa fallback quando não houver origem', () => {
+    component.movimentos = [
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: 2, saldo_anterior: 8, saldo_posterior: 6, origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
+      { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: 1, saldo_anterior: 6, saldo_posterior: 7, origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
+    ];
+    fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     const origemCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(11)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
 
@@ -590,6 +848,11 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
   });
 
   it('exibe cor e tamanho vindos da API e usa fallback quando vazio', () => {
+    component.movimentos = [
+      { Idmovimento: 1, Idloja: 1, CodigodeBarra: '7890000000001', referencia: 'REF-A', cor: 'Azul', tamanho: 'M', tipo: 'SAIDA', quantidade: 2, saldo_anterior: 8, saldo_posterior: 6, origem: 'VENDA', data_movimento: '2026-08-25T10:00:00Z' } as any,
+      { Idmovimento: 2, Idloja: 1, CodigodeBarra: '7890000000002', referencia: 'REF-A', tipo: 'AJUSTE', quantidade: 1, saldo_anterior: 6, saldo_posterior: 7, origem: '', data_movimento: '2026-08-25T11:00:00Z' } as any
+    ];
+    fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
     const corCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(6)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
     const tamanhoCells = Array.from(fixture.nativeElement.querySelectorAll('tbody tr td:nth-child(7)') as NodeListOf<HTMLTableCellElement>).map(el => el.textContent?.trim());
@@ -602,6 +865,8 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
 
   it('limpa todos os filtros da movimentação por referência', () => {
     component.search = 'REF-A';
+    component.movimentoReferenciaSelecionada = 'REF-A';
+    component.movimentoSugestoes = [{ referencia: 'REF-A', descricao: 'Produto A', label: 'REF-A - Produto A' }];
     component.loja = '2';
     component.tipo = 'SAIDA';
     component.dataInicio = '2026-08-24';
@@ -613,19 +878,16 @@ describe('EstoqueConsultaComponent - movimentação por referência', () => {
     component.clearFilters();
 
     expect(component.search).toBe('');
+    expect(component.movimentoReferenciaSelecionada).toBe('');
+    expect(component.movimentoSugestoes).toEqual([]);
     expect(component.loja).toBe('');
     expect(component.tipo).toBe('');
+    expect(component.tipoProduto).toBe('');
     expect(component.dataInicio).toBe('');
     expect(component.dataFim).toBe('');
     expect(component.colecao).toBe('');
     expect(component.estacao).toBe('');
     expect(component.filtroSaldo).toBe('todos');
-    expect(estoqueApi.listMovimentacoes).toHaveBeenCalledWith(jasmine.objectContaining({
-      search: '',
-      loja: '',
-      tipo: '',
-      data_inicio: '',
-      data_fim: ''
-    }));
+    expect(estoqueApi.movimentacoesReferencia).not.toHaveBeenCalledWith(jasmine.objectContaining({ referencia: '' }));
   });
 });

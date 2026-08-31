@@ -85,4 +85,50 @@ describe('AuthService', () => {
     expect(service.getToken()).toBe('token-novo');
     expect(sessionStorage.getItem('access_session_id')).toBe('sessao-nova');
   });
+
+  it('administrador delegado possui acesso funcional total pelo payload efetivo', () => {
+    service.setCurrentUser({
+      id: 2,
+      username: 'delegado',
+      first_name: '',
+      last_name: '',
+      email: '',
+      type: 'Regular',
+      is_full_company_administrator: true,
+      is_superuser: false,
+      is_company_master: false,
+      modulos_disponiveis_empresa: ['fiscal'],
+      permissoes_efetivas: { fiscal: 'NONE' },
+      permissoes_processos: {},
+    });
+
+    expect(service.podeAcessarModulo('fiscal', true)).toBeTrue();
+    expect(service.empresaModuloHabilitado('fiscal_contabil')).toBeTrue();
+    expect(service.podeAcessarModulo('fiscal_contabil', true)).toBeTrue();
+    expect(service.podeAcessarModulo('financeiro', true)).toBeTrue();
+    expect(service.podeExcluirModulo('fiscal')).toBeTrue();
+    expect(service.podeProcesso('requisicoes.aprovar')).toBeTrue();
+    expect(service.permissaoCampo('produto.custo')).toBeTrue();
+    expect(service.isAdministrador()).toBeTrue();
+  });
+
+  it('resolve fiscal_contabil pelo modulo fiscal contratado para usuarios comuns', () => {
+    service.setCurrentUser({
+      id: 3,
+      username: 'fiscal',
+      first_name: '',
+      last_name: '',
+      email: '',
+      type: 'Regular',
+      is_full_company_administrator: false,
+      is_superuser: false,
+      is_company_master: false,
+      modulos_disponiveis_empresa: ['fiscal'],
+      permissoes_efetivas: { fiscal: 'VIEW' },
+      permissoes_processos: {},
+    });
+
+    expect(service.empresaModuloHabilitado('fiscal_contabil')).toBeTrue();
+    expect(service.podeAcessarModulo('fiscal_contabil')).toBeTrue();
+  });
 });

@@ -81,6 +81,7 @@ select {
 
 .matrix-panel {
   border-color: #b7c7dc;
+  padding: 14px 16px;
 }
 
 .movimentos-panel {
@@ -95,9 +96,30 @@ select {
   color: #111827;
 }
 
+.referencia-header {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 14px;
+}
+
+.referencia-header strong {
+  flex: 0 0 auto;
+  line-height: 28px;
+}
+
+.referencia-header .muted {
+  line-height: 28px;
+}
+
+.referencia-total {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 28px;
+}
+
 .muted {
   display: inline-block;
-  margin-left: 10px;
   color: #64748b;
   font-size: 0.9rem;
 }
@@ -123,6 +145,23 @@ select {
 
 .matrix-wrapper {
   max-height: 520px;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: 0.9rem;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.check-inline input {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
 }
 
 .table {
@@ -160,6 +199,79 @@ select {
 .matrix-table th:nth-child(2),
 .matrix-table td:nth-child(2) {
   min-width: 150px;
+}
+
+.referencia-table th,
+.referencia-table td {
+  white-space: nowrap;
+}
+
+.referencia-table th:first-child,
+.referencia-table td:first-child {
+  min-width: 130px;
+}
+
+.referencia-table th:nth-child(2),
+.referencia-table td:nth-child(2) {
+  min-width: 170px;
+}
+
+.referencia-grade-table {
+  table-layout: auto;
+}
+
+.referencia-grade-table th,
+.referencia-grade-table td {
+  white-space: nowrap;
+}
+
+.referencia-grade-table th:first-child,
+.referencia-grade-table td:first-child {
+  min-width: 128px;
+  width: 128px;
+}
+
+.referencia-grade-table th:nth-child(2),
+.referencia-grade-table td:nth-child(2) {
+  min-width: 150px;
+  width: 170px;
+}
+
+.referencia-grade-table th:nth-child(3),
+.referencia-grade-table td:nth-child(3) {
+  min-width: 116px;
+  width: 130px;
+}
+
+.referencia-grade-table .size-col {
+  min-width: 68px;
+  width: 72px;
+  text-align: center;
+}
+
+.referencia-grade-table td.size-col {
+  padding: 6px 8px;
+  line-height: 1.2;
+}
+
+.referencia-grade-table td.size-col span,
+.referencia-grade-table tfoot th.size-col span {
+  display: block;
+}
+
+.referencia-grade-table tfoot th {
+  position: sticky;
+  bottom: 0;
+  background: #dfeaf7;
+  border-top: 1px solid #cbd5e1;
+}
+
+.referencia-grade-table tfoot th:first-child {
+  color: #0f172a;
+}
+
+.referencia-grade-table .empty-cell {
+  color: #94a3b8;
 }
 
 .colecao-table th:first-child,

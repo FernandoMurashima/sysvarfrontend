@@ -5,10 +5,11 @@
       <app-search-suggest
         *ngIf="!isColecao()"
         class="toolbar-search"
-        [(value)]="search"
+        [value]="search"
         [suggestions]="searchSuggestions"
         [showActions]="false"
         placeholder="Referência ou EAN..."
+        (valueChange)="onSearchTextChange($event)"
         (search)="buscar($event)"
         (cleared)="clearFilters()"
       />
@@ -40,6 +41,11 @@
           {{ c.Codigo }} - {{ c.Descricao }}
         </option>
       </select>
+      <select *ngIf="isMatriz()" [(ngModel)]="tipoProduto">
+        <option value="">Todos os tipos</option>
+        <option value="1">Revenda</option>
+        <option value="3">Coleção própria</option>
+      </select>
       <select *ngIf="isMovimentos()" [(ngModel)]="tipo">
         <option value="">Todos os tipos</option>
         <option value="ENTRADA">Entrada</option>
@@ -50,77 +56,57 @@
       <input *ngIf="isMovimentos()" type="date" [(ngModel)]="dataInicio" />
       <input *ngIf="isMovimentos()" type="date" [(ngModel)]="dataFim" />
       <div class="toolbar-buttons">
-        <button class="btn primary" (click)="isColecao() ? load() : buscar(search)">Buscar</button>
+        <button class="btn primary" (click)="isColecao() ? load() : buscar(search)">Atualizar filtro</button>
         <button class="btn" (click)="clearFilters()">Limpar</button>
-        <button class="btn" *ngIf="matrizTemDados() || colecaoTemDados() || movimentos.length" (click)="exportarExcel()">Exportar Excel</button>
+        <button class="btn" *ngIf="(isMatriz() && consultaReferenciaRows.length) || colecaoTemDados() || movimentos.length" (click)="exportarExcel()">Exportar Excel</button>
         <button class="btn" [routerLink]="['/home']">Home</button>
       </div>
     </div>
   </header>
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
 
-  <section class="panel matrix-panel" *ngIf="isMatriz() && search.trim()">
-    <div class="list-header">
-      <div>
-        <strong>Matriz por referência</strong>
-        <span class="muted" *ngIf="referenciasMatriz.length">
-          {{ referenciasMatriz.join(', ') }}
-        </span>
-      </div>
-      <span *ngIf="matrizTemDados()">
-        Físico: {{ matrizTotalGeral.fisico }} | Reservado: {{ matrizTotalGeral.reservado }} | Disponível: {{ matrizTotalGeral.disponivel }}
-      </span>
+  <section class="panel matrix-panel" *ngIf="isMatriz() && !search.trim()">
+    <div class="empty" *ngIf="!loading">
+      Informe uma referência ou EAN para consultar a grade de estoque.
+    </div>
+  </section>
+
+  <section class="panel matrix-panel" *ngIf="consultaReferenciaAtiva()">
+    <div class="list-header referencia-header">
+      <strong>Consulta por referência</strong>
+      <span class="muted">Uma linha por loja e cor. Os tamanhos formam a grade da referência.</span>
+      <label class="check-inline" *ngIf="referenciaGradeTemDados()"><input type="checkbox" [(ngModel)]="mostrarFisicoReferencia" /><span>Mostrar estoque físico</span></label>
+      <label class="check-inline" *ngIf="referenciaGradeTemDados()"><input type="checkbox" [(ngModel)]="mostrarReservadoReferencia" /><span>Mostrar reservado</span></label>
+      <span class="referencia-total" *ngIf="!loading">SKUs: {{ consultaReferenciaRows.length }}</span>
     </div>
 
-    <div class="table-wrapper matrix-wrapper" *ngIf="matrizTemDados(); else matrizVaziaTpl">
-      <table class="table matrix-table">
+    <div class="table-wrapper matrix-wrapper" *ngIf="referenciaGradeTemDados(); else matrizVaziaTpl">
+      <table class="table referencia-grade-table">
         <thead>
           <tr>
+            <th>Referência</th>
             <th>Loja</th>
             <th>Cor</th>
-            <th *ngFor="let t of matrizTamanhos" class="num">{{ t.label }}</th>
-            <th class="num total-col">Total</th>
+            <th *ngFor="let tamanho of referenciaGradeTamanhos" class="num size-col">{{ tamanho.label }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of matrizRows">
+          <tr *ngFor="let row of referenciaGradeRows">
+            <td>{{ row.referencia || '-' }}</td>
             <td>{{ row.loja }}</td>
-            <td>{{ row.cor }}</td>
-            <td
-              *ngFor="let t of matrizTamanhos"
-              class="num"
-              [class.zero]="matrizSaldo(row, t.id).disponivel === 0">
-              <div class="saldo-stack">
-                <span><small>Físico</small>{{ matrizSaldo(row, t.id).fisico }}</span>
-                <span><small>Reservado</small>{{ matrizSaldo(row, t.id).reservado }}</span>
-                <strong><small>Disponível</small>{{ matrizSaldo(row, t.id).disponivel }}</strong>
-              </div>
-            </td>
-            <td class="num total-col">
-              <div class="saldo-stack">
-                <span><small>Físico</small>{{ row.total.fisico }}</span>
-                <span><small>Reservado</small>{{ row.total.reservado }}</span>
-                <strong><small>Disponível</small>{{ row.total.disponivel }}</strong>
-              </div>
+            <td>{{ row.cor || '-' }}</td>
+            <td *ngFor="let tamanho of referenciaGradeTamanhos" class="num size-col" [class.zero]="referenciaCell(row, tamanho.id).existe && numeroSaldo(referenciaCell(row, tamanho.id).disponivel) === 0" [class.empty-cell]="!referenciaCell(row, tamanho.id).existe">
+              <span *ngFor="let linha of referenciaCellLinhas(referenciaCell(row, tamanho.id))">{{ linha }}</span>
             </td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
-            <th colspan="2">Total</th>
-            <th *ngFor="let t of matrizTamanhos" class="num">
-              <div class="saldo-stack">
-                <span><small>Físico</small>{{ matrizTotais[t.id].fisico || 0 }}</span>
-                <span><small>Reservado</small>{{ matrizTotais[t.id].reservado || 0 }}</span>
-                <strong><small>Disponível</small>{{ matrizTotais[t.id].disponivel || 0 }}</strong>
-              </div>
-            </th>
-            <th class="num total-col">
-              <div class="saldo-stack">
-                <span><small>Físico</small>{{ matrizTotalGeral.fisico }}</span>
-                <span><small>Reservado</small>{{ matrizTotalGeral.reservado }}</span>
-                <strong><small>Disponível</small>{{ matrizTotalGeral.disponivel }}</strong>
-              </div>
+            <th>TOTAL</th>
+            <th></th>
+            <th></th>
+            <th *ngFor="let tamanho of referenciaGradeTamanhos" class="num size-col">
+              <span *ngFor="let linha of referenciaCellLinhas(referenciaTotalCell(tamanho.id))">{{ linha }}</span>
             </th>
           </tr>
         </tfoot>
@@ -129,7 +115,7 @@
 
     <ng-template #matrizVaziaTpl>
       <div class="empty" *ngIf="!loading">
-        Informe uma referência cadastrada para montar a matriz de loja, cor e tamanho.
+        Informe uma referência ou EAN para consultar a grade de estoque.
       </div>
     </ng-template>
   </section>
@@ -183,7 +169,9 @@
         </tbody>
       </table>
       <ng-template #vazioTpl>
-        <div class="empty" *ngIf="!loading">Nenhuma movimentação encontrada para os filtros informados.</div>
+        <div class="empty" *ngIf="!loading">
+          {{ movimentoReferenciaSelecionada ? 'Nenhuma movimentação encontrada para os filtros informados.' : 'Selecione uma referência para consultar as movimentações.' }}
+        </div>
       </ng-template>
     </div>
   </section>

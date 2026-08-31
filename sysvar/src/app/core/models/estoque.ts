@@ -65,6 +65,13 @@ export interface EstoqueMovimentacao {
   data_movimento?: string;
 }
 
+export interface EstoqueReferenciaSugestao {
+  referencia: string;
+  descricao: string;
+  ean?: string;
+  label: string;
+}
+
 export interface EstoqueConsultaReferenciaItem {
   referencia: string;
   produto: string;
@@ -72,10 +79,15 @@ export interface EstoqueConsultaReferenciaItem {
   loja_nome: string;
   cor: string;
   tamanho: string;
+  tamanho_id?: number | null;
   ean: string;
   fisico: number | string;
   reservado: number | string;
   disponivel: number | string;
+  tipo_produto?: string;
+  colecao?: number | null;
+  colecao_codigo?: string;
+  colecao_descricao?: string;
 }
 
 export interface EstoqueConsultaColecaoItem {

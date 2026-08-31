@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { Subject, forkJoin, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
 import * as XLSX from 'xlsx';
 import { Colecao } from '../../core/models/colecao';
 import { Cor } from '../../core/models/cor';
-import { Estoque, EstoqueConsultaColecaoItem, EstoqueConsultaReferenciaItem, EstoqueMovimentacao } from '../../core/models/estoque';
+import { Estoque, EstoqueConsultaColecaoItem, EstoqueConsultaReferenciaItem, EstoqueMovimentacao, EstoqueReferenciaSugestao } from '../../core/models/estoque';
 import { Loja } from '../../core/models/loja';
 import { Produto } from '../../core/models/produto';
 import { TamanhoModel } from '../../core/models/tamanho';
@@ -46,6 +47,24 @@ interface ColecaoReferenciaRow {
   total: MatrizSaldo;
 }
 
+interface ReferenciaGradeTamanho {
+  id: number;
+  label: string;
+}
+
+interface ReferenciaGradeCell extends MatrizSaldo {
+  ean: string;
+  existe: boolean;
+}
+
+interface ReferenciaGradeRow {
+  referencia: string;
+  lojaId: number;
+  loja: string;
+  cor: string;
+  saldos: Record<number, ReferenciaGradeCell>;
+}
+
 type ExcelCell = string | number;
 
 interface ExcelExportData {
@@ -62,7 +81,7 @@ interface ExcelExportData {
   templateUrl: './estoque-consulta.component.html',
   styleUrls: ['./estoque-consulta.component.css']
 })
-export class EstoqueConsultaComponent implements OnInit {
+export class EstoqueConsultaComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private api = inject(EstoqueService);
   private lojasApi = inject(LojasService);
@@ -79,12 +98,15 @@ export class EstoqueConsultaComponent implements OnInit {
   colecao = '';
   estacao = '';
   tipo = '';
+  tipoProduto: '' | '1' | '3' = '';
   dataInicio = '';
   dataFim = '';
   estoques: Estoque[] = [];
   consultaReferenciaRows: EstoqueConsultaReferenciaItem[] = [];
   consultaColecaoRowsApi: EstoqueConsultaColecaoItem[] = [];
   movimentos: EstoqueMovimentacao[] = [];
+  movimentoReferenciaSelecionada = '';
+  movimentoSugestoes: EstoqueReferenciaSugestao[] = [];
   lojas: Loja[] = [];
   produtos: Produto[] = [];
   colecoes: Colecao[] = [];
@@ -104,8 +126,20 @@ export class EstoqueConsultaComponent implements OnInit {
   colecaoLojaIds: number[] = [];
   colecaoTotaisLoja: Record<number, MatrizSaldo> = {};
   colecaoTotalGeral: MatrizSaldo = this.saldoVazio();
+  mostrarFisicoReferencia = false;
+  mostrarReservadoReferencia = false;
+  referenciaGradeTamanhos: ReferenciaGradeTamanho[] = [];
+  referenciaGradeRows: ReferenciaGradeRow[] = [];
+  referenciaGradeTotais: Record<number, MatrizSaldo> = {};
+  private sugestaoBusca$ = new Subject<string>();
+  private destroy$ = new Subject<void>();
+  private loadSeq = 0;
 
   get searchSuggestions(): string[] {
+    if (this.isMovimentos()) {
+      return this.movimentoSugestoes.map(s => s.label || this.produtoSugestaoReferencia(s));
+    }
+
     if (this.isMatriz() && (this.loja || this.colecao)) {
       const valoresLoja = [
         ...this.estoques.flatMap(e => [
@@ -154,20 +188,43 @@ export class EstoqueConsultaComponent implements OnInit {
 
   buscar(valor?: string): void {
     const termo = String(valor ?? this.search ?? '').trim();
+    if (this.isMovimentos()) {
+      this.selecionarReferenciaMovimento(termo);
+      this.load();
+      return;
+    }
     this.search = this.normalizarBuscaReferencia(termo);
     this.load();
   }
 
   ngOnInit(): void {
+    this.sugestaoBusca$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(termo => {
+        if (!this.isMovimentos() || termo.trim().length < 2) return of([]);
+        return this.api.sugestoesReferencia({ search: termo.trim(), loja: this.loja });
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(res => {
+      this.movimentoSugestoes = this.unwrap<EstoqueReferenciaSugestao>(res);
+    });
+
     this.route.data.subscribe(data => {
       this.modo = data['modo'] || 'matriz';
       this.load();
     });
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   load(): void {
+    const requestSeq = ++this.loadSeq;
     this.loading = true;
-    const consultaReferenciaParams = { search: this.search, loja: this.loja, saldo: this.filtroSaldo, colecao: this.colecao };
+    const consultaReferenciaParams = { search: this.search, loja: this.loja, saldo: this.filtroSaldo, colecao: this.colecao, tipo_produto: this.tipoProduto };
     const consultaColecaoParams = {
       estacao: this.estacao,
       colecao: this.colecao,
@@ -183,23 +240,24 @@ export class EstoqueConsultaComponent implements OnInit {
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500 }),
       estoque: this.isMatriz() && !!this.loja ? this.api.list({ loja: this.loja, search: this.search, colecao: this.colecao, page_size: 500 }) : of([]),
-      consultaReferencia: this.isMatriz() ? this.api.consultaReferencia(consultaReferenciaParams) : of([]),
+      consultaReferencia: this.isMatriz() && !!this.search.trim() ? this.api.consultaReferencia(consultaReferenciaParams) : of([]),
       consultaColecao: this.isColecao() ? this.api.consultaColecao(consultaColecaoParams) : of([]),
-      movimentos: this.isMovimentos() ? this.api.listMovimentacoes({
-        search: this.search,
+      movimentos: this.movimentosReferenciaAtiva() ? this.api.movimentacoesReferencia({
+        referencia: this.movimentoReferenciaSelecionada,
         loja: this.loja,
         tipo: this.tipo,
         data_inicio: this.dataInicio,
         data_fim: this.dataFim,
         page_size: 1000
       }) : of([]),
-      produtos: this.isMovimentos() ? of([]) : this.produtosApi.list(produtoParams),
+      produtos: this.isMovimentos() || (this.isMatriz() && !this.search.trim()) ? of([]) : this.produtosApi.list(produtoParams),
       colecoes: !this.isMovimentos() ? this.colecoesApi.list() : of([]),
-      skus: this.isColecao() ? of([]) : this.skusApi.list(skuParams),
-      cores: this.isMatriz() ? this.coresApi.list({ page_size: 1000, ordering: 'Descricao' }) : of([]),
-      tamanhos: this.isMatriz() ? this.tamanhosApi.list({ ordering: 'Tamanho' }) : of([])
+      skus: this.isColecao() || (this.isMatriz() && !this.search.trim()) ? of([]) : this.skusApi.list(skuParams),
+      cores: of([]),
+      tamanhos: of([])
     }).subscribe({
       next: res => {
+        if (requestSeq !== this.loadSeq) return;
         this.lojas = this.unwrap<Loja>(res.lojas);
         this.estoques = this.unwrap<Estoque>(res.estoque);
         this.consultaReferenciaRows = this.unwrap<EstoqueConsultaReferenciaItem>(res.consultaReferencia);
@@ -211,7 +269,7 @@ export class EstoqueConsultaComponent implements OnInit {
         this.cores = this.unwrap<Cor>(res.cores);
         this.tamanhos = this.unwrap<TamanhoModel>(res.tamanhos);
         this.produtosColecao = this.produtosDaColecaoSelecionada();
-        this.montarMatrizReferencia();
+        this.montarGradeReferencia();
         this.montarMatrizColecao();
         if (this.isMatriz() && this.loja && this.search && !this.referenciaExisteNaLojaSelecionada()) {
           this.search = '';
@@ -221,6 +279,7 @@ export class EstoqueConsultaComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
+        if (requestSeq !== this.loadSeq) return;
         this.loading = false;
         this.errorMsg = 'Falha ao consultar estoque.';
       }
@@ -229,10 +288,13 @@ export class EstoqueConsultaComponent implements OnInit {
 
   clearFilters(): void {
     this.search = '';
+    this.movimentoReferenciaSelecionada = '';
+    this.movimentoSugestoes = [];
     this.loja = '';
     this.colecao = '';
     this.estacao = '';
     this.tipo = '';
+    this.tipoProduto = '';
     this.dataInicio = '';
     this.dataFim = '';
     this.filtroSaldo = 'todos';
@@ -240,7 +302,27 @@ export class EstoqueConsultaComponent implements OnInit {
   }
 
   onLojaChange(): void {
+    if (this.isMovimentos()) {
+      this.movimentoSugestoes = [];
+      if (this.search.trim()) this.sugestaoBusca$.next(this.search);
+    }
     this.load();
+  }
+
+  onSearchTextChange(value: string): void {
+    this.search = value;
+    if (!this.isMovimentos()) return;
+    const selected = this.movimentoSugestoes.find(s => s.referencia === this.movimentoReferenciaSelecionada);
+    const selectedLabel = selected?.label || '';
+    const suggestionLabel = this.movimentoSugestoes.some(s =>
+      this.normalizarTexto(s.label) === this.normalizarTexto(value)
+    );
+    if (suggestionLabel) return;
+    if (this.movimentoReferenciaSelecionada && value !== selectedLabel && value !== this.movimentoReferenciaSelecionada) {
+      this.movimentoReferenciaSelecionada = '';
+      this.movimentos = [];
+    }
+    this.sugestaoBusca$.next(value);
   }
 
   private produtoSugestao(produto: Produto): string | null {
@@ -306,6 +388,10 @@ export class EstoqueConsultaComponent implements OnInit {
     return Number(value || 0);
   }
 
+  numeroSaldo(value: number | string | null | undefined): number {
+    return Number(value || 0);
+  }
+
   movimentoOrigem(item: EstoqueMovimentacao): string {
     const labels: Record<string, string> = {
       NFE: 'NF-e',
@@ -353,6 +439,14 @@ export class EstoqueConsultaComponent implements OnInit {
 
   matrizTemDados(): boolean {
     return this.matrizRows.length > 0 && this.matrizTamanhos.length > 0;
+  }
+
+  consultaReferenciaAtiva(): boolean {
+    return this.isMatriz() && !!this.search.trim();
+  }
+
+  movimentosReferenciaAtiva(): boolean {
+    return this.isMovimentos() && !!this.movimentoReferenciaSelecionada;
   }
 
   isMatriz(): boolean {
@@ -467,21 +561,137 @@ export class EstoqueConsultaComponent implements OnInit {
     }
 
     return {
-      headers: ['Loja', 'Cor', ...this.matrizTamanhos.flatMap(t => [`${t.label} Físico`, `${t.label} Reservado`, `${t.label} Disponível`]), 'Total Físico', 'Total Reservado', 'Total Disponível'],
-      rows: this.matrizRows.map(row => [
-        row.loja,
-        row.cor,
-        ...this.matrizTamanhos.flatMap(t => {
-          const saldo = this.matrizSaldo(row, t.id);
-          return [saldo.fisico, saldo.reservado, saldo.disponivel];
-        }),
-        row.total.fisico,
-        row.total.reservado,
-        row.total.disponivel
-      ]),
-      filename: 'estoque-referencia.xlsx',
-      sheetName: 'Referencia'
-    };
+        headers: ['Referência', 'Loja', 'Cor', ...this.referenciaGradeTamanhos.map(t => t.label)],
+        rows: [
+          ...this.referenciaGradeRows.map(row => [
+            row.referencia || '-',
+            row.loja,
+            row.cor || '-',
+            ...this.referenciaGradeTamanhos.map(t => this.valorExportacaoReferencia(row.saldos[t.id]))
+          ]),
+          ...(this.referenciaGradeRows.length ? [[
+            'TOTAL',
+            '',
+            '',
+            ...this.referenciaGradeTamanhos.map(t => this.valorExportacaoReferencia(this.referenciaGradeTotais[t.id] as ReferenciaGradeCell))
+          ]] : [])
+        ],
+        filename: 'estoque-referencia.xlsx',
+        sheetName: 'Referencia'
+      };
+  }
+
+  private selecionarReferenciaMovimento(valor: string): void {
+    const normalizado = this.normalizarTexto(valor);
+    const sugestao = this.movimentoSugestoes.find(s =>
+      this.normalizarTexto(s.label) === normalizado ||
+      this.normalizarTexto(s.referencia) === normalizado ||
+      this.normalizarTexto(s.ean) === normalizado
+    );
+    this.movimentoReferenciaSelecionada = sugestao?.referencia || '';
+    this.search = sugestao?.label || valor;
+    if (!this.movimentoReferenciaSelecionada) {
+      this.movimentos = [];
+    }
+  }
+
+  private produtoSugestaoReferencia(sugestao: EstoqueReferenciaSugestao): string {
+    const descricao = sugestao.descricao ? ` - ${sugestao.descricao}` : '';
+    const ean = sugestao.ean ? ` - EAN ${sugestao.ean}` : '';
+    return `${sugestao.referencia}${descricao}${ean}`;
+  }
+
+  referenciaGradeTemDados(): boolean {
+    return this.referenciaGradeRows.length > 0 && this.referenciaGradeTamanhos.length > 0;
+  }
+
+  referenciaCell(row: ReferenciaGradeRow, tamanhoId: number): ReferenciaGradeCell {
+    return row.saldos[tamanhoId] || this.referenciaCellVazia(false);
+  }
+
+  referenciaTotalCell(tamanhoId: number): MatrizSaldo {
+    return this.referenciaGradeTotais[tamanhoId] || this.saldoVazio();
+  }
+
+  referenciaCellLinhas(saldo?: MatrizSaldo | ReferenciaGradeCell): string[] {
+    if (!saldo || ('existe' in saldo && !saldo.existe)) return ['-'];
+    if (!this.mostrarFisicoReferencia && !this.mostrarReservadoReferencia) {
+      return [String(this.numeroSaldo(saldo.disponivel))];
+    }
+    const linhas = [`D: ${this.numeroSaldo(saldo.disponivel)}`];
+    if (this.mostrarFisicoReferencia) linhas.push(`F: ${this.numeroSaldo(saldo.fisico)}`);
+    if (this.mostrarReservadoReferencia) linhas.push(`R: ${this.numeroSaldo(saldo.reservado)}`);
+    return linhas;
+  }
+
+  private valorExportacaoReferencia(saldo?: MatrizSaldo | ReferenciaGradeCell): string | number {
+    if (!saldo || ('existe' in saldo && !saldo.existe)) return '-';
+    if (!this.mostrarFisicoReferencia && !this.mostrarReservadoReferencia) {
+      return this.numeroSaldo(saldo.disponivel);
+    }
+    const partes = [`D: ${this.numeroSaldo(saldo.disponivel)}`];
+    if (this.mostrarFisicoReferencia) partes.push(`F: ${this.numeroSaldo(saldo.fisico)}`);
+    if (this.mostrarReservadoReferencia) partes.push(`R: ${this.numeroSaldo(saldo.reservado)}`);
+    return partes.join(' | ');
+  }
+
+  private montarGradeReferencia(): void {
+    this.referenciaGradeTamanhos = [];
+    this.referenciaGradeRows = [];
+    this.referenciaGradeTotais = {};
+
+    if (!this.isMatriz() || !this.search.trim() || !this.consultaReferenciaRows.length) return;
+
+    const tamanhoMap = new Map<number, ReferenciaGradeTamanho>();
+    this.consultaReferenciaRows.forEach(row => {
+      const id = Number(row.tamanho_id || 0) || this.tamanhoFallbackId(row.tamanho || '');
+      if (!tamanhoMap.has(id)) tamanhoMap.set(id, { id, label: row.tamanho || 'Sem tamanho' });
+    });
+    this.referenciaGradeTamanhos = Array.from(tamanhoMap.values())
+      .sort((a, b) => a.id - b.id || this.ordenarTexto(a.label, b.label));
+
+    const rowMap = new Map<string, ReferenciaGradeRow>();
+    this.consultaReferenciaRows.forEach(item => {
+      const key = `${item.loja}|${item.cor || 'Sem cor'}`;
+      let row = rowMap.get(key);
+      if (!row) {
+        row = {
+          referencia: item.referencia || '',
+          lojaId: item.loja,
+          loja: item.loja_nome || this.lojaNome(item.loja),
+          cor: item.cor || 'Sem cor',
+          saldos: {}
+        };
+        this.referenciaGradeTamanhos.forEach(t => row!.saldos[t.id] = this.referenciaCellVazia(false));
+        rowMap.set(key, row);
+      }
+      const tamanhoId = Number(item.tamanho_id || 0) || this.tamanhoFallbackId(item.tamanho || '');
+      row.saldos[tamanhoId] = {
+        ean: item.ean || '',
+        existe: true,
+        fisico: Number(item.fisico || 0),
+        reservado: Number(item.reservado || 0),
+        disponivel: Number(item.disponivel || 0)
+      };
+    });
+
+    this.referenciaGradeRows = Array.from(rowMap.values())
+      .sort((a, b) => this.ordenarTexto(a.loja, b.loja) || this.ordenarTexto(a.cor, b.cor));
+
+    this.referenciaGradeTamanhos.forEach(t => {
+      this.referenciaGradeTotais[t.id] = this.referenciaGradeRows.reduce((total, row) => {
+        const cell = row.saldos[t.id];
+        return cell?.existe ? this.somarSaldos(total, cell) : total;
+      }, this.saldoVazio());
+    });
+  }
+
+  private tamanhoFallbackId(label: string): number {
+    return 100000 + Array.from(label || 'Sem tamanho').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  }
+
+  private referenciaCellVazia(existe: boolean): ReferenciaGradeCell {
+    return { ean: '', existe, fisico: 0, reservado: 0, disponivel: 0 };
   }
 
   private montarMatrizReferencia(): void {

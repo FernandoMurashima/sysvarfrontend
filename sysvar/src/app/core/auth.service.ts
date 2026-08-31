@@ -33,6 +33,7 @@ interface MeResponse {
   permissoes_campos?: Array<{ campo: string; pode_ver: boolean }>;
   is_platform_superuser?: boolean;
   is_company_master?: boolean;
+  is_full_company_administrator?: boolean;
   contrato?: {
     status: string;
     data_inicio: string;
@@ -73,6 +74,10 @@ export type ModuloEmpresa =
   | 'relatorios'
   | 'configuracoes'
   | 'auditoria';
+
+const MODULO_ALIASES: Partial<Record<ModuloEmpresa, ModuloEmpresa>> = {
+  fiscal_contabil: 'fiscal',
+};
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -196,17 +201,24 @@ export class AuthService {
     }
   }
 
+  private moduloBase(modulo: string): string {
+    return MODULO_ALIASES[modulo as ModuloEmpresa] || modulo;
+  }
+
   empresaModuloHabilitado(modulo: ModuloEmpresa): boolean {
     const user = this.getCurrentUser();
     if (user?.is_superuser || user?.is_platform_superuser) return true;
-    return (user?.modulos_disponiveis_empresa || []).includes(modulo);
+    const modulos = user?.modulos_disponiveis_empresa || [];
+    return modulos.includes(modulo) || modulos.includes(this.moduloBase(modulo) as ModuloEmpresa);
   }
 
   permissaoModulo(modulo?: string | null): 'NONE' | 'VIEW' | 'EDIT' | null {
     if (!modulo) return null;
     const user = this.getCurrentUser();
-    if (user?.is_superuser) return 'EDIT';
+    if (user?.is_superuser || user?.is_full_company_administrator) return 'EDIT';
     if (user?.permissoes_efetivas && modulo in user.permissoes_efetivas) return user.permissoes_efetivas[modulo];
+    const baseModulo = this.moduloBase(modulo);
+    if (user?.permissoes_efetivas && baseModulo in user.permissoes_efetivas) return user.permissoes_efetivas[baseModulo];
     return 'NONE';
   }
 
@@ -239,25 +251,25 @@ export class AuthService {
   isAdministrador(): boolean {
     const user = this.getCurrentUser();
     const tipo = (user?.type || this.getUserType() || '').toString().toLowerCase().trim();
-    return user?.is_superuser === true || tipo === 'admin' || tipo === 'administrador';
+    return user?.is_superuser === true || user?.is_full_company_administrator === true || tipo === 'admin' || tipo === 'administrador';
   }
 
   podeExcluirModulo(modulo?: string | null): boolean {
     const user = this.getCurrentUser();
-    if (user?.is_superuser || user?.is_company_master) return true;
+    if (user?.is_superuser || user?.is_company_master || user?.is_full_company_administrator) return true;
     return Boolean(user?.permissoes_processos?.[`modulo.${modulo}.excluir`]) && this.podeAcessarModulo(modulo, true) === true;
   }
 
   podeProcesso(codigo: string): boolean {
     const user = this.getCurrentUser();
-    if (user?.is_superuser || user?.is_company_master) return true;
+    if (user?.is_superuser || user?.is_company_master || user?.is_full_company_administrator) return true;
     return user?.permissoes_processos?.[codigo] === true;
   }
 
   permissaoCampo(campo: string): boolean | null {
     const user = this.getCurrentUser();
     if (user?.is_superuser) return true;
-    if (user?.is_company_master) return true;
+    if (user?.is_company_master || user?.is_full_company_administrator) return true;
     return user?.permissoes_processos?.[campo] ?? null;
   }
 }
