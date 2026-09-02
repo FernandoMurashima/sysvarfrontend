@@ -107,6 +107,14 @@ export class PacksComponent implements OnInit {
     return this.packs.find(p => p.id === this.selectedPackId) ?? this.selectedPack;
   }
 
+  get packSelecionadoBloqueado(): boolean {
+    return !!this.selectedPackDetalhe?.bloqueado_alteracao;
+  }
+
+  isPackBloqueado(p: PackModel | null | undefined): boolean {
+    return !!p?.bloqueado_alteracao;
+  }
+
   formModePack: 'new' | 'edit' | null = null;
   editingPackId: number | null = null;
   consultandoPack = false;
@@ -184,9 +192,9 @@ export class PacksComponent implements OnInit {
   selecionarPackLinha(p: PackModel): void { this.selectedPack = this.isSelectedPack(p) ? null : p; }
   isSelectedPack(p: PackModel): boolean { return !!this.selectedPack && this.selectedPack.id === p.id; }
   consultarPackSelecionado(): void { if (this.selectedPack) this.consultarPack(this.selectedPack); }
-  editarPackSelecionado(): void { if (this.selectedPack && this.podeEditarModulo) this.editarPack(this.selectedPack); }
+  editarPackSelecionado(): void { if (this.selectedPack && this.podeEditarModulo && !this.isPackBloqueado(this.selectedPack)) this.editarPack(this.selectedPack); }
   abrirItensSelecionado(): void { if (this.selectedPack?.id) this.selecionarPack(this.selectedPack.id, this.selectedPack.grade); }
-  excluirPackSelecionado(): void { if (this.selectedPack && this.podeExcluirModulo) this.excluirPack(this.selectedPack); }
+  excluirPackSelecionado(): void { if (this.selectedPack && this.podeExcluirModulo && !this.isPackBloqueado(this.selectedPack)) this.excluirPack(this.selectedPack); }
   toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
   toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
   restoreViewPreference(): void {
@@ -214,6 +222,17 @@ export class PacksComponent implements OnInit {
   }
 
   editarPack(p: PackModel) {
+    if (this.isPackBloqueado(p)) {
+      this.editingPackId = p.id ?? null;
+      this.consultandoPack = true;
+      this.formModePack = 'edit';
+      this.submitted = false;
+      this.formPack.reset({ nome: p.nome ?? '', grade: p.grade ?? null, ativo: !!p.ativo });
+      this.formPack.disable({ emitEvent: false });
+      this.successMsg = '';
+      this.errorMsg = '';
+      return;
+    }
     this.editingPackId = p.id ?? null;
     this.consultandoPack = false;
     this.formModePack = 'edit';
@@ -230,6 +249,10 @@ export class PacksComponent implements OnInit {
   }
 
   salvarPack() {
+    if (this.editingPackId && this.packSelecionadoBloqueado) {
+      this.errorMsg = 'Pack utilizado em Pedido de Compra. Alterações não são permitidas.';
+      return;
+    }
     this.submitted = true;
     if (this.formPack.invalid) { this.errorMsg = 'Revise os campos destacados.'; return; }
     this.saving = true; this.errorMsg = ''; this.successMsg = '';
@@ -264,6 +287,10 @@ export class PacksComponent implements OnInit {
   excluirPack(p: PackModel) {
     if (!this.podeExcluirModulo) return;
     if (!p.id) return;
+    if (this.isPackBloqueado(p)) {
+      this.errorMsg = 'Pack utilizado em Pedido de Compra. Alterações não são permitidas.';
+      return;
+    }
     this.excluirModal = {
       tipo: 'pack',
       titulo: `Excluir o pack "${p.nome || ('#' + p.id)}"?`,
@@ -366,6 +393,10 @@ export class PacksComponent implements OnInit {
 
   novoItem() {
     if (!this.selectedPackId) return;
+    if (this.packSelecionadoBloqueado) {
+      this.formItem.disable({ emitEvent: false });
+      return;
+    }
     this.editingItemId = null;
     this.consultandoItem = false;
     this.submittedSub = false;
@@ -382,10 +413,14 @@ export class PacksComponent implements OnInit {
   }
 
   consultarItemSelecionado(): void { if (this.selectedItem) this.consultarItem(this.selectedItem); }
-  editarItemSelecionado(): void { if (this.selectedItem && this.podeEditarModulo) this.editarItem(this.selectedItem); }
-  excluirItemSelecionado(): void { if (this.selectedItem && this.podeExcluirModulo) this.excluirItem(this.selectedItem); }
+  editarItemSelecionado(): void { if (this.selectedItem && this.podeEditarModulo && !this.packSelecionadoBloqueado) this.editarItem(this.selectedItem); }
+  excluirItemSelecionado(): void { if (this.selectedItem && this.podeExcluirModulo && !this.packSelecionadoBloqueado) this.excluirItem(this.selectedItem); }
 
   editarItem(it: PackItemModel) {
+    if (this.packSelecionadoBloqueado) {
+      this.consultarItem(it);
+      return;
+    }
     this.editingItemId = it.id ?? null;
     this.consultandoItem = false;
     this.submittedSub = false;
@@ -401,6 +436,10 @@ export class PacksComponent implements OnInit {
 
   salvarItem() {
     this.submittedSub = true;
+    if (this.packSelecionadoBloqueado) {
+      this.errorMsg = 'Pack utilizado em Pedido de Compra. Alterações não são permitidas.';
+      return;
+    }
     if (this.formItem.invalid || !this.selectedPackId) return;
 
     const raw = this.formItem.getRawValue();
@@ -427,6 +466,10 @@ export class PacksComponent implements OnInit {
   excluirItem(it: PackItemModel) {
     if (!this.podeExcluirModulo) return;
     if (!it.id) return;
+    if (this.packSelecionadoBloqueado) {
+      this.errorMsg = 'Pack utilizado em Pedido de Compra. Alterações não são permitidas.';
+      return;
+    }
     this.excluirModal = {
       tipo: 'item',
       titulo: 'Excluir este item do pack?',

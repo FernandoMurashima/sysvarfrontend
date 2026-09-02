@@ -32,11 +32,24 @@ type PrazoOption = { id: number; label: string };
 type CorOption = { id: number; label: string };
 type PackOption = { id: number; label: string; grade: number };
 
+export const PEDIDO_COMPRA_REVENDA_ITEM_COLUMNS = [
+  'Produto',
+  'Referência',
+  'Cor',
+  'Pack',
+  'Packs',
+  'Qtd',
+  'Preço',
+  'Desc',
+  'Total',
+] as const;
+
 interface PedidoCompraItemUI {
   id: number | null;
   pedido: number;
   produto: number | null;
   produto_referencia: string;
+  produto_descricao_reduzida?: string;
   cor: number | null;
   cor_nome: string;
   pack: number | null;
@@ -50,6 +63,21 @@ interface PedidoCompraItemUI {
   produto_tipo?: '' | '1' | '2' | '4';
   produto_label?: string;
   unidade_label?: string;
+}
+
+export function displayPedidoCompraItemProduto(it: {
+  produto_descricao_reduzida?: string | null;
+  produto_label?: string | null;
+  produto_referencia?: string | null;
+}): string {
+  return (it.produto_descricao_reduzida || it.produto_label || it.produto_referencia || '').trim() || '-';
+}
+
+export function displayPedidoCompraItemPack(it: {
+  pack_nome?: string | null;
+  pack?: number | null;
+}): string {
+  return (it.pack_nome || String(it.pack || '')).trim() || '-';
 }
 
 interface PedidoCompraParcelaUI {
@@ -282,6 +310,12 @@ export class PedidosCompraComponent implements OnInit {
   }
   get totalItensResumo(): number {
     return this.itens.reduce((acc, it) => acc + Number(it.total_item || 0), 0);
+  }
+  produtoItemLabel(it: PedidoCompraItemUI): string {
+    return displayPedidoCompraItemProduto(it);
+  }
+  packItemLabel(it: PedidoCompraItemUI): string {
+    return displayPedidoCompraItemPack(it);
   }
   get totalParcelas(): number {
     return this.parcelas.reduce((acc, p) => acc + Number(p.valor || 0), 0);
@@ -1570,6 +1604,7 @@ export class PedidosCompraComponent implements OnInit {
 
           const ref = (it.produto_referencia ?? it.referencia ?? '') as string;
           const desc = (it.produto_descricao ?? it.descricao_livre ?? '') as string;
+          const descReduzida = (it.produto_descricao_reduzida ?? '') as string;
 
           return {
             id: it.id,
@@ -1586,7 +1621,8 @@ export class PedidosCompraComponent implements OnInit {
             desconto_valor: Number(it.desconto_valor || 0),
             total_item: Number(it.total_item || 0),
             observacoes: it.observacoes ?? null,
-            produto_label: desc || ref || String(produtoId || ''),
+            produto_descricao_reduzida: descReduzida,
+            produto_label: descReduzida || desc || ref || String(produtoId || ''),
             unidade_label: it.unidade_descricao || '',
           } as PedidoCompraItemUI;
         });

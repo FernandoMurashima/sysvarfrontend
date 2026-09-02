@@ -209,7 +209,7 @@ textarea { resize: vertical; max-height: 34px; }
   display: flex;
   flex-direction: column;
 }
-.items-modal { width: min(1180px, calc(100vw - 28px)); }
+.items-modal { width: min(1280px, calc(100vw - 40px)); }
 .recebimentos-modal { width: min(1160px, calc(100vw - 28px)); }
 .payment-modal { width: min(980px, calc(100vw - 28px)); }
 .payment-form {
@@ -280,7 +280,32 @@ textarea { resize: vertical; max-height: 34px; }
   max-height: clamp(220px, 34vh, 420px);
   overflow: auto;
 }
-.items-table-area .table { min-width: 860px; }
+.items-table-area .table { min-width: 1120px; table-layout: fixed; }
+.items-table th,
+.items-table td {
+  padding: 5px 6px;
+  line-height: 1.2;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.items-table th { font-size: 12px; }
+.items-table td { font-size: 12.5px; }
+.text-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.col-item-produto { width: 27%; }
+.col-item-ref { width: 12%; }
+.col-item-cor { width: 13%; }
+.col-item-pack { width: 13%; text-align: left; }
+.col-item-packs { width: 6%; text-align: center; }
+.col-item-qtd { width: 6%; text-align: right; padding-right: 8px !important; }
+.col-item-money { width: 6.5%; text-align: right; padding-right: 8px !important; }
+.col-item-total { width: 8.5%; text-align: right; padding-right: 8px !important; }
 .payment-table-area {
   max-height: clamp(180px, 30vh, 340px);
   overflow: auto;

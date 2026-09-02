@@ -363,31 +363,33 @@
       </section>
 
       <div class="table-wrapper itens-wrapper items-table-area">
-        <table class="table" *ngIf="itens.length > 0; else itensEmptyTpl">
+        <table class="table items-table" *ngIf="itens.length > 0; else itensEmptyTpl">
           <thead>
             <tr>
-              <th>Produto</th>
-              <th *ngIf="isPedidoRevenda()">Cor</th>
-              <th *ngIf="isPedidoRevenda()">Pack</th>
-              <th *ngIf="isPedidoRevenda()">Packs</th>
+              <th class="col-item-produto">Produto</th>
+              <th *ngIf="isPedidoRevenda()" class="col-item-ref">Referência</th>
+              <th *ngIf="isPedidoRevenda()" class="col-item-cor">Cor</th>
+              <th *ngIf="isPedidoRevenda()" class="col-item-pack">Pack</th>
+              <th *ngIf="isPedidoRevenda()" class="col-item-packs">Packs</th>
               <th *ngIf="isPedidoUsoOuInsumo()">Unidade</th>
-              <th>Qtd</th>
-              <th>Preço</th>
-              <th>Desc</th>
-              <th>Total</th>
+              <th class="col-item-qtd">Qtd</th>
+              <th class="col-item-money">Preço</th>
+              <th class="col-item-money">Desc</th>
+              <th class="col-item-total">Total</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let it of itens" [class.selected]="itemSelecionado(it)" (click)="selecionarItem(it)" (dblclick)="consultarItemSelecionado()">
-              <td>{{ it.produto_label || it.produto_referencia }}</td>
-              <td *ngIf="isPedidoRevenda()">{{ it.cor_nome }}</td>
-              <td *ngIf="isPedidoRevenda()">{{ it.pack_nome }}</td>
-              <td *ngIf="isPedidoRevenda()">{{ it.n_packs }}</td>
+              <td class="text-ellipsis" [title]="it.produto_label || produtoItemLabel(it)">{{ produtoItemLabel(it) }}</td>
+              <td *ngIf="isPedidoRevenda()" class="text-ellipsis" [title]="it.produto_referencia">{{ it.produto_referencia || '-' }}</td>
+              <td *ngIf="isPedidoRevenda()" class="text-ellipsis" [title]="it.cor_nome">{{ it.cor_nome }}</td>
+              <td *ngIf="isPedidoRevenda()" class="text-ellipsis col-item-pack" [title]="packItemLabel(it)">{{ packItemLabel(it) }}</td>
+              <td *ngIf="isPedidoRevenda()" class="col-item-packs">{{ it.n_packs }}</td>
               <td *ngIf="isPedidoUsoOuInsumo()">{{ it.unidade_label || '-' }}</td>
-              <td>{{ it.quantidade | number : '1.0-3' }}</td>
-              <td>{{ it.preco_unit | number : '1.2-2' }}</td>
-              <td>{{ it.desconto_valor | number : '1.2-2' }}</td>
-              <td>{{ it.total_item | number : '1.2-2' }}</td>
+              <td class="col-item-qtd">{{ it.quantidade | number : '1.0-3' }}</td>
+              <td class="col-item-money">{{ it.preco_unit | number : '1.2-2' }}</td>
+              <td class="col-item-money">{{ it.desconto_valor | number : '1.2-2' }}</td>
+              <td class="col-item-total">{{ it.total_item | number : '1.2-2' }}</td>
             </tr>
           </tbody>
         </table>
