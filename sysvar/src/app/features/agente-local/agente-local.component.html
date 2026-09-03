@@ -1,0 +1,46 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Agente Local Sysvar</h1>
+    </div>
+    <div class="title-actions">
+      <button class="btn primary" type="button" (click)="gerarCodigo()" [disabled]="loading">
+        <i class="bi bi-shield-check"></i>
+        {{ codigoAtual ? 'Gerar novo código' : 'Gerar código de ativação' }}
+      </button>
+    </div>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="card form-panel agent-panel">
+    <div class="form-title">
+      <div>
+        <h3>Ativação do agente</h3>
+        <p>O Sysvar Local Agent conecta o computador da empresa ao Sysvar para monitorar localmente os XMLs de NF-e configurados. Para instalar ou ativar um novo agente, gere um código temporário e informe-o no instalador.</p>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="!codigoAtual">
+      <i class="bi bi-pc-display"></i>
+      <span>Nenhum código gerado nesta sessão.</span>
+    </div>
+
+    <div class="activation-code" *ngIf="codigoAtual">
+      <div>
+        <small>Código de ativação</small>
+        <strong>{{ codigoAtual.codigo }}</strong>
+      </div>
+      <div>
+        <small>Validade</small>
+        <span>{{ codigoAtual.expira_em | date:'short' }}</span>
+      </div>
+      <p>Este código é temporário, de uso único e expira em 15 minutos.</p>
+      <button class="btn" type="button" (click)="copiarCodigo()">
+        <i class="bi bi-clipboard"></i>
+        Copiar código
+      </button>
+    </div>
+  </section>
+</div>

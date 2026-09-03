@@ -83,6 +83,7 @@ import { DashboardFinanceiroComponent } from './features/dashboard-financeiro/da
 import { PerfisAcessoComponent } from './features/perfis-acesso/perfis-acesso.component';
 import { AuditoriaComponent } from './features/auditoria/auditoria.component';
 import { ChangePasswordRequiredComponent } from './features/change-password-required/change-password-required.component';
+import { AgenteLocalComponent } from './features/agente-local/agente-local.component';
 
 
 
@@ -183,6 +184,7 @@ export const routes: Routes = [
       { path: 'config/usuarios', component: UsuariosComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
+      { path: 'config/agente-local', component: AgenteLocalComponent, data: { roles: ['Admin', 'Diretor'] } },
 
       // ⬇️ rota de coleções
 

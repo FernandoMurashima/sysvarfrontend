@@ -46,6 +46,7 @@ export class ShellComponent {
         { label: 'Estabelecimento', link: '/lojas', icon: 'bi bi-shop', moduloEmpresa: 'operacional' },
         { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', moduloEmpresa: 'operacional' },
         { label: 'Perfis de acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', moduloEmpresa: 'operacional' },
+        { label: 'Agente Local Sysvar', link: '/config/agente-local', icon: 'bi bi-pc-display', roles: ['Admin', 'Diretor'] },
         { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', moduloEmpresa: 'auditoria' },
       ]
     },

@@ -1,0 +1,55 @@
+@import '../cores/cores.component.css';
+
+.agent-panel {
+  position: static;
+  width: auto;
+  max-height: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  padding: 18px 0;
+}
+
+.empty-state i {
+  font-size: 24px;
+}
+
+.activation-code {
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+  padding: 18px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.activation-code small {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.activation-code strong {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 28px;
+  letter-spacing: 0;
+  color: #0f172a;
+}
+
+.activation-code p {
+  margin: 0;
+  color: #475569;
+}
+
+.btn i {
+  margin-right: 6px;
+}

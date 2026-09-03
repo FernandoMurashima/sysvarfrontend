@@ -87,4 +87,47 @@ describe('ShellComponent menu lateral', () => {
     expect(component.visibleMenu.some(item => item.label === 'Fiscal e Contábil')).toBeFalse();
     expect(fixture.nativeElement.textContent).not.toContain('Fiscal e Contábil');
   });
+
+  it('mostra Agente Local Sysvar para Admin ou Diretor no menu Operacional', () => {
+    currentUser = {
+      id: 4,
+      username: 'admin',
+      type: 'Admin',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['operacional'],
+      permissoes_efetivas: { operacional: 'EDIT' },
+    };
+
+    let component = render();
+    let operacional = component.visibleMenu.find(item => item.label === 'Operacional');
+    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar' && child.link === '/config/agente-local')).toBeTrue();
+
+    currentUser = {
+      id: 5,
+      username: 'diretor',
+      type: 'Diretor',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['operacional'],
+      permissoes_efetivas: { operacional: 'VIEW' },
+    };
+    component = render();
+    operacional = component.visibleMenu.find(item => item.label === 'Operacional');
+    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeTrue();
+  });
+
+  it('oculta Agente Local Sysvar para Gerente', () => {
+    currentUser = {
+      id: 6,
+      username: 'gerente',
+      type: 'Gerente',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['operacional'],
+      permissoes_efetivas: { operacional: 'EDIT' },
+    };
+
+    const component = render();
+    const operacional = component.visibleMenu.find(item => item.label === 'Operacional');
+
+    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeFalse();
+  });
 });

@@ -31,6 +31,12 @@ describe('rotas operacionais', () => {
     const rota = shell?.children?.find(route => route.path === 'change-password-required');
     expect(rota?.data?.['allowPasswordChange']).toBeTrue();
   });
+
+  it('agente local exige Admin ou Diretor', () => {
+    const rota = shell?.children?.find(route => route.path === 'config/agente-local');
+    expect(rota?.data?.['roles']).toEqual(['Admin', 'Diretor']);
+    expect(rota?.data?.['moduloEmpresa']).toBeUndefined();
+  });
 });
 
 describe('rotas de compras', () => {
