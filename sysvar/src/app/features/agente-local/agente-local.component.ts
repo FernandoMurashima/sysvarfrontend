@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { finalize } from 'rxjs';
 
 import { CodigoAtivacaoAgenteLocal } from '../../core/models/agente-local';
 import { AgenteLocalService } from '../../core/services/agente-local.service';
@@ -23,7 +24,9 @@ export class AgenteLocalComponent {
     this.loading = true;
     this.errorMsg = '';
     this.successMsg = '';
-    this.api.gerarCodigoAtivacao().subscribe({
+    this.api.gerarCodigoAtivacao().pipe(
+      finalize(() => this.loading = false),
+    ).subscribe({
       next: (res) => {
         this.codigoAtual = res;
         this.successMsg = 'Código de ativação gerado.';
@@ -34,7 +37,6 @@ export class AgenteLocalComponent {
           ? 'Você não possui permissão para gerar códigos de ativação.'
           : 'Não foi possível gerar o código de ativação. Tente novamente.';
       },
-      complete: () => this.loading = false,
     });
   }
 
