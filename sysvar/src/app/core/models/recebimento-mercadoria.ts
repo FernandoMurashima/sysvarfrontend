@@ -30,6 +30,36 @@ export interface RecebimentoMercadoria {
   criado_em: string;
   atualizado_em: string;
   pedidos: PedidoRecebimentoMercadoria[];
+  conferencia_itens: RecebimentoMercadoriaConferenciaItem[];
+  conferencia_resumo: RecebimentoMercadoriaConferenciaResumo;
+}
+
+export interface RecebimentoMercadoriaConferenciaItem {
+  id: number;
+  recebimento: number;
+  pedido: number;
+  pedido_item: number;
+  produto: number;
+  produto_referencia: string | null;
+  produto_descricao: string;
+  cor: number;
+  cor_nome: string;
+  tamanho: number;
+  tamanho_nome: string;
+  produto_detalhe: number;
+  ean: string | null;
+  quantidade_esperada: string;
+  quantidade_recebida: string;
+  diferenca: string;
+  situacao: 'OK' | 'FALTA' | 'SOBRA';
+}
+
+export interface RecebimentoMercadoriaConferenciaResumo {
+  quantidade_esperada_total: string;
+  quantidade_recebida_total: string;
+  diferenca_total: string;
+  quantidade_skus: number;
+  quantidade_skus_com_divergencia: number;
 }
 
 export interface PaginatedResponse<T> {

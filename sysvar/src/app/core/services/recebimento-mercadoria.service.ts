@@ -30,6 +30,14 @@ export class RecebimentoMercadoriaService {
     return this.http.post<RecebimentoMercadoria>(`${this.base}${id}/vincular-pedidos/`, { pedidos });
   }
 
+  gerarConferencia(id: number): Observable<RecebimentoMercadoria> {
+    return this.http.post<RecebimentoMercadoria>(`${this.base}${id}/gerar-conferencia/`, {});
+  }
+
+  salvarConferencia(id: number, itens: Array<{ id: number; quantidade_recebida: string | number }>): Observable<RecebimentoMercadoria> {
+    return this.http.post<RecebimentoMercadoria>(`${this.base}${id}/salvar-conferencia/`, { itens });
+  }
+
   private params(params?: Record<string, string | number | null | undefined>): HttpParams {
     let hp = new HttpParams();
     Object.entries(params || {}).forEach(([key, value]) => {

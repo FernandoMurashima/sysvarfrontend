@@ -47,4 +47,18 @@ describe('RecebimentoMercadoriaService', () => {
     expect(salvar.request.body).toEqual({ pedidos: [1, 2] });
     salvar.flush({ id: 3, pedidos: [] });
   });
+
+  it('gera e salva conferencia fisica', () => {
+    service.gerarConferencia(3).subscribe();
+    const gerar = http.expectOne(`${base}3/gerar-conferencia/`);
+    expect(gerar.request.method).toBe('POST');
+    expect(gerar.request.body).toEqual({});
+    gerar.flush({ id: 3, conferencia_itens: [] });
+
+    service.salvarConferencia(3, [{ id: 8, quantidade_recebida: '2' }]).subscribe();
+    const salvar = http.expectOne(`${base}3/salvar-conferencia/`);
+    expect(salvar.request.method).toBe('POST');
+    expect(salvar.request.body).toEqual({ itens: [{ id: 8, quantidade_recebida: '2' }] });
+    salvar.flush({ id: 3, conferencia_itens: [] });
+  });
 });

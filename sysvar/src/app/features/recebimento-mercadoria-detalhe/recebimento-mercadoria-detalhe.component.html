@@ -83,6 +83,75 @@
     </ng-template>
   </section>
 
+  <section class="content-card" *ngIf="recebimento">
+    <div class="card-header split">
+      <div>
+        <h2>Conferência física</h2>
+        <p *ngIf="conferenciaGerada()">
+          {{ recebimento.conferencia_resumo.quantidade_skus }} SKU(s) · esperado {{ recebimento.conferencia_resumo.quantidade_esperada_total }} · recebido {{ recebimento.conferencia_resumo.quantidade_recebida_total }}
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="btn primary" type="button" *ngIf="!conferenciaGerada()" (click)="gerarConferencia()" [disabled]="gerandoConferencia">
+          <i class="bi bi-grid-3x3-gap"></i>
+          Gerar conferência
+        </button>
+        <button class="btn primary" type="button" *ngIf="conferenciaGerada()" (click)="salvarConferencia()" [disabled]="salvandoConferencia">
+          <i class="bi bi-save"></i>
+          Salvar conferência
+        </button>
+      </div>
+    </div>
+
+    <div class="conference-summary" *ngIf="conferenciaGerada()">
+      <div><span>Esperado</span><strong>{{ recebimento.conferencia_resumo.quantidade_esperada_total }}</strong></div>
+      <div><span>Recebido</span><strong>{{ recebimento.conferencia_resumo.quantidade_recebida_total }}</strong></div>
+      <div><span>Diferença</span><strong>{{ recebimento.conferencia_resumo.diferenca_total }}</strong></div>
+      <div><span>Divergências</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus_com_divergencia }}</strong></div>
+    </div>
+
+    <div class="table-wrapper" *ngIf="conferenciaGerada(); else conferenciaVaziaTpl">
+      <table class="table conference-table">
+        <thead>
+          <tr>
+            <th>Referência</th>
+            <th>Produto</th>
+            <th>Cor</th>
+            <th>Tamanho</th>
+            <th>EAN</th>
+            <th>Esperado</th>
+            <th>Recebido</th>
+            <th>Diferença</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of recebimento.conferencia_itens; trackBy: trackConferenciaById">
+            <td>{{ item.produto_referencia || '-' }}</td>
+            <td>{{ item.produto_descricao }}</td>
+            <td>{{ item.cor_nome }}</td>
+            <td>{{ item.tamanho_nome }}</td>
+            <td>{{ item.ean || '-' }}</td>
+            <td>{{ item.quantidade_esperada }}</td>
+            <td>
+              <input class="qty-input" type="number" min="0" step="1" [(ngModel)]="item.quantidade_recebida" />
+            </td>
+            <td>
+              <span class="diff-badge" [class.ok]="diferenca(item) === 0" [class.falta]="diferenca(item) < 0" [class.sobra]="diferenca(item) > 0">
+                {{ diferenca(item) }} · {{ situacaoDiferenca(item) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #conferenciaVaziaTpl>
+      <div class="empty-state">
+        <i class="bi bi-grid-3x3-gap"></i>
+        <span>Conferência física ainda não gerada.</span>
+      </div>
+    </ng-template>
+  </section>
+
   <div class="loading" *ngIf="loading">Carregando recebimento...</div>
 
   <div class="modal-backdrop" *ngIf="modalPedidosAberto">

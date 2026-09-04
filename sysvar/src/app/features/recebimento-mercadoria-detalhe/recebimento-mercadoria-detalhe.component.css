@@ -38,6 +38,18 @@
   font-size: 0.82rem;
 }
 
+.card-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .receipt-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -129,6 +141,86 @@
   text-align: right;
 }
 
+.conference-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.conference-summary div {
+  padding: 14px 18px;
+  border-right: 1px solid #eef2f7;
+}
+
+.conference-summary div:last-child {
+  border-right: 0;
+}
+
+.conference-summary span {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.conference-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.conference-table th:nth-child(6),
+.conference-table th:nth-child(7),
+.conference-table th:nth-child(8),
+.conference-table td:nth-child(6),
+.conference-table td:nth-child(7),
+.conference-table td:nth-child(8) {
+  text-align: right;
+}
+
+.qty-input {
+  width: 96px;
+  height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  text-align: right;
+}
+
+.qty-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.diff-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.diff-badge.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.diff-badge.falta {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.diff-badge.sobra {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .empty-state {
   display: flex;
   min-height: 148px;
@@ -194,6 +286,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .conference-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .field:nth-child(4n) {
     border-right: 1px solid #eef2f7;
   }
@@ -213,6 +309,15 @@
 
   .receipt-grid {
     grid-template-columns: 1fr;
+  }
+
+  .conference-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .conference-summary div {
+    border-right: 0;
+    border-bottom: 1px solid #eef2f7;
   }
 
   .field,
