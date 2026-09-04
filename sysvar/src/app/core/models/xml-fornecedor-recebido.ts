@@ -29,6 +29,8 @@ export interface XmlFornecedorRecebido {
   destinatario_documento: string;
   destinatario_nome: string;
   valor_total: string;
+  quantidade_total_faturada: string | null;
+  unidade_comercial: string;
   situacao_fiscal: SituacaoFiscalXmlFornecedor;
   status_operacional: StatusOperacionalXmlFornecedor;
   caminho_origem_local: string;

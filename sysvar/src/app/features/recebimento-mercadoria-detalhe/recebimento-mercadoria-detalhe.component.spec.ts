@@ -38,13 +38,19 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     status: 'ABERTO',
     status_label: 'Aberto',
     criado_em: '2026-09-04T09:00:00-03:00',
-    xml_fornecedor_dados: { numero: '123', serie: '1', chave_acesso: '35260822345678000195550010000001234567890121', valor_total: '25.00' },
+    xml_fornecedor_dados: { numero: '123', serie: '1', chave_acesso: '35260822345678000195550010000001234567890121', valor_total: '25.00', quantidade_total_faturada: '5.000', unidade_comercial: 'UN' },
     pedidos: [pedido1],
     conferencia_itens: [],
     conferencia_resumo: {
       quantidade_esperada_total: '0',
       quantidade_recebida_total: '0',
       diferenca_total: '0',
+      quantidade_pedido_total: '2.000',
+      quantidade_nfe_total: null,
+      quantidade_fisica_total: '0',
+      diferenca_nfe_pedido: null,
+      diferenca_fisico_nfe: null,
+      diferenca_fisico_pedido: '-2.000',
       quantidade_skus: 0,
       quantidade_skus_com_divergencia: 0,
     },
@@ -64,6 +70,12 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
         quantidade_esperada_total: '4.000',
         quantidade_recebida_total: '3.000',
         diferenca_total: '-1.000',
+        quantidade_pedido_total: '4.000',
+        quantidade_nfe_total: '5.000',
+        quantidade_fisica_total: '3.000',
+        diferenca_nfe_pedido: '1.000',
+        diferenca_fisico_nfe: '-2.000',
+        diferenca_fisico_pedido: '-1.000',
         quantidade_skus: 1,
         quantidade_skus_com_divergencia: 1,
       },
@@ -75,6 +87,12 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
         quantidade_esperada_total: '4.000',
         quantidade_recebida_total: '4.000',
         diferenca_total: '0.000',
+        quantidade_pedido_total: '4.000',
+        quantidade_nfe_total: '5.000',
+        quantidade_fisica_total: '4.000',
+        diferenca_nfe_pedido: '1.000',
+        diferenca_fisico_nfe: '-1.000',
+        diferenca_fisico_pedido: '0.000',
         quantidade_skus: 1,
         quantidade_skus_com_divergencia: 0,
       },
@@ -121,18 +139,37 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(component.errorMsg).toBe('Não foi possível carregar os pedidos elegíveis.');
   });
 
-  it('gera conferencia e renderiza grade com EAN ausente', () => {
+  it('gera conferencia e mantem grade fora da pagina principal', () => {
     component.gerarConferencia();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
     expect(api.gerarConferencia).toHaveBeenCalledWith(8);
+    expect(text).toContain('Qtd pedido');
+    expect(text).toContain('Qtd NF-e');
+    expect(text).toContain('Qtd física');
+    expect(text).toContain('Abrir conferência');
+    expect(text).not.toContain('Referência');
+    expect(text).not.toContain('REF001');
+  });
+
+  it('abre modal grande com grade de conferencia e nfe apenas no resumo', () => {
+    component.gerarConferencia();
+    fixture.detectChanges();
+    component.abrirConferencia();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(component.modalConferenciaAberto).toBeTrue();
+    expect(text).toContain('Conferência física — Recebimento #8');
+    expect(text).toContain('NF-e: 5.000');
+    expect(text).toContain('Referência');
     expect(text).toContain('REF001');
     expect(text).toContain('Camiseta');
     expect(text).toContain('Azul');
     expect(text).toContain('M');
     expect(text).toContain('Falta');
-    expect(text).toContain('-');
+    expect(fixture.nativeElement.querySelectorAll('.conference-table th').length).toBe(8);
   });
 
   it('edita recebido, calcula diferenca e salva conferencia', () => {
@@ -145,6 +182,21 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     component.salvarConferencia();
 
     expect(api.salvarConferencia).toHaveBeenCalledWith(8, [{ id: 10, quantidade_recebida: '5' }]);
+  });
+
+  it('fecha modal de conferencia e mostra nfe sem quantidade como traco', () => {
+    component.recebimento = {
+      ...recebimento,
+      conferencia_itens: [conferenciaItem],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, quantidade_nfe_total: null, quantidade_skus: 1 },
+    };
+    component.abrirConferencia();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('NF-e: -');
+    component.fecharConferencia();
+
+    expect(component.modalConferenciaAberto).toBeFalse();
   });
 
   it('exibe erro de API ao gerar conferencia', () => {

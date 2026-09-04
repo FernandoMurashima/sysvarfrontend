@@ -22,6 +22,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit {
   pedidosElegiveis: PedidoRecebimentoMercadoria[] = [];
   selecionados = new Set<number>();
   modalPedidosAberto = false;
+  modalConferenciaAberto = false;
   loading = false;
   loadingPedidos = false;
   saving = false;
@@ -103,6 +104,15 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit {
     });
   }
 
+  abrirConferencia(): void {
+    if (!this.conferenciaGerada()) return;
+    this.modalConferenciaAberto = true;
+  }
+
+  fecharConferencia(): void {
+    this.modalConferenciaAberto = false;
+  }
+
   diferenca(item: RecebimentoMercadoriaConferenciaItem): number {
     return Number(item.quantidade_recebida || 0) - Number(item.quantidade_esperada || 0);
   }
@@ -115,6 +125,11 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit {
 
   conferenciaGerada(): boolean {
     return !!this.recebimento?.conferencia_itens?.length;
+  }
+
+  valorResumo(campo: keyof RecebimentoMercadoria['conferencia_resumo']): string {
+    const valor = this.recebimento?.conferencia_resumo?.[campo];
+    return valor === null || valor === undefined || valor === '' ? '-' : String(valor);
   }
 
   nfe(): string {

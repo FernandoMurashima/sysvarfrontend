@@ -255,6 +255,23 @@
   min-width: 920px;
 }
 
+.conference-modal-card {
+  width: 95vw;
+  max-height: calc(100vh - 40px);
+}
+
+.conference-modal-table {
+  max-height: min(68vh, 680px);
+}
+
+.conference-modal-table .table {
+  min-width: 980px;
+}
+
+.modal-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .modal-table th:first-child,
 .modal-table td:first-child {
   width: 48px;

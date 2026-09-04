@@ -58,6 +58,12 @@ export interface RecebimentoMercadoriaConferenciaResumo {
   quantidade_esperada_total: string;
   quantidade_recebida_total: string;
   diferenca_total: string;
+  quantidade_pedido_total: string;
+  quantidade_nfe_total: string | null;
+  quantidade_fisica_total: string;
+  diferenca_nfe_pedido: string | null;
+  diferenca_fisico_nfe: string | null;
+  diferenca_fisico_pedido: string;
   quantidade_skus: number;
   quantidade_skus_com_divergencia: number;
 }
