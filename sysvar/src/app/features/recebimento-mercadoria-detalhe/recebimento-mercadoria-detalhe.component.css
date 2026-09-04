@@ -238,6 +238,18 @@
   font-size: 1.75rem;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.45);
+}
+
 .modal-card {
   width: min(1120px, calc(100vw - 28px));
   max-height: calc(100vh - 56px);
@@ -245,9 +257,14 @@
   flex-direction: column;
   border-radius: 8px;
   overflow: hidden;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
 }
 
 .modal-table {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: min(58vh, 540px);
 }
 
@@ -261,7 +278,9 @@
 }
 
 .conference-modal-table {
-  max-height: min(68vh, 680px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .conference-modal-table .table {

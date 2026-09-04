@@ -167,7 +167,13 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
+    const backdrop = fixture.nativeElement.querySelector('.modal-backdrop');
+    const modalCard = fixture.nativeElement.querySelector('.conference-modal-card');
+
     expect(component.modalConferenciaAberto).toBeTrue();
+    expect(backdrop).withContext('modal de conferencia deve renderizar backdrop').not.toBeNull();
+    expect(modalCard).withContext('modal de conferencia deve manter card dedicado').not.toBeNull();
+    expect(backdrop?.contains(modalCard)).toBeTrue();
     expect(text).toContain('Conferência física — Recebimento #8');
     expect(text).toContain('NF-e: 5.000');
     expect(text).toContain('Referência');
@@ -201,9 +207,13 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('NF-e: -');
-    component.fecharConferencia();
+    const fecharButton = Array.from(fixture.nativeElement.querySelectorAll('.conference-modal-card .modal-footer .btn'))
+      .find((button: any) => button.textContent.includes('Fechar')) as HTMLButtonElement;
+    fecharButton.click();
+    fixture.detectChanges();
 
     expect(component.modalConferenciaAberto).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.modal-backdrop')).toBeNull();
   });
 
   it('exibe erro de API ao gerar conferencia', () => {
