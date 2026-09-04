@@ -32,6 +32,8 @@ export interface RecebimentoMercadoria {
   pedidos: PedidoRecebimentoMercadoria[];
   conferencia_itens: RecebimentoMercadoriaConferenciaItem[];
   conferencia_resumo: RecebimentoMercadoriaConferenciaResumo;
+  termo_encerramento?: RecebimentoMercadoriaTermo | null;
+  pode_encerrar_conferencia?: boolean;
 }
 
 export interface RecebimentoMercadoriaConferenciaItem {
@@ -66,6 +68,30 @@ export interface RecebimentoMercadoriaConferenciaResumo {
   diferenca_fisico_pedido: string;
   quantidade_skus: number;
   quantidade_skus_com_divergencia: number;
+}
+
+export interface RecebimentoMercadoriaTermo {
+  id: number;
+  encerrado_em: string;
+  encerrado_por_nome: string;
+  observacao_divergencia: string;
+  possui_divergencia: boolean;
+  hash_sha256: string;
+  snapshot: RecebimentoMercadoriaTermoSnapshot;
+  criado_em: string;
+}
+
+export interface RecebimentoMercadoriaTermoSnapshot {
+  recebimento?: Record<string, any>;
+  xml_nfe?: Record<string, any>;
+  estabelecimento?: Record<string, any>;
+  pedidos_vinculados?: Array<Record<string, any>>;
+  totais?: Record<string, any>;
+  contagem_operacional?: Record<string, any>;
+  conferencia_sku?: Array<Record<string, any>>;
+  divergencias?: { faltas?: Array<Record<string, any>>; sobras?: Array<Record<string, any>> };
+  usuario?: Record<string, any>;
+  observacao?: string;
 }
 
 export interface PaginatedResponse<T> {

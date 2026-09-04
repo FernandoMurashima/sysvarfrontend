@@ -37,13 +37,18 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   selecionados = new Set<number>();
   modalPedidosAberto = false;
   modalConferenciaAberto = false;
+  modalEncerramentoAberto = false;
+  modalTermoAberto = false;
   loading = false;
   loadingPedidos = false;
   saving = false;
   gerandoConferencia = false;
   salvandoConferencia = false;
+  encerrandoConferencia = false;
   errorMsg = '';
+  encerramentoErrorMsg = '';
   eanBipagem = '';
+  observacaoDivergencia = '';
   ultimaLeitura: UltimaLeituraConferencia | null = null;
   conferenciaItemDestacadoId: number | null = null;
   alteracoesPendentes = 0;
@@ -74,7 +79,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   abrirPedidos(): void {
-    if (!this.recebimento) return;
+    if (!this.recebimento || this.recebimento.status === 'CONCLUIDO') return;
     this.modalPedidosAberto = true;
     this.loadingPedidos = true;
     this.errorMsg = '';
@@ -94,7 +99,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   salvarPedidos(): void {
-    if (!this.recebimento) return;
+    if (!this.recebimento || this.recebimento.status === 'CONCLUIDO') return;
     this.saving = true;
     this.errorMsg = '';
     this.api.vincularPedidos(this.recebimento.id, Array.from(this.selecionados)).pipe(finalize(() => this.saving = false)).subscribe({
@@ -107,7 +112,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   gerarConferencia(): void {
-    if (!this.recebimento) return;
+    if (!this.recebimento || this.recebimento.status === 'CONCLUIDO') return;
     this.gerandoConferencia = true;
     this.errorMsg = '';
     this.api.gerarConferencia(this.recebimento.id).pipe(finalize(() => this.gerandoConferencia = false)).subscribe({
@@ -123,7 +128,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   abrirConferencia(): void {
     if (!this.conferenciaGerada()) return;
     this.modalConferenciaAberto = true;
-    this.focarBipagem();
+    if (!this.conferenciaEncerrada()) this.focarBipagem();
   }
 
   fecharConferencia(): void {
@@ -136,6 +141,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   processarBipagem(): void {
+    if (this.conferenciaEncerrada()) return;
     const ean = this.eanBipagem.trim();
     if (!ean || !this.recebimento) {
       this.eanBipagem = '';
@@ -168,8 +174,72 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   registrarEdicaoManual(): void {
+    if (this.conferenciaEncerrada()) return;
     this.atualizarResumoLocal();
     this.registrarAlteracaoPendente();
+  }
+
+  abrirEncerramento(): void {
+    if (!this.recebimento?.pode_encerrar_conferencia || this.conferenciaEncerrada()) return;
+    this.encerramentoErrorMsg = '';
+    this.observacaoDivergencia = '';
+    this.salvarPendenciasAntesDe(() => {
+      this.modalEncerramentoAberto = true;
+    });
+  }
+
+  cancelarEncerramento(): void {
+    this.modalEncerramentoAberto = false;
+    this.encerramentoErrorMsg = '';
+  }
+
+  confirmarEncerramento(): void {
+    if (!this.recebimento) return;
+    if (this.possuiDivergencia() && !this.observacaoDivergencia.trim()) {
+      this.encerramentoErrorMsg = 'Informe a justificativa da divergência antes de encerrar o recebimento.';
+      return;
+    }
+    this.encerrandoConferencia = true;
+    this.encerramentoErrorMsg = '';
+    this.api.encerrarConferencia(this.recebimento.id, this.observacaoDivergencia.trim()).pipe(finalize(() => this.encerrandoConferencia = false)).subscribe({
+      next: recebimento => {
+        this.recebimento = recebimento;
+        this.alteracoesPendentes = 0;
+        this.modalEncerramentoAberto = false;
+        this.modalConferenciaAberto = false;
+        this.modalTermoAberto = true;
+      },
+      error: err => this.encerramentoErrorMsg = err?.error?.observacao_divergencia || err?.error?.detail || 'Não foi possível encerrar a conferência.',
+    });
+  }
+
+  abrirTermo(): void {
+    if (!this.recebimento?.termo_encerramento) return;
+    this.modalTermoAberto = true;
+  }
+
+  fecharTermo(): void {
+    this.modalTermoAberto = false;
+  }
+
+  imprimirTermo(): void {
+    window.print();
+  }
+
+  conferenciaEncerrada(): boolean {
+    return this.recebimento?.status === 'CONCLUIDO' || !!this.recebimento?.termo_encerramento;
+  }
+
+  possuiDivergencia(): boolean {
+    if (!this.recebimento?.conferencia_resumo) return false;
+    const resumo = this.recebimento.conferencia_resumo;
+    const fisicoPedido = Number(resumo.diferenca_fisico_pedido || 0) !== 0;
+    const fisicoNfe = resumo.diferenca_fisico_nfe !== null && resumo.diferenca_fisico_nfe !== undefined && Number(resumo.diferenca_fisico_nfe || 0) !== 0;
+    return fisicoPedido || fisicoNfe || (this.recebimento.conferencia_itens || []).some(item => this.diferenca(item) !== 0);
+  }
+
+  referenciasRecebidas(): number {
+    return new Set((this.recebimento?.conferencia_itens || []).filter(item => Number(item.quantidade_recebida || 0) > 0).map(item => item.produto_referencia || item.produto)).size;
   }
 
   diferenca(item: RecebimentoMercadoriaConferenciaItem): number {
@@ -235,7 +305,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   }
 
   private salvarConferenciaAtual(options: { manual?: boolean; erro?: string } = {}): void {
-    if (!this.recebimento) return;
+    if (!this.recebimento || this.conferenciaEncerrada()) return;
     this.cancelarAutosave();
     if (this.saveEmAndamento) {
       this.saveAposAtual = true;
@@ -244,10 +314,7 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
 
     const recebimentoId = this.recebimento.id;
     const pendenciasSalvas = this.alteracoesPendentes;
-    const itens = (this.recebimento.conferencia_itens || []).map(item => ({
-      id: item.id,
-      quantidade_recebida: item.quantidade_recebida || 0,
-    }));
+    const itens = this.itensConferenciaPayload();
 
     this.saveEmAndamento = true;
     this.salvandoConferencia = true;
@@ -325,5 +392,30 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
 
   private formatarQuantidade(valor: number): string {
     return Number.isInteger(valor) ? String(valor) : valor.toFixed(3);
+  }
+
+  private itensConferenciaPayload(): Array<{ id: number; quantidade_recebida: string | number }> {
+    return (this.recebimento?.conferencia_itens || []).map(item => ({
+      id: item.id,
+      quantidade_recebida: item.quantidade_recebida || 0,
+    }));
+  }
+
+  private salvarPendenciasAntesDe(callback: () => void): void {
+    if (!this.recebimento || this.alteracoesPendentes <= 0) {
+      callback();
+      return;
+    }
+    this.cancelarAutosave();
+    this.salvandoConferencia = true;
+    this.errorMsg = '';
+    this.api.salvarConferencia(this.recebimento.id, this.itensConferenciaPayload()).pipe(finalize(() => this.salvandoConferencia = false)).subscribe({
+      next: recebimento => {
+        this.recebimento = recebimento;
+        this.alteracoesPendentes = 0;
+        callback();
+      },
+      error: () => this.errorMsg = 'Não foi possível salvar automaticamente a conferência.',
+    });
   }
 }

@@ -195,6 +195,12 @@
   outline: none;
 }
 
+.qty-input.locked {
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .diff-badge {
   display: inline-flex;
   align-items: center;
@@ -371,6 +377,108 @@
   min-width: 980px;
 }
 
+.closing-modal-card {
+  width: min(860px, calc(100vw - 32px));
+}
+
+.closing-body {
+  overflow: auto;
+}
+
+.closing-observation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+}
+
+.closing-observation span {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.closing-observation textarea {
+  min-height: 110px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.btn.warning {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.term-modal-card {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.receipt-term {
+  overflow: auto;
+  padding: 20px;
+  background: #fff;
+}
+
+.term-header h2,
+.term-section h3 {
+  margin: 0 0 6px;
+  color: #0f172a;
+}
+
+.term-header p,
+.term-section p,
+.term-footer p {
+  margin: 4px 0;
+  color: #334155;
+}
+
+.term-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.term-grid div {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.term-grid span {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.term-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+}
+
+.term-section {
+  margin-top: 16px;
+}
+
+.term-table {
+  min-width: 980px;
+}
+
+.term-footer {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  overflow-wrap: anywhere;
+}
+
 .modal-summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -457,5 +565,51 @@
 
   .scan-panel {
     grid-template-columns: 1fr;
+  }
+
+  .term-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-term,
+  .printable-term * {
+    visibility: visible;
+  }
+
+  .print-backdrop,
+  .term-modal-card,
+  .receipt-term {
+    position: static;
+    inset: auto;
+    display: block;
+    width: auto;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  .no-print,
+  .modal-footer {
+    display: none !important;
+  }
+
+  .printable-term {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .term-table thead {
+    display: table-header-group;
   }
 }

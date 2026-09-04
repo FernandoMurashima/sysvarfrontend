@@ -67,9 +67,27 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
       quantidade_skus_com_divergencia: 0,
     },
   } as any;
+  const termo = {
+    id: 7,
+    encerrado_em: '2026-09-04T12:00:00-03:00',
+    encerrado_por_nome: 'Conferente',
+    observacao_divergencia: 'Conferido com divergência.',
+    possui_divergencia: true,
+    hash_sha256: 'a'.repeat(64),
+    criado_em: '2026-09-04T12:00:00-03:00',
+    snapshot: {
+      recebimento: { id: 8, encerrado_em: '2026-09-04T12:00:00-03:00' },
+      xml_nfe: { numero: '123', serie: '1', fornecedor: 'Fornecedor A' },
+      estabelecimento: { nome: 'Loja A' },
+      totais: { quantidade_pedido_total: '4.000', quantidade_nfe_total: '5.000', quantidade_fisica_total: '4.000', diferenca_fisico_nfe: '-1.000', diferenca_fisico_pedido: '0.000' },
+      contagem_operacional: { quantidade_pedidos_vinculados: 1, quantidade_referencias_distintas: 1, quantidade_skus_total_conferencia: 1 },
+      divergencias: { faltas: [{ referencia: 'REF001' }], sobras: [] },
+      conferencia_sku: [{ referencia: 'REF001', produto: 'Camiseta', cor: 'Azul', tamanho: 'M', ean: '789', esperado: '4.000', recebido: '4.000', diferenca: '0.000' }],
+    },
+  } as any;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['get', 'pedidosElegiveis', 'vincularPedidos', 'gerarConferencia', 'salvarConferencia']);
+    api = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['get', 'pedidosElegiveis', 'vincularPedidos', 'gerarConferencia', 'salvarConferencia', 'encerrarConferencia']);
     api.get.and.returnValue(of(recebimento));
     api.pedidosElegiveis.and.returnValue(of([pedido1, pedido2]));
     api.vincularPedidos.and.returnValue(of({ ...recebimento, pedidos: [pedido1, pedido2] }));
@@ -108,6 +126,14 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
         quantidade_skus: 1,
         quantidade_skus_com_divergencia: 0,
       },
+    }));
+    api.encerrarConferencia.and.returnValue(of({
+      ...recebimento,
+      status: 'CONCLUIDO',
+      status_label: 'Concluído',
+      conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '4.000', diferenca: '0.000', situacao: 'OK' }],
+      termo_encerramento: termo,
+      pode_encerrar_conferencia: false,
     }));
 
     await TestBed.configureTestingModule({
@@ -386,6 +412,120 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(component.recebimento!.conferencia_resumo.quantidade_skus_com_divergencia).toBe(1);
     tick(2200);
   }));
+
+  it('botao Encerrar aparece em EM_CONFERENCIA, abre modal e exibe resumo', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'EM_CONFERENCIA',
+      pode_encerrar_conferencia: true,
+      conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '4.000' }],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, quantidade_pedido_total: '4.000', quantidade_nfe_total: '5.000', quantidade_fisica_total: '4.000', diferenca_fisico_nfe: '-1.000', diferenca_fisico_pedido: '0.000', quantidade_skus: 1, quantidade_skus_com_divergencia: 0 },
+    };
+    component.abrirConferencia();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Encerrar conferência');
+    component.abrirEncerramento();
+    fixture.detectChanges();
+
+    expect(component.modalEncerramentoAberto).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Após o encerramento');
+    expect(fixture.nativeElement.textContent).toContain('Pedidos vinculados');
+  });
+
+  it('divergencia exige justificativa e erro da API nao fecha modal', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'EM_CONFERENCIA',
+      pode_encerrar_conferencia: true,
+      conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '3.000' }],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, quantidade_pedido_total: '4.000', quantidade_nfe_total: '5.000', quantidade_fisica_total: '3.000', diferenca_fisico_nfe: '-2.000', diferenca_fisico_pedido: '-1.000', quantidade_skus: 1, quantidade_skus_com_divergencia: 1 },
+    };
+    component.modalEncerramentoAberto = true;
+    component.confirmarEncerramento();
+
+    expect(component.encerramentoErrorMsg).toBe('Informe a justificativa da divergência antes de encerrar o recebimento.');
+    expect(api.encerrarConferencia).not.toHaveBeenCalled();
+
+    api.encerrarConferencia.and.returnValue(throwError(() => ({ error: { detail: 'Falha' } })));
+    component.observacaoDivergencia = 'Divergência conferida.';
+    component.confirmarEncerramento();
+
+    expect(component.modalEncerramentoAberto).toBeTrue();
+    expect(component.encerramentoErrorMsg).toBe('Falha');
+  });
+
+  it('sem divergencia permite encerrar sem justificativa e chama endpoint', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'EM_CONFERENCIA',
+      pode_encerrar_conferencia: true,
+      conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '4.000' }],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, quantidade_pedido_total: '4.000', quantidade_nfe_total: '4.000', quantidade_fisica_total: '4.000', diferenca_fisico_nfe: '0.000', diferenca_fisico_pedido: '0.000', quantidade_skus: 1, quantidade_skus_com_divergencia: 0 },
+    };
+
+    component.confirmarEncerramento();
+
+    expect(api.encerrarConferencia).toHaveBeenCalledWith(8, '');
+    expect(component.recebimento?.status).toBe('CONCLUIDO');
+  });
+
+  it('pendencia e salva antes do encerramento', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'EM_CONFERENCIA',
+      pode_encerrar_conferencia: true,
+      conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '1' }],
+    };
+    component.alteracoesPendentes = 1;
+
+    component.abrirEncerramento();
+
+    expect(api.salvarConferencia).toHaveBeenCalled();
+    expect(component.modalEncerramentoAberto).toBeTrue();
+  });
+
+  it('apos sucesso status Concluido bloqueia inputs, bipagem e botoes de edicao', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'CONCLUIDO',
+      status_label: 'Concluído',
+      conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '4.000' }],
+      termo_encerramento: termo,
+      pode_encerrar_conferencia: false,
+    };
+    component.abrirConferencia();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Ver termo de recebimento');
+    expect(fixture.nativeElement.querySelector('.scan-input input')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.conference-modal-card .qty-input').classList).toContain('locked');
+    expect(fixture.nativeElement.textContent).not.toContain('Salvar conferência');
+    expect(fixture.nativeElement.textContent).not.toContain('Encerrar conferência');
+  });
+
+  it('termo mostra usuario data hash resumo divergencias linhas SKU e imprime', () => {
+    spyOn(window, 'print');
+    component.recebimento = {
+      ...recebimento,
+      status: 'CONCLUIDO',
+      termo_encerramento: termo,
+      conferencia_itens: [{ ...conferenciaItem }],
+    };
+    component.abrirTermo();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Termo de Recebimento #7');
+    expect(text).toContain('Conferente');
+    expect(text).toContain('a'.repeat(64));
+    expect(text).toContain('Qtd física');
+    expect(text).toContain('Faltas: 1');
+    expect(text).toContain('Camiseta');
+
+    component.imprimirTermo();
+    expect(window.print).toHaveBeenCalled();
+  });
 
   it('edita recebido, calcula diferenca e salva conferencia', () => {
     component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '5' }] };

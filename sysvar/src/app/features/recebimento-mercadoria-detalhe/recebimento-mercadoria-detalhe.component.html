@@ -100,6 +100,10 @@
           <i class="bi bi-arrows-fullscreen"></i>
           Abrir conferência
         </button>
+        <button class="btn" type="button" *ngIf="recebimento.termo_encerramento" (click)="abrirTermo()">
+          <i class="bi bi-file-earmark-text"></i>
+          Ver termo de recebimento
+        </button>
       </div>
     </div>
 
@@ -178,7 +182,7 @@
         <div><span>Físico x NF-e</span><strong>{{ valorResumo('diferenca_fisico_nfe') }}</strong></div>
         <div><span>Físico x Pedido</span><strong>{{ valorResumo('diferenca_fisico_pedido') }}</strong></div>
       </div>
-      <section class="scan-panel">
+      <section class="scan-panel" *ngIf="!conferenciaEncerrada()">
         <label class="scan-input">
           <span>Bipar EAN</span>
           <input
@@ -228,7 +232,8 @@
               <td>{{ item.ean || '-' }}</td>
               <td>{{ item.quantidade_esperada }}</td>
               <td>
-                <input class="qty-input" type="number" min="0" step="1" [(ngModel)]="item.quantidade_recebida" (ngModelChange)="registrarEdicaoManual()" />
+                <input *ngIf="recebimento.status !== 'CONCLUIDO' && !recebimento.termo_encerramento" class="qty-input" type="number" min="0" step="1" [(ngModel)]="item.quantidade_recebida" (ngModelChange)="registrarEdicaoManual()" />
+                <input *ngIf="recebimento.status === 'CONCLUIDO' || recebimento.termo_encerramento" class="qty-input locked" type="number" [ngModel]="item.quantidade_recebida" disabled />
               </td>
               <td>
                 <span class="diff-badge" [class.ok]="diferenca(item) === 0" [class.falta]="diferenca(item) < 0" [class.sobra]="diferenca(item) > 0">
@@ -241,10 +246,114 @@
       </div>
       <footer class="modal-footer">
         <button class="btn" type="button" (click)="fecharConferencia()">Fechar</button>
-        <button class="btn primary" type="button" (click)="salvarConferencia()" [disabled]="salvandoConferencia">
+        <button class="btn" type="button" *ngIf="recebimento.termo_encerramento" (click)="abrirTermo()">Ver termo de recebimento</button>
+        <button class="btn warning" type="button" *ngIf="recebimento.pode_encerrar_conferencia && !conferenciaEncerrada()" (click)="abrirEncerramento()" [disabled]="salvandoConferencia || encerrandoConferencia">Encerrar conferência</button>
+        <button class="btn primary" type="button" *ngIf="!conferenciaEncerrada()" (click)="salvarConferencia()" [disabled]="salvandoConferencia">
           <i class="bi bi-save"></i>
           Salvar conferência
         </button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="modalEncerramentoAberto && recebimento">
+    <section class="modal-card closing-modal-card">
+      <header class="modal-header">
+        <div>
+          <h3>Encerrar conferência</h3>
+          <p>Após o encerramento, a conferência ficará bloqueada para edição.</p>
+        </div>
+        <button class="btn icon" type="button" (click)="cancelarEncerramento()" title="Fechar"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <div class="closing-body">
+        <div class="conference-summary modal-summary">
+          <div><span>Pedido</span><strong>{{ valorResumo('quantidade_pedido_total') }}</strong></div>
+          <div><span>NF-e</span><strong>{{ valorResumo('quantidade_nfe_total') }}</strong></div>
+          <div><span>Físico</span><strong>{{ valorResumo('quantidade_fisica_total') }}</strong></div>
+          <div><span>NF-e x Pedido</span><strong>{{ valorResumo('diferenca_nfe_pedido') }}</strong></div>
+          <div><span>Físico x NF-e</span><strong>{{ valorResumo('diferenca_fisico_nfe') }}</strong></div>
+          <div><span>Físico x Pedido</span><strong>{{ valorResumo('diferenca_fisico_pedido') }}</strong></div>
+          <div><span>Pedidos vinculados</span><strong>{{ recebimento.pedidos.length }}</strong></div>
+          <div><span>Referências</span><strong>{{ referenciasRecebidas() }}</strong></div>
+          <div><span>SKUs</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus }}</strong></div>
+          <div><span>Divergências</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus_com_divergencia }}</strong></div>
+        </div>
+        <label class="closing-observation">
+          <span>Justificativa da divergência</span>
+          <textarea [(ngModel)]="observacaoDivergencia" [required]="possuiDivergencia()"></textarea>
+        </label>
+        <div class="alert error" *ngIf="encerramentoErrorMsg">{{ encerramentoErrorMsg }}</div>
+      </div>
+      <footer class="modal-footer">
+        <button class="btn" type="button" (click)="cancelarEncerramento()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarEncerramento()" [disabled]="encerrandoConferencia">Confirmar encerramento</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop print-backdrop" *ngIf="modalTermoAberto && recebimento?.termo_encerramento as termo">
+    <section class="modal-card term-modal-card">
+      <header class="modal-header no-print">
+        <div>
+          <h3>Termo de Recebimento #{{ termo.id }}</h3>
+          <p>Assinatura eletrônica interna Sysvar</p>
+        </div>
+        <button class="btn icon" type="button" (click)="fecharTermo()" title="Fechar"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <article class="receipt-term printable-term">
+        <header class="term-header">
+          <h2>Termo de Recebimento #{{ termo.id }}</h2>
+          <p>Recebimento #{{ termo.snapshot.recebimento?.['id'] }} · NF-e {{ termo.snapshot.xml_nfe?.['numero'] || '-' }} / {{ termo.snapshot.xml_nfe?.['serie'] || '-' }}</p>
+        </header>
+        <section class="term-grid">
+          <div><span>Fornecedor</span><strong>{{ termo.snapshot.xml_nfe?.['fornecedor'] || '-' }}</strong></div>
+          <div><span>Estabelecimento</span><strong>{{ termo.snapshot.estabelecimento?.['nome'] || '-' }}</strong></div>
+          <div><span>Data/hora</span><strong>{{ termo.snapshot.recebimento?.['encerrado_em'] | date:'short' }}</strong></div>
+          <div><span>Responsável</span><strong>{{ termo.encerrado_por_nome }}</strong></div>
+        </section>
+        <section class="term-grid">
+          <div><span>Pedidos</span><strong>{{ termo.snapshot.contagem_operacional?.['quantidade_pedidos_vinculados'] }}</strong></div>
+          <div><span>Referências</span><strong>{{ termo.snapshot.contagem_operacional?.['quantidade_referencias_distintas'] }}</strong></div>
+          <div><span>SKUs</span><strong>{{ termo.snapshot.contagem_operacional?.['quantidade_skus_total_conferencia'] }}</strong></div>
+          <div><span>Qtd pedido</span><strong>{{ termo.snapshot.totais?.['quantidade_pedido_total'] }}</strong></div>
+          <div><span>Qtd NF-e</span><strong>{{ termo.snapshot.totais?.['quantidade_nfe_total'] || '-' }}</strong></div>
+          <div><span>Qtd física</span><strong>{{ termo.snapshot.totais?.['quantidade_fisica_total'] }}</strong></div>
+          <div><span>Físico x NF-e</span><strong>{{ termo.snapshot.totais?.['diferenca_fisico_nfe'] || '-' }}</strong></div>
+          <div><span>Físico x Pedido</span><strong>{{ termo.snapshot.totais?.['diferenca_fisico_pedido'] }}</strong></div>
+        </section>
+        <section class="term-section">
+          <h3>Divergências</h3>
+          <p>Faltas: {{ termo.snapshot.divergencias?.faltas?.length || 0 }} · Sobras: {{ termo.snapshot.divergencias?.sobras?.length || 0 }}</p>
+          <p>{{ termo.observacao_divergencia || 'Sem justificativa registrada.' }}</p>
+        </section>
+        <section class="term-section">
+          <h3>Conferência detalhada</h3>
+          <table class="table term-table">
+            <thead><tr><th>Referência</th><th>Produto</th><th>Cor</th><th>Tamanho</th><th>EAN</th><th>Esperado</th><th>Recebido</th><th>Diferença</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let linha of termo.snapshot.conferencia_sku || []">
+                <td>{{ linha['referencia'] || '-' }}</td>
+                <td>{{ linha['produto'] }}</td>
+                <td>{{ linha['cor'] }}</td>
+                <td>{{ linha['tamanho'] }}</td>
+                <td>{{ linha['ean'] || '-' }}</td>
+                <td>{{ linha['esperado'] }}</td>
+                <td>{{ linha['recebido'] }}</td>
+                <td>{{ linha['diferenca'] }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <footer class="term-footer">
+          <strong>Assinatura eletrônica interna Sysvar</strong>
+          <p>Hash SHA-256: {{ termo.hash_sha256 }}</p>
+          <p>Usuário: {{ termo.encerrado_por_nome }}</p>
+          <p>Data/hora: {{ termo.encerrado_em | date:'short' }}</p>
+        </footer>
+      </article>
+      <footer class="modal-footer no-print">
+        <button class="btn" type="button" (click)="fecharTermo()">Fechar</button>
+        <button class="btn primary" type="button" (click)="imprimirTermo()">Imprimir termo</button>
       </footer>
     </section>
   </div>

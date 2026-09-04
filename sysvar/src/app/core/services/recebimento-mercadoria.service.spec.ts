@@ -61,4 +61,12 @@ describe('RecebimentoMercadoriaService', () => {
     expect(salvar.request.body).toEqual({ itens: [{ id: 8, quantidade_recebida: '2' }] });
     salvar.flush({ id: 3, conferencia_itens: [] });
   });
+
+  it('encerra conferencia fisica', () => {
+    service.encerrarConferencia(3, 'Divergência justificada').subscribe();
+    const req = http.expectOne(`${base}3/encerrar-conferencia/`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ observacao_divergencia: 'Divergência justificada' });
+    req.flush({ id: 3, status: 'CONCLUIDO' });
+  });
 });
