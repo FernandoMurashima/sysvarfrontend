@@ -2,16 +2,32 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { Subject, of } from 'rxjs';
 
 import { AgenteLocalService } from '../../core/services/agente-local.service';
+import { AuthService } from '../../core/auth.service';
 import { AgenteLocalComponent } from './agente-local.component';
+import { LojasService } from '../../core/services/lojas.service';
 
 describe('AgenteLocalComponent', () => {
   let fixture: ComponentFixture<AgenteLocalComponent>;
   let component: AgenteLocalComponent;
   let service: jasmine.SpyObj<AgenteLocalService>;
+  let lojasService: jasmine.SpyObj<LojasService>;
+  let auth: jasmine.SpyObj<AuthService>;
   let clipboardWrite: jasmine.Spy;
 
   beforeEach(async () => {
-    service = jasmine.createSpyObj<AgenteLocalService>('AgenteLocalService', ['gerarCodigoAtivacao']);
+    service = jasmine.createSpyObj<AgenteLocalService>('AgenteLocalService', [
+      'gerarCodigoAtivacao',
+      'listarAgentes',
+      'listarConfiguracoes',
+      'criarConfiguracao',
+      'atualizarConfiguracao',
+    ]);
+    lojasService = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['getCurrentUser']);
+    service.listarAgentes.and.returnValue(of([{ id: 1, empresa: 1, identificador: 'AG-1', nome: 'PC Escritório', hostname: 'DESKTOP-ABC123', ativo: true }]));
+    service.listarConfiguracoes.and.returnValue(of([{ id: 10, empresa: 1, loja: null, loja_nome: null, caminho_local: 'C:\\Fiscal\\XML', ativo: true, identificador_agente: 'AG-1' }]));
+    lojasService.list.and.returnValue(of({ count: 1, results: [{ id: 2, nome_loja: 'Fábrica' } as any] }));
+    auth.getCurrentUser.and.returnValue({ Idempresa: 1 } as any);
     clipboardWrite = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -22,7 +38,11 @@ describe('AgenteLocalComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AgenteLocalComponent],
-      providers: [{ provide: AgenteLocalService, useValue: service }],
+      providers: [
+        { provide: AgenteLocalService, useValue: service },
+        { provide: LojasService, useValue: lojasService },
+        { provide: AuthService, useValue: auth },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AgenteLocalComponent);
@@ -34,6 +54,7 @@ describe('AgenteLocalComponent', () => {
     expect(component.codigoAtual).toBeNull();
     expect(component.loading).toBeFalse();
     expect(fixture.nativeElement.textContent).toContain('Nenhum código gerado nesta sessão.');
+    expect(fixture.nativeElement.textContent).toContain('Ativação do agente');
     expect(fixture.nativeElement.textContent).not.toContain('ABCD-EFGH-IJKL');
   });
 
@@ -128,5 +149,86 @@ describe('AgenteLocalComponent', () => {
     expect(component.codigoAtual).toBeNull();
     expect(component.loading).toBeFalse();
     expect(component.errorMsg).toBe('Não foi possível gerar o código de ativação. Tente novamente.');
+  });
+
+  it('lista configuracoes de pastas monitoradas sem expor token ou codigo sensivel', () => {
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(service.listarAgentes).toHaveBeenCalled();
+    expect(service.listarConfiguracoes).toHaveBeenCalled();
+    expect(text).toContain('Pastas monitoradas');
+    expect(text).toContain('PC Escritório - DESKTOP-ABC123');
+    expect(text).toContain('Empresa inteira');
+    expect(text).toContain('C:\\Fiscal\\XML');
+    expect(text).not.toContain('token_hash');
+    expect(text).not.toContain('token_prefixo');
+  });
+
+  it('abre inclusao com Agent em select e estabelecimento opcional', () => {
+    component.abrirNovaPasta();
+    fixture.detectChanges();
+
+    const selectAgente = fixture.nativeElement.querySelector('select[formControlName="identificador_agente"]');
+    const inputAgente = fixture.nativeElement.querySelector('input[formControlName="identificador_agente"]');
+    expect(selectAgente).toBeTruthy();
+    expect(inputAgente).toBeFalsy();
+    expect(fixture.nativeElement.textContent).toContain('Empresa inteira');
+  });
+
+  it('exige caminho local antes de salvar', () => {
+    component.abrirNovaPasta();
+    component.form.patchValue({ identificador_agente: 'AG-1', caminho_local: '' });
+
+    component.salvarPasta();
+
+    expect(service.criarConfiguracao).not.toHaveBeenCalled();
+    expect(component.errorMsg).toBe('Informe o agente e a pasta local.');
+  });
+
+  it('envia POST correto e atualiza listagem apos salvar nova configuracao', () => {
+    service.criarConfiguracao.and.returnValue(of({ id: 11, empresa: 1, loja: 2, loja_nome: 'Fábrica', caminho_local: 'X:\\Fiscal\\XML', ativo: true, identificador_agente: 'AG-1' }));
+    component.abrirNovaPasta();
+    component.form.patchValue({ identificador_agente: 'AG-1', loja: 2, caminho_local: '  X:\\Fiscal\\XML  ', ativo: true });
+
+    component.salvarPasta();
+
+    expect(service.criarConfiguracao).toHaveBeenCalledOnceWith({ empresa: 1, loja: 2, caminho_local: 'X:\\Fiscal\\XML', ativo: true, identificador_agente: 'AG-1' });
+    expect(service.listarConfiguracoes).toHaveBeenCalledTimes(2);
+    expect(component.successMsg).toBe('Configuração salva.');
+  });
+
+  it('edicao usa PATCH sem limpar campos nao alterados', () => {
+    const config = component.configuracoes[0];
+    service.atualizarConfiguracao.and.returnValue(of({ ...config, caminho_local: 'D:\\NFe\\Entradas' }));
+
+    component.editarPasta(config);
+    component.form.patchValue({ caminho_local: 'D:\\NFe\\Entradas' });
+    component.salvarPasta();
+
+    expect(service.atualizarConfiguracao).toHaveBeenCalledWith(10, { empresa: 1, loja: null, caminho_local: 'D:\\NFe\\Entradas', ativo: true, identificador_agente: 'AG-1' });
+    expect(component.successMsg).toBe('Configuração atualizada.');
+  });
+
+  it('ativar e desativar usa PATCH e recarrega dados', () => {
+    service.atualizarConfiguracao.and.returnValue(of({ ...component.configuracoes[0], ativo: false }));
+
+    component.alternarAtivo(component.configuracoes[0]);
+
+    expect(service.atualizarConfiguracao).toHaveBeenCalledWith(10, { ativo: false });
+    expect(component.successMsg).toBe('Configuração desativada.');
+    expect(service.listarConfiguracoes).toHaveBeenCalledTimes(2);
+  });
+
+  it('exibe mensagem amigavel quando backend rejeita salvamento', () => {
+    const erro$ = new Subject<any>();
+    service.criarConfiguracao.and.returnValue(erro$);
+    component.abrirNovaPasta();
+    component.form.patchValue({ identificador_agente: 'AG-1', caminho_local: 'C:\\Fiscal\\XML' });
+
+    component.salvarPasta();
+    erro$.error({ error: { identificador_agente: ['Agente local inválido para esta empresa.'] } });
+
+    expect(component.errorMsg).toBe('Agente local inválido para esta empresa.');
   });
 });

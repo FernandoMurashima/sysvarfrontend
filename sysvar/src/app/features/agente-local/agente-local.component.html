@@ -43,4 +43,103 @@
       </button>
     </div>
   </section>
+
+  <section class="card form-panel agent-panel folders-panel">
+    <div class="form-title">
+      <div>
+        <h3>Pastas monitoradas</h3>
+        <p>Defina as pastas locais de XML que cada Sysvar Local Agent deve acompanhar.</p>
+      </div>
+      <button class="btn primary" type="button" (click)="abrirNovaPasta()">
+        <i class="bi bi-folder-plus"></i>
+        Adicionar pasta
+      </button>
+    </div>
+
+    <div class="table-wrap" *ngIf="configuracoes.length > 0; else emptyPastas">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Agente</th>
+            <th>Estabelecimento</th>
+            <th>Pasta local</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let config of configuracoes">
+            <td>{{ agenteLabel(config.identificador_agente) }}</td>
+            <td>{{ lojaNome(config.loja, config.loja_nome) }}</td>
+            <td><code>{{ config.caminho_local }}</code></td>
+            <td><span class="status" [class.inactive]="!config.ativo">{{ config.ativo ? 'Ativo' : 'Inativo' }}</span></td>
+            <td class="actions">
+              <button class="btn small" type="button" (click)="editarPasta(config)">
+                <i class="bi bi-pencil"></i>
+                Editar
+              </button>
+              <button class="btn small" type="button" (click)="alternarAtivo(config)">
+                <i class="bi" [class.bi-toggle-on]="config.ativo" [class.bi-toggle-off]="!config.ativo"></i>
+                {{ config.ativo ? 'Desativar' : 'Ativar' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #emptyPastas>
+      <div class="empty-state">
+        <i class="bi bi-folder2-open"></i>
+        <span *ngIf="!loadingPastas">Nenhuma pasta monitorada configurada.</span>
+        <span *ngIf="loadingPastas">Carregando pastas monitoradas...</span>
+      </div>
+    </ng-template>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="modalAberto">
+    <section class="modal-card">
+      <div class="modal-header">
+        <h3>{{ editing ? 'Editar pasta' : 'Adicionar pasta' }}</h3>
+        <button class="btn icon" type="button" (click)="fecharModal()" title="Cancelar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="salvarPasta()" class="folder-form">
+        <label class="input-item" [class.invalid]="submitted && form.get('identificador_agente')?.invalid">
+          Agente*
+          <select formControlName="identificador_agente">
+            <option value="">Selecione</option>
+            <option *ngFor="let agente of agentes" [value]="agente.identificador">
+              {{ agenteLabel(agente.identificador) }} - {{ agente.identificador }}{{ agente.ativo ? '' : ' (inativo)' }}
+            </option>
+          </select>
+        </label>
+
+        <label class="input-item">
+          Estabelecimento
+          <select formControlName="loja">
+            <option [ngValue]="null">Empresa inteira</option>
+            <option *ngFor="let loja of lojas" [ngValue]="loja.id ?? loja.Idloja">{{ loja.nome_loja }}</option>
+          </select>
+        </label>
+
+        <label class="input-item" [class.invalid]="submitted && form.get('caminho_local')?.invalid">
+          Pasta local*
+          <input type="text" formControlName="caminho_local" placeholder="C:\Fiscal\XML" maxlength="500" />
+        </label>
+
+        <label class="check-line">
+          <input type="checkbox" formControlName="ativo" />
+          Ativo
+        </label>
+
+        <div class="modal-actions">
+          <button class="btn" type="button" (click)="fecharModal()">Cancelar</button>
+          <button class="btn primary" type="submit" [disabled]="savingPasta">Salvar</button>
+        </div>
+      </form>
+    </section>
+  </div>
 </div>
