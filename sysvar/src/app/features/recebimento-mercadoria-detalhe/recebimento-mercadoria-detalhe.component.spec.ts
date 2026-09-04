@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { RecebimentoMercadoriaService } from '../../core/services/recebimento-mercadoria.service';
 import { RecebimentoMercadoriaDetalheComponent } from './recebimento-mercadoria-detalhe.component';
@@ -30,6 +31,17 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     quantidade_recebida: '3.000',
     diferenca: '-1.000',
     situacao: 'FALTA',
+  } as any;
+  const conferenciaItem2 = {
+    ...conferenciaItem,
+    id: 11,
+    produto_referencia: 'REF002',
+    produto_descricao: 'Bermuda',
+    cor_nome: 'Preto',
+    tamanho_nome: 'G',
+    ean: '7892701001577',
+    quantidade_esperada: '2.000',
+    quantidade_recebida: '0',
   } as any;
   const recebimento = {
     id: 8,
@@ -184,6 +196,196 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(text).toContain('Falta');
     expect(fixture.nativeElement.querySelectorAll('.conference-table th').length).toBe(8);
   });
+
+  it('abrir modal da foco no campo EAN e mantem tabela dentro da sobretela', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.abrirConferencia();
+    fixture.detectChanges();
+    tick();
+
+    const input = fixture.nativeElement.querySelector('.scan-input input') as HTMLInputElement;
+    const modalTable = fixture.nativeElement.querySelector('.conference-modal-card .conference-modal-table');
+    expect(document.activeElement).toBe(input);
+    expect(modalTable).not.toBeNull();
+  }));
+
+  it('EAN valido incrementa exatamente 1, limpa campo, retorna foco e exibe ultima leitura', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.abrirConferencia();
+    fixture.detectChanges();
+    tick();
+
+    component.eanBipagem = ' 7892701001577 ';
+    component.processarBipagem();
+    fixture.detectChanges();
+    tick();
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('1');
+    expect(component.eanBipagem).toBe('');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.scan-input input'));
+    expect(fixture.nativeElement.textContent).toContain('Última leitura');
+    expect(fixture.nativeElement.textContent).toContain('REF002');
+    tick(2200);
+  }));
+
+  it('dois bips incrementam 2 e quantidade igual ao esperado fica OK', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.abrirConferencia();
+    fixture.detectChanges();
+
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    fixture.detectChanges();
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('2');
+    expect(component.diferenca(component.recebimento!.conferencia_itens[0])).toBe(0);
+    expect(component.situacaoDiferenca(component.recebimento!.conferencia_itens[0])).toBe('OK');
+    expect(component.ultimaLeitura?.situacao).toBe('OK');
+    tick(2200);
+  }));
+
+  it('bip alem do esperado gera Sobra', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '2' }] };
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('3');
+    expect(component.situacaoDiferenca(component.recebimento!.conferencia_itens[0])).toBe('Sobra');
+    expect(component.ultimaLeitura?.status).toBe('sobra');
+    tick(2200);
+  }));
+
+  it('EAN inexistente nao altera quantidade', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.eanBipagem = '0000000000000';
+    component.processarBipagem();
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('0');
+    expect(component.ultimaLeitura?.mensagem).toBe('EAN não pertence a este recebimento.');
+    expect(api.salvarConferencia).not.toHaveBeenCalled();
+    tick();
+  }));
+
+  it('EAN duplicado nao altera quantidade', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }, { ...conferenciaItem2, id: 12 }] };
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('0');
+    expect(component.recebimento!.conferencia_itens[1].quantidade_recebida).toBe('0');
+    expect(component.ultimaLeitura?.mensagem).toBe('EAN duplicado/ambíguo na conferência.');
+    expect(api.salvarConferencia).not.toHaveBeenCalled();
+    tick();
+  }));
+
+  it('edicao manual continua funcionando e dispara autosave apos debounce', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '1' }] };
+    component.recebimento!.conferencia_itens[0].quantidade_recebida = '2';
+    component.registrarEdicaoManual();
+
+    expect(component.diferenca(component.recebimento!.conferencia_itens[0])).toBe(0);
+    expect(api.salvarConferencia).not.toHaveBeenCalled();
+    tick(700);
+
+    expect(api.salvarConferencia).toHaveBeenCalledWith(8, [{ id: 11, quantidade_recebida: '2' }]);
+  }));
+
+  it('salva imediatamente ao atingir 20 alteracoes', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    for (let i = 0; i < 20; i += 1) {
+      component.eanBipagem = '7892701001577';
+      component.processarBipagem();
+    }
+
+    expect(api.salvarConferencia).toHaveBeenCalledTimes(1);
+    expect(api.salvarConferencia.calls.mostRecent().args[1]).toEqual([{ id: 11, quantidade_recebida: '20' }]);
+    tick(2200);
+  }));
+
+  it('nao dispara saves simultaneos', fakeAsync(() => {
+    const primeiraResposta = new Subject<any>();
+    api.salvarConferencia.and.returnValues(
+      primeiraResposta.asObservable(),
+      of({ ...recebimento, conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '2' }] }),
+    );
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    tick(700);
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+
+    expect(api.salvarConferencia).toHaveBeenCalledTimes(1);
+    tick(700);
+    expect(api.salvarConferencia).toHaveBeenCalledTimes(1);
+    primeiraResposta.next({ ...recebimento, conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '1' }] });
+    primeiraResposta.complete();
+    tick();
+    expect(api.salvarConferencia).toHaveBeenCalledTimes(2);
+    tick(2200);
+  }));
+
+  it('erro de autosave preserva quantidades locais', fakeAsync(() => {
+    api.salvarConferencia.and.returnValue(throwError(() => ({ status: 500 })));
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    tick(700);
+
+    expect(component.recebimento!.conferencia_itens[0].quantidade_recebida).toBe('1');
+    expect(component.errorMsg).toBe('Não foi possível salvar automaticamente a conferência.');
+    tick(1500);
+  }));
+
+  it('fechar com pendencia salva antes e erro ao salvar impede fechar', fakeAsync(() => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.abrirConferencia();
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    component.fecharConferencia();
+
+    expect(api.salvarConferencia).toHaveBeenCalled();
+    expect(component.modalConferenciaAberto).toBeFalse();
+
+    api.salvarConferencia.calls.reset();
+    api.salvarConferencia.and.returnValue(throwError(() => ({ status: 500 })));
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2 }] };
+    component.abrirConferencia();
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+    component.fecharConferencia();
+
+    expect(component.modalConferenciaAberto).toBeTrue();
+    expect(component.errorMsg).toBe('Não foi possível salvar automaticamente a conferência.');
+    tick(2200);
+  }));
+
+  it('salvar manualmente continua funcionando sem esperar debounce', () => {
+    component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem2, quantidade_recebida: '1' }] };
+    component.salvarConferencia();
+
+    expect(api.salvarConferencia).toHaveBeenCalledWith(8, [{ id: 11, quantidade_recebida: '1' }]);
+  });
+
+  it('resumo fisico atualiza imediatamente', fakeAsync(() => {
+    component.recebimento = {
+      ...recebimento,
+      conferencia_itens: [{ ...conferenciaItem2 }],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, quantidade_pedido_total: '2.000', quantidade_nfe_total: '3.000' },
+    };
+    component.eanBipagem = '7892701001577';
+    component.processarBipagem();
+
+    expect(component.valorResumo('quantidade_fisica_total')).toBe('1');
+    expect(component.valorResumo('diferenca_fisico_pedido')).toBe('-1');
+    expect(component.valorResumo('diferenca_fisico_nfe')).toBe('-2');
+    expect(component.recebimento!.conferencia_resumo.quantidade_skus_com_divergencia).toBe(1);
+    tick(2200);
+  }));
 
   it('edita recebido, calcula diferenca e salva conferencia', () => {
     component.recebimento = { ...recebimento, conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '5' }] };

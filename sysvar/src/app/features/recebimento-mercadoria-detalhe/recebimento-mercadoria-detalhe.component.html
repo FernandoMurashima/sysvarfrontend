@@ -178,6 +178,29 @@
         <div><span>Físico x NF-e</span><strong>{{ valorResumo('diferenca_fisico_nfe') }}</strong></div>
         <div><span>Físico x Pedido</span><strong>{{ valorResumo('diferenca_fisico_pedido') }}</strong></div>
       </div>
+      <section class="scan-panel">
+        <label class="scan-input">
+          <span>Bipar EAN</span>
+          <input
+            #eanInput
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [(ngModel)]="eanBipagem"
+            (keydown.enter)="processarBipagem()"
+          />
+        </label>
+        <div class="last-scan" *ngIf="ultimaLeitura" [class.ok]="ultimaLeitura.status === 'ok'" [class.falta]="ultimaLeitura.status === 'falta'" [class.sobra]="ultimaLeitura.status === 'sobra'" [class.erro]="ultimaLeitura.status === 'erro'">
+          <span>Última leitura</span>
+          <strong>{{ ultimaLeitura.ean }}</strong>
+          <p *ngIf="ultimaLeitura.mensagem">{{ ultimaLeitura.mensagem }}</p>
+          <p *ngIf="!ultimaLeitura.mensagem">
+            {{ ultimaLeitura.referencia }} — {{ ultimaLeitura.produto }}<br />
+            {{ ultimaLeitura.cor }} — {{ ultimaLeitura.tamanho }}<br />
+            {{ ultimaLeitura.recebido }} / {{ ultimaLeitura.esperado }} — {{ ultimaLeitura.situacao }}
+          </p>
+        </div>
+      </section>
       <div class="table-wrapper conference-modal-table">
         <table class="table conference-table">
           <thead>
@@ -193,7 +216,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of recebimento.conferencia_itens; trackBy: trackConferenciaById">
+            <tr
+              *ngFor="let item of recebimento.conferencia_itens; trackBy: trackConferenciaById"
+              [class.highlight-read]="conferenciaItemDestacadoId === item.id"
+              [attr.data-conferencia-item-id]="item.id"
+            >
               <td>{{ item.produto_referencia || '-' }}</td>
               <td>{{ item.produto_descricao }}</td>
               <td>{{ item.cor_nome }}</td>
@@ -201,7 +228,7 @@
               <td>{{ item.ean || '-' }}</td>
               <td>{{ item.quantidade_esperada }}</td>
               <td>
-                <input class="qty-input" type="number" min="0" step="1" [(ngModel)]="item.quantidade_recebida" />
+                <input class="qty-input" type="number" min="0" step="1" [(ngModel)]="item.quantidade_recebida" (ngModelChange)="registrarEdicaoManual()" />
               </td>
               <td>
                 <span class="diff-badge" [class.ok]="diferenca(item) === 0" [class.falta]="diferenca(item) < 0" [class.sobra]="diferenca(item) > 0">
