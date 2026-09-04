@@ -1,0 +1,169 @@
+<div class="nfe-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>NF-e detectadas</h1>
+      <p>Documentos identificados pelo Sysvar Local Agent aguardando tratamento.</p>
+    </div>
+    <div class="title-actions">
+      <button class="btn" type="button" (click)="carregar()" [disabled]="loading">
+        <i class="bi bi-arrow-clockwise"></i>
+        Atualizar
+      </button>
+    </div>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="indicator-bar">
+    <article class="indicator-card" [class.pending]="indicadores.pendentes > 0">
+      <span>Pendências</span>
+      <strong>{{ indicadores.pendentes }}</strong>
+    </article>
+    <article class="indicator-card">
+      <span>Detectadas</span>
+      <strong>{{ indicadores.detectadas }}</strong>
+    </article>
+    <article class="indicator-card">
+      <span>Aguardando recebimento</span>
+      <strong>{{ indicadores.aguardando_recebimento }}</strong>
+    </article>
+    <article class="indicator-card">
+      <span>Em recebimento</span>
+      <strong>{{ indicadores.em_recebimento }}</strong>
+    </article>
+    <article class="indicator-card">
+      <span>Recebidas/Processadas</span>
+      <strong>{{ indicadores.recebidas_processadas }}</strong>
+    </article>
+  </section>
+
+  <section class="filter-bar" *ngIf="filtersVisible">
+    <label>
+      <span>Estabelecimento</span>
+      <select [(ngModel)]="filtros.loja">
+        <option value="">Todos</option>
+        <option *ngFor="let loja of lojas" [value]="loja.id ?? loja.Idloja">{{ loja.nome_loja }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Fornecedor</span>
+      <select [(ngModel)]="filtros.fornecedor">
+        <option value="">Todos</option>
+        <option *ngFor="let fornecedor of fornecedores" [value]="fornecedor.id">{{ fornecedor.nome_fornecedor }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="filtros.status_operacional">
+        <option value="">Todos</option>
+        <option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Situação fiscal</span>
+      <select [(ngModel)]="filtros.situacao_fiscal">
+        <option value="">Todas</option>
+        <option *ngFor="let situacao of situacaoOptions" [value]="situacao.value">{{ situacao.label }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Número/chave/busca</span>
+      <input [(ngModel)]="filtros.search" type="search" placeholder="Buscar" />
+    </label>
+    <label>
+      <span>Detectada de</span>
+      <input [(ngModel)]="filtros.detectado_de" type="date" />
+    </label>
+    <label>
+      <span>Detectada até</span>
+      <input [(ngModel)]="filtros.detectado_ate" type="date" />
+    </label>
+    <div class="filter-actions">
+      <button class="btn primary" type="button" (click)="buscar()">Buscar</button>
+      <button class="btn" type="button" (click)="limparFiltros()">Limpar filtros</button>
+    </div>
+  </section>
+
+  <section class="results-area">
+    <div class="table-wrapper" *ngIf="rows.length; else emptyTpl">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Detectada em</th>
+            <th>Estabelecimento</th>
+            <th>Fornecedor</th>
+            <th>NF-e</th>
+            <th>Emissão</th>
+            <th>Valor</th>
+            <th>Situação fiscal</th>
+            <th>Status</th>
+            <th>Agente</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows; trackBy: trackById">
+            <td>{{ row.detectado_em | date:'short' }}</td>
+            <td>{{ lojaNome(row) }}</td>
+            <td>{{ fornecedorNome(row) }}</td>
+            <td>{{ nfe(row) }}</td>
+            <td>{{ row.dh_emissao | date:'shortDate' }}</td>
+            <td>{{ +row.valor_total | currency:'BRL':'symbol':'1.2-2' }}</td>
+            <td><span class="badge fiscal" [class]="row.situacao_fiscal.toLowerCase()">{{ situacaoLabel(row.situacao_fiscal) }}</span></td>
+            <td><span class="badge operacional" [class]="row.status_operacional.toLowerCase()">{{ statusLabel(row.status_operacional) }}</span></td>
+            <td>{{ row.identificador_agente || '-' }}</td>
+            <td>
+              <button class="btn small" type="button" (click)="detalhes(row)">
+                <i class="bi bi-eye"></i>
+                Detalhes
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #emptyTpl>
+      <div class="empty-hint" *ngIf="!loading">Nenhuma NF-e detectada encontrada.</div>
+      <div class="loading" *ngIf="loading">Carregando NF-e detectadas...</div>
+    </ng-template>
+
+    <div class="pagination">
+      <span>{{ count }} registro(s)</span>
+      <button class="btn small" type="button" (click)="prevPage()" [disabled]="page <= 1">Anterior</button>
+      <strong>Página {{ page }}</strong>
+      <button class="btn small" type="button" (click)="nextPage()" [disabled]="page * pageSize >= count">Próxima</button>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="selecionado">
+    <section class="modal-card">
+      <header>
+        <div>
+          <h3>Detalhes da NF-e {{ nfe(selecionado) }}</h3>
+        </div>
+        <button class="btn icon" type="button" (click)="fecharDetalhes()" title="Fechar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <dl class="details-grid">
+        <div><dt>Número</dt><dd>{{ selecionado.numero || '-' }}</dd></div>
+        <div><dt>Série</dt><dd>{{ selecionado.serie || '-' }}</dd></div>
+        <div class="wide"><dt>Chave de acesso</dt><dd>{{ selecionado.chave_acesso }}</dd></div>
+        <div><dt>Emissão</dt><dd>{{ selecionado.dh_emissao | date:'short' }}</dd></div>
+        <div><dt>Detecção</dt><dd>{{ selecionado.detectado_em | date:'short' }}</dd></div>
+        <div><dt>Fornecedor</dt><dd>{{ fornecedorDetalhe(selecionado) }}</dd></div>
+        <div><dt>Documento do emitente</dt><dd>{{ selecionado.emitente_documento || '-' }}</dd></div>
+        <div><dt>Emitente</dt><dd>{{ selecionado.emitente_nome || '-' }}</dd></div>
+        <div><dt>Estabelecimento</dt><dd>{{ lojaDetalhe(selecionado) }}</dd></div>
+        <div><dt>Destinatário</dt><dd>{{ selecionado.destinatario_nome || '-' }}</dd></div>
+        <div><dt>Documento do destinatário</dt><dd>{{ selecionado.destinatario_documento || '-' }}</dd></div>
+        <div><dt>Valor total</dt><dd>{{ +selecionado.valor_total | currency:'BRL':'symbol':'1.2-2' }}</dd></div>
+        <div><dt>Situação fiscal</dt><dd>{{ situacaoLabel(selecionado.situacao_fiscal) }}</dd></div>
+        <div><dt>Status operacional</dt><dd>{{ statusLabel(selecionado.status_operacional) }}</dd></div>
+        <div><dt>Agent</dt><dd>{{ selecionado.identificador_agente || '-' }}</dd></div>
+        <div class="wide"><dt>Caminho de origem local</dt><dd>{{ selecionado.caminho_origem_local || '-' }}</dd></div>
+      </dl>
+    </section>
+  </div>
+</div>

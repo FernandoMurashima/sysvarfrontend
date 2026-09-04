@@ -130,4 +130,20 @@ describe('ShellComponent menu lateral', () => {
 
     expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeFalse();
   });
+
+  it('mostra NF-e detectadas no menu Estoque para operação de estoque', () => {
+    currentUser = {
+      id: 7,
+      username: 'estoque',
+      type: 'Gerente',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['estoque'],
+      permissoes_efetivas: { estoque: 'VIEW' },
+    };
+
+    const component = render();
+    const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
+
+    expect(estoque?.children?.some(child => child.label === 'NF-e detectadas' && child.link === '/estoque/nfe-detectadas')).toBeTrue();
+  });
 });

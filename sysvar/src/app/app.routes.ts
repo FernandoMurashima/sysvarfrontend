@@ -84,6 +84,7 @@ import { PerfisAcessoComponent } from './features/perfis-acesso/perfis-acesso.co
 import { AuditoriaComponent } from './features/auditoria/auditoria.component';
 import { ChangePasswordRequiredComponent } from './features/change-password-required/change-password-required.component';
 import { AgenteLocalComponent } from './features/agente-local/agente-local.component';
+import { NfeDetectadasComponent } from './features/nfe-detectadas/nfe-detectadas.component';
 
 
 
@@ -174,6 +175,7 @@ export const routes: Routes = [
       { path: 'estoque/consulta-colest', component: EstoqueConsultaComponent, data: { modo: 'colecao', roles: ['Diretor', 'Gerente', 'Auxiliar', 'Caixa', 'Vendedor'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/movimentacoes', component: EstoqueMovimentacoesComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'estoque/inventario', component: EstoqueInventarioComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
+      { path: 'estoque/nfe-detectadas', component: NfeDetectadasComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'distribuicao', component: DistribuicaoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'distribuicao' } },
       { path: 'distribuicao/pedidos-venda', component: PedidosVendaDistribuicaoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'distribuicao' } },
       { path: 'estoque/etiquetas', component: EstoqueEtiquetasComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },

@@ -49,6 +49,16 @@ describe('rotas de compras', () => {
   });
 });
 
+describe('rotas de estoque', () => {
+  const shell = routes.find(route => route.path === '');
+
+  it('possui rota operacional para NF-e detectadas', () => {
+    const rota = shell?.children?.find(route => route.path === 'estoque/nfe-detectadas');
+    expect(rota?.data?.['moduloEmpresa']).toBe('estoque');
+    expect(rota?.data?.['roles']).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
+  });
+});
+
 describe('rotas de requisicoes', () => {
   const shell = routes.find(route => route.path === '');
 
