@@ -116,11 +116,40 @@ describe('NfeDetectadasComponent', () => {
     expect(fixture.nativeElement.querySelector('a[href^="file:"]')).toBeFalsy();
   });
 
-  it('trata fornecedor e estabelecimento nao identificados', () => {
-    const row = { ...xml, loja: null, loja_nome: null, fornecedor: null, fornecedor_nome: null, emitente_nome: '', destinatario_nome: '' };
+  it('trata fornecedor e estabelecimento nao identificados na tabela sem usar nomes do XML', () => {
+    const row = {
+      ...xml,
+      loja: null,
+      loja_nome: null,
+      fornecedor: null,
+      fornecedor_nome: null,
+      emitente_nome: 'Emitente somente no XML',
+      destinatario_nome: 'Destinatário somente no XML',
+    };
 
     expect(component.fornecedorNome(row)).toBe('Fornecedor não identificado');
     expect(component.lojaNome(row)).toBe('Estabelecimento não identificado');
+  });
+
+  it('mantem emitente e destinatario do XML nos detalhes', () => {
+    const row = {
+      ...xml,
+      loja: null,
+      loja_nome: null,
+      fornecedor: null,
+      fornecedor_nome: null,
+      emitente_nome: 'Emitente somente no XML',
+      destinatario_nome: 'Destinatário somente no XML',
+    };
+
+    component.detalhes(row);
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Fornecedor não identificado');
+    expect(text).toContain('Estabelecimento não identificado');
+    expect(text).toContain('Emitente somente no XML');
+    expect(text).toContain('Destinatário somente no XML');
   });
 
   it('exibe estado vazio', () => {

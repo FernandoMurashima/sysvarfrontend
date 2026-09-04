@@ -142,7 +142,7 @@ export class NfeDetectadasComponent implements OnInit {
   }
 
   fornecedorNome(row: XmlFornecedorRecebido): string {
-    return row.fornecedor_nome || row.emitente_nome || 'Fornecedor não identificado';
+    return row.fornecedor_nome || 'Fornecedor não identificado';
   }
 
   fornecedorDetalhe(row: XmlFornecedorRecebido): string {
@@ -150,7 +150,7 @@ export class NfeDetectadasComponent implements OnInit {
   }
 
   lojaNome(row: XmlFornecedorRecebido): string {
-    return row.loja_nome || row.destinatario_nome || 'Estabelecimento não identificado';
+    return row.loja_nome || 'Estabelecimento não identificado';
   }
 
   lojaDetalhe(row: XmlFornecedorRecebido): string {
