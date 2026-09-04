@@ -120,6 +120,13 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(text).toContain('123 / 1');
     expect(text).not.toContain('Confirmar estoque');
     expect(text).toContain('Conferência física ainda não gerada.');
+    expect(text).toContain('Qtd pedido');
+    expect(text).toContain('2.000');
+    expect(text).toContain('Qtd NF-e');
+    expect(text).toContain('Qtd física');
+    expect(text).toContain('Gerar conferência');
+    expect(text).not.toContain('Referência');
+    expect(text).not.toContain('REF001');
   });
 
   it('carrega pedidos elegiveis, permite selecao multipla e salva vinculos', () => {

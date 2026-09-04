@@ -103,7 +103,7 @@
       </div>
     </div>
 
-    <div class="conference-summary" *ngIf="conferenciaGerada()">
+    <div class="conference-summary" *ngIf="recebimento.conferencia_resumo">
       <div><span>Qtd pedido</span><strong>{{ valorResumo('quantidade_pedido_total') }}</strong></div>
       <div><span>Qtd NF-e</span><strong>{{ valorResumo('quantidade_nfe_total') }}</strong></div>
       <div><span>Qtd física</span><strong>{{ valorResumo('quantidade_fisica_total') }}</strong></div>
