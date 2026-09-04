@@ -145,5 +145,6 @@ describe('ShellComponent menu lateral', () => {
     const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
 
     expect(estoque?.children?.some(child => child.label === 'NF-e detectadas' && child.link === '/estoque/nfe-detectadas')).toBeTrue();
+    expect(estoque?.children?.some(child => child.label === 'Recebimento de Mercadoria' && child.link === '/estoque/recebimentos-mercadoria')).toBeTrue();
   });
 });

@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { RecebimentoMercadoriaService } from '../../core/services/recebimento-mercadoria.service';
 import { XmlFornecedorRecebidoService } from '../../core/services/xml-fornecedor-recebido.service';
 import { NfeDetectadasComponent } from './nfe-detectadas.component';
 
@@ -10,6 +12,8 @@ describe('NfeDetectadasComponent', () => {
   let fixture: ComponentFixture<NfeDetectadasComponent>;
   let component: NfeDetectadasComponent;
   let api: jasmine.SpyObj<XmlFornecedorRecebidoService>;
+  let recebimentosApi: jasmine.SpyObj<RecebimentoMercadoriaService>;
+  let router: jasmine.SpyObj<Router>;
   let lojasApi: jasmine.SpyObj<LojasService>;
   let fornecedoresApi: jasmine.SpyObj<FornecedoresService>;
 
@@ -40,10 +44,13 @@ describe('NfeDetectadasComponent', () => {
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<XmlFornecedorRecebidoService>('XmlFornecedorRecebidoService', ['listar', 'indicadores', 'get']);
+    recebimentosApi = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['iniciarPorXml']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
     fornecedoresApi = jasmine.createSpyObj<FornecedoresService>('FornecedoresService', ['list']);
     api.listar.and.returnValue(of({ count: 1, next: null, previous: null, results: [xml] }));
     api.indicadores.and.returnValue(of({ total: 1, detectadas: 1, aguardando_recebimento: 0, em_recebimento: 0, recebidas_processadas: 0, pendentes: 1 }));
+    recebimentosApi.iniciarPorXml.and.returnValue(of({ id: 9 } as any));
     lojasApi.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 2, nome_loja: 'Fábrica' } as any] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 3, nome_fornecedor: 'Fornecedor A' } as any] }));
 
@@ -51,6 +58,8 @@ describe('NfeDetectadasComponent', () => {
       imports: [NfeDetectadasComponent],
       providers: [
         { provide: XmlFornecedorRecebidoService, useValue: api },
+        { provide: RecebimentoMercadoriaService, useValue: recebimentosApi },
+        { provide: Router, useValue: router },
         { provide: LojasService, useValue: lojasApi },
         { provide: FornecedoresService, useValue: fornecedoresApi },
       ],
@@ -74,6 +83,13 @@ describe('NfeDetectadasComponent', () => {
     expect(text).not.toContain('xml_original');
     expect(text).not.toContain('token_hash');
     expect(fixture.nativeElement.querySelector('button.status')).toBeFalsy();
+  });
+
+  it('inicia recebimento e navega para o detalhe', () => {
+    component.iniciarRecebimento(xml);
+
+    expect(recebimentosApi.iniciarPorXml).toHaveBeenCalledWith(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/estoque/recebimentos-mercadoria', 9]);
   });
 
   it('envia filtros ao backend e limpa filtros', () => {

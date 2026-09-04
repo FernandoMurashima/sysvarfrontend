@@ -1,0 +1,23 @@
+@import '../cores/cores.component.css';
+
+.recebimento-detalhe-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.modal-card {
+  width: min(1120px, calc(100vw - 28px));
+}

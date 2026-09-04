@@ -1,6 +1,7 @@
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { forkJoin, finalize } from 'rxjs';
 
 import { Fornecedor } from '../../core/models/fornecedor';
@@ -14,6 +15,7 @@ import {
 } from '../../core/models/xml-fornecedor-recebido';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { LojasService } from '../../core/services/lojas.service';
+import { RecebimentoMercadoriaService } from '../../core/services/recebimento-mercadoria.service';
 import { XmlFornecedorRecebidoService } from '../../core/services/xml-fornecedor-recebido.service';
 
 @Component({
@@ -27,6 +29,8 @@ export class NfeDetectadasComponent implements OnInit {
   private api = inject(XmlFornecedorRecebidoService);
   private lojasApi = inject(LojasService);
   private fornecedoresApi = inject(FornecedoresService);
+  private recebimentosApi = inject(RecebimentoMercadoriaService);
+  private router = inject(Router);
 
   rows: XmlFornecedorRecebido[] = [];
   lojas: Loja[] = [];
@@ -41,6 +45,7 @@ export class NfeDetectadasComponent implements OnInit {
   };
   selecionado: XmlFornecedorRecebido | null = null;
   loading = false;
+  iniciandoId: number | null = null;
   errorMsg = '';
   filtersVisible = true;
   page = 1;
@@ -115,6 +120,20 @@ export class NfeDetectadasComponent implements OnInit {
 
   detalhes(row: XmlFornecedorRecebido): void {
     this.selecionado = row;
+  }
+
+  podeIniciarRecebimento(row: XmlFornecedorRecebido): boolean {
+    return ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
+  }
+
+  iniciarRecebimento(row: XmlFornecedorRecebido): void {
+    if (!this.podeIniciarRecebimento(row)) return;
+    this.iniciandoId = row.id;
+    this.errorMsg = '';
+    this.recebimentosApi.iniciarPorXml(row.id).pipe(finalize(() => this.iniciandoId = null)).subscribe({
+      next: recebimento => this.router.navigate(['/estoque/recebimentos-mercadoria', recebimento.id]),
+      error: () => this.errorMsg = 'Não foi possível iniciar o recebimento.',
+    });
   }
 
   fecharDetalhes(): void {

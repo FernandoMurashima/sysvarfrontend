@@ -1,0 +1,7 @@
+@import '../cores/cores.component.css';
+
+.recebimentos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

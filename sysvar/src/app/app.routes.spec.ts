@@ -57,6 +57,15 @@ describe('rotas de estoque', () => {
     expect(rota?.data?.['moduloEmpresa']).toBe('estoque');
     expect(rota?.data?.['roles']).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
   });
+
+  it('possui rotas operacionais para recebimento de mercadoria', () => {
+    const lista = shell?.children?.find(route => route.path === 'estoque/recebimentos-mercadoria');
+    const detalhe = shell?.children?.find(route => route.path === 'estoque/recebimentos-mercadoria/:id');
+    expect(lista?.data?.['moduloEmpresa']).toBe('estoque');
+    expect(detalhe?.data?.['moduloEmpresa']).toBe('estoque');
+    expect(lista?.data?.['roles']).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
+    expect(detalhe?.data?.['roles']).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
+  });
 });
 
 describe('rotas de requisicoes', () => {

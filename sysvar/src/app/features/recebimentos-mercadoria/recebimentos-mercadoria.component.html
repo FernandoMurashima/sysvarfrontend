@@ -1,0 +1,54 @@
+<div class="recebimentos-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Recebimento de Mercadoria no Estoque</h1>
+      <p>Recebimentos físicos iniciados a partir de NF-e detectadas.</p>
+    </div>
+    <button class="btn" type="button" (click)="carregar()" [disabled]="loading">
+      <i class="bi bi-arrow-clockwise"></i>
+      Atualizar
+    </button>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="results-area">
+    <div class="table-wrapper" *ngIf="rows.length; else emptyTpl">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Data</th>
+            <th>Estabelecimento</th>
+            <th>Fornecedor</th>
+            <th>NF-e</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows; trackBy: trackById">
+            <td>{{ row.id }}</td>
+            <td>{{ row.criado_em | date:'short' }}</td>
+            <td>{{ lojaNome(row) }}</td>
+            <td>{{ fornecedorNome(row) }}</td>
+            <td>{{ nfe(row) }}</td>
+            <td>{{ valor(row) | currency:'BRL':'symbol':'1.2-2' }}</td>
+            <td><span class="badge operacional">{{ row.status_label || row.status }}</span></td>
+            <td>
+              <a class="btn small" [routerLink]="['/estoque/recebimentos-mercadoria', row.id]">
+                <i class="bi bi-eye"></i>
+                Detalhes
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #emptyTpl>
+      <div class="empty-hint" *ngIf="!loading">Nenhum recebimento iniciado.</div>
+      <div class="loading" *ngIf="loading">Carregando recebimentos...</div>
+    </ng-template>
+  </section>
+</div>

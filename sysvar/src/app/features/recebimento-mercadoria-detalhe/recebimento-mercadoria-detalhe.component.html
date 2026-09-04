@@ -1,0 +1,91 @@
+<div class="recebimento-detalhe-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Recebimento #{{ recebimento?.id || '-' }}</h1>
+      <p>Estrutura-base para vínculo da NF-e detectada aos pedidos de compra.</p>
+    </div>
+    <a class="btn" routerLink="/estoque/recebimentos-mercadoria">
+      <i class="bi bi-arrow-left"></i>
+      Voltar
+    </a>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+
+  <section class="details-grid" *ngIf="recebimento">
+    <div><dt>NF-e</dt><dd>{{ nfe() }}</dd></div>
+    <div><dt>Status</dt><dd>{{ recebimento.status_label || recebimento.status }}</dd></div>
+    <div><dt>Estabelecimento</dt><dd>{{ lojaNome() }}</dd></div>
+    <div><dt>Fornecedor</dt><dd>{{ fornecedorNome() }}</dd></div>
+    <div><dt>Data</dt><dd>{{ recebimento.criado_em | date:'short' }}</dd></div>
+    <div><dt>Valor NF-e</dt><dd>{{ +(recebimento.xml_fornecedor_dados?.valor_total || 0) | currency:'BRL':'symbol':'1.2-2' }}</dd></div>
+    <div class="wide"><dt>Chave de acesso</dt><dd>{{ recebimento.xml_fornecedor_dados?.chave_acesso || '-' }}</dd></div>
+  </section>
+
+  <section class="results-area" *ngIf="recebimento">
+    <div class="section-header">
+      <h2>Pedidos vinculados</h2>
+      <button class="btn primary" type="button" (click)="abrirPedidos()">
+        <i class="bi bi-check2-square"></i>
+        Selecionar pedidos
+      </button>
+    </div>
+
+    <div class="table-wrapper" *ngIf="recebimento.pedidos.length; else semPedidosTpl">
+      <table class="table">
+        <thead>
+          <tr><th>Pedido</th><th>Data</th><th>Fornecedor</th><th>Estabelecimento</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pedido of recebimento.pedidos; trackBy: trackById">
+            <td>{{ pedido.id }}</td>
+            <td>{{ pedido.emissao | date:'shortDate' }}</td>
+            <td>{{ pedido.fornecedor_nome }}</td>
+            <td>{{ pedido.loja_nome }}</td>
+            <td>{{ pedido.quantidade }}</td>
+            <td>{{ +pedido.valor | currency:'BRL':'symbol':'1.2-2' }}</td>
+            <td>{{ pedido.status_label || pedido.status }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #semPedidosTpl><div class="empty-hint">Nenhum pedido vinculado.</div></ng-template>
+  </section>
+
+  <div class="loading" *ngIf="loading">Carregando recebimento...</div>
+
+  <div class="modal-backdrop" *ngIf="modalPedidosAberto">
+    <section class="modal-card">
+      <header>
+        <h3>Selecionar pedidos</h3>
+        <button class="btn icon" type="button" (click)="fecharPedidos()" title="Fechar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <div class="table-wrapper" *ngIf="pedidosElegiveis.length; else semElegiveisTpl">
+        <table class="table">
+          <thead>
+            <tr><th></th><th>Pedido</th><th>Data</th><th>Fornecedor</th><th>Estabelecimento</th><th>Quantidade</th><th>Valor</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pedido of pedidosElegiveis; trackBy: trackById">
+              <td><input type="checkbox" [ngModel]="selecionados.has(pedido.id)" (ngModelChange)="togglePedido(pedido, $event)" /></td>
+              <td>{{ pedido.id }}</td>
+              <td>{{ pedido.emissao | date:'shortDate' }}</td>
+              <td>{{ pedido.fornecedor_nome }}</td>
+              <td>{{ pedido.loja_nome }}</td>
+              <td>{{ pedido.quantidade }}</td>
+              <td>{{ +pedido.valor | currency:'BRL':'symbol':'1.2-2' }}</td>
+              <td>{{ pedido.status_label || pedido.status }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #semElegiveisTpl><div class="empty-hint">{{ loadingPedidos ? 'Carregando pedidos...' : 'Nenhum pedido elegível.' }}</div></ng-template>
+      <footer>
+        <button class="btn" type="button" (click)="fecharPedidos()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="salvarPedidos()" [disabled]="saving">Salvar vínculos</button>
+      </footer>
+    </section>
+  </div>
+</div>
