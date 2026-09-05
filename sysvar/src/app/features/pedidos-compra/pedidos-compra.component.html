@@ -456,7 +456,7 @@
       <div class="modal-head">
         <div>
           <h3>Recebimentos</h3>
-          <p class="modal-text">Consulta de recebimentos vinculados à Nota Fiscal de Entrada.</p>
+          <p class="modal-text">Consulta das quantidades recebidas e do saldo dos itens deste pedido.</p>
         </div>
         <button class="btn" type="button" (click)="fecharRecebimentos()">Fechar</button>
       </div>
@@ -477,13 +477,13 @@
         <ng-template #recebimentosEmptyTpl><div class="empty-hint">{{ loadingRecebimentos ? 'Carregando recebimentos...' : 'Nenhum item de recebimento encontrado.' }}</div></ng-template>
       </div>
 
-      <div class="section-header item-section-head notas-head"><h3>Notas Fiscais Relacionadas</h3></div>
+      <div class="section-header item-section-head notas-head"><h3>Documentos fiscais relacionados</h3></div>
       <div class="table-wrapper itens-wrapper notas-table-area">
         <table class="table" *ngIf="notasEntrada.length > 0; else notasEmptyTpl">
           <thead><tr><th>Número</th><th>Série</th><th>Entrada</th><th>Status</th></tr></thead>
           <tbody><tr *ngFor="let n of notasEntrada"><td>{{ n.numero }}</td><td>{{ n.serie || '-' }}</td><td>{{ n.dt_entrada }}</td><td>{{ n.status }}</td></tr></tbody>
         </table>
-        <ng-template #notasEmptyTpl><div class="empty-hint">Nenhuma NF de entrada vinculada.</div></ng-template>
+        <ng-template #notasEmptyTpl><div class="empty-hint">Nenhum documento fiscal de entrada vinculado.</div></ng-template>
       </div>
     </section>
   </div>
