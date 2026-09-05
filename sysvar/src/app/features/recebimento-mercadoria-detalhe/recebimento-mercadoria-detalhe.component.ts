@@ -39,14 +39,17 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   modalConferenciaAberto = false;
   modalEncerramentoAberto = false;
   modalTermoAberto = false;
+  modalEfetivacaoAberto = false;
   loading = false;
   loadingPedidos = false;
   saving = false;
   gerandoConferencia = false;
   salvandoConferencia = false;
   encerrandoConferencia = false;
+  efetivandoEstoque = false;
   errorMsg = '';
   encerramentoErrorMsg = '';
+  efetivacaoErrorMsg = '';
   eanBipagem = '';
   observacaoDivergencia = '';
   ultimaLeitura: UltimaLeituraConferencia | null = null;
@@ -222,6 +225,30 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
     this.modalTermoAberto = false;
   }
 
+  abrirEfetivacaoEstoque(): void {
+    if (!this.recebimento?.pode_efetivar_estoque) return;
+    this.efetivacaoErrorMsg = '';
+    this.modalEfetivacaoAberto = true;
+  }
+
+  cancelarEfetivacaoEstoque(): void {
+    this.modalEfetivacaoAberto = false;
+    this.efetivacaoErrorMsg = '';
+  }
+
+  confirmarEfetivacaoEstoque(): void {
+    if (!this.recebimento?.pode_efetivar_estoque) return;
+    this.efetivandoEstoque = true;
+    this.efetivacaoErrorMsg = '';
+    this.api.efetivarEstoque(this.recebimento.id).pipe(finalize(() => this.efetivandoEstoque = false)).subscribe({
+      next: () => {
+        this.modalEfetivacaoAberto = false;
+        this.carregar();
+      },
+      error: err => this.efetivacaoErrorMsg = err?.error?.detail || err?.error?.status || 'Não foi possível efetivar o estoque.',
+    });
+  }
+
   imprimirTermo(): void {
     window.print();
   }
@@ -268,6 +295,23 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
 
   lojaNome(): string {
     return this.recebimento?.loja_nome || 'Estabelecimento não identificado';
+  }
+
+  lojaEfetivacaoNome(): string {
+    return this.recebimento?.efetivacao_estoque?.loja_nome || this.recebimento?.efetivacao_estoque_resumo?.loja_nome || '-';
+  }
+
+  quantidadeEfetivacao(): string {
+    return this.recebimento?.efetivacao_estoque?.quantidade_total || this.recebimento?.efetivacao_estoque_resumo?.quantidade_total || '0';
+  }
+
+  skusEfetivacao(): number {
+    return this.recebimento?.efetivacao_estoque?.quantidade_skus || this.recebimento?.efetivacao_estoque_resumo?.quantidade_skus || 0;
+  }
+
+  hashEfetivacaoResumo(): string {
+    const hash = this.recebimento?.efetivacao_estoque?.hash_termo || this.recebimento?.efetivacao_estoque_resumo?.hash_termo || '';
+    return hash ? `${hash.slice(0, 12)}...${hash.slice(-8)}` : '-';
   }
 
   fornecedorNome(): string {

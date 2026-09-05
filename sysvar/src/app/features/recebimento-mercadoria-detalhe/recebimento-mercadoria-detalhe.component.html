@@ -48,6 +48,30 @@
     </dl>
   </section>
 
+  <section class="content-card" *ngIf="recebimento?.status === 'CONCLUIDO' && recebimento?.termo_encerramento">
+    <div class="card-header split">
+      <div>
+        <h2>Efetivação do estoque</h2>
+        <p>{{ recebimento?.estoque_efetivado ? 'Efetivado' : recebimento?.pode_efetivar_estoque ? 'Pendente' : 'Sem quantidade para efetivação' }}</p>
+      </div>
+      <button class="btn primary" type="button" *ngIf="recebimento?.pode_efetivar_estoque" (click)="abrirEfetivacaoEstoque()">
+        <i class="bi bi-box-arrow-in-down"></i>
+        Efetivar estoque
+      </button>
+    </div>
+    <div class="conference-summary">
+      <div><span>Status</span><strong>{{ recebimento?.estoque_efetivado ? 'Efetivado' : recebimento?.pode_efetivar_estoque ? 'Pendente' : 'Bloqueado' }}</strong></div>
+      <div><span>Loja destino</span><strong>{{ lojaEfetivacaoNome() }}</strong></div>
+      <div><span>Quantidade física</span><strong>{{ quantidadeEfetivacao() }}</strong></div>
+      <div><span>SKUs</span><strong>{{ skusEfetivacao() }}</strong></div>
+      <div *ngIf="recebimento?.efetivacao_estoque"><span>Usuário</span><strong>{{ recebimento?.efetivacao_estoque?.efetivado_por_nome }}</strong></div>
+      <div *ngIf="recebimento?.efetivacao_estoque"><span>Data/hora</span><strong>{{ recebimento?.efetivacao_estoque?.efetivado_em | date:'short' }}</strong></div>
+    </div>
+    <div class="stock-block-reason" *ngIf="!recebimento?.pode_efetivar_estoque && !recebimento?.estoque_efetivado">
+      {{ recebimento?.efetivacao_estoque_resumo?.motivo_bloqueio || 'Efetivação indisponível.' }}
+    </div>
+  </section>
+
   <section class="content-card" *ngIf="recebimento">
     <div class="card-header split">
       <h2>Pedidos de compra vinculados</h2>
@@ -354,6 +378,33 @@
       <footer class="modal-footer no-print">
         <button class="btn" type="button" (click)="fecharTermo()">Fechar</button>
         <button class="btn primary" type="button" (click)="imprimirTermo()">Imprimir termo</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="modalEfetivacaoAberto && recebimento">
+    <section class="modal-card closing-modal-card">
+      <header class="modal-header">
+        <div>
+          <h3>Efetivar recebimento no estoque</h3>
+          <p>Esta operação lançará definitivamente as quantidades físicas conferidas no estoque.</p>
+        </div>
+        <button class="btn icon" type="button" (click)="cancelarEfetivacaoEstoque()" title="Fechar"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <div class="closing-body">
+        <div class="conference-summary modal-summary">
+          <div><span>Recebimento</span><strong>#{{ recebimento.id }}</strong></div>
+          <div><span>Termo</span><strong>#{{ recebimento.termo_encerramento?.id }}</strong></div>
+          <div><span>Loja destino</span><strong>{{ lojaEfetivacaoNome() }}</strong></div>
+          <div><span>Quantidade física</span><strong>{{ quantidadeEfetivacao() }}</strong></div>
+          <div><span>SKUs</span><strong>{{ skusEfetivacao() }}</strong></div>
+          <div><span>Hash</span><strong>{{ hashEfetivacaoResumo() }}</strong></div>
+        </div>
+        <div class="alert error" *ngIf="efetivacaoErrorMsg">{{ efetivacaoErrorMsg }}</div>
+      </div>
+      <footer class="modal-footer">
+        <button class="btn" type="button" (click)="cancelarEfetivacaoEstoque()">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarEfetivacaoEstoque()" [disabled]="efetivandoEstoque">Efetivar estoque</button>
       </footer>
     </section>
   </div>

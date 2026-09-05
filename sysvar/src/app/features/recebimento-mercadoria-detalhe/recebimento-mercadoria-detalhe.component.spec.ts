@@ -87,7 +87,7 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
   } as any;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['get', 'pedidosElegiveis', 'vincularPedidos', 'gerarConferencia', 'salvarConferencia', 'encerrarConferencia']);
+    api = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['get', 'pedidosElegiveis', 'vincularPedidos', 'gerarConferencia', 'salvarConferencia', 'encerrarConferencia', 'efetivarEstoque']);
     api.get.and.returnValue(of(recebimento));
     api.pedidosElegiveis.and.returnValue(of([pedido1, pedido2]));
     api.vincularPedidos.and.returnValue(of({ ...recebimento, pedidos: [pedido1, pedido2] }));
@@ -134,6 +134,21 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
       conferencia_itens: [{ ...conferenciaItem, quantidade_recebida: '4.000', diferenca: '0.000', situacao: 'OK' }],
       termo_encerramento: termo,
       pode_encerrar_conferencia: false,
+    }));
+    api.efetivarEstoque.and.returnValue(of({
+      id: 3,
+      recebimento: 8,
+      termo: 7,
+      empresa: 1,
+      loja: 1,
+      loja_nome: 'Loja A',
+      efetivado_por: 2,
+      efetivado_por_nome: 'Conferente',
+      efetivado_em: '2026-09-04T12:30:00-03:00',
+      quantidade_total: '4.000',
+      quantidade_skus: 1,
+      hash_termo: 'a'.repeat(64),
+      criado_em: '2026-09-04T12:30:00-03:00',
     }));
 
     await TestBed.configureTestingModule({
@@ -563,5 +578,70 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     component.gerarConferencia();
 
     expect(component.errorMsg).toBe('Não foi possível gerar a conferência física.');
+  });
+
+  it('mostra card pendente, abre confirmacao e chama endpoint de efetivacao', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'CONCLUIDO',
+      termo_encerramento: termo,
+      estoque_efetivado: false,
+      pode_efetivar_estoque: true,
+      efetivacao_estoque_resumo: { loja: 1, loja_nome: 'Loja A', quantidade_total: '4.000', quantidade_skus: 1, hash_termo: 'a'.repeat(64), motivo_bloqueio: '' },
+    };
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Efetivação do estoque');
+    expect(fixture.nativeElement.textContent).toContain('Pendente');
+    expect(fixture.nativeElement.textContent).toContain('Loja A');
+    expect(fixture.nativeElement.textContent).toContain('4.000');
+
+    component.abrirEfetivacaoEstoque();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Efetivar recebimento no estoque');
+    component.confirmarEfetivacaoEstoque();
+    expect(api.efetivarEstoque).toHaveBeenCalledWith(8);
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('sucesso mostra efetivado e remove botao de efetivar', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'CONCLUIDO',
+      termo_encerramento: termo,
+      estoque_efetivado: true,
+      pode_efetivar_estoque: false,
+      efetivacao_estoque: { id: 3, recebimento: 8, termo: 7, empresa: 1, loja: 1, loja_nome: 'Loja A', efetivado_por: 2, efetivado_por_nome: 'Conferente', efetivado_em: '2026-09-04T12:30:00-03:00', quantidade_total: '4.000', quantidade_skus: 1, hash_termo: 'a'.repeat(64), criado_em: '2026-09-04T12:30:00-03:00' },
+    };
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Efetivado');
+    expect(text).toContain('Conferente');
+    expect(text).toContain('Ver termo de recebimento');
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).map((button: any) => button.textContent.trim());
+    expect(buttons).not.toContain('Efetivar estoque');
+  });
+
+  it('fisico zero nao permite efetivar e erro da API fica na confirmacao', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'CONCLUIDO',
+      termo_encerramento: termo,
+      estoque_efetivado: false,
+      pode_efetivar_estoque: false,
+      efetivacao_estoque_resumo: { loja: 1, loja_nome: 'Loja A', quantidade_total: '0', quantidade_skus: 0, hash_termo: 'a'.repeat(64), motivo_bloqueio: 'Não há quantidade física recebida para efetivar no estoque.' },
+    };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Não há quantidade física recebida');
+    expect(fixture.nativeElement.textContent).not.toContain('Efetivar estoque');
+
+    component.recebimento!.pode_efetivar_estoque = true;
+    api.efetivarEstoque.and.returnValue(throwError(() => ({ error: { detail: 'Falha de validação' } })));
+    component.abrirEfetivacaoEstoque();
+    component.confirmarEfetivacaoEstoque();
+    fixture.detectChanges();
+    expect(component.modalEfetivacaoAberto).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Falha de validação');
   });
 });

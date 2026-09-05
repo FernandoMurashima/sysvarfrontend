@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { PaginatedResponse, PedidoRecebimentoMercadoria, RecebimentoMercadoria } from '../models/recebimento-mercadoria';
+import { PaginatedResponse, PedidoRecebimentoMercadoria, RecebimentoMercadoria, RecebimentoMercadoriaEfetivacaoEstoque } from '../models/recebimento-mercadoria';
 
 @Injectable({ providedIn: 'root' })
 export class RecebimentoMercadoriaService {
@@ -40,6 +40,10 @@ export class RecebimentoMercadoriaService {
 
   encerrarConferencia(id: number, observacao_divergencia: string): Observable<RecebimentoMercadoria> {
     return this.http.post<RecebimentoMercadoria>(`${this.base}${id}/encerrar-conferencia/`, { observacao_divergencia });
+  }
+
+  efetivarEstoque(id: number): Observable<RecebimentoMercadoriaEfetivacaoEstoque> {
+    return this.http.post<RecebimentoMercadoriaEfetivacaoEstoque>(`${this.base}${id}/efetivar-estoque/`, {});
   }
 
   private params(params?: Record<string, string | number | null | undefined>): HttpParams {

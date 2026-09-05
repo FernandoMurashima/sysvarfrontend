@@ -34,6 +34,10 @@ export interface RecebimentoMercadoria {
   conferencia_resumo: RecebimentoMercadoriaConferenciaResumo;
   termo_encerramento?: RecebimentoMercadoriaTermo | null;
   pode_encerrar_conferencia?: boolean;
+  estoque_efetivado?: boolean;
+  efetivacao_estoque?: RecebimentoMercadoriaEfetivacaoEstoque | null;
+  pode_efetivar_estoque?: boolean;
+  efetivacao_estoque_resumo?: RecebimentoMercadoriaEfetivacaoEstoqueResumo;
 }
 
 export interface RecebimentoMercadoriaConferenciaItem {
@@ -92,6 +96,31 @@ export interface RecebimentoMercadoriaTermoSnapshot {
   divergencias?: { faltas?: Array<Record<string, any>>; sobras?: Array<Record<string, any>> };
   usuario?: Record<string, any>;
   observacao?: string;
+}
+
+export interface RecebimentoMercadoriaEfetivacaoEstoque {
+  id: number;
+  recebimento: number;
+  termo: number;
+  empresa: number;
+  loja: number;
+  loja_nome: string;
+  efetivado_por: number;
+  efetivado_por_nome: string;
+  efetivado_em: string;
+  quantidade_total: string;
+  quantidade_skus: number;
+  hash_termo: string;
+  criado_em: string;
+}
+
+export interface RecebimentoMercadoriaEfetivacaoEstoqueResumo {
+  loja: number | null;
+  loja_nome: string | null;
+  quantidade_total: string;
+  quantidade_skus: number;
+  hash_termo: string;
+  motivo_bloqueio: string;
 }
 
 export interface PaginatedResponse<T> {

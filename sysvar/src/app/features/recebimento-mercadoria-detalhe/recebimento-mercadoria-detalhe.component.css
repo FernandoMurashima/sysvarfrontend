@@ -414,6 +414,14 @@
   color: #92400e;
 }
 
+.stock-block-reason {
+  padding: 14px 18px;
+  color: #92400e;
+  background: #fffbeb;
+  border-top: 1px solid #fde68a;
+  font-weight: 600;
+}
+
 .term-modal-card {
   width: min(1120px, calc(100vw - 32px));
 }
