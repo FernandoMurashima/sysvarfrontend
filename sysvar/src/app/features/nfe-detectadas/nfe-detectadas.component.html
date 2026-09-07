@@ -67,6 +67,13 @@
       </select>
     </label>
     <label>
+      <span>Tratamento</span>
+      <select [(ngModel)]="filtros.tipo_tratamento">
+        <option value="">Todos</option>
+        <option *ngFor="let tratamento of tratamentoOptions" [value]="tratamento.value">{{ tratamento.label }}</option>
+      </select>
+    </label>
+    <label>
       <span>Número/chave/busca</span>
       <input [(ngModel)]="filtros.search" type="search" placeholder="Buscar" />
     </label>
@@ -97,6 +104,7 @@
             <th>Valor</th>
             <th>Situação fiscal</th>
             <th>Status</th>
+            <th>Tratamento</th>
             <th>Agente</th>
             <th>Ações</th>
           </tr>
@@ -111,11 +119,16 @@
             <td>{{ +row.valor_total | currency:'BRL':'symbol':'1.2-2' }}</td>
             <td><span class="badge fiscal" [class]="row.situacao_fiscal.toLowerCase()">{{ situacaoLabel(row.situacao_fiscal) }}</span></td>
             <td><span class="badge operacional" [class]="row.status_operacional.toLowerCase()">{{ statusLabel(row.status_operacional) }}</span></td>
+            <td><span class="badge tratamento" [class]="row.tipo_tratamento.toLowerCase()">{{ tratamentoLabel(row) }}</span></td>
             <td>{{ row.identificador_agente || '-' }}</td>
             <td>
               <button class="btn small primary" type="button" *ngIf="podeIniciarRecebimento(row)" (click)="iniciarRecebimento(row)" [disabled]="iniciandoId === row.id">
                 <i class="bi bi-box-arrow-in-down"></i>
                 Iniciar recebimento
+              </button>
+              <button class="btn small" type="button" (click)="abrirDefinirTratamento(row)">
+                <i class="bi bi-sliders"></i>
+                Definir tratamento
               </button>
               <button class="btn small" type="button" (click)="detalhes(row)">
                 <i class="bi bi-eye"></i>
@@ -165,9 +178,43 @@
         <div><dt>Valor total</dt><dd>{{ +selecionado.valor_total | currency:'BRL':'symbol':'1.2-2' }}</dd></div>
         <div><dt>Situação fiscal</dt><dd>{{ situacaoLabel(selecionado.situacao_fiscal) }}</dd></div>
         <div><dt>Status operacional</dt><dd>{{ statusLabel(selecionado.status_operacional) }}</dd></div>
+        <div><dt>Tratamento</dt><dd>{{ tratamentoLabel(selecionado) }}</dd></div>
         <div><dt>Agent</dt><dd>{{ selecionado.identificador_agente || '-' }}</dd></div>
         <div class="wide"><dt>Caminho de origem local</dt><dd>{{ selecionado.caminho_origem_local || '-' }}</dd></div>
       </dl>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="tratamentoSelecionado">
+    <section class="modal-card treatment-modal">
+      <header>
+        <div>
+          <h3>Definir tratamento</h3>
+        </div>
+        <button class="btn icon" type="button" (click)="fecharDefinirTratamento()" title="Fechar" [disabled]="salvandoTratamento">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <dl class="details-grid compact">
+        <div><dt>NF-e</dt><dd>{{ nfe(tratamentoSelecionado) }}</dd></div>
+        <div><dt>Fornecedor</dt><dd>{{ fornecedorDetalhe(tratamentoSelecionado) }}</dd></div>
+        <div><dt>Estabelecimento</dt><dd>{{ lojaDetalhe(tratamentoSelecionado) }}</dd></div>
+        <div><dt>Tratamento atual</dt><dd>{{ tratamentoLabel(tratamentoSelecionado) }}</dd></div>
+      </dl>
+      <label class="modal-field">
+        <span>Tratamento</span>
+        <select [(ngModel)]="tratamentoForm" required>
+          <option value="" disabled>Selecione</option>
+          <option *ngFor="let tratamento of tratamentoOperacionalOptions" [value]="tratamento.value">{{ tratamento.label }}</option>
+        </select>
+      </label>
+      <footer class="modal-actions">
+        <button class="btn" type="button" (click)="fecharDefinirTratamento()" [disabled]="salvandoTratamento">Cancelar</button>
+        <button class="btn primary" type="button" (click)="confirmarTratamento()" [disabled]="!tratamentoForm || salvandoTratamento">
+          <i class="bi bi-check2"></i>
+          Confirmar
+        </button>
+      </footer>
     </section>
   </div>
 </div>

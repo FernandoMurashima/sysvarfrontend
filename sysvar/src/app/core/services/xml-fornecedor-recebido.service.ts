@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   PaginatedResponse,
+  TipoTratamentoXmlFornecedor,
   XmlFornecedorRecebido,
   XmlFornecedorRecebidoIndicadores,
   XmlFornecedorRecebidoListParams,
@@ -25,6 +26,10 @@ export class XmlFornecedorRecebidoService {
 
   get(id: number): Observable<XmlFornecedorRecebido> {
     return this.http.get<XmlFornecedorRecebido>(`${this.base}${id}/`);
+  }
+
+  definirTratamento(id: number, tipo_tratamento: TipoTratamentoXmlFornecedor): Observable<XmlFornecedorRecebido> {
+    return this.http.post<XmlFornecedorRecebido>(`${this.base}${id}/definir-tratamento/`, { tipo_tratamento });
   }
 
   private params(params?: XmlFornecedorRecebidoListParams, includePaging = true): HttpParams {

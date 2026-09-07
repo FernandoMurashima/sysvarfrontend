@@ -12,6 +12,13 @@ export type SituacaoFiscalXmlFornecedor =
   | 'CANCELADA'
   | 'DENEGADA';
 
+export type TipoTratamentoXmlFornecedor =
+  | 'NAO_DEFINIDO'
+  | 'ESTOQUE'
+  | 'USO_CONSUMO'
+  | 'INSUMO_PRODUCAO'
+  | 'FISCAL_SEM_ESTOQUE';
+
 export interface XmlFornecedorRecebido {
   id: number;
   empresa: number;
@@ -33,6 +40,8 @@ export interface XmlFornecedorRecebido {
   unidade_comercial: string;
   situacao_fiscal: SituacaoFiscalXmlFornecedor;
   status_operacional: StatusOperacionalXmlFornecedor;
+  tipo_tratamento: TipoTratamentoXmlFornecedor;
+  tipo_tratamento_display?: string;
   caminho_origem_local: string;
   identificador_agente: string;
   detectado_em: string;
@@ -53,6 +62,7 @@ export interface XmlFornecedorRecebidoListParams {
   fornecedor?: number | string;
   status_operacional?: StatusOperacionalXmlFornecedor | string;
   situacao_fiscal?: SituacaoFiscalXmlFornecedor | string;
+  tipo_tratamento?: TipoTratamentoXmlFornecedor | string;
   search?: string;
   chave_acesso?: string;
   detectado_de?: string;

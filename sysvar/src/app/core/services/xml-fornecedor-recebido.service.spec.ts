@@ -25,6 +25,7 @@ describe('XmlFornecedorRecebidoService', () => {
       fornecedor: 3,
       status_operacional: 'DETECTADO',
       situacao_fiscal: 'AUTORIZADA',
+      tipo_tratamento: 'ESTOQUE',
       search: '123',
       detectado_de: '2026-09-01',
       detectado_ate: '2026-09-04',
@@ -37,6 +38,7 @@ describe('XmlFornecedorRecebidoService', () => {
     expect(req.request.params.get('fornecedor')).toBe('3');
     expect(req.request.params.get('status_operacional')).toBe('DETECTADO');
     expect(req.request.params.get('situacao_fiscal')).toBe('AUTORIZADA');
+    expect(req.request.params.get('tipo_tratamento')).toBe('ESTOQUE');
     expect(req.request.params.get('search')).toBe('123');
     expect(req.request.params.get('detectado_de')).toBe('2026-09-01');
     expect(req.request.params.get('detectado_ate')).toBe('2026-09-04');
@@ -53,5 +55,13 @@ describe('XmlFornecedorRecebidoService', () => {
     expect(req.request.params.has('page_size')).toBeFalse();
     expect(req.request.params.get('status_operacional')).toBe('DETECTADO');
     req.flush({ total: 1, detectadas: 1, aguardando_recebimento: 0, em_recebimento: 0, recebidas_processadas: 0, pendentes: 1 });
+  });
+
+  it('define tratamento operacional do XML', () => {
+    service.definirTratamento(7, 'ESTOQUE').subscribe();
+
+    const req = http.expectOne(request => request.method === 'POST' && request.url === `${environment.apiBaseUrl}/fiscal/xmls-fornecedor-recebidos/7/definir-tratamento/`);
+    expect(req.request.body).toEqual({ tipo_tratamento: 'ESTOQUE' });
+    req.flush({ id: 7, tipo_tratamento: 'ESTOQUE' });
   });
 });

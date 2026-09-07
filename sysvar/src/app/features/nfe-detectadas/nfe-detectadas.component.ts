@@ -9,6 +9,7 @@ import { Loja } from '../../core/models/loja';
 import {
   StatusOperacionalXmlFornecedor,
   SituacaoFiscalXmlFornecedor,
+  TipoTratamentoXmlFornecedor,
   XmlFornecedorRecebido,
   XmlFornecedorRecebidoIndicadores,
   XmlFornecedorRecebidoListParams,
@@ -44,6 +45,9 @@ export class NfeDetectadasComponent implements OnInit {
     pendentes: 0,
   };
   selecionado: XmlFornecedorRecebido | null = null;
+  tratamentoSelecionado: XmlFornecedorRecebido | null = null;
+  tratamentoForm: TipoTratamentoXmlFornecedor | '' = '';
+  salvandoTratamento = false;
   loading = false;
   iniciandoId: number | null = null;
   errorMsg = '';
@@ -57,6 +61,7 @@ export class NfeDetectadasComponent implements OnInit {
     fornecedor: '',
     status_operacional: '',
     situacao_fiscal: '',
+    tipo_tratamento: '',
     search: '',
     detectado_de: '',
     detectado_ate: '',
@@ -77,6 +82,16 @@ export class NfeDetectadasComponent implements OnInit {
     { value: 'DENEGADA', label: 'Denegada' },
     { value: 'DESCONHECIDA', label: 'Desconhecida' },
   ];
+
+  readonly tratamentoOptions: Array<{ value: TipoTratamentoXmlFornecedor; label: string }> = [
+    { value: 'NAO_DEFINIDO', label: 'Não definido' },
+    { value: 'ESTOQUE', label: 'Mercadoria para estoque' },
+    { value: 'USO_CONSUMO', label: 'Uso e consumo' },
+    { value: 'INSUMO_PRODUCAO', label: 'Insumo / produção' },
+    { value: 'FISCAL_SEM_ESTOQUE', label: 'Entrada fiscal sem estoque' },
+  ];
+
+  readonly tratamentoOperacionalOptions = this.tratamentoOptions.filter(item => item.value !== 'NAO_DEFINIDO');
 
   ngOnInit(): void {
     this.carregarLookups();
@@ -113,7 +128,7 @@ export class NfeDetectadasComponent implements OnInit {
   }
 
   limparFiltros(): void {
-    this.filtros = { loja: '', fornecedor: '', status_operacional: '', situacao_fiscal: '', search: '', detectado_de: '', detectado_ate: '' };
+    this.filtros = { loja: '', fornecedor: '', status_operacional: '', situacao_fiscal: '', tipo_tratamento: '', search: '', detectado_de: '', detectado_ate: '' };
     this.page = 1;
     this.carregar();
   }
@@ -123,7 +138,7 @@ export class NfeDetectadasComponent implements OnInit {
   }
 
   podeIniciarRecebimento(row: XmlFornecedorRecebido): boolean {
-    return ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
+    return row.tipo_tratamento === 'ESTOQUE' && ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
   }
 
   iniciarRecebimento(row: XmlFornecedorRecebido): void {
@@ -138,6 +153,34 @@ export class NfeDetectadasComponent implements OnInit {
 
   fecharDetalhes(): void {
     this.selecionado = null;
+  }
+
+  abrirDefinirTratamento(row: XmlFornecedorRecebido): void {
+    this.tratamentoSelecionado = row;
+    this.tratamentoForm = row.tipo_tratamento === 'NAO_DEFINIDO' ? '' : row.tipo_tratamento;
+    this.errorMsg = '';
+  }
+
+  fecharDefinirTratamento(): void {
+    if (this.salvandoTratamento) return;
+    this.tratamentoSelecionado = null;
+    this.tratamentoForm = '';
+  }
+
+  confirmarTratamento(): void {
+    if (!this.tratamentoSelecionado || !this.tratamentoForm || this.salvandoTratamento) return;
+    const id = this.tratamentoSelecionado.id;
+    this.salvandoTratamento = true;
+    this.errorMsg = '';
+    this.api.definirTratamento(id, this.tratamentoForm).pipe(finalize(() => this.salvandoTratamento = false)).subscribe({
+      next: xml => {
+        this.rows = this.rows.map(row => row.id === xml.id ? xml : row);
+        if (this.selecionado?.id === xml.id) this.selecionado = xml;
+        this.tratamentoSelecionado = null;
+        this.tratamentoForm = '';
+      },
+      error: error => this.errorMsg = this.extrairMensagemErroTratamento(error),
+    });
   }
 
   nextPage(): void {
@@ -158,6 +201,11 @@ export class NfeDetectadasComponent implements OnInit {
 
   situacaoLabel(value: string): string {
     return this.situacaoOptions.find(item => item.value === value)?.label || value || '-';
+  }
+
+  tratamentoLabel(row: XmlFornecedorRecebido | null): string {
+    if (!row) return '-';
+    return row.tipo_tratamento_display || this.tratamentoOptions.find(item => item.value === row.tipo_tratamento)?.label || 'Não definido';
   }
 
   fornecedorNome(row: XmlFornecedorRecebido): string {
@@ -217,6 +265,7 @@ export class NfeDetectadasComponent implements OnInit {
       fornecedor: this.filtros.fornecedor,
       status_operacional: this.filtros.status_operacional,
       situacao_fiscal: this.filtros.situacao_fiscal,
+      tipo_tratamento: this.filtros.tipo_tratamento,
       search: this.filtros.search.trim(),
       detectado_de: this.filtros.detectado_de,
       detectado_ate: this.filtros.detectado_ate,
@@ -227,5 +276,12 @@ export class NfeDetectadasComponent implements OnInit {
 
   private unwrap<T>(resp: T[] | { results: T[] }): T[] {
     return Array.isArray(resp) ? resp : (resp?.results ?? []);
+  }
+
+  private extrairMensagemErroTratamento(error: any): string {
+    const data = error?.error || {};
+    const value = data.detail || data.tipo_tratamento || data.non_field_errors;
+    if (Array.isArray(value)) return value.join(' ');
+    return value || 'Não foi possível definir o tratamento da NF-e.';
   }
 }
