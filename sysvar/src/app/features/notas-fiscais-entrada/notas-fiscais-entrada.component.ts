@@ -648,10 +648,16 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     return this.notaAtual()?.status !== 'AB';
   }
 
+  xmlFiscalSemEstoque(): boolean {
+    const nota = this.notaAtual();
+    return !!nota?.xml_fornecedor && nota?.tipo_tratamento === 'FISCAL_SEM_ESTOQUE';
+  }
+
   situacaoXml(): string {
     const status = this.notaAtual()?.status;
     if (status === 'FE') return 'Efetivada';
     if (status === 'CA') return 'Cancelada';
+    if (this.xmlFiscalSemEstoque()) return 'Fiscal sem estoque';
     if (!this.resumoConciliacao?.nota_conciliada) return 'Aguardando conciliação';
     if (!this.resumoConferencia?.conferencia_completa) return 'Aguardando conferência';
     if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) return 'Conversão pendente';
@@ -679,6 +685,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   temDivergenciaRecebimento(): boolean {
+    if (this.xmlFiscalSemEstoque()) return false;
     return (this.resumoConferencia?.itens_com_divergencia || 0) > 0 || this.divergenciasXml.length > 0;
   }
 
@@ -697,6 +704,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   bloqueiosPedido(): NotaFiscalEntradaDivergenciaPedido[] {
+    if (this.xmlFiscalSemEstoque()) return [];
     return this.divergenciasPedido().filter(div => div.bloqueia);
   }
 
@@ -710,10 +718,12 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (nota?.situacao_fiscal && nota.situacao_fiscal !== 'AUTORIZADA') motivos.push(`Situação fiscal ${this.situacaoFiscalLabel(nota.situacao_fiscal)}`);
     if (nota?.finalidade_nfe && nota.finalidade_nfe !== '1') motivos.push('Finalidade fiscal requer fluxo específico');
     if (!nota?.pedido_compra && this.cobrancaFinanceira?.pendencias?.length) motivos.push(...this.cobrancaFinanceira.pendencias);
-    if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
-    if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
-    if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
-    motivos.push(...this.bloqueiosPedido().map(div => div.mensagem));
+    if (!this.xmlFiscalSemEstoque()) {
+      if (!this.resumoConciliacao?.nota_conciliada) motivos.push(`${this.resumoConciliacao?.itens_pendentes || 0} item(ns) sem Produto Sysvar`);
+      if (!this.resumoConferencia?.conferencia_completa) motivos.push(`${this.resumoConferencia?.itens_nao_conferidos || 0} item(ns) não conferido(s)`);
+      if ((this.resumoConferencia?.conversoes_pendentes || 0) > 0) motivos.push(`${this.resumoConferencia?.conversoes_pendentes || 0} conversão(ões) pendente(s)`);
+      motivos.push(...this.bloqueiosPedido().map(div => div.mensagem));
+    }
     return motivos.filter(m => !m.startsWith('0 '));
   }
 
@@ -764,7 +774,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   reprocessarConciliacao(): void {
     const nota = this.notaAtual();
-    if (!nota || this.conciliandoAuto) return;
+    if (!nota || this.xmlFiscalSemEstoque() || this.conciliandoAuto) return;
     this.conciliandoAuto = true;
     this.notasApi.conciliarAutomaticamente(nota.id).subscribe({
       next: (resp) => {
@@ -781,6 +791,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   abrirConciliacao(item: ItemXmlUI): void {
+    if (this.xmlFiscalSemEstoque()) return;
     this.conciliacaoModal = { item, termo: item.descricao_produto || item.codigo_produto_fornecedor || '', candidatos: [], selecionado: null, loading: false, saving: false };
     this.buscarCandidatosXml();
   }
@@ -816,7 +827,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   conferirItemXml(item: ItemXmlUI): void {
     const nota = this.notaAtual();
-    if (!nota || this.xmlSomenteLeitura() || item.salvando) return;
+    if (!nota || this.xmlSomenteLeitura() || this.xmlFiscalSemEstoque() || item.salvando) return;
     const qtd = item.recebidoInput;
     if (qtd === null || qtd === undefined || Number.isNaN(Number(qtd))) {
       this.erro = 'Informe a quantidade recebida.';
@@ -847,7 +858,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
 
   confirmarQuantidadesFiscais(): void {
     const nota = this.notaAtual();
-    if (!nota || this.xmlSomenteLeitura() || this.conferindoLote) return;
+    if (!nota || this.xmlSomenteLeitura() || this.xmlFiscalSemEstoque() || this.conferindoLote) return;
     const itens = this.itensXml.filter(i => i.conciliado).map(i => ({ item: i.id, quantidade_recebida: i.quantidade_comercial }));
     if (!itens.length) return;
     this.conferindoLote = true;

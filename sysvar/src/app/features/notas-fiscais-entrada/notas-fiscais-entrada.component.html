@@ -348,14 +348,15 @@
         </table>
       </section>
       <div class="step-summary">
-        <div><small>Conciliação</small><strong>{{ resumoConciliacao?.itens_conciliados || 0 }} de {{ resumoConciliacao?.total_itens || 0 }}</strong></div>
-        <div><small>Conferência</small><strong>{{ resumoConferencia?.itens_conferidos || 0 }} de {{ resumoConferencia?.total_itens || 0 }}</strong></div>
-        <div><small>Divergências</small><strong>{{ resumoConferencia?.itens_com_divergencia || 0 }}</strong></div>
+        <div><small>Conciliação</small><strong>{{ xmlFiscalSemEstoque() ? 'Não aplicável' : ((resumoConciliacao?.itens_conciliados || 0) + ' de ' + (resumoConciliacao?.total_itens || 0)) }}</strong></div>
+        <div><small>Conferência</small><strong>{{ xmlFiscalSemEstoque() ? 'Não aplicável' : ((resumoConferencia?.itens_conferidos || 0) + ' de ' + (resumoConferencia?.total_itens || 0)) }}</strong></div>
+        <div><small>Divergências</small><strong>{{ xmlFiscalSemEstoque() ? 'Não aplicável' : (resumoConferencia?.itens_com_divergencia || 0) }}</strong></div>
         <div><small>Situação</small><strong>{{ situacaoXml() }}</strong></div>
       </div>
+      <div class="alert info" *ngIf="xmlFiscalSemEstoque()">Tratamento fiscal sem movimentação de estoque — conciliação e conferência não aplicáveis.</div>
       <div class="actions-form">
-        <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
-        <button class="btn" type="button" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
+        <button class="btn" type="button" *ngIf="!xmlFiscalSemEstoque()" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
+        <button class="btn" type="button" *ngIf="!xmlFiscalSemEstoque()" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
         <button class="btn danger-soft" type="button" [disabled]="xmlSomenteLeitura()" (click)="recusarEntradaXml()">Recusar entrada</button>
       </div>
       <section class="pedido-divergencias" *ngIf="divergenciasPedido().length">
@@ -368,7 +369,7 @@
       </section>
       <div class="table-wrapper itens-wrapper xml-items">
         <table class="table" *ngIf="itensXml.length; else xmlEmptyTpl">
-          <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Valor unit.</th><th>Total item</th><th>Produto Sysvar</th><th>Conversão</th><th>Recebido</th><th>Situação</th><th>Ação</th></tr></thead>
+          <thead><tr><th>Item</th><th>Código fornecedor</th><th>Descrição XML</th><th>Unidade XML</th><th>Qtd fiscal</th><th>Valor unit.</th><th>Total item</th><th *ngIf="!xmlFiscalSemEstoque()">Produto Sysvar</th><th *ngIf="!xmlFiscalSemEstoque()">Conversão</th><th *ngIf="!xmlFiscalSemEstoque()">Recebido</th><th>Situação</th><th *ngIf="!xmlFiscalSemEstoque()">Ação</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of itensXml">
               <td>{{ item.numero_item }}</td>
@@ -378,17 +379,17 @@
               <td>{{ formatarQuantidade(item.quantidade_comercial) }}</td>
               <td>{{ formatarMoeda(item.valor_unitario_comercial) }}</td>
               <td>{{ formatarMoeda(item.valor_produto) }}</td>
-              <td>{{ item.produto_descricao || 'Pendente' }}</td>
-              <td>
+              <td *ngIf="!xmlFiscalSemEstoque()">{{ item.produto_descricao || 'Pendente' }}</td>
+              <td *ngIf="!xmlFiscalSemEstoque()">
                 <span *ngIf="item.conversao && !item.conversao.conversao_pendente">{{ item.unidade_comercial }} → {{ item.conversao.quantidade_interna || '-' }} {{ item.conversao.unidade_interna || '' }}</span>
                 <span class="text-warn" *ngIf="!item.conversao || item.conversao.conversao_pendente">Conversão de unidade pendente</span>
               </td>
-              <td><input type="number" step="0.001" [(ngModel)]="item.recebidoInput" [disabled]="xmlSomenteLeitura() || !item.conciliado" /></td>
+              <td *ngIf="!xmlFiscalSemEstoque()"><input type="number" step="0.001" [(ngModel)]="item.recebidoInput" [disabled]="xmlSomenteLeitura() || !item.conciliado" /></td>
               <td>
-                <span class="badge" [ngClass]="item.conciliado && item.conferido ? 'badge-ok' : 'badge-off'">{{ item.conciliado ? (item.conferido ? 'Conferido' : 'Conciliado') : 'Pendente' }}</span>
-                <span class="badge badge-off pedido-badge" *ngIf="divergenciasPedidoItem(item)[0] as div" [title]="div.mensagem">{{ div.titulo }}</span>
+                <span class="badge" [ngClass]="xmlFiscalSemEstoque() || (item.conciliado && item.conferido) ? 'badge-ok' : 'badge-off'">{{ xmlFiscalSemEstoque() ? 'Fiscal sem estoque' : (item.conciliado ? (item.conferido ? 'Conferido' : 'Conciliado') : 'Pendente') }}</span>
+                <span class="badge badge-off pedido-badge" *ngIf="!xmlFiscalSemEstoque() && divergenciasPedidoItem(item)[0] as div" [title]="div.mensagem">{{ div.titulo }}</span>
               </td>
-              <td>
+              <td *ngIf="!xmlFiscalSemEstoque()">
                 <button class="btn sm" type="button" *ngIf="!item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="abrirConciliacao(item)">Vincular produto</button>
                 <button class="btn sm" type="button" *ngIf="item.conciliado" [disabled]="xmlSomenteLeitura()" (click)="preencherQuantidadeFiscal(item)">Qtd fiscal</button>
                 <button class="btn sm primary" type="button" *ngIf="item.conciliado" [disabled]="xmlSomenteLeitura() || item.salvando" (click)="conferirItemXml(item)">Conferir</button>

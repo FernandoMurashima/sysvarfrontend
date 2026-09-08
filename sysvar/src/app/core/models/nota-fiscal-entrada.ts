@@ -16,6 +16,9 @@ export interface NotaFiscalEntrada {
   valor_frete: string;
   valor_total: string;
   observacoes: string;
+  xml_fornecedor?: number | null;
+  tipo_tratamento?: 'NAO_DEFINIDO' | 'ESTOQUE' | 'USO_CONSUMO' | 'INSUMO_PRODUCAO' | 'FISCAL_SEM_ESTOQUE' | string | null;
+  tipo_tratamento_display?: string | null;
   xml_original?: string;
   xml_importado?: boolean;
   natureza_operacao?: string;

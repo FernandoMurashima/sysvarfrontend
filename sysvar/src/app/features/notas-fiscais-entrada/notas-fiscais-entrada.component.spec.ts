@@ -594,6 +594,52 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(notasApi.fechar).toHaveBeenCalledWith(1);
   });
 
+  it('FISCAL_SEM_ESTOQUE do XML fornecedor habilita efetivacao sem conciliacao ou conferencia', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true, pedido_compra: null, xml_fornecedor: 55, tipo_tratamento: 'FISCAL_SEM_ESTOQUE', situacao_fiscal: 'AUTORIZADA' });
+    component.resumoConciliacao = { total_itens: 2, itens_conciliados: 0, itens_pendentes: 2, nota_conciliada: false };
+    component.resumoConferencia = { total_itens: 2, itens_conferidos: 0, itens_nao_conferidos: 2, itens_com_divergencia: 2, quantidade_faltante_total: '2', valor_divergente_total: '100.00', possui_divergencia_pendente: true, conversoes_pendentes: 2, conferencia_completa: false };
+    component.divergenciasXml = [{ id: 1, nota: 1, item_xml: 7, fornecedor: 4, produto: 0, quantidade_fiscal: '1', quantidade_recebida: '0', quantidade_faltante: '1', valor_divergente: '50.00', status: 'PENDENTE' }];
+    component.cobrancaFinanceira = { usa_duplicatas: false, valor_fatura: '100.00', parcelas: [], pagamentos: [], sugestoes: [], pendencias: [], forma_pagamento_conciliada: true, forma_pagamento_sysvar_id: null, forma_pagamento_sysvar_codigo: null, forma_pagamento_sysvar_descricao: null, forma_pagamento_sysvar_tipo: null, financeiro_pronto: true };
+
+    expect(component.motivosBloqueioEfetivar()).toEqual([]);
+    expect(component.podeEfetivarXml()).toBeTrue();
+    expect(component.temDivergenciaRecebimento()).toBeFalse();
+  });
+
+  it('USO_CONSUMO continua bloqueando efetivacao sem conciliacao e conferencia', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true, pedido_compra: null, xml_fornecedor: 56, tipo_tratamento: 'USO_CONSUMO', situacao_fiscal: 'AUTORIZADA' });
+    component.resumoConciliacao = { total_itens: 2, itens_conciliados: 0, itens_pendentes: 2, nota_conciliada: false };
+    component.resumoConferencia = { total_itens: 2, itens_conferidos: 0, itens_nao_conferidos: 2, itens_com_divergencia: 0, quantidade_faltante_total: '0', valor_divergente_total: '0.00', possui_divergencia_pendente: false, conversoes_pendentes: 0, conferencia_completa: false };
+
+    expect(component.podeEfetivarXml()).toBeFalse();
+    expect(component.motivosBloqueioEfetivar()).toContain('2 item(ns) sem Produto Sysvar');
+    expect(component.motivosBloqueioEfetivar()).toContain('2 item(ns) não conferido(s)');
+  });
+
+  it('INSUMO_PRODUCAO continua bloqueando efetivacao sem conciliacao e conferencia', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true, pedido_compra: null, xml_fornecedor: 57, tipo_tratamento: 'INSUMO_PRODUCAO', situacao_fiscal: 'AUTORIZADA' });
+    component.resumoConciliacao = { total_itens: 1, itens_conciliados: 0, itens_pendentes: 1, nota_conciliada: false };
+    component.resumoConferencia = { total_itens: 1, itens_conferidos: 0, itens_nao_conferidos: 1, itens_com_divergencia: 0, quantidade_faltante_total: '0', valor_divergente_total: '0.00', possui_divergencia_pendente: false, conversoes_pendentes: 0, conferencia_completa: false };
+
+    expect(component.podeEfetivarXml()).toBeFalse();
+    expect(component.motivosBloqueioEfetivar()).toContain('1 item(ns) sem Produto Sysvar');
+    expect(component.motivosBloqueioEfetivar()).toContain('1 item(ns) não conferido(s)');
+  });
+
+  it('FISCAL_SEM_ESTOQUE preserva bloqueios fiscais e financeiros', () => {
+    component.notaAtual.set({ ...nota, xml_importado: true, pedido_compra: null, xml_fornecedor: 58, tipo_tratamento: 'FISCAL_SEM_ESTOQUE', situacao_fiscal: 'CANCELADA' });
+    component.resumoConciliacao = { total_itens: 1, itens_conciliados: 0, itens_pendentes: 1, nota_conciliada: false };
+    component.resumoConferencia = { total_itens: 1, itens_conferidos: 0, itens_nao_conferidos: 1, itens_com_divergencia: 0, quantidade_faltante_total: '0', valor_divergente_total: '0.00', possui_divergencia_pendente: false, conversoes_pendentes: 1, conferencia_completa: false };
+    component.cobrancaFinanceira = { usa_duplicatas: true, valor_fatura: '100.00', parcelas: [], pagamentos: [{ codigo_tpag: '15', descricao_tpag: 'Boleto bancário', valor: '100.00' }], sugestoes: [], pendencias: ['Concilie a forma de pagamento do XML antes de efetivar a NF-e.'], forma_pagamento_conciliada: false, forma_pagamento_sysvar_id: null, forma_pagamento_sysvar_codigo: null, forma_pagamento_sysvar_descricao: null, forma_pagamento_sysvar_tipo: null, financeiro_pronto: false };
+
+    const motivos = component.motivosBloqueioEfetivar();
+    expect(component.podeEfetivarXml()).toBeFalse();
+    expect(motivos).toContain('Situação fiscal Cancelada');
+    expect(motivos).toContain('Concilie a forma de pagamento do XML antes de efetivar a NF-e.');
+    expect(motivos).not.toContain('1 item(ns) sem Produto Sysvar');
+    expect(motivos).not.toContain('1 item(ns) não conferido(s)');
+  });
+
   it('recusa entrada XML aberta pelo endpoint proprio e volta para a lista', () => {
     notasApi.cancelar.calls.reset();
     component.notaAtual.set({ ...nota, xml_importado: true });
