@@ -92,7 +92,6 @@ export class ShellComponent {
       children: [
         { label: 'Pedido de Compra', link: '/compras/pedidos', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Cotações', link: '/compras/cotacoes', icon: 'bi bi-list-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
-        { label: 'Entrada de NF-e', link: '/compras/notas-entrada', icon: 'bi bi-receipt', roles: this.comprasRoles, moduloEmpresa: 'compras' },
       ]
     },
 
@@ -113,7 +112,7 @@ export class ShellComponent {
           ]
         },
         { label: 'Movimentações', link: '/estoque/movimentacoes', icon: 'bi bi-arrow-left-right', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
-        { label: 'NF-e detectadas', link: '/estoque/nfe-detectadas', icon: 'bi bi-file-earmark-text', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
+        { label: 'NF-e', link: '/estoque/nfe-detectadas', icon: 'bi bi-file-earmark-text', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
         { label: 'Recebimento de Mercadoria', link: '/estoque/recebimentos-mercadoria', icon: 'bi bi-box-seam', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
         { label: 'Inventário', link: '/estoque/inventario', icon: 'bi bi-clipboard-data', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },
         { label: 'Etiquetas', link: '/estoque/etiquetas', icon: 'bi bi-upc-scan', roles: this.estoqueOperacaoRoles, moduloEmpresa: 'estoque' },

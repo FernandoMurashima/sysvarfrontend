@@ -119,7 +119,7 @@ export class NfeDetectadasComponent implements OnInit {
         }
         this.indicadores = indicadores;
       },
-      error: () => this.errorMsg = 'Não foi possível carregar as NF-e detectadas.',
+      error: () => this.errorMsg = 'Não foi possível carregar as NF-e.',
     });
   }
 

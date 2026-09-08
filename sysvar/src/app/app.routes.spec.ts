@@ -42,8 +42,9 @@ describe('rotas operacionais', () => {
 describe('rotas de compras', () => {
   const shell = routes.find(route => route.path === '');
 
-  it('entrada de nfe pertence ao modulo compras sem requisito fiscal paralelo', () => {
+  it('mantem rota interna de entrada de nfe em compras', () => {
     const rota = shell?.children?.find(route => route.path === 'compras/notas-entrada');
+    expect(rota).toBeTruthy();
     expect(rota?.data?.['moduloEmpresa']).toBe('compras');
     expect(rota?.data?.['moduloEmpresa']).not.toBe('fiscal');
   });
@@ -52,8 +53,9 @@ describe('rotas de compras', () => {
 describe('rotas de estoque', () => {
   const shell = routes.find(route => route.path === '');
 
-  it('possui rota operacional para NF-e detectadas', () => {
+  it('mantem rota operacional para NF-e', () => {
     const rota = shell?.children?.find(route => route.path === 'estoque/nfe-detectadas');
+    expect(rota).toBeTruthy();
     expect(rota?.data?.['moduloEmpresa']).toBe('estoque');
     expect(rota?.data?.['roles']).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
   });

@@ -77,7 +77,7 @@ describe('NfeDetectadasComponent', () => {
   it('carrega listagem paginada e badges sem expor chave inteira na tabela', () => {
     const text = fixture.nativeElement.textContent;
     expect(api.listar).toHaveBeenCalledWith(jasmine.objectContaining({ page: 1, page_size: 25 }));
-    expect(text).toContain('NF-e detectadas');
+    expect((fixture.nativeElement.querySelector('h1') as HTMLElement).textContent?.trim()).toBe('NF-e');
     expect(text).toContain('Fábrica');
     expect(text).toContain('Fornecedor A');
     expect(text).toContain('123 / 1');
@@ -333,7 +333,7 @@ describe('NfeDetectadasComponent', () => {
     component.carregar();
     fixture.detectChanges();
 
-    expect(component.errorMsg).toBe('Não foi possível carregar as NF-e detectadas.');
+    expect(component.errorMsg).toBe('Não foi possível carregar as NF-e.');
   });
 
   it('navega pela paginacao', () => {

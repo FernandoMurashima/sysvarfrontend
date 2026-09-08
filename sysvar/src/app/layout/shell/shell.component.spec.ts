@@ -131,7 +131,7 @@ describe('ShellComponent menu lateral', () => {
     expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeFalse();
   });
 
-  it('mostra NF-e detectadas no menu Estoque para operação de estoque', () => {
+  it('mostra NF-e no menu Estoque para operação de estoque', () => {
     currentUser = {
       id: 7,
       username: 'estoque',
@@ -144,7 +144,27 @@ describe('ShellComponent menu lateral', () => {
     const component = render();
     const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
 
-    expect(estoque?.children?.some(child => child.label === 'NF-e detectadas' && child.link === '/estoque/nfe-detectadas')).toBeTrue();
+    expect(estoque?.children?.some(child => child.label === 'NF-e' && child.link === '/estoque/nfe-detectadas')).toBeTrue();
     expect(estoque?.children?.some(child => child.label === 'Recebimento de Mercadoria' && child.link === '/estoque/recebimentos-mercadoria')).toBeTrue();
+  });
+
+  it('nao mostra Entrada de NF-e no menu Compras', () => {
+    currentUser = {
+      id: 8,
+      username: 'compras',
+      type: 'Gerente',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['compras'],
+      permissoes_efetivas: { compras: 'VIEW' },
+    };
+
+    const component = render();
+    const compras = component.visibleMenu.find(item => item.label === 'Compras');
+
+    expect(compras).toBeTruthy();
+    expect(compras?.children?.some(child => child.label === 'Pedido de Compra')).toBeTrue();
+    expect(compras?.children?.some(child => child.label === 'Cotações')).toBeTrue();
+    expect(compras?.children?.some(child => child.label === 'Entrada de NF-e')).toBeFalse();
+    expect(compras?.children?.some(child => child.link === '/compras/notas-entrada')).toBeFalse();
   });
 });
