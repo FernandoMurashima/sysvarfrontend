@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
@@ -55,6 +55,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   private formasPagamentoApi = inject(FormasPagamentoService);
   private lojasApi = inject(LojasService);
   private fornecedoresApi = inject(FornecedoresService);
+  private route = inject(ActivatedRoute);
 
   view = signal<'list' | 'form'>('list');
   notaAtual = signal<NotaFiscalEntrada | null>(null);
@@ -190,6 +191,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.loadLookups();
     this.loadPedidosAprovados();
     this.loadNotas();
+    this.abrirNotaDaRota();
   }
 
   private hojeISO(): string {
@@ -469,6 +471,15 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     } else {
       this.carregarItensPedido(nota.id);
     }
+  }
+
+  private abrirNotaDaRota(): void {
+    const id = Number(this.route.snapshot.queryParamMap.get('nota') || 0);
+    if (!id) return;
+    this.notasApi.get(id).subscribe({
+      next: nota => this.editar(nota),
+      error: err => this.erro = this.errorText(err, 'Não foi possível abrir a nota fiscal.'),
+    });
   }
 
   rowActions(nota: NotaFiscalEntrada): RowAction[] {

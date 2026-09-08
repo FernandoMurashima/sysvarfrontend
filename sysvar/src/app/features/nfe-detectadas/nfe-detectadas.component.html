@@ -124,7 +124,11 @@
             <td>
               <button class="btn small primary" type="button" *ngIf="podeIniciarRecebimento(row)" (click)="iniciarRecebimento(row)" [disabled]="iniciandoId === row.id">
                 <i class="bi bi-box-arrow-in-down"></i>
-                Iniciar recebimento
+                {{ iniciandoId === row.id ? 'Iniciando...' : 'Iniciar recebimento' }}
+              </button>
+              <button class="btn small primary" type="button" *ngIf="podeEncaminharFiscal(row)" (click)="encaminharFiscal(row)" [disabled]="encaminhandoFiscalId === row.id">
+                <i class="bi bi-journal-arrow-up"></i>
+                {{ encaminhandoFiscalId === row.id ? 'Encaminhando...' : 'Encaminhar fiscal' }}
               </button>
               <button class="btn small" type="button" (click)="abrirDefinirTratamento(row)">
                 <i class="bi bi-sliders"></i>

@@ -45,7 +45,7 @@ describe('NfeDetectadasComponent', () => {
   } as any;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<XmlFornecedorRecebidoService>('XmlFornecedorRecebidoService', ['listar', 'indicadores', 'get', 'definirTratamento']);
+    api = jasmine.createSpyObj<XmlFornecedorRecebidoService>('XmlFornecedorRecebidoService', ['listar', 'indicadores', 'get', 'definirTratamento', 'encaminharFiscal']);
     recebimentosApi = jasmine.createSpyObj<RecebimentoMercadoriaService>('RecebimentoMercadoriaService', ['iniciarPorXml']);
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     lojasApi = jasmine.createSpyObj<LojasService>('LojasService', ['list']);
@@ -53,6 +53,7 @@ describe('NfeDetectadasComponent', () => {
     api.listar.and.returnValue(of({ count: 1, next: null, previous: null, results: [xml] }));
     api.indicadores.and.returnValue(of({ total: 1, detectadas: 1, aguardando_recebimento: 0, em_recebimento: 0, recebidas_processadas: 0, pendentes: 1 }));
     api.definirTratamento.and.returnValue(of({ ...xml, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque' } as any));
+    api.encaminharFiscal.and.returnValue(of({ id: 11, numero: '123' } as any));
     recebimentosApi.iniciarPorXml.and.returnValue(of({ id: 9 } as any));
     lojasApi.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 2, nome_loja: 'Fábrica' } as any] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, next: null, previous: null, results: [{ id: 3, nome_fornecedor: 'Fornecedor A' } as any] }));
@@ -202,6 +203,60 @@ describe('NfeDetectadasComponent', () => {
 
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Iniciar recebimento'));
     expect(buttons.length).toBe(1);
+  });
+
+  it('mostra Encaminhar fiscal somente para tratamentos fiscais', () => {
+    component.rows = [
+      { ...xml, id: 1, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque' },
+      { ...xml, id: 2, tipo_tratamento: 'NAO_DEFINIDO', tipo_tratamento_display: 'Não definido' },
+      { ...xml, id: 3, tipo_tratamento: 'USO_CONSUMO', tipo_tratamento_display: 'Uso e consumo' },
+      { ...xml, id: 4, tipo_tratamento: 'INSUMO_PRODUCAO', tipo_tratamento_display: 'Insumo / produção' },
+      { ...xml, id: 5, tipo_tratamento: 'FISCAL_SEM_ESTOQUE', tipo_tratamento_display: 'Entrada fiscal sem estoque' },
+    ];
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Encaminhar fiscal'));
+    expect(buttons.length).toBe(3);
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'USO_CONSUMO' })).toBeTrue();
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'INSUMO_PRODUCAO' })).toBeTrue();
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'FISCAL_SEM_ESTOQUE' })).toBeTrue();
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'ESTOQUE' })).toBeFalse();
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'NAO_DEFINIDO' })).toBeFalse();
+  });
+
+  it('encaminha fiscal e navega para a nota retornada', () => {
+    const row = { ...xml, tipo_tratamento: 'USO_CONSUMO' };
+
+    component.encaminharFiscal(row);
+
+    expect(api.encaminharFiscal).toHaveBeenCalledWith(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/compras/notas-entrada'], { queryParams: { nota: 11 } });
+  });
+
+  it('aceita retorno idempotente e evita duplo clique no encaminhamento fiscal', () => {
+    const pending = new Subject<any>();
+    api.encaminharFiscal.and.returnValue(pending.asObservable());
+    const row = { ...xml, tipo_tratamento: 'FISCAL_SEM_ESTOQUE' };
+
+    component.encaminharFiscal(row);
+    component.encaminharFiscal(row);
+
+    expect(api.encaminharFiscal).toHaveBeenCalledTimes(1);
+    expect(component.encaminhandoFiscalId).toBe(1);
+    pending.next({ id: 22, numero: '123' });
+    pending.complete();
+    expect(router.navigate).toHaveBeenCalledWith(['/compras/notas-entrada'], { queryParams: { nota: 22 } });
+    expect(component.encaminhandoFiscalId).toBeNull();
+  });
+
+  it('exibe erro de negocio ao encaminhar fiscal', () => {
+    api.encaminharFiscal.and.returnValue(throwError(() => ({
+      error: { fornecedor: ['Fornecedor do emitente não identificado na empresa.'] },
+    })));
+
+    component.encaminharFiscal({ ...xml, tipo_tratamento: 'INSUMO_PRODUCAO' });
+
+    expect(component.errorMsg).toBe('Fornecedor do emitente não identificado na empresa.');
   });
 
   it('cancelar modal nao chama API', () => {

@@ -64,4 +64,12 @@ describe('XmlFornecedorRecebidoService', () => {
     expect(req.request.body).toEqual({ tipo_tratamento: 'ESTOQUE' });
     req.flush({ id: 7, tipo_tratamento: 'ESTOQUE' });
   });
+
+  it('encaminharFiscal faz POST para URL correta sem payload de negocio', () => {
+    service.encaminharFiscal(7).subscribe();
+
+    const req = http.expectOne(request => request.method === 'POST' && request.url === `${environment.apiBaseUrl}/fiscal/xmls-fornecedor-recebidos/7/encaminhar-fiscal/`);
+    expect(req.request.body).toEqual({});
+    req.flush({ id: 11, numero: '123' });
+  });
 });

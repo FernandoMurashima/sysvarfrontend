@@ -50,6 +50,7 @@ export class NfeDetectadasComponent implements OnInit {
   salvandoTratamento = false;
   loading = false;
   iniciandoId: number | null = null;
+  encaminhandoFiscalId: number | null = null;
   errorMsg = '';
   filtersVisible = true;
   page = 1;
@@ -141,13 +142,28 @@ export class NfeDetectadasComponent implements OnInit {
     return row.tipo_tratamento === 'ESTOQUE' && ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
   }
 
+  podeEncaminharFiscal(row: XmlFornecedorRecebido): boolean {
+    return ['USO_CONSUMO', 'INSUMO_PRODUCAO', 'FISCAL_SEM_ESTOQUE'].includes(row.tipo_tratamento);
+  }
+
   iniciarRecebimento(row: XmlFornecedorRecebido): void {
     if (!this.podeIniciarRecebimento(row)) return;
+    if (this.iniciandoId === row.id) return;
     this.iniciandoId = row.id;
     this.errorMsg = '';
     this.recebimentosApi.iniciarPorXml(row.id).pipe(finalize(() => this.iniciandoId = null)).subscribe({
       next: recebimento => this.router.navigate(['/estoque/recebimentos-mercadoria', recebimento.id]),
       error: () => this.errorMsg = 'Não foi possível iniciar o recebimento.',
+    });
+  }
+
+  encaminharFiscal(row: XmlFornecedorRecebido): void {
+    if (!this.podeEncaminharFiscal(row) || this.encaminhandoFiscalId === row.id) return;
+    this.encaminhandoFiscalId = row.id;
+    this.errorMsg = '';
+    this.api.encaminharFiscal(row.id).pipe(finalize(() => this.encaminhandoFiscalId = null)).subscribe({
+      next: nota => this.router.navigate(['/compras/notas-entrada'], { queryParams: { nota: nota.id } }),
+      error: error => this.errorMsg = this.extrairMensagemErroEncaminhamento(error),
     });
   }
 
@@ -283,5 +299,15 @@ export class NfeDetectadasComponent implements OnInit {
     const value = data.detail || data.tipo_tratamento || data.non_field_errors;
     if (Array.isArray(value)) return value.join(' ');
     return value || 'Não foi possível definir o tratamento da NF-e.';
+  }
+
+  private extrairMensagemErroEncaminhamento(error: any): string {
+    const data = error?.error || {};
+    for (const key of ['detail', 'tipo_tratamento', 'dados_fiscais', 'itens_fiscais', 'fornecedor', 'loja', 'chave_acesso', 'dt_emissao', 'non_field_errors']) {
+      const value = data[key];
+      if (Array.isArray(value)) return value.join(' ');
+      if (typeof value === 'string' && value) return value;
+    }
+    return 'Não foi possível encaminhar a NF-e para a Entrada Fiscal.';
   }
 }

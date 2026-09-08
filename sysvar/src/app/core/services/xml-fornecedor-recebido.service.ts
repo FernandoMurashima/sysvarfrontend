@@ -4,6 +4,9 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  NotaFiscalEntrada,
+} from '../models/nota-fiscal-entrada';
+import {
   PaginatedResponse,
   TipoTratamentoXmlFornecedor,
   XmlFornecedorRecebido,
@@ -30,6 +33,10 @@ export class XmlFornecedorRecebidoService {
 
   definirTratamento(id: number, tipo_tratamento: TipoTratamentoXmlFornecedor): Observable<XmlFornecedorRecebido> {
     return this.http.post<XmlFornecedorRecebido>(`${this.base}${id}/definir-tratamento/`, { tipo_tratamento });
+  }
+
+  encaminharFiscal(id: number): Observable<NotaFiscalEntrada> {
+    return this.http.post<NotaFiscalEntrada>(`${this.base}${id}/encaminhar-fiscal/`, {});
   }
 
   private params(params?: XmlFornecedorRecebidoListParams, includePaging = true): HttpParams {
