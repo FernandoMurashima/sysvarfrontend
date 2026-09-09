@@ -168,6 +168,18 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
           status_fiscal: 'FE',
         },
         {
+          origem: 'NOTA_FISCAL',
+          recebimento_id: null,
+          nota_entrada_id: 10,
+          numero: '777',
+          serie: '1',
+          quantidade_fisica: null,
+          status_recebimento: null,
+          status_operacional: null,
+          estoque_efetivado: false,
+          status_fiscal: 'AB',
+        },
+        {
           origem: 'RECEBIMENTO_FISICO',
           xml_fornecedor_id: 999,
           recebimento_id: 5,
@@ -239,10 +251,10 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
   it('mostra documentos fisicos, fiscal pendente, acoes e cancelado sem duplicar linha', () => {
     (component as any).carregarRecebimentos(1);
 
-    expect(component.documentosRecebimento.length).toBe(3);
+    expect(component.documentosRecebimento.length).toBe(4);
     const nfe132 = component.documentosRecebimento.find(doc => doc.numero === '132')!;
     expect(nfe132.quantidade_fisica).toBe(19);
-    expect(component.labelStatusOperacional(nfe132)).toBe('Recebido');
+    expect(component.labelStatusOperacional(nfe132)).toBe('Concluído');
     expect(nfe132.estoque_efetivado).toBeTrue();
     expect(nfe132.fiscal).toBe('Pendente');
 
@@ -253,6 +265,8 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
 
     const cancelado = component.documentosRecebimento.find(doc => doc.numero === '999')!;
     expect(component.labelStatusOperacional(cancelado)).toBe('Cancelado');
+    const semRecebimento = component.documentosRecebimento.find(doc => doc.numero === '777')!;
+    expect(component.labelStatusOperacional(semRecebimento)).toBe('-');
 
     component.verRecebimento(nfe132);
     component.verFiscal(dedup);

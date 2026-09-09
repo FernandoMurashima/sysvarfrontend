@@ -932,10 +932,8 @@ export class PedidosCompraComponent implements OnInit {
     return 'Pendente';
   }
 
-  labelStatusOperacional(doc: Pick<RecebimentoDocumentoUI, 'status_operacional' | 'status_recebimento' | 'recebimento_cancelado'>): string {
+  labelStatusOperacional(doc: Pick<RecebimentoDocumentoUI, 'status_recebimento' | 'recebimento_cancelado'>): string {
     if (doc.recebimento_cancelado || doc.status_recebimento === 'CANCELADO') return 'Cancelado';
-    if (doc.status_operacional === 'RECEBIDO') return 'Recebido';
-    if (doc.status_operacional === 'PROCESSADO') return 'Processado';
     if (doc.status_recebimento === 'CONCLUIDO') return 'Concluído';
     if (doc.status_recebimento === 'EM_CONFERENCIA') return 'Em conferência';
     if (doc.status_recebimento === 'ABERTO') return 'Aberto';
@@ -957,7 +955,7 @@ export class PedidosCompraComponent implements OnInit {
 
   badgeDocumento(doc: RecebimentoDocumentoUI): string {
     if (doc.recebimento_cancelado || doc.nota_cancelada || doc.status_recebimento === 'CANCELADO') return 'badge-danger';
-    if (doc.status_operacional === 'RECEBIDO' || doc.status_operacional === 'PROCESSADO') return 'badge-ok';
+    if (doc.status_recebimento === 'CONCLUIDO') return 'badge-ok';
     return 'inactive';
   }
 
