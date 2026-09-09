@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
@@ -57,6 +57,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   private lojasApi = inject(LojasService);
   private fornecedoresApi = inject(FornecedoresService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   view = signal<'list' | 'form'>('list');
   notaAtual = signal<NotaFiscalEntrada | null>(null);
@@ -440,6 +441,10 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.itensPedido = [];
     this.selectedItem = null;
     this.loadNotas();
+  }
+
+  voltarParaNfe(): void {
+    this.router.navigate(['/estoque/nfe-detectadas']);
   }
 
   editar(nota: NotaFiscalEntrada): void {
@@ -1099,7 +1104,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     if (!nota || nota.status !== 'AB' || !nota.xml_importado) return;
     this.confirmModal = {
       action: 'recusarEntrada',
-      title: 'Recusar entrada',
+      title: 'Cancelar entrada',
       text: 'Deseja abandonar esta entrada? A importação será descartada e esta chave de NF-e poderá ser utilizada novamente em uma nova importação.',
     };
   }
@@ -1161,7 +1166,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   }
 
   podeCancelarEntrada(nota: NotaFiscalEntrada | null = this.notaAtual()): boolean {
-    return !!nota?.xml_fornecedor && nota.status === 'FE';
+    return !!nota?.xml_fornecedor && nota.status !== 'CA';
   }
 
   podeCancelarNfe(nota: NotaFiscalEntrada | null = this.notaAtual()): boolean {
@@ -1235,14 +1240,36 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const analise = this.cancelamentoAnalise;
     if (!nota || !analise || !this.podeConfirmarCancelamento()) return;
     this.cancelandoNota = true;
-    const req = this.cancelamentoModo === 'ENTRADA'
-      ? this.notasApi.cancelarEntrada(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0)
-      : this.notasApi.cancelar(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0);
-    req.subscribe({
+    const motivo = this.motivoCancelamento.trim();
+    const confirmarAvisos = analise.avisos.length > 0;
+    if (this.cancelamentoModo === 'ENTRADA') {
+      this.notasApi.cancelarEntrada(nota.id, motivo, confirmarAvisos).subscribe({
+        next: n => {
+          this.cancelandoNota = false;
+          this.cancelarModalAberto = false;
+          this.cancelamentoModo = null;
+          this.notaAtual.set(null);
+          this.itensPedido = [];
+          this.selectedItem = null;
+          this.itensXml = [];
+          this.resumoConciliacao = null;
+          this.resumoConferencia = null;
+          this.divergenciasXml = [];
+          this.cobrancaFinanceira = null;
+          this.mensagem = n.detail || 'Entrada cancelada. NF-e disponível para novo tratamento.';
+          this.router.navigate(['/estoque/nfe-detectadas']);
+        },
+        error: err => {
+          this.cancelandoNota = false;
+          this.erro = this.errorText(err, 'Não foi possível cancelar a nota.');
+        },
+      });
+      return;
+    }
+    this.notasApi.cancelar(nota.id, motivo, confirmarAvisos).subscribe({
       next: n => {
         this.cancelandoNota = false;
         this.cancelarModalAberto = false;
-        const modo = this.cancelamentoModo;
         this.cancelamentoModo = null;
         this.notaAtual.set(n);
         if (n.status === 'AB') {
@@ -1250,9 +1277,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         } else {
           this.form.disable();
         }
-        this.mensagem = modo === 'ENTRADA'
-          ? 'Entrada cancelada. NF-e disponível para reprocessamento.'
-          : 'NF-e cancelada.';
+        this.mensagem = 'NF-e cancelada.';
         this.loadNotas();
         this.loadPedidosAprovados();
         if (n.xml_importado) this.carregarFluxoXml(n.id);

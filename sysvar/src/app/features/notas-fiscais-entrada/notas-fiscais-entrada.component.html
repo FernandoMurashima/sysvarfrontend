@@ -7,6 +7,7 @@
     <div class="title-actions">
       <button class="btn" type="button">Ajuda</button>
       <button class="btn" type="button" [routerLink]="['/home']">Home</button>
+      <button class="btn" type="button" (click)="voltarParaNfe()">Voltar para NF-e</button>
       <button class="btn" type="button" [disabled]="loading" (click)="clearSearch()">Limpar</button>
       <button class="btn" type="button" [disabled]="loading" (click)="loadNotas()">Atualizar</button>
       <button class="btn primary" type="button" (click)="abrirImportacaoXml()">Importar XML</button>
@@ -358,7 +359,7 @@
       <div class="actions-form">
         <button class="btn" type="button" *ngIf="!xmlFiscalSemEstoque()" [disabled]="xmlSomenteLeitura() || conciliandoAuto" (click)="reprocessarConciliacao()">Reprocessar conciliação</button>
         <button class="btn" type="button" *ngIf="!xmlFiscalSemEstoque()" [disabled]="xmlSomenteLeitura() || conferindoLote" (click)="confirmarQuantidadesFiscais()">Confirmar todas as quantidades fiscais</button>
-        <button class="btn danger-soft" type="button" [disabled]="xmlSomenteLeitura()" (click)="recusarEntradaXml()">Recusar entrada</button>
+        <button class="btn danger-soft" type="button" *ngIf="podeCancelarEntrada()" (click)="abrirCancelamentoEntrada()">Cancelar entrada</button>
       </div>
       <section class="pedido-divergencias" *ngIf="divergenciasPedido().length">
         <h3>Divergências Pedido × NF-e</h3>
@@ -498,9 +499,6 @@
     <div class="actions-form end-actions" *ngIf="notaAtual()">
       <button class="btn primary" type="button" (click)="fecharNota()" [disabled]="notaAtual()?.xml_importado ? !podeEfetivarXml() : notaAtual()?.status !== 'AB'">
         {{ notaAtual()?.xml_importado ? 'Efetivar NF-e' : 'Fechar NF' }}
-      </button>
-      <button class="btn danger-soft" type="button" *ngIf="podeCancelarEntrada()" (click)="abrirCancelamentoEntrada()">
-        Cancelar entrada
       </button>
       <button class="btn danger" type="button" *ngIf="podeCancelarNfe()" (click)="cancelarNota()">
         Cancelar NF-e

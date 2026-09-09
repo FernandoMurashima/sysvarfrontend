@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import { FornecedoresService } from '../../core/services/fornecedores.service';
@@ -12,6 +13,7 @@ import { NotasFiscaisEntradaComponent } from './notas-fiscais-entrada.component'
 describe('NotasFiscaisEntradaComponent', () => {
   let fixture: ComponentFixture<NotasFiscaisEntradaComponent>;
   let component: NotasFiscaisEntradaComponent;
+  let router: Router;
 
   const nota = {
     id: 1,
@@ -108,7 +110,15 @@ describe('NotasFiscaisEntradaComponent', () => {
     notasApi.vincularFormaPagamentoFiscal.and.returnValue(of({ cobranca: { usa_duplicatas: true, valor_fatura: '100.00', parcelas: [], pagamentos: [], sugestoes: [], pendencias: [], forma_pagamento_conciliada: true, forma_pagamento_sysvar_id: 8, forma_pagamento_sysvar_codigo: 'BOL', forma_pagamento_sysvar_descricao: 'Boleto', forma_pagamento_sysvar_tipo: 'BOLETO', financeiro_pronto: true } }));
     notasApi.fechar.and.returnValue(of({ ...nota, status: 'FE' as const, xml_importado: true }));
     notasApi.cancelar.and.returnValue(of({ ...nota, status: 'CA' as const }));
-    notasApi.cancelarEntrada.and.returnValue(of({ ...notaFechadaXml, status: 'AB' as const }));
+    notasApi.cancelarEntrada.and.returnValue(of({
+      detail: 'Entrada cancelada. NF-e disponível para novo tratamento.',
+      id: notaFechadaXml.id,
+      xml_fornecedor_id: 44,
+      chave_acesso: notaFechadaXml.chave_acesso,
+      status_operacional: 'DETECTADO',
+      tipo_tratamento: 'NAO_DEFINIDO',
+      situacao_fiscal: 'AUTORIZADA',
+    }));
     notasApi.recusar.and.returnValue(of({ detail: 'Entrada recusada. O XML poderá ser importado novamente.', id: nota.id, chave_acesso: nota.chave_acesso }));
     notasApi.importarXml.and.returnValue(of({ ...nota, xml_importado: true, pedido_compra: null }));
     notasApi.listarItensXml.and.returnValue(of([]));
@@ -140,6 +150,8 @@ describe('NotasFiscaisEntradaComponent', () => {
 
     fixture = TestBed.createComponent(NotasFiscaisEntradaComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
     fixture.detectChanges();
   });
 
@@ -658,12 +670,17 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(component.mensagem).toContain('O XML poderá ser importado novamente');
   });
 
-  it('nota fechada com xml fornecedor mostra Cancelar entrada e Cancelar NF-e', () => {
+  it('entrada originada do Agent mostra um unico Cancelar entrada no bloco XML e nao mostra Recusar entrada', () => {
     component.editar(notaFechadaXml);
     fixture.detectChanges();
 
-    const text = (fixture.nativeElement as HTMLElement).textContent || '';
-    expect(text).toContain('Cancelar entrada');
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent || '';
+    const cancelarEntrada = Array.from(el.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Cancelar entrada'));
+    expect(text).not.toContain('Recusar entrada');
+    expect(cancelarEntrada.length).toBe(1);
+    expect(el.querySelector('.xml-flow .actions-form')?.textContent || '').toContain('Cancelar entrada');
+    expect(el.querySelector('.end-actions')?.textContent || '').not.toContain('Cancelar entrada');
     expect(text).toContain('Cancelar NF-e');
   });
 
@@ -685,17 +702,23 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(endActions.textContent || '').not.toContain('Cancelar NF-e');
   });
 
-  it('cancelar entrada usa endpoint proprio e reabre fluxo para reprocessamento', () => {
+  it('entrada aberta e fechada originada do Agent podem cancelar entrada', () => {
+    expect(component.podeCancelarEntrada({ ...notaFechadaXml, status: 'AB' })).toBeTrue();
+    expect(component.podeCancelarEntrada(notaFechadaXml)).toBeTrue();
+  });
+
+  it('cancelar entrada usa endpoint proprio, limpa a nota excluida e navega para NF-e', () => {
     component.notaAtual.set(notaFechadaXml);
     component.abrirCancelamentoEntrada();
     component.motivoCancelamento = 'Desfazer entrada';
+    notasApi.listarItensXml.calls.reset();
     component.confirmarCancelamentoOperacional();
 
     expect(notasApi.cancelarEntrada).toHaveBeenCalledWith(4, 'Desfazer entrada', false);
     expect(notasApi.cancelar).not.toHaveBeenCalledWith(4, 'Desfazer entrada', false);
-    expect(component.notaAtual()?.status).toBe('AB');
-    expect(component.mensagem).toBe('Entrada cancelada. NF-e disponível para reprocessamento.');
-    expect(notasApi.listarItensXml).toHaveBeenCalledWith(4);
+    expect(component.notaAtual()).toBeNull();
+    expect(notasApi.listarItensXml).not.toHaveBeenCalledWith(4);
+    expect(router.navigate).toHaveBeenCalledWith(['/estoque/nfe-detectadas']);
   });
 
   it('cancelar NF-e usa cancelamento fiscal', () => {
@@ -731,6 +754,15 @@ describe('NotasFiscaisEntradaComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent || '';
     expect(text).toContain('Cancelar NF-e');
     expect(component.rowActions(notaFechada).find(action => action.key === 'cancelar')?.label).toBe('Cancelar NF-e');
+  });
+
+  it('cabecalho possui Voltar para NF-e com rota explicita', () => {
+    const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.title-actions button'))
+      .find((item: any) => item.textContent.includes('Voltar para NF-e')) as HTMLButtonElement;
+
+    button.click();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/estoque/nfe-detectadas']);
   });
 
   it('analisa cancelamento, bloqueia baixa financeira e envia motivo com confirmação de avisos', () => {

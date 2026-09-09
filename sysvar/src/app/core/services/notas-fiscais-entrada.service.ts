@@ -51,6 +51,16 @@ export type NotaFiscalEntradaListParams = {
   page_size?: number;
 };
 
+export type CancelamentoEntradaResponse = {
+  detail: string;
+  id: number;
+  xml_fornecedor_id: number;
+  chave_acesso: string;
+  status_operacional: string;
+  tipo_tratamento: string;
+  situacao_fiscal: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class NotasFiscaisEntradaService {
   private http = inject(HttpClient);
@@ -195,8 +205,8 @@ export class NotasFiscaisEntradaService {
     });
   }
 
-  cancelarEntrada(id: number, motivo = '', confirmarAvisos = false): Observable<NotaFiscalEntrada> {
-    return this.http.post<NotaFiscalEntrada>(`${this.base}${id}/cancelar-entrada/`, {
+  cancelarEntrada(id: number, motivo = '', confirmarAvisos = false): Observable<CancelamentoEntradaResponse> {
+    return this.http.post<CancelamentoEntradaResponse>(`${this.base}${id}/cancelar-entrada/`, {
       motivo,
       confirmar_avisos: confirmarAvisos,
     });

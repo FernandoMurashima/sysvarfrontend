@@ -244,6 +244,24 @@ describe('NfeDetectadasComponent', () => {
     expect(buttons.length).toBe(1);
   });
 
+  it('apos cancelar entrada mostra somente Definir tratamento para XML detectado sem vinculos', () => {
+    component.rows = [{
+      ...xml,
+      status_operacional: 'DETECTADO',
+      tipo_tratamento: 'NAO_DEFINIDO',
+      tipo_tratamento_display: 'Não definido',
+      nota_entrada_id: null,
+      recebimento_id: null,
+    }];
+    fixture.detectChanges();
+
+    const actionsText = fixture.nativeElement.querySelector('tbody td:last-child')?.textContent || '';
+    expect(actionsText).toContain('Definir tratamento');
+    expect(actionsText).not.toContain('Consultar');
+    expect(actionsText).not.toContain('Encaminhar fiscal');
+    expect(actionsText).not.toContain('Iniciar recebimento');
+  });
+
   it('mostra Consultar para estoque com recebimento e processado fiscal com nota', () => {
     component.rows = [
       { ...xml, id: 1, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque', status_operacional: 'RECEBIDO', recebimento_id: 9 },

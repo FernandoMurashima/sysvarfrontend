@@ -182,6 +182,13 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(text).not.toContain('REF001');
   });
 
+  it('botao Voltar para NF-e aponta para a central de NF-e detectadas', () => {
+    const link = fixture.nativeElement.querySelector('.title-bar a') as HTMLAnchorElement;
+
+    expect(link.textContent || '').toContain('Voltar para NF-e');
+    expect(link.getAttribute('href')).toBe('/estoque/nfe-detectadas');
+  });
+
   it('carrega pedidos elegiveis, permite selecao multipla e salva vinculos', () => {
     component.abrirPedidos();
     component.togglePedido(pedido2, true);
