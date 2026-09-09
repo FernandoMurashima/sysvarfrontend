@@ -78,6 +78,76 @@ describe('ShellComponent menu lateral', () => {
     ]);
   }
 
+  function labelsOf(items: any[] | undefined): string[] {
+    return (items || []).map(item => item.label);
+  }
+
+  function countItems(items: any[] | undefined, label: string): number {
+    return (items || []).reduce((total, item) => {
+      const current = item.label === label ? 1 : 0;
+      return total + current + countItems(item.children, label);
+    }, 0);
+  }
+
+  it('mantem Dashboard no topo com submenu analitico restaurado', () => {
+    const component = render();
+    const dashboard = component.menuItems[0];
+
+    expect(dashboard.label).toBe('Dashboard');
+    expect(dashboard.link).toBeUndefined();
+    expect(labelsOf(dashboard.children)).toEqual([
+      'Visão Geral',
+      'Executivo',
+      'Vendas',
+      'Produtos',
+      'Estoque',
+      'Financeiro',
+      'Margem / CMV',
+    ]);
+    expect(findItem(dashboard.children, 'Visão Geral')?.link).toBe('/home');
+    expect(linksOf(dashboard.children)).toEqual([
+      '/home',
+      '/dashboard/executivo',
+      '/dashboard/vendas',
+      '/dashboard/produtos',
+      '/dashboard/estoque',
+      '/dashboard/financeiro',
+      '/relatorios/margem-cmv',
+    ]);
+    expect(countItems(component.menuItems, 'Dashboard')).toBe(1);
+    expect(countItems(component.menuItems, 'Margem / CMV')).toBe(1);
+  });
+
+  it('mantem os grupos principais na ordem aprovada', () => {
+    const component = render();
+
+    expect(labelsOf(component.menuItems)).toEqual([
+      'Dashboard',
+      'Cadastros',
+      'Produtos',
+      'Compras',
+      'Estoque',
+      'Distribuição',
+      'Produção',
+      'Vendas',
+      'Loja',
+      'Financeiro',
+      'Fiscal / Contábil',
+    ]);
+  });
+
+  it('mantem regras de acesso dos dashboards analiticos no menu', () => {
+    const component = render();
+    const dashboard = component.menuItems[0];
+
+    expect(findItem(dashboard.children, 'Executivo')).toEqual(jasmine.objectContaining({ roles: ['Admin', 'Diretor'], moduloEmpresa: 'operacional' }));
+    expect(findItem(dashboard.children, 'Vendas')).toEqual(jasmine.objectContaining({ roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'vendas' }));
+    expect(findItem(dashboard.children, 'Produtos')).toEqual(jasmine.objectContaining({ roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'produtos' }));
+    expect(findItem(dashboard.children, 'Estoque')).toEqual(jasmine.objectContaining({ roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'estoque' }));
+    expect(findItem(dashboard.children, 'Financeiro')).toEqual(jasmine.objectContaining({ roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'financeiro' }));
+    expect(findItem(dashboard.children, 'Margem / CMV')).toEqual(jasmine.objectContaining({ roles: ['Diretor', 'Gerente'], moduloEmpresa: 'financeiro' }));
+  });
+
   it('exibe Fiscal / Contábil para administrador delegado com fiscal contratado', () => {
     const component = render();
     const fiscal = component.visibleMenu.find(item => item.label === 'Fiscal / Contábil');

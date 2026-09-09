@@ -37,7 +37,18 @@ export class ShellComponent {
   private financeiroRoles: NavItem['roles'] = ['Diretor', 'Gerente', 'AssistenteReceber', 'AssistentePagar'];
 
   menuItems: NavItem[] = [
-    { label: 'Dashboard', link: '/home', icon: 'bi bi-speedometer2' },
+    {
+      label: 'Dashboard', icon: 'bi bi-speedometer2',
+      children: [
+        { label: 'Visão Geral', link: '/home', icon: 'bi bi-house' },
+        { label: 'Executivo', link: '/dashboard/executivo', icon: 'bi bi-speedometer2', roles: ['Admin', 'Diretor'], moduloEmpresa: 'operacional' },
+        { label: 'Vendas', link: '/dashboard/vendas', icon: 'bi bi-graph-up-arrow', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'vendas' },
+        { label: 'Produtos', link: '/dashboard/produtos', icon: 'bi bi-box-seam', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'produtos' },
+        { label: 'Estoque', link: '/dashboard/estoque', icon: 'bi bi-archive', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'estoque' },
+        { label: 'Financeiro', link: '/dashboard/financeiro', icon: 'bi bi-cash-coin', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'financeiro' },
+        { label: 'Margem / CMV', link: '/relatorios/margem-cmv', icon: 'bi bi-percent', roles: this.vendasGestaoRoles, moduloEmpresa: 'financeiro' },
+      ]
+    },
 
     {
       label: 'Cadastros', icon: 'bi bi-journal-text',
@@ -193,9 +204,6 @@ export class ShellComponent {
         { label: 'Cashback', link: '/vendas/cashback', icon: 'bi bi-gift', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
         { label: 'Vales-Troca', link: '/financeiro/vales-troca', icon: 'bi bi-ticket-perforated', roles: ['Admin'], moduloEmpresa: 'vendas' },
         { label: 'Promoções', link: '/vendas/promocoes', icon: 'bi bi-tags', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas' },
-        { label: 'Relatórios', icon: 'bi bi-graph-up', roles: this.vendasGestaoRoles, moduloEmpresa: 'vendas', children: [
-          { label: 'Margem / CMV', link: '/relatorios/margem-cmv', icon: 'bi bi-percent', roles: this.vendasGestaoRoles, moduloEmpresa: 'financeiro' },
-        ] },
       ]
     },
 
@@ -293,7 +301,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/home', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
+    return ['/home', '/dashboard/executivo', '/dashboard/vendas', '/dashboard/produtos', '/dashboard/estoque', '/dashboard/financeiro', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
   }
 
   toggleBarControls(): void {
