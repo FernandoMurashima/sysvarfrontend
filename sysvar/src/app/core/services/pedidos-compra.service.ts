@@ -29,6 +29,53 @@ export interface PedidoCompra {
   natureza_label?: string | null;
 }
 
+export interface PedidoRecebimentosResumoTotais {
+  quantidade_pedida_total: string;
+  quantidade_recebida_total: string;
+  saldo_total: string;
+  situacao: 'PENDENTE' | 'PARCIAL' | 'RECEBIDO';
+}
+
+export interface PedidoRecebimentosResumoItem {
+  pedido_item_id: number;
+  produto_id: number | null;
+  produto: string;
+  referencia: string;
+  cor: string;
+  pack: string;
+  quantidade_pedida: string;
+  quantidade_recebida: string;
+  saldo: string;
+  situacao: 'PENDENTE' | 'PARCIAL' | 'RECEBIDO';
+}
+
+export interface PedidoRecebimentosResumoDocumento {
+  origem: string;
+  xml_fornecedor_id?: number | null;
+  recebimento_id?: number | null;
+  numero?: string | null;
+  serie?: string | null;
+  chave_acesso?: string | null;
+  dh_emissao?: string | null;
+  valor_total?: string | null;
+  status_recebimento?: 'ABERTO' | 'EM_CONFERENCIA' | 'CONCLUIDO' | 'CANCELADO' | null;
+  status_operacional?: 'DETECTADO' | 'AGUARDANDO_RECEBIMENTO' | 'EM_RECEBIMENTO' | 'RECEBIDO' | 'PROCESSADO' | 'IGNORADO' | null;
+  tipo_tratamento?: string | null;
+  quantidade_fisica?: string | null;
+  estoque_efetivado: boolean;
+  recebimento_cancelado?: boolean;
+  nota_entrada_id?: number | null;
+  status_fiscal?: 'AB' | 'FE' | 'CA' | null;
+  nota_cancelada?: boolean;
+}
+
+export interface PedidoRecebimentosResumo {
+  pedido_id: number;
+  resumo: PedidoRecebimentosResumoTotais;
+  itens: PedidoRecebimentosResumoItem[];
+  documentos: PedidoRecebimentosResumoDocumento[];
+}
+
 type Paginated<T> = {
   results: T[];
   count?: number;
@@ -65,6 +112,10 @@ export class PedidosCompraService {
 
   getById(id: number): Observable<PedidoCompra> {
     return this.http.get<PedidoCompra>(`${this.base}${id}/`);
+  }
+
+  getRecebimentosResumo(pedidoId: number): Observable<PedidoRecebimentosResumo> {
+    return this.http.get<PedidoRecebimentosResumo>(`${this.base}${pedidoId}/recebimentos-resumo/`);
   }
 
   createHeader(payload: Partial<PedidoCompra>): Observable<PedidoCompra> {

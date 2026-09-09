@@ -1,5 +1,23 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+
+import { AuthService } from '../../core/auth.service';
+import { CoresService } from '../../core/services/cores.service';
+import { FornecedoresService } from '../../core/services/fornecedores.service';
+import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
+import { LojasService } from '../../core/services/lojas.service';
+import { NatLancamentosService } from '../../core/services/natureza-lancamento.service';
+import { PacksService } from '../../core/services/pack.service';
+import { PackItensService } from '../../core/services/pack-item.service';
+import { PedidosCompraService } from '../../core/services/pedidos-compra.service';
+import { ProdutosService } from '../../core/services/produtos.service';
+import { UnidadesService } from '../../core/services/unidades.service';
 import {
   PEDIDO_COMPRA_REVENDA_ITEM_COLUMNS,
+  PedidosCompraComponent,
   displayPedidoCompraItemPack,
   displayPedidoCompraItemProduto,
 } from './pedidos-compra.component';
@@ -81,5 +99,194 @@ describe('PedidosCompraComponent item display helpers', () => {
     expect(item.preco_unit).toBe(85);
     expect(item.desconto_valor).toBe(0);
     expect(item.total_item).toBe(10200);
+  });
+});
+
+describe('PedidosCompraComponent recebimentos resumo', () => {
+  let component: PedidosCompraComponent;
+  let pedidosApi: jasmine.SpyObj<PedidosCompraService>;
+  let router: jasmine.SpyObj<Router>;
+
+  const emptyApi = () => ({ list: jasmine.createSpy('list').and.returnValue(of([])) });
+
+  beforeEach(() => {
+    pedidosApi = jasmine.createSpyObj<PedidosCompraService>('PedidosCompraService', [
+      'getRecebimentosResumo',
+      'listar',
+      'listItensByPedido',
+      'listParcelas',
+      'getById',
+    ]);
+    pedidosApi.getRecebimentosResumo.and.returnValue(of({
+      pedido_id: 1,
+      resumo: {
+        quantidade_pedida_total: '696.000',
+        quantidade_recebida_total: '225.000',
+        saldo_total: '471.000',
+        situacao: 'PARCIAL',
+      },
+      itens: [
+        {
+          pedido_item_id: 10,
+          produto_id: 1,
+          produto: 'Azul Marinho',
+          referencia: '27-01-01003',
+          cor: 'Azul Marinho',
+          pack: 'Pack 120',
+          quantidade_pedida: '120.000',
+          quantidade_recebida: '118.000',
+          saldo: '2.000',
+          situacao: 'PARCIAL',
+        },
+      ],
+      documentos: [
+        {
+          origem: 'RECEBIMENTO_FISICO',
+          xml_fornecedor_id: 132,
+          recebimento_id: 3,
+          numero: '132',
+          serie: '1',
+          dh_emissao: '2026-09-09T10:00:00Z',
+          quantidade_fisica: '19.000',
+          status_recebimento: 'CONCLUIDO',
+          status_operacional: 'RECEBIDO',
+          estoque_efetivado: true,
+          nota_entrada_id: null,
+          status_fiscal: null,
+        },
+        {
+          origem: 'NOTA_FISCAL+RECEBIMENTO_FISICO',
+          xml_fornecedor_id: 123,
+          recebimento_id: 4,
+          nota_entrada_id: 9,
+          numero: '123',
+          serie: '1',
+          quantidade_fisica: '6.000',
+          status_recebimento: 'CONCLUIDO',
+          status_operacional: 'RECEBIDO',
+          estoque_efetivado: true,
+          status_fiscal: 'FE',
+        },
+        {
+          origem: 'RECEBIMENTO_FISICO',
+          xml_fornecedor_id: 999,
+          recebimento_id: 5,
+          numero: '999',
+          serie: '1',
+          quantidade_fisica: '1.000',
+          status_recebimento: 'CANCELADO',
+          status_operacional: 'RECEBIDO',
+          estoque_efetivado: false,
+          recebimento_cancelado: true,
+          nota_entrada_id: null,
+          status_fiscal: null,
+        },
+      ],
+    }));
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      imports: [PedidosCompraComponent],
+      providers: [
+        { provide: PedidosCompraService, useValue: pedidosApi },
+        { provide: Router, useValue: router },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        { provide: AuthService, useValue: { podeAcessarModulo: () => true } },
+        { provide: LojasService, useValue: emptyApi() },
+        { provide: FormasPagamentoService, useValue: emptyApi() },
+        { provide: FornecedoresService, useValue: emptyApi() },
+        { provide: ProdutosService, useValue: emptyApi() },
+        { provide: CoresService, useValue: emptyApi() },
+        { provide: PacksService, useValue: emptyApi() },
+        { provide: PackItensService, useValue: emptyApi() },
+        { provide: UnidadesService, useValue: emptyApi() },
+        { provide: NatLancamentosService, useValue: emptyApi() },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    });
+    component = TestBed.createComponent(PedidosCompraComponent).componentInstance;
+  });
+
+  it('carrega recebimentos por uma unica fonte consolidada', () => {
+    (component as any).carregarRecebimentos(1);
+
+    expect(pedidosApi.getRecebimentosResumo).toHaveBeenCalledOnceWith(1);
+    expect(component.recebimentosResumo?.quantidade_pedida_total).toBe('696.000');
+    expect(component.recebimentosResumo?.quantidade_recebida_total).toBe('225.000');
+    expect(component.recebimentosResumo?.saldo_total).toBe('471.000');
+    expect(component.labelSituacaoRecebimento(component.recebimentosResumo?.situacao)).toBe('Parcial');
+  });
+
+  it('usa response.itens diretamente na tabela', () => {
+    (component as any).carregarRecebimentos(1);
+
+    expect(component.recebimentos).toEqual([
+      {
+        item_id: 10,
+        produto: 'Azul Marinho',
+        referencia: '27-01-01003',
+        cor: 'Azul Marinho',
+        pack: 'Pack 120',
+        qtd_pedida: 120,
+        qtd_recebida: 118,
+        saldo: 2,
+        situacao: 'Parcial',
+      },
+    ]);
+  });
+
+  it('mostra documentos fisicos, fiscal pendente, acoes e cancelado sem duplicar linha', () => {
+    (component as any).carregarRecebimentos(1);
+
+    expect(component.documentosRecebimento.length).toBe(3);
+    const nfe132 = component.documentosRecebimento.find(doc => doc.numero === '132')!;
+    expect(nfe132.quantidade_fisica).toBe(19);
+    expect(component.labelStatusOperacional(nfe132)).toBe('Recebido');
+    expect(nfe132.estoque_efetivado).toBeTrue();
+    expect(nfe132.fiscal).toBe('Pendente');
+
+    const dedup = component.documentosRecebimento.find(doc => doc.numero === '123')!;
+    expect(dedup.recebimento_id).toBe(4);
+    expect(dedup.nota_entrada_id).toBe(9);
+    expect(dedup.fiscal).toBe('Fechada');
+
+    const cancelado = component.documentosRecebimento.find(doc => doc.numero === '999')!;
+    expect(component.labelStatusOperacional(cancelado)).toBe('Cancelado');
+
+    component.verRecebimento(nfe132);
+    component.verFiscal(dedup);
+    expect(router.navigate).toHaveBeenCalledWith(['/estoque/recebimentos-mercadoria', 3]);
+    expect(router.navigate).toHaveBeenCalledWith(['/compras/notas-entrada'], { queryParams: { nota: 9 } });
+  });
+
+  it('mantem estado vazio de documentos', () => {
+    pedidosApi.getRecebimentosResumo.and.returnValue(of({
+      pedido_id: 1,
+      resumo: {
+        quantidade_pedida_total: '10.000',
+        quantidade_recebida_total: '0.000',
+        saldo_total: '10.000',
+        situacao: 'PENDENTE',
+      },
+      itens: [],
+      documentos: [],
+    }));
+
+    (component as any).carregarRecebimentos(1);
+
+    expect(component.recebimentosResumo?.situacao).toBe('PENDENTE');
+    expect(component.documentosRecebimento).toEqual([]);
+  });
+
+  it('limpa dados anteriores quando endpoint falha', () => {
+    (component as any).carregarRecebimentos(1);
+    pedidosApi.getRecebimentosResumo.and.returnValue(throwError(() => new Error('falha')));
+
+    (component as any).carregarRecebimentos(1);
+
+    expect(component.recebimentosResumo).toBeNull();
+    expect(component.recebimentos).toEqual([]);
+    expect(component.documentosRecebimento).toEqual([]);
   });
 });

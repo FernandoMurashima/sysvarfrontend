@@ -463,6 +463,13 @@
 
       <div class="empty-hint" *ngIf="(pedidoAtual?.status || 'AB') === 'AB'">Pedido ainda não aprovado / sem recebimentos.</div>
 
+      <div class="indicator-bar compact-summary recebimentos-summary-grid">
+        <div class="indicator recebimentos-summary-card"><span class="indicator-icon purple">Ped</span><div><small>Quantidade Pedida</small><strong>{{ toNumber(recebimentosResumo?.quantidade_pedida_total || 0) | number : '1.0-3' }}</strong></div></div>
+        <div class="indicator recebimentos-summary-card"><span class="indicator-icon green">Rec</span><div><small>Quantidade Recebida</small><strong>{{ toNumber(recebimentosResumo?.quantidade_recebida_total || 0) | number : '1.0-3' }}</strong></div></div>
+        <div class="indicator recebimentos-summary-card"><span class="indicator-icon orange">Sal</span><div><small>Saldo</small><strong>{{ toNumber(recebimentosResumo?.saldo_total || 0) | number : '1.0-3' }}</strong></div></div>
+        <div class="indicator recebimentos-summary-card"><span class="indicator-icon blue">Sit</span><div><small>Situação</small><strong><span class="status-pill" [ngClass]="badgeSituacaoRecebimento(recebimentosResumo?.situacao)">{{ labelSituacaoRecebimento(recebimentosResumo?.situacao) }}</span></strong></div></div>
+      </div>
+
       <div class="table-wrapper itens-wrapper recebimentos-table-area">
         <table class="table" *ngIf="recebimentos.length > 0; else recebimentosEmptyTpl">
           <thead><tr><th>Produto</th><th>Referência</th><th>Cor</th><th>Pack</th><th>Qtd Pedida</th><th>Qtd Recebida</th><th>Saldo</th><th>Situação</th></tr></thead>
@@ -479,11 +486,24 @@
 
       <div class="section-header item-section-head notas-head"><h3>Documentos fiscais relacionados</h3></div>
       <div class="table-wrapper itens-wrapper notas-table-area">
-        <table class="table" *ngIf="notasEntrada.length > 0; else notasEmptyTpl">
-          <thead><tr><th>Número</th><th>Série</th><th>Entrada</th><th>Status</th></tr></thead>
-          <tbody><tr *ngFor="let n of notasEntrada"><td>{{ n.numero }}</td><td>{{ n.serie || '-' }}</td><td>{{ n.dt_entrada }}</td><td>{{ n.status }}</td></tr></tbody>
+        <table class="table" *ngIf="documentosRecebimento.length > 0; else notasEmptyTpl">
+          <thead><tr><th>NF-e</th><th>Emissão</th><th>Qtd recebida</th><th>Recebimento</th><th>Estoque</th><th>Fiscal</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let doc of documentosRecebimento">
+              <td>{{ doc.numero }} / {{ doc.serie }}</td>
+              <td>{{ doc.emissao ? (doc.emissao | date : 'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ doc.quantidade_fisica == null ? '-' : (doc.quantidade_fisica | number : '1.0-3') }}</td>
+              <td><span class="status-pill" [ngClass]="badgeDocumento(doc)">{{ labelStatusOperacional(doc) }}</span></td>
+              <td><span class="status-pill" [ngClass]="doc.recebimento_cancelado ? 'badge-danger' : (doc.estoque_efetivado ? 'badge-ok' : '')">{{ doc.recebimento_cancelado ? 'Cancelado' : (doc.estoque_efetivado ? 'Efetivado' : 'Pendente') }}</span></td>
+              <td><span class="status-pill" [ngClass]="doc.nota_cancelada ? 'badge-danger' : (doc.fiscal === 'Fechada' ? 'badge-ok' : '')">{{ doc.fiscal }}</span></td>
+              <td class="doc-actions">
+                <button class="btn sm" type="button" *ngIf="doc.recebimento_id" (click)="verRecebimento(doc)">Ver recebimento</button>
+                <button class="btn sm" type="button" *ngIf="doc.nota_entrada_id" (click)="verFiscal(doc)">Ver fiscal</button>
+              </td>
+            </tr>
+          </tbody>
         </table>
-        <ng-template #notasEmptyTpl><div class="empty-hint">Nenhum documento fiscal de entrada vinculado.</div></ng-template>
+        <ng-template #notasEmptyTpl><div class="empty-hint">Nenhum documento fiscal relacionado.</div></ng-template>
       </div>
     </section>
   </div>

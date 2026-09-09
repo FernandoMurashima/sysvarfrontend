@@ -3,13 +3,13 @@ import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { LojasService } from '../../core/services/lojas.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { PrazoPagamento } from '../../core/models/forma-pagamento';
-import { PedidosCompraService } from '../../core/services/pedidos-compra.service';
+import { PedidoRecebimentosResumoDocumento, PedidoRecebimentosResumoTotais, PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { CoresService } from '../../core/services/cores.service';
@@ -100,6 +100,22 @@ interface RecebimentoItemUI {
   situacao: 'Pendente' | 'Parcial' | 'Recebido';
 }
 
+interface RecebimentoDocumentoUI {
+  origem: string;
+  numero: string;
+  serie: string;
+  emissao: string | null;
+  quantidade_fisica: number | null;
+  recebimento_id: number | null;
+  nota_entrada_id: number | null;
+  status_recebimento: string | null;
+  status_operacional: string | null;
+  estoque_efetivado: boolean;
+  recebimento_cancelado: boolean;
+  nota_cancelada: boolean;
+  fiscal: string;
+}
+
 @Component({
   selector: 'app-pedidos-compra',
   standalone: true,
@@ -113,6 +129,7 @@ export class PedidosCompraComponent implements OnInit {
   private formasApi = inject(FormasPagamentoService);
   private pedidosApi = inject(PedidosCompraService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private fornecedoresApi = inject(FornecedoresService);
   private produtosApi = inject(ProdutosService);
   private coresApi = inject(CoresService);
@@ -205,7 +222,8 @@ export class PedidosCompraComponent implements OnInit {
   loadingParcelas = false;
   savingPagamento = false;
   recebimentos: RecebimentoItemUI[] = [];
-  notasEntrada: any[] = [];
+  recebimentosResumo: PedidoRecebimentosResumoTotais | null = null;
+  documentosRecebimento: RecebimentoDocumentoUI[] = [];
   loadingRecebimentos = false;
 
   // form de cabeçalho
@@ -860,76 +878,97 @@ export class PedidosCompraComponent implements OnInit {
 
   private carregarRecebimentos(pedidoId: number): void {
     this.loadingRecebimentos = true;
-    const entregasUrl = `${environment.apiBaseUrl}/compras/entregas/`;
-    const notasUrl = `${environment.apiBaseUrl}/fiscal/notas-entrada/`;
-    const itensNotasUrl = `${environment.apiBaseUrl}/fiscal/notas-entrada-itens/`;
-    const params = new HttpParams().set('pedido', String(pedidoId)).set('page_size', '1000');
-
-    let entregas: any[] = [];
-    let itensNotas: any[] = [];
-
-    this.http.get<any>(entregasUrl, { params }).subscribe({
+    this.recebimentos = [];
+    this.recebimentosResumo = null;
+    this.documentosRecebimento = [];
+    this.pedidosApi.getRecebimentosResumo(pedidoId).subscribe({
       next: resp => {
-        entregas = this.arrayOrResults<any>(resp);
-        this.http.get<any>(itensNotasUrl, { params }).subscribe({
-          next: itensResp => {
-            itensNotas = this.arrayOrResults<any>(itensResp);
-            this.montarRecebimentos(entregas, itensNotas);
-            this.loadingRecebimentos = false;
-          },
-          error: () => {
-            this.montarRecebimentos(entregas, []);
-            this.loadingRecebimentos = false;
-          },
-        });
-      },
-      error: () => {
-        this.montarRecebimentos([], []);
+        this.recebimentosResumo = resp.resumo;
+        this.recebimentos = (resp.itens || []).map(item => ({
+          item_id: item.pedido_item_id,
+          produto: item.produto || '',
+          referencia: item.referencia || '',
+          cor: item.cor || '',
+          pack: item.pack || '',
+          qtd_pedida: this.toNumber(item.quantidade_pedida),
+          qtd_recebida: this.toNumber(item.quantidade_recebida),
+          saldo: this.toNumber(item.saldo),
+          situacao: this.labelSituacaoRecebimento(item.situacao),
+        }));
+        this.documentosRecebimento = (resp.documentos || []).map(doc => this.mapDocumentoRecebimento(doc));
         this.loadingRecebimentos = false;
       },
-    });
-
-    this.http.get<any>(notasUrl, { params }).subscribe({
-      next: resp => {
-        this.notasEntrada = this.arrayOrResults<any>(resp);
-      },
       error: () => {
-        this.notasEntrada = [];
+        this.recebimentos = [];
+        this.recebimentosResumo = null;
+        this.documentosRecebimento = [];
+        this.loadingRecebimentos = false;
+        this.showError('Erro ao carregar recebimentos do pedido.');
       },
     });
   }
 
-  private montarRecebimentos(entregas: any[], itensNotas: any[]): void {
-    const recebidosPorItem = new Map<number, number>();
-    itensNotas.forEach(item => {
-      const itemId = Number(item.pedido_item || 0);
-      const nota = this.notasEntrada.find(n => Number(n.id) === Number(item.nota));
-      if (nota?.status === 'CA') return;
-      recebidosPorItem.set(itemId, (recebidosPorItem.get(itemId) || 0) + Number(item.qtd_recebida || 0));
-    });
+  private mapDocumentoRecebimento(doc: PedidoRecebimentosResumoDocumento): RecebimentoDocumentoUI {
+    return {
+      origem: doc.origem || '',
+      numero: doc.numero || '-',
+      serie: doc.serie || '-',
+      emissao: doc.dh_emissao || null,
+      quantidade_fisica: doc.quantidade_fisica == null ? null : this.toNumber(doc.quantidade_fisica),
+      recebimento_id: doc.recebimento_id ?? null,
+      nota_entrada_id: doc.nota_entrada_id ?? null,
+      status_recebimento: doc.status_recebimento || null,
+      status_operacional: doc.status_operacional || null,
+      estoque_efetivado: !!doc.estoque_efetivado,
+      recebimento_cancelado: !!doc.recebimento_cancelado,
+      nota_cancelada: !!doc.nota_cancelada,
+      fiscal: this.labelStatusFiscal(doc.status_fiscal, doc.nota_entrada_id),
+    };
+  }
 
-    this.recebimentos = this.itens.map(item => {
-      const entrega = entregas.find(e => Number(e.item) === Number(item.id));
-      const qtdPedida = Number(entrega?.qtd_prevista ?? item.quantidade ?? 0);
-      const qtdRecebida = Number(entrega?.qtd_recebida ?? recebidosPorItem.get(Number(item.id)) ?? 0);
-      const saldo = Math.max(qtdPedida - qtdRecebida, 0);
-      const situacao: RecebimentoItemUI['situacao'] = qtdRecebida <= 0
-        ? 'Pendente'
-        : qtdRecebida >= qtdPedida
-          ? 'Recebido'
-          : 'Parcial';
-      return {
-        item_id: item.id,
-        produto: item.produto_label || item.produto_referencia || '',
-        referencia: item.produto_referencia || '',
-        cor: item.cor_nome || '',
-        pack: item.pack_nome || '',
-        qtd_pedida: qtdPedida,
-        qtd_recebida: qtdRecebida,
-        saldo,
-        situacao,
-      };
-    });
+  labelSituacaoRecebimento(status?: string | null): RecebimentoItemUI['situacao'] {
+    if (status === 'RECEBIDO') return 'Recebido';
+    if (status === 'PARCIAL') return 'Parcial';
+    return 'Pendente';
+  }
+
+  labelStatusOperacional(doc: Pick<RecebimentoDocumentoUI, 'status_operacional' | 'status_recebimento' | 'recebimento_cancelado'>): string {
+    if (doc.recebimento_cancelado || doc.status_recebimento === 'CANCELADO') return 'Cancelado';
+    if (doc.status_operacional === 'RECEBIDO') return 'Recebido';
+    if (doc.status_operacional === 'PROCESSADO') return 'Processado';
+    if (doc.status_recebimento === 'CONCLUIDO') return 'Concluído';
+    if (doc.status_recebimento === 'EM_CONFERENCIA') return 'Em conferência';
+    if (doc.status_recebimento === 'ABERTO') return 'Aberto';
+    return '-';
+  }
+
+  labelStatusFiscal(status?: string | null, notaId?: number | null): string {
+    if (!notaId) return 'Pendente';
+    if (status === 'AB') return 'Aberta';
+    if (status === 'FE') return 'Fechada';
+    if (status === 'CA') return 'Cancelada';
+    return '-';
+  }
+
+  badgeSituacaoRecebimento(status?: string | null): string {
+    const label = this.labelSituacaoRecebimento(status);
+    return label === 'Recebido' ? 'badge-ok' : (label === 'Parcial' ? 'inactive' : '');
+  }
+
+  badgeDocumento(doc: RecebimentoDocumentoUI): string {
+    if (doc.recebimento_cancelado || doc.nota_cancelada || doc.status_recebimento === 'CANCELADO') return 'badge-danger';
+    if (doc.status_operacional === 'RECEBIDO' || doc.status_operacional === 'PROCESSADO') return 'badge-ok';
+    return 'inactive';
+  }
+
+  verRecebimento(doc: RecebimentoDocumentoUI): void {
+    if (!doc.recebimento_id) return;
+    this.router.navigate(['/estoque/recebimentos-mercadoria', doc.recebimento_id]);
+  }
+
+  verFiscal(doc: RecebimentoDocumentoUI): void {
+    if (!doc.nota_entrada_id) return;
+    this.router.navigate(['/compras/notas-entrada'], { queryParams: { nota: doc.nota_entrada_id } });
   }
 
   abrirItensPedido(): void {

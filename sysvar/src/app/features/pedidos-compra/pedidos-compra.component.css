@@ -197,6 +197,7 @@ textarea { resize: vertical; max-height: 34px; }
 .btn.sm { min-height: 26px; padding: 4px 8px; font-size: 12px; }
 .table th, .table td { padding: 6px 8px; }
 .badge-ok, .status-pill.badge-ok { background: #dcfce7; color: #15803d; }
+.badge-danger, .status-pill.badge-danger { background: #fee2e2; color: #b91c1c; }
 .badge-off { background: #e2e8f0; color: #475569; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(15, 23, 42, .25); }
 .modal-card { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: hidden; background: #fff; border: 1px solid #cbd6e2; border-radius: 8px; padding: 16px; box-shadow: 0 18px 40px rgba(15, 23, 42, .22); }
@@ -312,10 +313,21 @@ textarea { resize: vertical; max-height: 34px; }
 }
 .payment-table-area .table { min-width: 640px; }
 .recebimentos-table-area {
-  max-height: clamp(260px, 46vh, 520px);
+  max-height: clamp(220px, 34vh, 420px);
   overflow: auto;
 }
 .recebimentos-table-area .table { min-width: 980px; }
+.recebimentos-summary-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.recebimentos-summary-card {
+  min-height: 50px;
+  padding: 7px 10px;
+}
+.recebimentos-summary-card strong { font-size: 16px; }
+.recebimentos-summary-card strong .status-pill { font-size: 12px; }
 .notas-head {
   margin-top: 12px;
   padding-top: 2px;
@@ -324,11 +336,16 @@ textarea { resize: vertical; max-height: 34px; }
   max-height: clamp(120px, 18vh, 220px);
   overflow: auto;
 }
-.notas-table-area .table { min-width: 640px; }
+.notas-table-area .table { min-width: 900px; }
+.doc-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
 @media (max-width: 900px) {
   .indicator-bar, .summary-grid, .filter-bar, .grid-12 { grid-template-columns: 1fr; }
   .col-span-1,.col-span-2,.col-span-3,.col-span-4,.col-span-5,.col-span-6,.col-span-8,.col-span-12 { grid-column: 1 / -1; }
-  .initial-layout .itens-grid, .revenda-layout .itens-grid, .consumo-layout .itens-grid, .lookup-head, .payment-grid, .payment-summary-grid { grid-template-columns: 1fr; }
+  .initial-layout .itens-grid, .revenda-layout .itens-grid, .consumo-layout .itens-grid, .lookup-head, .payment-grid, .payment-summary-grid, .recebimentos-summary-grid { grid-template-columns: 1fr; }
   .item-observacoes { grid-column: 1 / -1 !important; }
   .section-header { align-items: stretch; flex-direction: column; }
   .form-title-row { align-items: stretch; flex-direction: column; }
