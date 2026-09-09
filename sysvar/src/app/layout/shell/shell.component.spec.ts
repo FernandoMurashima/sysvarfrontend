@@ -62,13 +62,29 @@ describe('ShellComponent menu lateral', () => {
     return fixture.componentInstance;
   }
 
-  it('exibe Fiscal e Contábil para administrador delegado com fiscal contratado', () => {
+  function findItem(items: any[] | undefined, label: string): any | undefined {
+    for (const item of items || []) {
+      if (item.label === label) return item;
+      const child = findItem(item.children, label);
+      if (child) return child;
+    }
+    return undefined;
+  }
+
+  function linksOf(items: any[] | undefined): string[] {
+    return (items || []).flatMap(item => [
+      ...(item.link ? [item.link] : []),
+      ...linksOf(item.children),
+    ]);
+  }
+
+  it('exibe Fiscal / Contábil para administrador delegado com fiscal contratado', () => {
     const component = render();
-    const fiscal = component.visibleMenu.find(item => item.label === 'Fiscal e Contábil');
+    const fiscal = component.visibleMenu.find(item => item.label === 'Fiscal / Contábil');
 
     expect(fiscal).toBeTruthy();
-    expect(fiscal?.children?.map(child => child.label)).toContain('NCM');
-    expect(fixture.nativeElement.textContent).toContain('Fiscal e Contábil');
+    expect(findItem(fiscal?.children, 'NCM')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Fiscal / Contábil');
     expect(fixture.nativeElement.textContent).toContain('NCM');
   });
 
@@ -84,11 +100,11 @@ describe('ShellComponent menu lateral', () => {
 
     const component = render();
 
-    expect(component.visibleMenu.some(item => item.label === 'Fiscal e Contábil')).toBeFalse();
-    expect(fixture.nativeElement.textContent).not.toContain('Fiscal e Contábil');
+    expect(component.visibleMenu.some(item => item.label === 'Fiscal / Contábil')).toBeFalse();
+    expect(fixture.nativeElement.textContent).not.toContain('Fiscal / Contábil');
   });
 
-  it('mostra Agente Local Sysvar para Admin ou Diretor no menu Operacional', () => {
+  it('mostra Agente para Admin ou Diretor em Cadastros > Operacional', () => {
     currentUser = {
       id: 4,
       username: 'admin',
@@ -99,8 +115,9 @@ describe('ShellComponent menu lateral', () => {
     };
 
     let component = render();
-    let operacional = component.visibleMenu.find(item => item.label === 'Operacional');
-    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar' && child.link === '/config/agente-local')).toBeTrue();
+    let cadastros = component.visibleMenu.find(item => item.label === 'Cadastros');
+    let operacional = findItem(cadastros?.children, 'Operacional');
+    expect(operacional?.children?.some((child: any) => child.label === 'Agente' && child.link === '/config/agente-local')).toBeTrue();
 
     currentUser = {
       id: 5,
@@ -111,11 +128,12 @@ describe('ShellComponent menu lateral', () => {
       permissoes_efetivas: { operacional: 'VIEW' },
     };
     component = render();
-    operacional = component.visibleMenu.find(item => item.label === 'Operacional');
-    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeTrue();
+    cadastros = component.visibleMenu.find(item => item.label === 'Cadastros');
+    operacional = findItem(cadastros?.children, 'Operacional');
+    expect(operacional?.children?.some((child: any) => child.label === 'Agente')).toBeTrue();
   });
 
-  it('oculta Agente Local Sysvar para Gerente', () => {
+  it('oculta Agente para Gerente', () => {
     currentUser = {
       id: 6,
       username: 'gerente',
@@ -126,9 +144,10 @@ describe('ShellComponent menu lateral', () => {
     };
 
     const component = render();
-    const operacional = component.visibleMenu.find(item => item.label === 'Operacional');
+    const cadastros = component.visibleMenu.find(item => item.label === 'Cadastros');
+    const operacional = findItem(cadastros?.children, 'Operacional');
 
-    expect(operacional?.children?.some(child => child.label === 'Agente Local Sysvar')).toBeFalse();
+    expect(operacional?.children?.some((child: any) => child.label === 'Agente')).toBeFalse();
   });
 
   it('mostra NF-e no menu Estoque para operação de estoque', () => {
@@ -144,8 +163,8 @@ describe('ShellComponent menu lateral', () => {
     const component = render();
     const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
 
-    expect(estoque?.children?.some(child => child.label === 'NF-e' && child.link === '/estoque/nfe-detectadas')).toBeTrue();
-    expect(estoque?.children?.some(child => child.label === 'Recebimento de Mercadoria' && child.link === '/estoque/recebimentos-mercadoria')).toBeTrue();
+    expect(findItem(estoque?.children, 'NF-e')?.link).toBe('/estoque/nfe-detectadas');
+    expect(findItem(estoque?.children, 'Recebimento de Almoxarifado')?.link).toBe('/estoque/recebimentos-mercadoria');
   });
 
   it('nao mostra Entrada de NF-e no menu Compras', () => {
@@ -162,9 +181,43 @@ describe('ShellComponent menu lateral', () => {
     const compras = component.visibleMenu.find(item => item.label === 'Compras');
 
     expect(compras).toBeTruthy();
-    expect(compras?.children?.some(child => child.label === 'Pedido de Compra')).toBeTrue();
-    expect(compras?.children?.some(child => child.label === 'Cotações')).toBeTrue();
-    expect(compras?.children?.some(child => child.label === 'Entrada de NF-e')).toBeFalse();
-    expect(compras?.children?.some(child => child.link === '/compras/notas-entrada')).toBeFalse();
+    expect(findItem(compras?.children, 'Pedidos de Compra')).toBeTruthy();
+    expect(findItem(compras?.children, 'Cotações')).toBeTruthy();
+    expect(findItem(compras?.children, 'Entrada de NF-e')).toBeFalsy();
+    expect(linksOf(compras?.children)).not.toContain('/compras/notas-entrada');
+  });
+
+  it('mantem PDV somente no menu Loja e remove os PDVs do menu Vendas', () => {
+    currentUser = {
+      id: 9,
+      username: 'caixa',
+      type: 'Caixa',
+      is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['vendas', 'estoque'],
+      permissoes_efetivas: { vendas: 'VIEW', estoque: 'VIEW' },
+    };
+
+    const component = render();
+    const vendas = component.visibleMenu.find(item => item.label === 'Vendas');
+    const loja = component.visibleMenu.find(item => item.label === 'Loja');
+
+    expect(linksOf(vendas?.children)).not.toContain('/vendas/pdv');
+    expect(linksOf(vendas?.children)).not.toContain('/loja/pdv-offline');
+    expect(findItem(loja?.children, 'PDV')?.link).toBe('/loja/pdv-offline');
+    expect(findItem(loja?.children, 'Recebimento de Mercadoria')?.link).toBe('/loja/recebimento');
+    expect(findItem(loja?.children, 'Consulta de Estoque')?.link).toBe('/estoque/consulta-referencia');
+  });
+
+  it('mantem todas as rotas do menu como rotas conhecidas da barra da pagina', () => {
+    const component = render();
+    const links = linksOf(component.menuItems);
+    let currentUrl = '/home';
+    spyOnProperty((component as any).router, 'url', 'get').and.callFake(() => currentUrl);
+
+    expect(links).not.toContain('/vendas/pdv');
+    expect(links.every(link => {
+      currentUrl = link;
+      return component.showPageBarControls || link === '/home';
+    })).toBeTrue();
   });
 });
