@@ -139,11 +139,32 @@ export class NfeDetectadasComponent implements OnInit {
   }
 
   podeIniciarRecebimento(row: XmlFornecedorRecebido): boolean {
-    return row.tipo_tratamento === 'ESTOQUE' && ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
+    return row.tipo_tratamento === 'ESTOQUE'
+      && !row.recebimento_id
+      && ['DETECTADO', 'AGUARDANDO_RECEBIMENTO'].includes(row.status_operacional);
   }
 
   podeEncaminharFiscal(row: XmlFornecedorRecebido): boolean {
-    return ['USO_CONSUMO', 'INSUMO_PRODUCAO', 'FISCAL_SEM_ESTOQUE'].includes(row.tipo_tratamento);
+    return ['USO_CONSUMO', 'INSUMO_PRODUCAO', 'FISCAL_SEM_ESTOQUE'].includes(row.tipo_tratamento)
+      && !row.nota_entrada_id;
+  }
+
+  podeDefinirTratamento(row: XmlFornecedorRecebido): boolean {
+    return row.tipo_tratamento === 'NAO_DEFINIDO' && !row.recebimento_id && !row.nota_entrada_id;
+  }
+
+  podeConsultar(row: XmlFornecedorRecebido): boolean {
+    return !!row.recebimento_id || !!row.nota_entrada_id;
+  }
+
+  consultar(row: XmlFornecedorRecebido): void {
+    if (row.recebimento_id) {
+      this.router.navigate(['/estoque/recebimentos-mercadoria', row.recebimento_id]);
+      return;
+    }
+    if (row.nota_entrada_id) {
+      this.router.navigate(['/compras/notas-entrada'], { queryParams: { nota: row.nota_entrada_id } });
+    }
   }
 
   iniciarRecebimento(row: XmlFornecedorRecebido): void {

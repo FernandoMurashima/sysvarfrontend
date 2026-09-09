@@ -42,6 +42,8 @@ describe('NfeDetectadasComponent', () => {
     atualizado_em: '2026-09-04T09:05:00-03:00',
     tipo_tratamento: 'NAO_DEFINIDO',
     tipo_tratamento_display: 'Não definido',
+    nota_entrada_id: null,
+    recebimento_id: null,
   } as any;
 
   beforeEach(async () => {
@@ -76,6 +78,7 @@ describe('NfeDetectadasComponent', () => {
 
   it('carrega listagem paginada e badges sem expor chave inteira na tabela', () => {
     const text = fixture.nativeElement.textContent;
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('thead th')).map((th: any) => th.textContent.trim());
     expect(api.listar).toHaveBeenCalledWith(jasmine.objectContaining({ page: 1, page_size: 25 }));
     expect((fixture.nativeElement.querySelector('h1') as HTMLElement).textContent?.trim()).toBe('NF-e');
     expect(text).toContain('Fábrica');
@@ -84,6 +87,7 @@ describe('NfeDetectadasComponent', () => {
     expect(text).toContain('Detectado');
     expect(text).toContain('Autorizada');
     expect(text).toContain('Não definido');
+    expect(headers).not.toContain('Agente');
     expect(text).not.toContain(xml.chave_acesso);
     expect(text).not.toContain('xml_original');
     expect(text).not.toContain('token_hash');
@@ -184,6 +188,7 @@ describe('NfeDetectadasComponent', () => {
   it('aplica regra do botão Iniciar recebimento por tratamento e status', () => {
     expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'ESTOQUE', status_operacional: 'DETECTADO' })).toBeTrue();
     expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'ESTOQUE', status_operacional: 'AGUARDANDO_RECEBIMENTO' })).toBeTrue();
+    expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'ESTOQUE', status_operacional: 'RECEBIDO', recebimento_id: 9 })).toBeFalse();
     expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'NAO_DEFINIDO', status_operacional: 'DETECTADO' })).toBeFalse();
     expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'USO_CONSUMO', status_operacional: 'DETECTADO' })).toBeFalse();
     expect(component.podeIniciarRecebimento({ ...xml, tipo_tratamento: 'INSUMO_PRODUCAO', status_operacional: 'DETECTADO' })).toBeFalse();
@@ -198,6 +203,7 @@ describe('NfeDetectadasComponent', () => {
       { ...xml, id: 3, tipo_tratamento: 'USO_CONSUMO', tipo_tratamento_display: 'Uso e consumo' },
       { ...xml, id: 4, tipo_tratamento: 'INSUMO_PRODUCAO', tipo_tratamento_display: 'Insumo / produção' },
       { ...xml, id: 5, tipo_tratamento: 'FISCAL_SEM_ESTOQUE', tipo_tratamento_display: 'Entrada fiscal sem estoque' },
+      { ...xml, id: 6, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque', recebimento_id: 9 },
     ];
     fixture.detectChanges();
 
@@ -218,10 +224,48 @@ describe('NfeDetectadasComponent', () => {
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Encaminhar fiscal'));
     expect(buttons.length).toBe(3);
     expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'USO_CONSUMO' })).toBeTrue();
+    expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'USO_CONSUMO', nota_entrada_id: 11 })).toBeFalse();
     expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'INSUMO_PRODUCAO' })).toBeTrue();
     expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'FISCAL_SEM_ESTOQUE' })).toBeTrue();
     expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'ESTOQUE' })).toBeFalse();
     expect(component.podeEncaminharFiscal({ ...xml, tipo_tratamento: 'NAO_DEFINIDO' })).toBeFalse();
+  });
+
+  it('mostra Definir tratamento apenas para XML nao definido sem processamento iniciado', () => {
+    component.rows = [
+      { ...xml, id: 1, tipo_tratamento: 'NAO_DEFINIDO', tipo_tratamento_display: 'Não definido' },
+      { ...xml, id: 2, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque' },
+      { ...xml, id: 3, tipo_tratamento: 'USO_CONSUMO', tipo_tratamento_display: 'Uso e consumo' },
+      { ...xml, id: 4, tipo_tratamento: 'NAO_DEFINIDO', tipo_tratamento_display: 'Não definido', nota_entrada_id: 12 },
+    ];
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Definir tratamento'));
+    expect(buttons.length).toBe(1);
+  });
+
+  it('mostra Consultar para estoque com recebimento e processado fiscal com nota', () => {
+    component.rows = [
+      { ...xml, id: 1, tipo_tratamento: 'ESTOQUE', tipo_tratamento_display: 'Mercadoria para estoque', status_operacional: 'RECEBIDO', recebimento_id: 9 },
+      { ...xml, id: 2, tipo_tratamento: 'USO_CONSUMO', tipo_tratamento_display: 'Uso e consumo', status_operacional: 'PROCESSADO', nota_entrada_id: 11 },
+      { ...xml, id: 3, tipo_tratamento: 'USO_CONSUMO', tipo_tratamento_display: 'Uso e consumo', status_operacional: 'DETECTADO', nota_entrada_id: null },
+    ];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    const consultar = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Consultar'));
+    const encaminhar = Array.from(fixture.nativeElement.querySelectorAll('button')).filter((button: any) => button.textContent.includes('Encaminhar fiscal'));
+    expect(consultar.length).toBe(2);
+    expect(encaminhar.length).toBe(1);
+    expect(text).not.toContain('Iniciar recebimento');
+  });
+
+  it('Consultar navega para recebimento ou entrada fiscal conforme vinculo', () => {
+    component.consultar({ ...xml, tipo_tratamento: 'ESTOQUE', recebimento_id: 9 });
+    component.consultar({ ...xml, tipo_tratamento: 'USO_CONSUMO', nota_entrada_id: 11 });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/estoque/recebimentos-mercadoria', 9]);
+    expect(router.navigate).toHaveBeenCalledWith(['/compras/notas-entrada'], { queryParams: { nota: 11 } });
   });
 
   it('encaminha fiscal e navega para a nota retornada', () => {

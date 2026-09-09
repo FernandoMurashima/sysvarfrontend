@@ -9,7 +9,9 @@
 .filter-bar input { height: 34px; border: 1px solid #dbe4ef; border-radius: 6px; padding: 0 8px; background: #fff; color: #0f172a; min-width: 0; }
 .filter-actions { display: flex; gap: 8px; align-items: end; }
 .table-wrapper { overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
-.table { min-width: 1180px; }
+.table { min-width: 1120px; }
+.table th:nth-child(9),
+.table td:nth-child(9) { min-width: 190px; }
 .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; }
 .badge.operacional.detectado,
 .badge.operacional.aguardando_recebimento { background: #fef3c7; color: #92400e; }

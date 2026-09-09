@@ -105,7 +105,6 @@
             <th>Situação fiscal</th>
             <th>Status</th>
             <th>Tratamento</th>
-            <th>Agente</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -120,8 +119,11 @@
             <td><span class="badge fiscal" [class]="row.situacao_fiscal.toLowerCase()">{{ situacaoLabel(row.situacao_fiscal) }}</span></td>
             <td><span class="badge operacional" [class]="row.status_operacional.toLowerCase()">{{ statusLabel(row.status_operacional) }}</span></td>
             <td><span class="badge tratamento" [class]="row.tipo_tratamento.toLowerCase()">{{ tratamentoLabel(row) }}</span></td>
-            <td>{{ row.identificador_agente || '-' }}</td>
             <td>
+              <button class="btn small primary" type="button" *ngIf="podeConsultar(row)" (click)="consultar(row)">
+                <i class="bi bi-box-arrow-up-right"></i>
+                Consultar
+              </button>
               <button class="btn small primary" type="button" *ngIf="podeIniciarRecebimento(row)" (click)="iniciarRecebimento(row)" [disabled]="iniciandoId === row.id">
                 <i class="bi bi-box-arrow-in-down"></i>
                 {{ iniciandoId === row.id ? 'Iniciando...' : 'Iniciar recebimento' }}
@@ -130,7 +132,7 @@
                 <i class="bi bi-journal-arrow-up"></i>
                 {{ encaminhandoFiscalId === row.id ? 'Encaminhando...' : 'Encaminhar fiscal' }}
               </button>
-              <button class="btn small" type="button" (click)="abrirDefinirTratamento(row)">
+              <button class="btn small" type="button" *ngIf="podeDefinirTratamento(row)" (click)="abrirDefinirTratamento(row)">
                 <i class="bi bi-sliders"></i>
                 Definir tratamento
               </button>
