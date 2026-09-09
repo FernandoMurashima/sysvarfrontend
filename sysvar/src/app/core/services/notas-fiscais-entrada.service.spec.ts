@@ -111,6 +111,10 @@ describe('NotasFiscaisEntradaService', () => {
     const cancelarReq = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/cancelar/') && r.body.motivo === 'Erro operacional' && r.body.confirmar_avisos === true);
     expect(cancelarReq.request.body.confirmar_avisos).toBeTrue();
     cancelarReq.flush({});
+    service.cancelarEntrada(1, 'Desfazer entrada', true).subscribe();
+    const cancelarEntradaReq = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/cancelar-entrada/') && r.body.motivo === 'Desfazer entrada' && r.body.confirmar_avisos === true);
+    expect(cancelarEntradaReq.request.body.confirmar_avisos).toBeTrue();
+    cancelarEntradaReq.flush({});
     service.recusar(1).subscribe();
     http.expectOne(r => r.method === 'POST' && r.url.endsWith('/fiscal/notas-entrada/1/recusar/')).flush({});
   });

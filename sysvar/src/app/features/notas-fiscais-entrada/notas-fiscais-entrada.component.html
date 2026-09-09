@@ -54,7 +54,8 @@
 
   <div class="modal-backdrop" *ngIf="cancelarModalAberto">
     <section class="modal-card cancel-modal">
-      <h3>Cancelar NF</h3>
+      <h3>{{ cancelamentoTitulo() }}</h3>
+      <p class="modal-text">{{ cancelamentoTexto() }}</p>
       <div class="alert error" *ngIf="cancelamentoAnalise?.bloqueios?.length">
         <div *ngFor="let bloqueio of cancelamentoAnalise?.bloqueios">{{ bloqueio }}</div>
       </div>
@@ -71,7 +72,7 @@
       <label class="check-line" *ngIf="cancelamentoAnalise?.avisos?.length"><input type="checkbox" [(ngModel)]="confirmacaoAvisosCancelamento" /> Confirmo os avisos e desejo continuar.</label>
       <div class="modal-actions">
         <button class="btn" type="button" [disabled]="cancelandoNota" (click)="cancelarModalAberto = false">Voltar</button>
-        <button class="btn danger" type="button" [disabled]="!podeConfirmarCancelamento()" (click)="confirmarCancelamentoOperacional()">{{ cancelandoNota ? 'Cancelando...' : 'Cancelar NF' }}</button>
+        <button class="btn danger" type="button" [disabled]="!podeConfirmarCancelamento()" (click)="confirmarCancelamentoOperacional()">{{ cancelandoNota ? 'Cancelando...' : cancelamentoBotao() }}</button>
       </div>
     </section>
   </div>
@@ -155,7 +156,7 @@
 
   <section class="action-bar" *ngIf="view() === 'list'">
     <button class="btn" type="button" [disabled]="acaoSelecionadaDesabilitada('abrir')" (click)="executarAcaoSelecionada('abrir')">Abrir</button>
-    <button class="btn danger" type="button" [disabled]="acaoSelecionadaDesabilitada('cancelar')" (click)="executarAcaoSelecionada('cancelar')">Cancelar NF</button>
+    <button class="btn danger" type="button" [disabled]="acaoSelecionadaDesabilitada('cancelar')" (click)="executarAcaoSelecionada('cancelar')">Cancelar NF-e</button>
   </section>
 
   <section class="results-area table-card" *ngIf="view() === 'list'">
@@ -498,8 +499,11 @@
       <button class="btn primary" type="button" (click)="fecharNota()" [disabled]="notaAtual()?.xml_importado ? !podeEfetivarXml() : notaAtual()?.status !== 'AB'">
         {{ notaAtual()?.xml_importado ? 'Efetivar NF-e' : 'Fechar NF' }}
       </button>
-      <button class="btn danger" type="button" (click)="cancelarNota()" [disabled]="notaAtual()?.status === 'CA'">
-        Cancelar NF
+      <button class="btn danger-soft" type="button" *ngIf="podeCancelarEntrada()" (click)="abrirCancelamentoEntrada()">
+        Cancelar entrada
+      </button>
+      <button class="btn danger" type="button" *ngIf="podeCancelarNfe()" (click)="cancelarNota()">
+        Cancelar NF-e
       </button>
     </div>
   </section>

@@ -195,6 +195,13 @@ export class NotasFiscaisEntradaService {
     });
   }
 
+  cancelarEntrada(id: number, motivo = '', confirmarAvisos = false): Observable<NotaFiscalEntrada> {
+    return this.http.post<NotaFiscalEntrada>(`${this.base}${id}/cancelar-entrada/`, {
+      motivo,
+      confirmar_avisos: confirmarAvisos,
+    });
+  }
+
   recusar(id: number): Observable<{ detail: string; id: number; chave_acesso: string }> {
     return this.http.post<{ detail: string; id: number; chave_acesso: string }>(`${this.base}${id}/recusar/`, {});
   }

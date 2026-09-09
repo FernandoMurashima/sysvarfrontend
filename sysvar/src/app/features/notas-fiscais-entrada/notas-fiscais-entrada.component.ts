@@ -27,6 +27,7 @@ import { SummaryCardComponent } from '../../shared/components/summary-card/summa
 
 type Option = { id: number; label: string };
 type RowAction = { key: string; label: string; icon?: string; disabled?: boolean; visible?: boolean; danger?: boolean; dividerBefore?: boolean };
+type CancelamentoModo = 'ENTRADA' | 'FISCAL';
 
 type ItemRecebimentoUI = NotaFiscalEntradaPedidoItem & {
   qtd_receber: number;
@@ -82,6 +83,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   efetivarModalAberto = false;
   cancelarModalAberto = false;
   cancelamentoAnalise: NotaFiscalEntradaAnaliseCancelamento | null = null;
+  cancelamentoModo: CancelamentoModo | null = null;
   motivoCancelamento = '';
   confirmacaoAvisosCancelamento = false;
   analisandoCancelamento = false;
@@ -485,7 +487,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
   rowActions(nota: NotaFiscalEntrada): RowAction[] {
     return [
       { key: 'abrir', label: 'Abrir', icon: '⌕' },
-      { key: 'cancelar', label: 'Cancelar NF', icon: '×', disabled: nota.status === 'CA', danger: true, dividerBefore: true },
+      { key: 'cancelar', label: 'Cancelar NF-e', icon: '×', disabled: nota.status === 'CA', danger: true, dividerBefore: true },
     ];
   }
 
@@ -1124,12 +1126,12 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const nota = this.notaAtual();
     if (!nota || nota.status === 'CA') return;
     if (nota.status === 'FE') {
-      this.abrirCancelamentoOperacional();
+      this.abrirCancelamentoOperacional('FISCAL');
       return;
     }
     this.confirmModal = {
       action: 'cancelarNota',
-      title: 'Cancelar nota fiscal',
+      title: 'Cancelar NF-e',
       text: `Confirma o cancelamento da nota ${nota.numero}?`,
     };
   }
@@ -1142,7 +1144,7 @@ export class NotasFiscaisEntradaComponent implements OnInit {
         this.confirmModal = null;
         this.notaAtual.set(n);
         this.form.disable();
-        this.mensagem = 'Nota cancelada.';
+        this.mensagem = 'NF-e cancelada.';
         this.erro = '';
         this.loadNotas();
         this.loadPedidosAprovados();
@@ -1158,10 +1160,24 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     this.executarFechamentoNota();
   }
 
-  abrirCancelamentoOperacional(): void {
+  podeCancelarEntrada(nota: NotaFiscalEntrada | null = this.notaAtual()): boolean {
+    return !!nota?.xml_fornecedor && nota.status === 'FE';
+  }
+
+  podeCancelarNfe(nota: NotaFiscalEntrada | null = this.notaAtual()): boolean {
+    return !!nota && nota.status !== 'CA';
+  }
+
+  abrirCancelamentoEntrada(): void {
+    if (!this.podeCancelarEntrada()) return;
+    this.abrirCancelamentoOperacional('ENTRADA');
+  }
+
+  abrirCancelamentoOperacional(modo: CancelamentoModo = 'FISCAL'): void {
     const nota = this.notaAtual();
     if (!nota || this.analisandoCancelamento) return;
     this.analisandoCancelamento = true;
+    this.cancelamentoModo = modo;
     this.cancelamentoAnalise = null;
     this.motivoCancelamento = '';
     this.confirmacaoAvisosCancelamento = false;
@@ -1176,9 +1192,25 @@ export class NotasFiscaisEntradaComponent implements OnInit {
       },
       error: err => {
         this.analisandoCancelamento = false;
+        this.cancelamentoModo = null;
         this.erro = this.errorText(err, 'Não foi possível analisar o cancelamento.');
       },
     });
+  }
+
+  cancelamentoTitulo(): string {
+    return this.cancelamentoModo === 'ENTRADA' ? 'Cancelar entrada' : 'Cancelar NF-e';
+  }
+
+  cancelamentoTexto(): string {
+    if (this.cancelamentoModo === 'ENTRADA') {
+      return 'Esta operação desfará os efeitos desta entrada e manterá a NF-e disponível para novo processamento.';
+    }
+    return 'Use esta opção somente quando a NF-e tiver sido cancelada fiscalmente. Os efeitos da entrada serão desfeitos e o XML não poderá ser utilizado novamente.';
+  }
+
+  cancelamentoBotao(): string {
+    return this.cancelamentoModo === 'ENTRADA' ? 'Cancelar entrada' : 'Cancelar NF-e';
   }
 
   private consolidarBloqueiosCancelamento(bloqueios: string[]): string[] {
@@ -1203,13 +1235,24 @@ export class NotasFiscaisEntradaComponent implements OnInit {
     const analise = this.cancelamentoAnalise;
     if (!nota || !analise || !this.podeConfirmarCancelamento()) return;
     this.cancelandoNota = true;
-    this.notasApi.cancelar(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0).subscribe({
+    const req = this.cancelamentoModo === 'ENTRADA'
+      ? this.notasApi.cancelarEntrada(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0)
+      : this.notasApi.cancelar(nota.id, this.motivoCancelamento.trim(), analise.avisos.length > 0);
+    req.subscribe({
       next: n => {
         this.cancelandoNota = false;
         this.cancelarModalAberto = false;
+        const modo = this.cancelamentoModo;
+        this.cancelamentoModo = null;
         this.notaAtual.set(n);
-        this.form.disable();
-        this.mensagem = 'Nota cancelada.';
+        if (n.status === 'AB') {
+          this.form.enable();
+        } else {
+          this.form.disable();
+        }
+        this.mensagem = modo === 'ENTRADA'
+          ? 'Entrada cancelada. NF-e disponível para reprocessamento.'
+          : 'NF-e cancelada.';
         this.loadNotas();
         this.loadPedidosAprovados();
         if (n.xml_importado) this.carregarFluxoXml(n.id);
