@@ -539,7 +539,35 @@ describe('NotasFiscaisEntradaComponent', () => {
     expect(text).toContain('Cobrança / Financeiro');
     expect(text).toContain('Boleto bancário');
     expect(text).toContain('001');
+    expect(text).toContain('25/09/2026');
     expect(component.motivosBloqueioEfetivar()).toContain('Concilie a forma de pagamento do XML antes de efetivar a NF-e.');
+  });
+
+  it('NF XML cancelada oculta detalhes de cobrança e mostra financeiro removido', () => {
+    notasApi.cobrancaFinanceira.and.returnValue(of({
+      usa_duplicatas: true,
+      valor_fatura: '100.00',
+      parcelas: [{ numero: '001', vencimento: '2026-09-25', valor: '100.00' }],
+      pagamentos: [{ codigo_tpag: '15', descricao_tpag: 'Boleto bancário', valor: '100.00' }],
+      sugestoes: [{ id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO' }],
+      pendencias: [],
+      forma_pagamento_conciliada: true,
+      forma_pagamento_sysvar_id: 8,
+      forma_pagamento_sysvar_codigo: 'BOL',
+      forma_pagamento_sysvar_descricao: 'Boleto',
+      forma_pagamento_sysvar_tipo: 'BOLETO',
+      financeiro_pronto: true,
+    }));
+
+    component.editar({ ...nota, status: 'CA', xml_importado: true, pedido_compra: null, situacao_fiscal: 'CANCELADA' });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent || '';
+    expect(text).toContain('Financeiro');
+    expect(text).toContain('Cancelado — os títulos gerados por esta entrada foram removidos.');
+    expect(text).not.toContain('Cobrança / Financeiro');
+    expect(text).not.toContain('Boleto bancário');
+    expect(text).not.toContain('25/09/2026');
   });
 
   it('vincula forma fiscal usando sugestao sem alterar busca de produto', () => {

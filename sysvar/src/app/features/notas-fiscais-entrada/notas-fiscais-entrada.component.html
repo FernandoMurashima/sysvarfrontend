@@ -333,7 +333,13 @@
     </div>
 
     <section class="xml-flow" *ngIf="notaAtual()?.xml_importado">
-      <section class="billing-block" *ngIf="cobrancaFinanceira as cobranca">
+      <section class="billing-block" *ngIf="notaAtual()?.status === 'CA'">
+        <div class="billing-head">
+          <h3>Financeiro</h3>
+        </div>
+        <p class="modal-text">Cancelado — os títulos gerados por esta entrada foram removidos.</p>
+      </section>
+      <section class="billing-block" *ngIf="notaAtual()?.status !== 'CA' && cobrancaFinanceira as cobranca">
         <div class="billing-head">
           <h3>Cobrança / Financeiro</h3>
           <button class="btn sm" type="button" *ngIf="!cobranca.forma_pagamento_conciliada && cobranca.pagamentos.length" [disabled]="xmlSomenteLeitura()" (click)="abrirFormaPagamentoFiscal()">Vincular forma de pagamento</button>
