@@ -260,9 +260,21 @@ export class RecebimentoMercadoriaDetalheComponent implements OnInit, OnDestroy 
   possuiDivergencia(): boolean {
     if (!this.recebimento?.conferencia_resumo) return false;
     const resumo = this.recebimento.conferencia_resumo;
-    const fisicoPedido = Number(resumo.diferenca_fisico_pedido || 0) !== 0;
     const fisicoNfe = resumo.diferenca_fisico_nfe !== null && resumo.diferenca_fisico_nfe !== undefined && Number(resumo.diferenca_fisico_nfe || 0) !== 0;
-    return fisicoPedido || fisicoNfe || (this.recebimento.conferencia_itens || []).some(item => this.diferenca(item) !== 0);
+    const linhasDivergentes = (this.recebimento.conferencia_itens || []).some(item => this.diferenca(item) !== 0);
+    if (this.xmlEstoqueEstruturado()) return fisicoNfe || linhasDivergentes;
+    const fisicoPedido = Number(resumo.diferenca_fisico_pedido || 0) !== 0;
+    return fisicoPedido || fisicoNfe || linhasDivergentes;
+  }
+
+  xmlEstoqueEstruturado(): boolean {
+    const xml = this.recebimento?.xml_fornecedor_dados;
+    return !!(
+      xml &&
+      xml.tipo_tratamento === 'ESTOQUE' &&
+      Array.isArray(xml.itens_fiscais) &&
+      xml.itens_fiscais.length > 0
+    );
   }
 
   referenciasRecebidas(): number {

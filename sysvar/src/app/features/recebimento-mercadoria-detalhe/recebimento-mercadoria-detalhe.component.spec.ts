@@ -470,6 +470,93 @@ describe('RecebimentoMercadoriaDetalheComponent', () => {
     expect(component.encerramentoErrorMsg).toBe('Falha');
   });
 
+  it('ESTOQUE estruturado ignora diferenca fisico x pedido para exigir justificativa', () => {
+    component.recebimento = {
+      ...recebimento,
+      status: 'EM_CONFERENCIA',
+      pode_encerrar_conferencia: true,
+      xml_fornecedor_dados: {
+        ...recebimento.xml_fornecedor_dados,
+        tipo_tratamento: 'ESTOQUE',
+        itens_fiscais: [{ gtin_ean: '7892701001607', quantidade_comercial: '19.000' }],
+      },
+      conferencia_itens: [
+        { ...conferenciaItem, ean: '7892701001607', quantidade_esperada: '19.000', quantidade_recebida: '19.000', diferenca: '0.000', situacao: 'OK' },
+      ],
+      conferencia_resumo: {
+        ...recebimento.conferencia_resumo,
+        quantidade_pedido_total: '490.000',
+        quantidade_nfe_total: '19.000',
+        quantidade_fisica_total: '19.000',
+        diferenca_fisico_pedido: '-471.000',
+        diferenca_fisico_nfe: '0.000',
+        quantidade_skus_com_divergencia: 0,
+      },
+    };
+
+    expect(component.xmlEstoqueEstruturado()).toBeTrue();
+    expect(component.possuiDivergencia()).toBeFalse();
+    component.confirmarEncerramento();
+    expect(api.encerrarConferencia).toHaveBeenCalledWith(8, '');
+  });
+
+  it('ESTOQUE estruturado considera fisico x nfe ou linha diferente como divergencia', () => {
+    component.recebimento = {
+      ...recebimento,
+      xml_fornecedor_dados: {
+        ...recebimento.xml_fornecedor_dados,
+        tipo_tratamento: 'ESTOQUE',
+        itens_fiscais: [{ gtin_ean: '7892701001607', quantidade_comercial: '19.000' }],
+      },
+      conferencia_itens: [
+        { ...conferenciaItem, ean: '7892701001607', quantidade_esperada: '19.000', quantidade_recebida: '19.000' },
+      ],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, diferenca_fisico_pedido: '-471.000', diferenca_fisico_nfe: '-1.000' },
+    };
+    expect(component.possuiDivergencia()).toBeTrue();
+
+    component.recebimento = {
+      ...component.recebimento,
+      conferencia_itens: [
+        { ...conferenciaItem, ean: '7892701001607', quantidade_esperada: '19.000', quantidade_recebida: '18.000' },
+      ],
+      conferencia_resumo: { ...component.recebimento!.conferencia_resumo, diferenca_fisico_nfe: '0.000' },
+    } as any;
+    expect(component.possuiDivergencia()).toBeTrue();
+  });
+
+  it('legado preserva fisico x pedido como divergencia', () => {
+    component.recebimento = {
+      ...recebimento,
+      xml_fornecedor_dados: { ...recebimento.xml_fornecedor_dados, tipo_tratamento: 'ESTOQUE', itens_fiscais: [] },
+      conferencia_itens: [{ ...conferenciaItem, quantidade_esperada: '4.000', quantidade_recebida: '4.000' }],
+      conferencia_resumo: { ...recebimento.conferencia_resumo, diferenca_fisico_nfe: '0.000', diferenca_fisico_pedido: '-471.000' },
+    };
+
+    expect(component.xmlEstoqueEstruturado()).toBeFalse();
+    expect(component.possuiDivergencia()).toBeTrue();
+  });
+
+  it('texto informativo aparece somente no fluxo ESTOQUE estruturado', () => {
+    component.recebimento = {
+      ...recebimento,
+      xml_fornecedor_dados: {
+        ...recebimento.xml_fornecedor_dados,
+        tipo_tratamento: 'ESTOQUE',
+        itens_fiscais: [{ gtin_ean: '7892701001607', quantidade_comercial: '19.000' }],
+      },
+    };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Diferenças em relação ao pedido são informativas');
+
+    component.recebimento = {
+      ...recebimento,
+      xml_fornecedor_dados: { ...recebimento.xml_fornecedor_dados, tipo_tratamento: 'ESTOQUE', itens_fiscais: [] },
+    };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Diferenças em relação ao pedido são informativas');
+  });
+
   it('sem divergencia permite encerrar sem justificativa e chama endpoint', () => {
     component.recebimento = {
       ...recebimento,

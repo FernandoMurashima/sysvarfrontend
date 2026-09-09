@@ -42,6 +42,7 @@ export interface XmlFornecedorRecebido {
   status_operacional: StatusOperacionalXmlFornecedor;
   tipo_tratamento: TipoTratamentoXmlFornecedor;
   tipo_tratamento_display?: string;
+  itens_fiscais?: Array<Record<string, any>> | null;
   caminho_origem_local: string;
   identificador_agente: string;
   detectado_em: string;

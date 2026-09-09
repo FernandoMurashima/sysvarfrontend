@@ -141,6 +141,9 @@
       <div><span>SKUs</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus }}</strong></div>
       <div><span>Divergências</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus_com_divergencia }}</strong></div>
     </div>
+    <div class="stock-block-reason" *ngIf="xmlEstoqueEstruturado()">
+      Diferenças em relação ao pedido são informativas; a divergência do recebimento é apurada entre NF-e e físico.
+    </div>
 
     <ng-container *ngIf="!conferenciaGerada()">
       <div class="empty-state">
@@ -205,6 +208,9 @@
         <div><span>NF-e x Pedido</span><strong>{{ valorResumo('diferenca_nfe_pedido') }}</strong></div>
         <div><span>Físico x NF-e</span><strong>{{ valorResumo('diferenca_fisico_nfe') }}</strong></div>
         <div><span>Físico x Pedido</span><strong>{{ valorResumo('diferenca_fisico_pedido') }}</strong></div>
+      </div>
+      <div class="stock-block-reason" *ngIf="xmlEstoqueEstruturado()">
+        Diferenças em relação ao pedido são informativas; a divergência do recebimento é apurada entre NF-e e físico.
       </div>
       <section class="scan-panel" *ngIf="!conferenciaEncerrada()">
         <label class="scan-input">
@@ -301,6 +307,9 @@
           <div><span>Referências</span><strong>{{ referenciasRecebidas() }}</strong></div>
           <div><span>SKUs</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus }}</strong></div>
           <div><span>Divergências</span><strong>{{ recebimento.conferencia_resumo.quantidade_skus_com_divergencia }}</strong></div>
+        </div>
+        <div class="stock-block-reason" *ngIf="xmlEstoqueEstruturado()">
+          Diferenças em relação ao pedido são informativas; a divergência do recebimento é apurada entre NF-e e físico.
         </div>
         <label class="closing-observation">
           <span>Justificativa da divergência</span>
