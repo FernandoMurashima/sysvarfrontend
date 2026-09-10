@@ -1,7 +1,7 @@
 // src/app/core/services/pedidos-compra.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface PedidoCompra {
@@ -215,9 +215,16 @@ export class PedidosCompraService {
     return this.http.delete(`${this.baseItem}${id}/`);
   }
 
-  listItensByPedido(pedidoId: number) {
+  listItensByPedido(pedidoId: number): Observable<any[]> {
     const params = new HttpParams().set('pedido', String(pedidoId));
-    return this.http.get(this.baseItem, { params });
+    return this.http.get<Paginated<any> | any[]>(this.baseItem, { params }).pipe(
+      expand(resp => {
+        const next = Array.isArray(resp) ? null : resp.next;
+        return next ? this.http.get<Paginated<any> | any[]>(next) : EMPTY;
+      }),
+      map(resp => Array.isArray(resp) ? resp : (resp.results ?? [])),
+      reduce((acc, rows) => acc.concat(rows), [] as any[])
+    );
   }
 
   // ===== Parcelas (planejamento) – para uso futuro =====

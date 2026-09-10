@@ -201,6 +201,7 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
       ],
     }));
     pedidosApi.listar.and.returnValue(of([]));
+    pedidosApi.listItensByPedido.and.returnValue(of([]));
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
 
     TestBed.configureTestingModule({
@@ -356,5 +357,66 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
       .map(button => button.textContent?.trim());
     expect(buttonLabels).not.toContain('Aprovar');
     expect(buttonLabels).not.toContain('Cancelar Pedido');
+  });
+
+  it('carrega 46 itens do pedido e calcula resumo com todos eles', () => {
+    const itens = Array.from({ length: 46 }, (_, index) => ({
+      id: index + 1,
+      pedido: 7,
+      produto: 100 + index,
+      produto_referencia: `REF-${index + 1}`,
+      cor: null,
+      pack: null,
+      n_packs: 0,
+      qtd: index === 45 ? 510 : 70,
+      preco_unit: 10,
+      desconto_valor: 0,
+      total_item: index === 45 ? 4634 : 7000,
+    }));
+    pedidosApi.listItensByPedido.and.returnValue(of(itens));
+
+    (component as any).carregarItensPedido(7);
+
+    expect(pedidosApi.listItensByPedido).toHaveBeenCalledOnceWith(7);
+    expect(component.itens.length).toBe(46);
+    expect(component.quantidadeTotalItens).toBe(3660);
+    expect(component.totalItensResumo).toBe(319634);
+  });
+
+  it('mostra todos os itens carregados no modal de itens', () => {
+    const itens = Array.from({ length: 46 }, (_, index) => ({
+      id: index + 1,
+      pedido: 7,
+      produto: 100 + index,
+      produto_referencia: `REF-${index + 1}`,
+      produto_descricao_reduzida: `Produto ${index + 1}`,
+      cor: null,
+      pack: null,
+      qtd: 1,
+      preco_unit: 1,
+      total_item: 1,
+    }));
+    pedidosApi.listItensByPedido.and.returnValue(of(itens));
+    component.pedidoAtual = { id: 7, status: 'AB', tipo: '1' };
+    component.pedidoAtualId.set(7);
+    component.headerForm.patchValue({ loja: 44, fornecedor: 406 });
+    component.setViewForm();
+
+    component.abrirItensPedido();
+    fixture.detectChanges();
+
+    expect(component.itensModalAberto).toBeTrue();
+    expect(component.itens.length).toBe(46);
+    expect(fixture.nativeElement.querySelectorAll('.items-table tbody tr').length).toBe(46);
+  });
+
+  it('limpa itens e encerra loading quando falha o carregamento completo', () => {
+    component.itens = [{ id: 1, pedido: 7 } as any];
+    pedidosApi.listItensByPedido.and.returnValue(throwError(() => new Error('falha pagina 2')));
+
+    (component as any).carregarItensPedido(7);
+
+    expect(component.itens).toEqual([]);
+    expect(component.loadingItens).toBeFalse();
   });
 });
