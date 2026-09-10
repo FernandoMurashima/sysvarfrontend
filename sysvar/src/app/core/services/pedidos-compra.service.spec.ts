@@ -78,6 +78,22 @@ describe('PedidosCompraService', () => {
     expect(result[0].map(row => row.id)).toEqual([1, 2, 3]);
   });
 
+  it('normaliza next absoluto do DRF para URL interna autenticavel', () => {
+    const absoluteNext = `http://127.0.0.1:8000${itensUrl}?page=2&pedido=7`;
+    let result: any[] = [];
+
+    service.listItensByPedido(7).subscribe(resp => result = resp);
+
+    http.expectOne(r => r.url === itensUrl && r.params.get('pedido') === '7')
+      .flush({ count: 2, next: absoluteNext, previous: null, results: [{ id: 1, pedido: 7 }] });
+
+    const second = http.expectOne(`${itensUrl}?page=2&pedido=7`);
+    expect(second.request.urlWithParams).toBe(`${itensUrl}?page=2&pedido=7`);
+    second.flush({ count: 2, next: null, previous: itensUrl, results: [{ id: 2, pedido: 7 }] });
+
+    expect(result.map(row => row.id)).toEqual([1, 2]);
+  });
+
   it('percorre tres ou mais paginas ate next nulo sem chamadas extras', () => {
     const page2 = `${itensUrl}?page=2&pedido=7`;
     const page3 = `${itensUrl}?page=3&pedido=7`;
@@ -126,5 +142,27 @@ describe('PedidosCompraService', () => {
     http.expectOne(page2).flush({ count: 2, next: null, previous: itensUrl, results: [{ id: 2, pedido: 7 }] });
 
     expect(result.every(row => row.pedido === 7)).toBeTrue();
+  });
+
+  it('nao segue next externo fora do endpoint de itens do pedido', () => {
+    let emitted = false;
+    let failed = false;
+
+    service.listItensByPedido(7).subscribe({
+      next: () => emitted = true,
+      error: () => failed = true,
+    });
+
+    http.expectOne(r => r.url === itensUrl && r.params.get('pedido') === '7')
+      .flush({
+        count: 2,
+        next: 'https://externo.example.com/api/outro-endpoint/?page=2&pedido=7',
+        previous: null,
+        results: [{ id: 1, pedido: 7 }],
+      });
+
+    http.expectNone('https://externo.example.com/api/outro-endpoint/?page=2&pedido=7');
+    expect(emitted).toBeFalse();
+    expect(failed).toBeTrue();
   });
 });

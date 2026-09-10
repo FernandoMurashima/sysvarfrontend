@@ -220,11 +220,27 @@ export class PedidosCompraService {
     return this.http.get<Paginated<any> | any[]>(this.baseItem, { params }).pipe(
       expand(resp => {
         const next = Array.isArray(resp) ? null : resp.next;
-        return next ? this.http.get<Paginated<any> | any[]>(next) : EMPTY;
+        return next ? this.http.get<Paginated<any> | any[]>(this.normalizeItensNextUrl(next)) : EMPTY;
       }),
       map(resp => Array.isArray(resp) ? resp : (resp.results ?? [])),
       reduce((acc, rows) => acc.concat(rows), [] as any[])
     );
+  }
+
+  private normalizeItensNextUrl(next: string): string {
+    const parsed = new URL(next, 'http://sysvar.local');
+    const basePath = this.baseItemPath();
+    if (parsed.pathname !== basePath) {
+      throw new Error('Link de próxima página inválido para itens do pedido.');
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  }
+
+  private baseItemPath(): string {
+    if (this.baseItem.startsWith('http://') || this.baseItem.startsWith('https://')) {
+      return new URL(this.baseItem).pathname;
+    }
+    return this.baseItem.split('?')[0];
   }
 
   // ===== Parcelas (planejamento) – para uso futuro =====
