@@ -554,10 +554,13 @@ export class DistribuicaoComponent implements OnInit {
   get matrizLojas(): { id: number; nome: string; titulo: string }[] { return this.matrizLojasView; }
   destinoCell(item: DistribuicaoItem, lojaId: number): DistribuicaoDestino | null { return this.matrizCells.get(`${item.id}-${lojaId}`) || null; }
   totalItem(item: DistribuicaoItem): number { return this.totaisItem.get(Number(item.id)) || 0; }
-  saldoItem(item: DistribuicaoItem): number { return this.saldosItem.get(Number(item.id)) || this.num(item.quantidade_selecionada); }
+  saldoItem(item: DistribuicaoItem): number {
+    const itemId = Number(item.id);
+    return this.saldosItem.has(itemId) ? (this.saldosItem.get(itemId) ?? 0) : this.num(item.quantidade_selecionada);
+  }
   totalLoja(lojaId: number): number { return this.totaisLoja.get(lojaId) || 0; }
-  custoUnitarioDist(dist: Distribuicao | null): number { return dist && this.num(dist.quantidade_total) ? this.num(dist.valor_total_custo) / this.num(dist.quantidade_total) : 0; }
-  vendaUnitarioDist(dist: Distribuicao | null): number { return dist && this.num(dist.quantidade_total) ? this.num(dist.valor_total_venda) / this.num(dist.quantidade_total) : 0; }
+  custoUnitarioItem(item: DistribuicaoItem): number { return this.num(item.custo_unitario); }
+  vendaUnitariaItem(item: DistribuicaoItem): number { return this.custoUnitarioItem(item) * (1 + this.num(this.selecionada?.fator_preco)); }
   isSelected(dist: Distribuicao): boolean { return this.selecionada?.id === dist.id; }
   trackByDistribuicao(_: number, item: Distribuicao): number | string { return item.id || item.numero; }
   trackByItem(_: number, item: DistribuicaoItem): number | string { return item.id || item.ean13; }

@@ -176,6 +176,13 @@
   text-align: center !important;
 }
 
+.money-col {
+  width: 104px;
+  min-width: 104px;
+  max-width: 104px;
+  text-align: center !important;
+}
+
 thead .sticky-col,
 tfoot .sticky-col {
   background: #f8fafc;

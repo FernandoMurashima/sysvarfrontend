@@ -120,8 +120,6 @@
       <div><small>Origem</small><strong [title]="selecionada.unidade_origem_nome">{{ selecionada.unidade_origem_nome }}</strong></div>
       <div><small>Status</small><strong>{{ statusLabel(selecionada.status) }}</strong></div>
       <div><small>Peças</small><strong>{{ qty(selecionada.quantidade_total) }}</strong></div>
-      <div><small>Custo un.</small><strong>{{ money(custoUnitarioDist(selecionada)) }}</strong></div>
-      <div><small>Venda un.</small><strong>{{ money(vendaUnitarioDist(selecionada)) }}</strong></div>
       <div><small>Fator preço</small><strong>{{ num(selecionada.fator_preco) | percent:'1.0-2' }}</strong></div>
       <label><small>SKU</small><input [(ngModel)]="estoqueSearch" placeholder="Referência ou EAN" /></label>
       <label class="check-inline"><input type="checkbox" [(ngModel)]="distribuirDisponivel" /><span>Todo disp.</span></label>
@@ -167,6 +165,8 @@
             <th class="sticky-col">SKU</th>
             <th>Cor</th>
             <th class="size-col">Tam.</th>
+            <th class="money-col">Custo un.</th>
+            <th class="money-col">Venda un.</th>
             <th class="qty-col">Disp.</th>
             <th class="store-col" *ngFor="let loja of matrizLojas; trackBy: trackByLoja" [title]="loja.titulo">{{ loja.nome }}</th>
             <th class="qty-col">Total</th>
@@ -178,6 +178,8 @@
             <td class="sticky-col"><strong>{{ item.referencia }}</strong><small>{{ item.descricao }} · {{ item.ean13 }}</small></td>
             <td>{{ item.cor_descricao || '-' }}</td>
             <td class="size-col">{{ item.tamanho_descricao || '-' }}</td>
+            <td class="matrix-number money-col">{{ money(custoUnitarioItem(item)) }}</td>
+            <td class="matrix-number money-col">{{ money(vendaUnitariaItem(item)) }}</td>
             <td class="matrix-number qty-col">{{ qtyInt(item.quantidade_selecionada) }}</td>
             <td class="matrix-cell" *ngFor="let loja of matrizLojas; trackBy: trackByLoja" [title]="loja.titulo">
               <ng-container *ngIf="destinoCell(item, loja.id) as destino; else semDestino">
@@ -191,7 +193,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <td class="sticky-col">Total por loja</td><td></td><td></td><td></td>
+            <td class="sticky-col">Total por loja</td><td></td><td></td><td></td><td></td><td></td>
             <td class="matrix-total" *ngFor="let loja of matrizLojas; trackBy: trackByLoja">{{ qtyInt(totalLoja(loja.id)) }}</td>
             <td></td><td></td>
           </tr>
