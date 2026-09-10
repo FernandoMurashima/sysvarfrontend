@@ -270,7 +270,7 @@
 
     <section class="action-bar">
       <button class="btn" type="button" (click)="abrirItensPedido()">Itens</button>
-      <button class="btn" type="button" [disabled]="consultando || !isAberto(pedidoAtual)" (click)="abrirImportacaoPlanilha()">Importar Planilha</button>
+      <button class="btn" type="button" [disabled]="importacaoPlanilhaDesabilitada()" (click)="abrirImportacaoPlanilha()">Importar Planilha</button>
       <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirFormaPagamento()">Forma de Pagamento</button>
       <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirRecebimentos()">Recebimentos</button>
     </section>

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -104,10 +104,15 @@ describe('PedidosCompraComponent item display helpers', () => {
 
 describe('PedidosCompraComponent recebimentos resumo', () => {
   let component: PedidosCompraComponent;
+  let fixture: ComponentFixture<PedidosCompraComponent>;
   let pedidosApi: jasmine.SpyObj<PedidosCompraService>;
   let router: jasmine.SpyObj<Router>;
 
   const emptyApi = () => ({ list: jasmine.createSpy('list').and.returnValue(of([])) });
+  const emptyFormasApi = () => ({
+    list: jasmine.createSpy('list').and.returnValue(of([])),
+    listPrazos: jasmine.createSpy('listPrazos').and.returnValue(of([])),
+  });
 
   beforeEach(() => {
     pedidosApi = jasmine.createSpyObj<PedidosCompraService>('PedidosCompraService', [
@@ -195,6 +200,7 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
         },
       ],
     }));
+    pedidosApi.listar.and.returnValue(of([]));
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
 
     TestBed.configureTestingModule({
@@ -205,7 +211,7 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
         { provide: AuthService, useValue: { podeAcessarModulo: () => true } },
         { provide: LojasService, useValue: emptyApi() },
-        { provide: FormasPagamentoService, useValue: emptyApi() },
+        { provide: FormasPagamentoService, useValue: emptyFormasApi() },
         { provide: FornecedoresService, useValue: emptyApi() },
         { provide: ProdutosService, useValue: emptyApi() },
         { provide: CoresService, useValue: emptyApi() },
@@ -217,7 +223,8 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
         provideHttpClientTesting(),
       ],
     });
-    component = TestBed.createComponent(PedidosCompraComponent).componentInstance;
+    fixture = TestBed.createComponent(PedidosCompraComponent);
+    component = fixture.componentInstance;
   });
 
   it('carrega recebimentos por uma unica fonte consolidada', () => {
@@ -302,5 +309,52 @@ describe('PedidosCompraComponent recebimentos resumo', () => {
     expect(component.recebimentosResumo).toBeNull();
     expect(component.recebimentos).toEqual([]);
     expect(component.documentosRecebimento).toEqual([]);
+  });
+
+  it('renderiza novo pedido com pedidoAtual nulo e mantem importacao habilitada', () => {
+    component.setViewForm();
+    component.consultando = false;
+    component.pedidoAtual = null;
+    component.pedidoAtualId.set(null);
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const importButton = buttons.find(button => button.textContent?.includes('Importar Planilha'));
+    expect(importButton).toBeTruthy();
+    expect(importButton?.disabled).toBeFalse();
+  });
+
+  it('controla habilitacao da importacao para pedido novo e status existentes', () => {
+    component.consultando = false;
+    component.pedidoAtual = null;
+    expect(component.isAberto(component.pedidoAtual)).toBeFalse();
+    expect(component.importacaoPlanilhaDesabilitada()).toBeFalse();
+
+    component.pedidoAtual = { status: 'AB' };
+    expect(component.importacaoPlanilhaDesabilitada()).toBeFalse();
+
+    for (const status of ['AP', 'AT', 'CA']) {
+      component.pedidoAtual = { status };
+      expect(component.importacaoPlanilhaDesabilitada()).withContext(status).toBeTrue();
+    }
+
+    component.consultando = true;
+    component.pedidoAtual = null;
+    expect(component.importacaoPlanilhaDesabilitada()).toBeTrue();
+  });
+
+  it('nao exibe aprovar ou cancelar pedido quando pedidoAtual esta nulo', () => {
+    component.setViewForm();
+    component.consultando = false;
+    component.pedidoAtual = null;
+    component.pedidoAtualId.set(null);
+
+    fixture.detectChanges();
+
+    const buttonLabels = (Array.from(fixture.nativeElement.querySelectorAll('.actions-form button')) as HTMLButtonElement[])
+      .map(button => button.textContent?.trim());
+    expect(buttonLabels).not.toContain('Aprovar');
+    expect(buttonLabels).not.toContain('Cancelar Pedido');
   });
 });

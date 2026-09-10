@@ -1786,7 +1786,11 @@ export class PedidosCompraComponent implements OnInit {
   // ===== Ações na LISTA: editar / excluir / aprovar / cancelar =====
 
   isAberto(p: any): boolean {
-    return (p.status ?? '').toUpperCase() === 'AB';
+    return ((p?.status ?? '').toString().toUpperCase()) === 'AB';
+  }
+
+  importacaoPlanilhaDesabilitada(): boolean {
+    return this.consultando || (!!this.pedidoAtual && !this.isAberto(this.pedidoAtual));
   }
 
   editarPedido(p: any) {
