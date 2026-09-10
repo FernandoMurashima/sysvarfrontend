@@ -270,6 +270,7 @@
 
     <section class="action-bar">
       <button class="btn" type="button" (click)="abrirItensPedido()">Itens</button>
+      <button class="btn" type="button" [disabled]="consultando || !isAberto(pedidoAtual)" (click)="abrirImportacaoPlanilha()">Importar Planilha</button>
       <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirFormaPagamento()">Forma de Pagamento</button>
       <button class="btn" type="button" [disabled]="!pedidoAtualId()" (click)="abrirRecebimentos()">Recebimentos</button>
     </section>
@@ -285,6 +286,78 @@
       </button>
     </div>
   </section>
+
+  <div class="modal-backdrop" *ngIf="importacaoModalAberto">
+    <section class="modal-card product-modal import-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Importar Planilha</h3>
+          <p class="modal-text">{{ importacaoArquivoNome || 'Pedido de Compra - Revenda' }}</p>
+        </div>
+        <button class="btn" type="button" (click)="fecharImportacaoPlanilha()">Fechar</button>
+      </div>
+
+      <section class="action-bar item-actions">
+        <label class="btn upload-btn">Selecionar XLSX
+          <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportacaoArquivoSelecionado($event)" />
+        </label>
+        <button class="btn" type="button" (click)="baixarModeloImportacao()">Baixar modelo</button>
+        <button class="btn primary" type="button" [disabled]="!importacaoPodeConfirmar()" (click)="confirmarImportacaoPlanilha()">Confirmar importação</button>
+      </section>
+
+      <div class="indicator-bar compact-summary import-summary-grid" *ngIf="importacaoPreview">
+        <div class="indicator summary-card"><span class="indicator-icon blue">Lin</span><div><small>Linhas</small><strong>{{ importacaoPreview.total_linhas_preview }}</strong></div></div>
+        <div class="indicator summary-card"><span class="indicator-icon green">Qtd</span><div><small>Peças</small><strong>{{ totalImportacao(importacaoPreview, 'total_quantidade') | number : '1.0-3' }}</strong></div></div>
+        <div class="indicator summary-card"><span class="indicator-icon purple">R$</span><div><small>Total</small><strong>{{ totalImportacao(importacaoPreview, 'total_valor') | number : '1.2-2' }}</strong></div></div>
+        <div class="indicator summary-card"><span class="indicator-icon orange">Sit</span><div><small>Situação</small><strong>{{ importacaoPreview.valid ? 'Válida' : 'Com erros' }}</strong></div></div>
+      </div>
+
+      <div class="form-pending" *ngIf="importacaoPreview?.errors?.length">
+        <strong>Pendências</strong>
+        <ul>
+          <li *ngFor="let msg of importacaoPreview?.errors">{{ msg }}</li>
+        </ul>
+      </div>
+
+      <div class="empty-hint" *ngIf="importacaoLoading">Validando planilha...</div>
+      <div class="empty-hint" *ngIf="!importacaoLoading && !importacaoPreview">Selecione uma planilha XLSX para visualizar a prévia.</div>
+
+      <div class="table-wrapper itens-wrapper import-table-area" *ngIf="importacaoPreview?.linhas?.length">
+        <table class="table items-table">
+          <thead>
+            <tr>
+              <th>Linha</th>
+              <th>Cód. fornecedor</th>
+              <th>Produto</th>
+              <th>Cor</th>
+              <th>Pack</th>
+              <th>Packs</th>
+              <th>Qtd</th>
+              <th>Preço</th>
+              <th>Desc</th>
+              <th>Total</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of importacaoPreview?.linhas">
+              <td>{{ row.origem }}</td>
+              <td>{{ row.codigo_produto_fornecedor || '-' }}</td>
+              <td class="text-ellipsis" [title]="row.produto">{{ row.produto }}</td>
+              <td>{{ row.cor }}</td>
+              <td class="text-ellipsis" [title]="row.pack">{{ row.pack }}</td>
+              <td>{{ row.n_packs }}</td>
+              <td>{{ row.quantidade_calculada | number : '1.0-3' }}</td>
+              <td>{{ row.preco_unitario | number : '1.2-2' }}</td>
+              <td>{{ row.desconto | number : '1.2-2' }}</td>
+              <td>{{ row.total | number : '1.2-2' }}</td>
+              <td><span class="status-pill" [ngClass]="importacaoPreview?.valid ? 'badge-ok' : 'badge-danger'">{{ row.situacao }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
   <div class="modal-backdrop" *ngIf="itensModalAberto">
     <section class="modal-card product-modal items-modal">

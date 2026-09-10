@@ -5,11 +5,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import * as XLSX from 'xlsx';
 
 import { LojasService } from '../../core/services/lojas.service';
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { PrazoPagamento } from '../../core/models/forma-pagamento';
-import { PedidoRecebimentosResumoDocumento, PedidoRecebimentosResumoTotais, PedidosCompraService } from '../../core/services/pedidos-compra.service';
+import { PedidoCompraImportacaoLinha, PedidoCompraImportacaoPreview, PedidoRecebimentosResumoDocumento, PedidoRecebimentosResumoTotais, PedidosCompraService } from '../../core/services/pedidos-compra.service';
 import { FornecedoresService } from '../../core/services/fornecedores.service';
 import { ProdutosService } from '../../core/services/produtos.service';
 import { CoresService } from '../../core/services/cores.service';
@@ -211,6 +212,10 @@ export class PedidosCompraComponent implements OnInit {
   itensModalAberto = false;
   pagamentoModalAberto = false;
   recebimentosModalAberto = false;
+  importacaoModalAberto = false;
+  importacaoPreview: PedidoCompraImportacaoPreview | null = null;
+  importacaoArquivoNome = '';
+  importacaoLoading = false;
   selectedItem: PedidoCompraItemUI | null = null;
   produtoSelecionado: any | null = null;
 
@@ -983,6 +988,111 @@ export class PedidosCompraComponent implements OnInit {
     this.carregarItensPedido(pedidoId);
     this.limparItem();
     this.itensModalAberto = true;
+  }
+
+  abrirImportacaoPlanilha(): void {
+    this.submitted = true;
+    if (this.headerForm.invalid) {
+      this.showError('Preencha o cabeçalho antes de importar a planilha.');
+      return;
+    }
+    if (this.pedidoAtual && !this.isAberto(this.pedidoAtual)) {
+      this.showError('Somente pedidos em aberto (AB) permitem importação.');
+      return;
+    }
+    const pedidoId = this.pedidoAtualId();
+    if (!pedidoId) {
+      this.salvarCabecalho(() => this.abrirImportacaoPlanilha());
+      return;
+    }
+    this.importacaoPreview = null;
+    this.importacaoArquivoNome = '';
+    this.importacaoModalAberto = true;
+  }
+
+  fecharImportacaoPlanilha(): void {
+    this.importacaoModalAberto = false;
+    this.importacaoPreview = null;
+    this.importacaoArquivoNome = '';
+  }
+
+  onImportacaoArquivoSelecionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      this.showError('Selecione um arquivo XLSX.');
+      return;
+    }
+    const pedidoId = this.pedidoAtualId();
+    if (!pedidoId) {
+      this.showError('Salve o pedido antes de importar.');
+      return;
+    }
+    this.importacaoArquivoNome = file.name;
+    this.importacaoLoading = true;
+    this.importacaoPreview = null;
+    this.pedidosApi.previewImportacaoRevenda(pedidoId, file).subscribe({
+      next: preview => {
+        this.importacaoLoading = false;
+        this.importacaoPreview = preview;
+      },
+      error: err => {
+        this.importacaoLoading = false;
+        const body = err?.error || {};
+        this.importacaoPreview = body?.linhas || body?.errors ? body as PedidoCompraImportacaoPreview : null;
+        this.showError(body?.detail || body?.errors?.[0] || 'Erro ao validar planilha.');
+      },
+    });
+  }
+
+  confirmarImportacaoPlanilha(): void {
+    const pedidoId = this.pedidoAtualId();
+    const linhas = this.importacaoPreview?.linhas || [];
+    if (!pedidoId || !this.importacaoPreview?.valid || !linhas.length) return;
+    this.importacaoLoading = true;
+    this.pedidosApi.confirmarImportacaoRevenda(pedidoId, linhas).subscribe({
+      next: resultado => {
+        this.importacaoLoading = false;
+        this.importacaoModalAberto = false;
+        this.importacaoPreview = null;
+        this.pedidoAtual = resultado.pedido;
+        this.pedidoAtualId.set(resultado.pedido_id);
+        this.carregarItensPedido(pedidoId);
+        this.recarregarPedidoAtual(pedidoId);
+        this.showSuccess(`Importação concluída: ${resultado.referencias} referências, ${resultado.itens_criados} linhas e ${Number(resultado.quantidade_total || 0).toLocaleString('pt-BR')} peças.`);
+      },
+      error: err => {
+        this.importacaoLoading = false;
+        const body = err?.error || {};
+        if (body?.linhas || body?.errors) this.importacaoPreview = body as PedidoCompraImportacaoPreview;
+        this.showError(body?.detail || body?.errors?.[0] || 'Erro ao confirmar importação.');
+      },
+    });
+  }
+
+  baixarModeloImportacao(): void {
+    const headers = ['Codigo_Produto_Fornecedor', 'Produto', 'Grade', 'Cor', 'Pack', 'Nr_Packs', 'Preco_Unitario', 'Desconto', 'Observacoes'];
+    const itens = [headers];
+    const instrucoes = [
+      ['Campo', 'Orientação'],
+      ['Cor', 'Use código/descrição da cor ou TODAS para expandir pelas cores reais do produto.'],
+      ['Pack', 'Informe o nome de um pack ativo da mesma grade do produto.'],
+      ['Quantidade', 'Não informe tamanhos nem quantidade total; o Sysvar calcula Pack x Nr_Packs.'],
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(itens), 'Itens');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instrucoes), 'Instrucoes');
+    XLSX.writeFile(wb, 'modelo-pedido-compra-revenda.xlsx');
+  }
+
+  importacaoPodeConfirmar(): boolean {
+    return !!this.importacaoPreview?.valid && !!this.importacaoPreview.linhas?.length && !this.importacaoLoading;
+  }
+
+  totalImportacao(preview: PedidoCompraImportacaoPreview | null, field: 'total_quantidade' | 'total_valor'): number {
+    return Number(preview?.[field] || 0);
   }
 
   fecharItensPedido(): void {

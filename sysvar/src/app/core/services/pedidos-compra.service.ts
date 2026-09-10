@@ -76,6 +76,46 @@ export interface PedidoRecebimentosResumo {
   documentos: PedidoRecebimentosResumoDocumento[];
 }
 
+export interface PedidoCompraImportacaoLinha {
+  linha_planilha: number;
+  origem: string;
+  codigo_produto_fornecedor: string;
+  produto_id: number;
+  produto: string;
+  produto_referencia: string;
+  grade: string;
+  cor_id: number;
+  cor: string;
+  pack_id: number;
+  pack: string;
+  n_packs: number;
+  quantidade_calculada: string;
+  preco_unitario: string;
+  desconto: string;
+  total: string;
+  observacoes: string;
+  situacao: string;
+}
+
+export interface PedidoCompraImportacaoPreview {
+  valid: boolean;
+  errors: string[];
+  total_linhas_planilha: number;
+  total_linhas_preview: number;
+  total_quantidade: string;
+  total_valor: string;
+  linhas: PedidoCompraImportacaoLinha[];
+}
+
+export interface PedidoCompraImportacaoResultado {
+  pedido_id: number;
+  itens_criados: number;
+  referencias: number;
+  quantidade_total: string;
+  total_importado: string;
+  pedido: PedidoCompra;
+}
+
 type Paginated<T> = {
   results: T[];
   count?: number;
@@ -149,6 +189,16 @@ export class PedidosCompraService {
   cancelar(id: number) {
     // ação custom do backend: POST /compras/pedidos/{id}/cancelar/
     return this.http.post<PedidoCompra>(`${this.base}${id}/cancelar/`, {});
+  }
+
+  previewImportacaoRevenda(id: number, arquivo: File): Observable<PedidoCompraImportacaoPreview> {
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    return this.http.post<PedidoCompraImportacaoPreview>(`${this.base}${id}/importar-planilha-preview/`, form);
+  }
+
+  confirmarImportacaoRevenda(id: number, linhas: PedidoCompraImportacaoLinha[]): Observable<PedidoCompraImportacaoResultado> {
+    return this.http.post<PedidoCompraImportacaoResultado>(`${this.base}${id}/importar-planilha-confirmar/`, { linhas });
   }
 
   // ===== Itens =====

@@ -307,6 +307,12 @@ textarea { resize: vertical; max-height: 34px; }
 .col-item-qtd { width: 6%; text-align: right; padding-right: 8px !important; }
 .col-item-money { width: 6.5%; text-align: right; padding-right: 8px !important; }
 .col-item-total { width: 8.5%; text-align: right; padding-right: 8px !important; }
+
+.import-modal { width: min(1180px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+.import-summary-grid { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
+.import-table-area { max-height: 48vh; }
+.upload-btn { position: relative; overflow: hidden; }
+.upload-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .payment-table-area {
   max-height: clamp(180px, 30vh, 340px);
   overflow: auto;
