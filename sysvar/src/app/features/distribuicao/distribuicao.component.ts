@@ -102,8 +102,8 @@ export class DistribuicaoComponent implements OnInit {
     this.loading = true;
     forkJoin({
       lojas: this.lojasApi.list({ page_size: 500, ordering: 'nome_loja' }),
-      perfis: this.api.listPerfis({ ativo: 'true', page_size: 500 }),
-      distribuicoes: this.api.list(this.queryParams()),
+      perfis: this.api.listAllPerfis({ ativo: 'true' }),
+      distribuicoes: this.api.listAll(this.queryParams()),
     }).subscribe({
       next: result => {
         this.lojas = this.unwrap<Loja>(result.lojas);
@@ -463,7 +463,7 @@ export class DistribuicaoComponent implements OnInit {
     this.showPerfilModal = false;
     this.perfilEditandoId = null;
     this.successMsg = 'Perfil salvo.';
-    this.api.listPerfis({ ativo: 'true', page_size: 500 }).subscribe({
+    this.api.listAllPerfis({ ativo: 'true' }).subscribe({
       next: resp => {
         this.perfis = this.unwrap<PerfilDistribuicao>(resp);
         this.form.patchValue({ perfil: perfil.id || null, fator_preco: this.num(perfil.fator_preco ?? 0.2) });
@@ -487,7 +487,7 @@ export class DistribuicaoComponent implements OnInit {
         this.prepareMatrix();
         this.loading = false;
         if (reloadList) {
-          this.api.list(this.queryParams()).subscribe({
+          this.api.listAll(this.queryParams()).subscribe({
             next: resp => {
               this.distribuicoes = this.unwrap<Distribuicao>(resp);
               this.updateListView();
@@ -585,7 +585,7 @@ export class DistribuicaoComponent implements OnInit {
   @HostListener('window:sysvar-distribuicao-restore-view') onRestoreView() { this.restoreViewPreference(); }
 
   private queryParams(): Record<string, string | number | null | undefined> {
-    return { search: this.search, origem: this.filterOrigem, status: this.filterStatus, data_ini: this.filterDataIni, data_fim: this.filterDataFim, page_size: 500 };
+    return { search: this.search, origem: this.filterOrigem, status: this.filterStatus, data_ini: this.filterDataIni, data_fim: this.filterDataFim };
   }
   private today(): string { return new Date().toISOString().slice(0, 10); }
   private unwrap<T>(resp: T[] | { results: T[] } | any): T[] { return Array.isArray(resp) ? resp : (resp?.results || []); }

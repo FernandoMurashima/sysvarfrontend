@@ -56,7 +56,7 @@ export class PedidosVendaDistribuicaoComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    this.api.listPedidos({ search: this.search, status: this.status, page_size: 500 }).subscribe({
+    this.api.listAllPedidos({ search: this.search, status: this.status }).subscribe({
       next: resp => {
         this.pedidos = this.unwrap<PedidoVendaDistribuicao>(resp);
         this.loading = false;

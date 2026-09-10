@@ -78,7 +78,7 @@ export class LojaRecebimentoComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.errorMsg = '';
-    this.api.listTransitos({ search: this.search, status: this.status, page_size: 1000 }).subscribe({
+    this.api.listAllTransitos({ search: this.search, status: this.status }).subscribe({
       next: resp => {
         this.transitos = this.unwrap<MercadoriaTransito>(resp);
         this.notas = this.groupNotas(this.transitos);
