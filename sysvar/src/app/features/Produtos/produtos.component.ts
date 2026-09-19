@@ -37,6 +37,7 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { RowAction, RowActionsMenuComponent } from '../../shared/components/row-actions-menu/row-actions-menu.component';
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component';
+import { environment } from '../../../environments/environment';
 
 type ItemRef = { id: number; label: string };
 type ImagemPendente = { file: File; preview: string; principal: boolean };
@@ -285,6 +286,26 @@ export class ProdutosComponent {
     if (Array.isArray(data)) return data as T[];
     if (data && Array.isArray(data.results)) return data.results as T[];
     return [];
+  }
+
+  imagemProdutoUrl(img: any): string | null {
+    const url = img?.imagem_reduzida_url || img?.imagem_url || null;
+    if (!url) return null;
+    if (/^(?:[a-z][a-z\d+\-.]*:)?\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
+      return url;
+    }
+    if (!url.startsWith('/')) return url;
+
+    const mediaBaseUrl = environment.mediaBaseUrl || '';
+    const apiBaseUrl = mediaBaseUrl || environment.apiBaseUrl || '';
+    if (!apiBaseUrl || apiBaseUrl.startsWith('/')) return url;
+
+    try {
+      const apiUrl = new URL(apiBaseUrl);
+      return `${apiUrl.origin}${url}`;
+    } catch {
+      return url;
+    }
   }
 
   // lookups

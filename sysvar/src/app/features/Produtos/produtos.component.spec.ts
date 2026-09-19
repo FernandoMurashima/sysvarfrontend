@@ -20,6 +20,7 @@ import { ProdutoDetalheService } from '../../core/services/produto-detalhe.servi
 import { AuthService } from '../../core/auth.service';
 import { FichaTecnicaService } from '../../core/services/ficha-tecnica.service';
 import { OrdemProducaoService } from '../../core/services/ordem-producao.service';
+import { environment } from '../../../environments/environment';
 
 describe('ProdutosComponent Produto Venda', () => {
   let fixture: ComponentFixture<ProdutosComponent>;
@@ -153,6 +154,26 @@ describe('ProdutosComponent Produto Venda', () => {
     expect(fixture.nativeElement.querySelector('.product-image-preview img')?.getAttribute('src')).toBe('http://img/produto.jpg');
     expect(fixture.nativeElement.textContent).toContain('Fiscal');
     expect(fixture.nativeElement.textContent).toContain('Estoque por loja');
+  });
+
+  it('resolve URL relativa de media para o host configurado da API', () => {
+    const originalMediaBaseUrl = environment.mediaBaseUrl;
+    environment.mediaBaseUrl = 'http://127.0.0.1:8000';
+    try {
+      expect(component.imagemProdutoUrl({ imagem_url: '/media/produtos/imagens/270101001.png' }))
+        .toBe('http://127.0.0.1:8000/media/produtos/imagens/270101001.png');
+    } finally {
+      environment.mediaBaseUrl = originalMediaBaseUrl;
+    }
+  });
+
+  it('preserva URL absoluta de imagem', () => {
+    expect(component.imagemProdutoUrl({ imagem_url: 'https://cdn.sysvar.test/produto.png' }))
+      .toBe('https://cdn.sysvar.test/produto.png');
+  });
+
+  it('retorna null quando nao ha URL de imagem', () => {
+    expect(component.imagemProdutoUrl({})).toBeNull();
   });
 
   it('exibe Produto Venda, tipo Fabricação Própria e status dos SKUs', () => {

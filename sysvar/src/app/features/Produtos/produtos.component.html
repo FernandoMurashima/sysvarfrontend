@@ -135,7 +135,7 @@
         <section class="col-span-12 sku-cost-box" *ngIf="!consultando">
           <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ totalImagensSelecionadas() }} de 3 imagem(ns)</small></div><label class="btn upload-btn" *ngIf="podeEditarModulo" [class.disabled]="totalImagensSelecionadas() >= 3">Incluir imagem<input type="file" accept="image/*" multiple [disabled]="totalImagensSelecionadas() >= 3" (change)="onImagemSelecionada($event)" /></label></div>
           <div class="chips" *ngIf="totalImagensSelecionadas() > 0; else semImagensEdicaoTpl">
-            <figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption><div class="image-actions"><button class="btn" type="button" [disabled]="img.principal" (click)="marcarImagemPrincipal(img)">Principal</button><button class="btn danger-soft" type="button" (click)="removerImagem(img)">Excluir</button></div></figure>
+            <figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="imagemProdutoUrl(img)" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption><div class="image-actions"><button class="btn" type="button" [disabled]="img.principal" (click)="marcarImagemPrincipal(img)">Principal</button><button class="btn danger-soft" type="button" (click)="removerImagem(img)">Excluir</button></div></figure>
             <figure class="product-image-preview" *ngFor="let img of imagensPendentes(); let i = index"><img [src]="img.preview" alt="Imagem selecionada" /><figcaption>{{ img.principal ? 'Principal' : 'Nova imagem' }}</figcaption><div class="image-actions"><button class="btn" type="button" [disabled]="img.principal" (click)="marcarPendentePrincipal(i)">Principal</button><button class="btn danger-soft" type="button" (click)="removerImagemPendente(i)">Remover</button></div></figure>
           </div>
           <ng-template #semImagensEdicaoTpl><div class="empty-inline">Nenhuma imagem cadastrada.</div></ng-template>
@@ -155,7 +155,7 @@
         </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando">
           <div class="sku-cost-head"><div><strong>Imagens</strong><small>{{ produtoImagens().length }} imagem(ns)</small></div></div>
-          <div class="chips" *ngIf="produtoImagens().length; else semImagensConsultaTpl"><figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="img.imagem_reduzida_url || img.imagem_url" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption></figure></div>
+          <div class="chips" *ngIf="produtoImagens().length; else semImagensConsultaTpl"><figure class="product-image-preview" *ngFor="let img of produtoImagens()"><img [src]="imagemProdutoUrl(img)" [alt]="'Imagem do produto ' + (img.id || '')" /><figcaption>{{ img.principal ? 'Principal' : 'Imagem' }}</figcaption></figure></div>
           <ng-template #semImagensConsultaTpl><div class="empty-inline">Nenhuma imagem cadastrada.</div></ng-template>
         </section>
         <section class="col-span-12 sku-cost-box" *ngIf="consultando && consultaProduto()?.tipo_produto === '3' && (produtoFichasTecnicas().length || produtoOrdensProducao().length)">
