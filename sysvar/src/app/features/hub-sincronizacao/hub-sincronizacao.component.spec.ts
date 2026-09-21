@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 
 import { HubSincronizacaoService } from '../../core/services/hub-sincronizacao.service';
 import { HubSincronizacaoComponent } from './hub-sincronizacao.component';
@@ -52,4 +53,46 @@ describe('HubSincronizacaoComponent', () => {
     });
     expect(api.sincronizarLoja).toHaveBeenCalledWith(1);
   });
+
+  it('deve manter polling vivo após falha isolada', fakeAsync(() => {
+    fixture.componentInstance.ngOnDestroy();
+    api.listarPainel.calls.reset();
+    const linhas = [{
+      loja_id: 2,
+      loja_nome: 'Loja 2',
+      empresa_id: 1,
+      hub_id: 2,
+      hub_uuid: 'uuid-2',
+      hub_ativo: true,
+      hostname: 'HOST-2',
+      versao: '1',
+      ultimo_ip: null,
+      ultimo_contato: null,
+      sincronizacao_id: null,
+      sincronizacao_status: '',
+      solicitado_em: null,
+      iniciado_em: null,
+      concluido_em: null,
+      etapa_atual: '',
+      mensagem_erro: '',
+      status_visual: 'VERMELHO',
+    } as const];
+    api.listarPainel.and.returnValues(
+      throwError(() => new Error('offline')),
+      of(linhas as any),
+    );
+
+    fixture.componentInstance.ngOnInit();
+    tick(0);
+    expect(api.listarPainel).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.errorMsg).toBe('Não foi possível carregar o painel de sincronização.');
+
+    tick(10000);
+    expect(api.listarPainel).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.linhas.length).toBe(1);
+    expect(fixture.componentInstance.linhas[0].loja_id).toBe(2);
+    expect(fixture.componentInstance.errorMsg).toBe('');
+    fixture.componentInstance.ngOnDestroy();
+    discardPeriodicTasks();
+  }));
 });

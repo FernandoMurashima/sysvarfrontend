@@ -1,6 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { Subscription, finalize, interval, startWith, switchMap } from 'rxjs';
+import { EMPTY, Subscription, catchError, finalize, interval, startWith, switchMap } from 'rxjs';
 
 import { HubSincronizacaoLoja } from '../../core/models/hub-sincronizacao';
 import { HubSincronizacaoService } from '../../core/services/hub-sincronizacao.service';
@@ -28,11 +28,21 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
       startWith(0),
       switchMap(() => {
         this.loading = this.linhas.length === 0;
-        return this.api.listarPainel().pipe(finalize(() => this.loading = false));
+        return this.api.listarPainel().pipe(
+          catchError(() => {
+            this.errorMsg = 'Não foi possível carregar o painel de sincronização.';
+            return EMPTY;
+          }),
+          finalize(() => this.loading = false),
+        );
       }),
     ).subscribe({
-      next: linhas => this.linhas = linhas,
-      error: () => this.errorMsg = 'Não foi possível carregar o painel de sincronização.',
+      next: linhas => {
+        this.linhas = linhas;
+        if (this.errorMsg === 'Não foi possível carregar o painel de sincronização.') {
+          this.errorMsg = '';
+        }
+      },
     });
   }
 
