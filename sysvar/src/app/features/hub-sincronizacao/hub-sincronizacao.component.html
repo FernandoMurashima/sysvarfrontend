@@ -1,0 +1,68 @@
+<div class="cadastro-page">
+  <section class="title-bar">
+    <div class="title-left">
+      <h1>Sincronização Hub</h1>
+    </div>
+    <div class="title-actions">
+      <button class="btn primary" type="button" (click)="sincronizarTodas()" [disabled]="syncingAll">
+        <i class="bi bi-arrow-repeat"></i>
+        Sincronizar todas
+      </button>
+    </div>
+  </section>
+
+  <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
+  <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
+
+  <section class="panel">
+    <div class="table-wrap" *ngIf="linhas.length > 0; else vazio">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Situação</th>
+            <th>Loja</th>
+            <th>Hub</th>
+            <th>Último contato</th>
+            <th>Última sincronização</th>
+            <th>Etapa</th>
+            <th>Versão</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linha of linhas">
+            <td>
+              <span class="state">
+                <span class="dot" [class.ok]="linha.status_visual === 'VERDE'" [class.warn]="linha.status_visual === 'AMARELO'" [class.bad]="linha.status_visual === 'VERMELHO'"></span>
+                <span>{{ situacaoTexto(linha) }}</span>
+              </span>
+              <small class="error-text" *ngIf="linha.mensagem_erro">{{ linha.mensagem_erro }}</small>
+            </td>
+            <td>{{ linha.loja_nome }}</td>
+            <td>
+              <strong>{{ linha.hostname || (linha.hub_id ? 'Hub vinculado' : 'Sem Hub') }}</strong>
+              <small *ngIf="linha.hub_uuid">{{ linha.hub_uuid }}</small>
+            </td>
+            <td>{{ linha.ultimo_contato ? (linha.ultimo_contato | date:'short') : '-' }}</td>
+            <td>{{ ultimaSincronizacao(linha) ? (ultimaSincronizacao(linha) | date:'short') : '-' }}</td>
+            <td>{{ linha.etapa_atual || '-' }}</td>
+            <td>{{ linha.versao || '-' }}</td>
+            <td>
+              <button class="btn small" type="button" (click)="sincronizarLoja(linha)" [disabled]="!podeSincronizar(linha) || syncingLojaId === linha.loja_id">
+                <i class="bi bi-arrow-repeat"></i>
+                Sincronizar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #vazio>
+      <div class="empty-state">
+        <i class="bi bi-arrow-repeat"></i>
+        <span>{{ loading ? 'Carregando painel...' : 'Nenhuma loja encontrada.' }}</span>
+      </div>
+    </ng-template>
+  </section>
+</div>

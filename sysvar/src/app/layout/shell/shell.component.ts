@@ -61,6 +61,7 @@ export class ShellComponent {
             { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', moduloEmpresa: 'operacional' },
             { label: 'Perfis de Acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', moduloEmpresa: 'operacional' },
             { label: 'Agente', link: '/config/agente-local', icon: 'bi bi-pc-display', roles: ['Admin', 'Diretor'] },
+            { label: 'Sincronização Hub', link: '/config/sincronizacao-hub', icon: 'bi bi-arrow-repeat', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional' },
             { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', moduloEmpresa: 'auditoria' },
           ]
         },
@@ -301,7 +302,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/home', '/dashboard/executivo', '/dashboard/vendas', '/dashboard/produtos', '/dashboard/estoque', '/dashboard/financeiro', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
+    return ['/home', '/dashboard/executivo', '/dashboard/vendas', '/dashboard/produtos', '/dashboard/estoque', '/dashboard/financeiro', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/sincronizacao-hub', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
   }
 
   toggleBarControls(): void {
@@ -358,6 +359,7 @@ export class ShellComponent {
       '/config/usuarios': 'usuarios',
       '/config/perfis': 'perfis',
       '/config/agente-local': 'agente-local',
+      '/config/sincronizacao-hub': 'sincronizacao-hub',
       '/config/auditoria': 'auditoria',
       '/financeiro/configuracao': 'config-financeira',
       '/financeiro/formas-pagamento': 'formas-pagamento',

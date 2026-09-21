@@ -84,6 +84,7 @@ import { PerfisAcessoComponent } from './features/perfis-acesso/perfis-acesso.co
 import { AuditoriaComponent } from './features/auditoria/auditoria.component';
 import { ChangePasswordRequiredComponent } from './features/change-password-required/change-password-required.component';
 import { AgenteLocalComponent } from './features/agente-local/agente-local.component';
+import { HubSincronizacaoComponent } from './features/hub-sincronizacao/hub-sincronizacao.component';
 import { NfeDetectadasComponent } from './features/nfe-detectadas/nfe-detectadas.component';
 import { RecebimentoMercadoriaDetalheComponent } from './features/recebimento-mercadoria-detalhe/recebimento-mercadoria-detalhe.component';
 import { RecebimentosMercadoriaComponent } from './features/recebimentos-mercadoria/recebimentos-mercadoria.component';
@@ -191,6 +192,7 @@ export const routes: Routes = [
       { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
       { path: 'config/agente-local', component: AgenteLocalComponent, data: { roles: ['Admin', 'Diretor'] } },
+      { path: 'config/sincronizacao-hub', component: HubSincronizacaoComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
 
       // ⬇️ rota de coleções
 

@@ -1,0 +1,79 @@
+@import '../cores/cores.component.css';
+
+.panel {
+  padding: 16px 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+  background: #ef4444;
+}
+
+.dot.ok {
+  background: #22c55e;
+}
+
+.dot.warn {
+  background: #f59e0b;
+}
+
+.dot.bad {
+  background: #ef4444;
+}
+
+td small {
+  display: block;
+  color: #64748b;
+  margin-top: 3px;
+  max-width: 320px;
+  word-break: break-word;
+}
+
+.error-text {
+  color: #991b1b;
+}
+
+.btn i {
+  margin-right: 6px;
+}
+
+.btn.small {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  padding: 18px 0;
+}
+
+@media (max-width: 760px) {
+  .title-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .title-actions .btn {
+    width: 100%;
+  }
+}
