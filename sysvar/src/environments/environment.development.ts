@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://127.0.0.1:8000/api',
-  mediaBaseUrl: 'http://127.0.0.1:8000'
+  apiBaseUrl: 'http://127.0.0.1:8001/api',
+  mediaBaseUrl: 'http://127.0.0.1:8001'
 };

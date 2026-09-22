@@ -18,6 +18,7 @@ export interface Loja {
   bairro?: string;
   cidade?: string;
   estado?: string;
+  codigo_municipio_ibge?: string | null;
 
   telefone1?: string;
   telefone2?: string;

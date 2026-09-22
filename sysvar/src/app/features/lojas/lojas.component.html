@@ -100,6 +100,7 @@
         <label id="email-box" class="input-item">E-mail<input type="email" formControlName="email" /></label>
         <label id="cidade-box" class="input-item">Cidade<input type="text" formControlName="cidade" /></label>
         <label id="estado-box" class="input-item">UF<input type="text" maxlength="2" formControlName="estado" /></label>
+        <label id="codigo-municipio-ibge-box" class="input-item" [class.invalid]="form.get('codigo_municipio_ibge')?.invalid && (form.get('codigo_municipio_ibge')?.touched || submitted)">Código município IBGE<input type="text" maxlength="7" inputmode="numeric" formControlName="codigo_municipio_ibge" [attr.aria-invalid]="form.get('codigo_municipio_ibge')?.invalid && (form.get('codigo_municipio_ibge')?.touched || submitted) ? 'true' : null" /></label>
         <label id="telefone1-box" class="input-item">Telefone 1<input type="text" formControlName="telefone1" (input)="onPhoneInput('telefone1')" /></label>
         <label id="telefone2-box" class="input-item">Telefone 2<input type="text" formControlName="telefone2" (input)="onPhoneInput('telefone2')" /></label>
         <label id="cnpj-box" class="input-item" [class.invalid]="form.get('cnpj')?.invalid && (form.get('cnpj')?.touched || submitted)">CNPJ*<input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" /></label>

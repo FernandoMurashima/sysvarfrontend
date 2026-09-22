@@ -1,5 +1,6 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -48,6 +49,7 @@ export class LojasComponent implements OnInit {
   private auth = inject(AuthService);
   private api = inject(LojasService);
   private empresasApi = inject(EmpresasService);
+  private destroyRef = inject(DestroyRef);
 
   loading = false;
   saving = false;
@@ -120,6 +122,7 @@ export class LojasComponent implements OnInit {
     bairro: [''],
     cidade: [''],
     estado: [''],
+    codigo_municipio_ibge: ['', [this.codigoMunicipioIbgeValidator]],
 
     telefone1: ['', [this.phoneValidator]],
     telefone2: ['', [this.phoneValidator]],
@@ -193,6 +196,7 @@ export class LojasComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.setupCodigoMunicipioIbgeValidation();
     this.loadColumnsPreference();
     this.loadViewPreference();
     this.loadUsuarioAtual();
@@ -245,6 +249,31 @@ export class LojasComponent implements OnInit {
     if (!v) return null;
     const ok = /^\(\d{2}\)-\d{4}-\d{4}$/.test(v) || /^\(\d{2}\)-\d{5}-\d{4}$/.test(v);
     return ok ? null : { phone: true };
+  }
+
+  codigoMunicipioIbgeValidator(ctrl: AbstractControl): ValidationErrors | null {
+    const v = (ctrl.value || '').toString().trim();
+    if (!v) return null;
+    return /^\d{7}$/.test(v) ? null : { codigoMunicipioIbge: true };
+  }
+
+  private setupCodigoMunicipioIbgeValidation(): void {
+    const emiteNfceCtrl = this.form.get('emite_nfce');
+    emiteNfceCtrl?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.applyCodigoMunicipioIbgeValidators());
+    this.applyCodigoMunicipioIbgeValidators();
+  }
+
+  private applyCodigoMunicipioIbgeValidators(): void {
+    const codigoCtrl = this.form.get('codigo_municipio_ibge');
+    if (!codigoCtrl) return;
+    const validators = [this.codigoMunicipioIbgeValidator];
+    if (this.form.get('emite_nfce')?.value === true) {
+      validators.unshift(Validators.required);
+    }
+    codigoCtrl.setValidators(validators);
+    codigoCtrl.updateValueAndValidity({ emitEvent: false });
   }
 
   onPhoneInput(field: 'telefone1'|'telefone2'): void {
@@ -496,6 +525,7 @@ export class LojasComponent implements OnInit {
       bairro: '',
       cidade: '',
       estado: '',
+      codigo_municipio_ibge: '',
       telefone1: '',
       telefone2: '',
       DataAbertura: '',
@@ -540,6 +570,7 @@ export class LojasComponent implements OnInit {
       bairro:       row.bairro ?? '',
       cidade:       row.cidade ?? '',
       estado:       (row as any).estado ?? '',
+      codigo_municipio_ibge: (row as any).codigo_municipio_ibge ?? '',
       telefone1:    this.formatPhone(row.telefone1),
       telefone2:    this.formatPhone(row.telefone2),
 
@@ -583,6 +614,7 @@ export class LojasComponent implements OnInit {
       bairro: row.bairro ?? '',
       cidade: row.cidade ?? '',
       estado: (row as any).estado ?? '',
+      codigo_municipio_ibge: (row as any).codigo_municipio_ibge ?? '',
       telefone1: '',
       telefone2: '',
       EstoqueNegativo: (row as any).EstoqueNegativo ?? 'NAO',
@@ -641,6 +673,7 @@ export class LojasComponent implements OnInit {
       bairro: this.blankToNull(f.bairro),
       cidade: this.blankToNull(f.cidade),
       estado: this.blankToNull(f.estado),
+      codigo_municipio_ibge: this.blankToNull(f.codigo_municipio_ibge),
 
       telefone1: this.blankToNull(f.telefone1),
       telefone2: this.blankToNull(f.telefone2),
@@ -1057,11 +1090,13 @@ export class LojasComponent implements OnInit {
     push(f.get('numero')?.hasError('maxlength') || false, 'numero: Máx. 10 caracteres.');
     push(f.get('telefone1')?.hasError('phone') || false, 'telefone1: Formato (99)-9999-9999 ou (99)-99999-9999.');
     push(f.get('telefone2')?.hasError('phone') || false, 'telefone2: Formato (99)-9999-9999 ou (99)-99999-9999.');
+    push(f.get('codigo_municipio_ibge')?.hasError('required') || false, 'codigo_municipio_ibge: Este campo é obrigatório para emitir NFC-e.');
+    push(f.get('codigo_municipio_ibge')?.hasError('codigoMunicipioIbge') || false, 'codigo_municipio_ibge: Informe 7 dígitos numéricos.');
 
     const fields = [
       'empresa','nome_loja','apelido_loja','cnpj','email',
       'logradouro','endereco','numero','complemento',
-      'cep','bairro','cidade','estado',
+      'cep','bairro','cidade','estado','codigo_municipio_ibge',
       'telefone1','telefone2',
       'DataAbertura','DataEnceramento',
       'EstoqueNegativo','Rede','Matriz','tipo_unidade'
