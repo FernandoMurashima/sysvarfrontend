@@ -260,7 +260,7 @@ export class FornecedoresComponent implements OnInit {
 
   loadLookups(): void {
     forkJoin({
-      prazos: this.prazosApi.listPrazos({ ativo: true }),
+      prazos: this.prazosApi.listPrazos({ ativo: true, finalidade: 'PAGAR' }),
       plano: this.planoApi.list({ ativa: true, analitica: true, page_size: 50 }),
       naturezas: this.naturezaApi.list({ ativo: true, movimenta_financeiro: true, page_size: 50 }),
     }).subscribe({

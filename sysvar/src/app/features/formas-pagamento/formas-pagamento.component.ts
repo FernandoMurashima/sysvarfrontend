@@ -73,8 +73,7 @@ export class FormasPagamentoComponent implements OnInit {
     { value: 'DINHEIRO' as TipoFormaPagamento, label: 'Dinheiro' },
     { value: 'PIX' as TipoFormaPagamento, label: 'Pix' },
     { value: 'DEBITO' as TipoFormaPagamento, label: 'Cartão débito' },
-    { value: 'CREDITO_ROTATIVO' as TipoFormaPagamento, label: 'Crédito rotativo' },
-    { value: 'CREDITO_PARCELADO' as TipoFormaPagamento, label: 'Crédito parcelado' },
+    { value: 'CREDITO' as TipoFormaPagamento, label: 'Cartão crédito' },
     { value: 'BOLETO' as TipoFormaPagamento, label: 'Boleto' },
     { value: 'TRANSFERENCIA' as TipoFormaPagamento, label: 'Transferência' },
     { value: 'OUTRO' as TipoFormaPagamento, label: 'Outro' },
@@ -186,7 +185,7 @@ export class FormasPagamentoComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }), prazos: this.api.listPrazos({ ativo: true }) }).subscribe({
+    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }), prazos: this.api.listPrazos({ ativo: true, finalidade: 'RECEBER' }) }).subscribe({
       next: (res: any) => {
         this.contas = Array.isArray(res.contas) ? res.contas : (res.contas?.results ?? []);
         this.prazos = Array.isArray(res.prazos) ? res.prazos : (res.prazos?.results ?? []);

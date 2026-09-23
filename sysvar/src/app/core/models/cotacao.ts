@@ -248,6 +248,7 @@ export interface PrazoPagamento {
   Idprazo: number;
   codigo: string;
   descricao: string;
+  finalidade?: 'PAGAR' | 'RECEBER' | 'AMBOS';
   num_parcelas: number;
   intervalo_dias: number;
   ativo: boolean;

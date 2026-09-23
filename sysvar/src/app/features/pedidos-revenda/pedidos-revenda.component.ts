@@ -351,7 +351,7 @@ export class PedidosRevendaComponent implements OnInit {
       },
     });
 
-    this.formasApi.listPrazos({ ativo: true }).subscribe({
+    this.formasApi.listPrazos({ ativo: true, finalidade: 'RECEBER' }).subscribe({
       next: (resp: any) => {
         const arr = this.arrayOrResults<PrazoPagamento>(resp);
         this.prazos = arr

@@ -70,13 +70,16 @@ export class FormasPagamentoService {
 
   // ===== Prazos de pagamento =====
 
-  listPrazos(params?: { ativo?: boolean; codigo?: string }): Observable<PrazosListResp> {
+  listPrazos(params?: { ativo?: boolean; codigo?: string; finalidade?: 'PAGAR' | 'RECEBER' | 'AMBOS' }): Observable<PrazosListResp> {
     let httpParams = new HttpParams();
     if (typeof params?.ativo === 'boolean') {
       httpParams = httpParams.set('ativo', params.ativo ? 'true' : 'false');
     }
     if (params?.codigo) {
       httpParams = httpParams.set('codigo', params.codigo.trim());
+    }
+    if (params?.finalidade) {
+      httpParams = httpParams.set('finalidade', params.finalidade);
     }
     return this.http.get<PrazosListResp>(this.basePrazos, { params: httpParams });
   }

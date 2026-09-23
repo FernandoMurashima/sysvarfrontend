@@ -76,7 +76,7 @@ export class CotacoesService {
   }
 
   listarPrazosPagamento(): Observable<PrazoPagamento[] | Paginated<PrazoPagamento>> {
-    return this.http.get<PrazoPagamento[] | Paginated<PrazoPagamento>>(this.prazosBase, { params: new HttpParams().set('ativo', 'true').set('page_size', '500') });
+    return this.http.get<PrazoPagamento[] | Paginated<PrazoPagamento>>(this.prazosBase, { params: new HttpParams().set('ativo', 'true').set('finalidade', 'PAGAR').set('page_size', '500') });
   }
 
   criarProposta(payload: Partial<CotacaoProposta>): Observable<CotacaoProposta> {

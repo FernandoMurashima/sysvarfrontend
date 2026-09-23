@@ -488,7 +488,7 @@ export class PedidosCompraComponent implements OnInit {
       },
     });
 
-    this.formasApi.listPrazos({ ativo: true }).subscribe({
+    this.formasApi.listPrazos({ ativo: true, finalidade: 'PAGAR' }).subscribe({
       next: (resp: any) => {
         const arr = this.arrayOrResults<PrazoPagamento>(resp);
         this.prazos = arr

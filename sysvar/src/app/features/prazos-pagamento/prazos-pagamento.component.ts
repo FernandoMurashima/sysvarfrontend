@@ -42,6 +42,7 @@ export class PrazosPagamentoComponent implements OnInit {
   columns = [
     { key: 'codigo', label: 'Código', visible: true, required: true },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
+    { key: 'finalidade', label: 'Finalidade', visible: true, required: false },
     { key: 'parcelas', label: 'Parcelas', visible: true, required: false },
     { key: 'intervalo', label: 'Intervalo', visible: true, required: false },
     { key: 'dias', label: 'Dias', visible: true, required: false },
@@ -59,6 +60,7 @@ export class PrazosPagamentoComponent implements OnInit {
   form: FormGroup = this.fb.group({
     codigo: ['', [Validators.required, Validators.maxLength(12)]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
+    finalidade: ['AMBOS', Validators.required],
     num_parcelas: [1, [Validators.required, Validators.min(1)]],
     intervalo_dias: [30, [Validators.required, Validators.min(0)]],
     ativo: [true],
@@ -135,7 +137,7 @@ export class PrazosPagamentoComponent implements OnInit {
     this.successMsg = '';
     this.errorMsg = '';
     this.form.enable({ emitEvent: false });
-    this.form.reset({ codigo: '', descricao: '', num_parcelas: 1, intervalo_dias: 30, ativo: true });
+    this.form.reset({ codigo: '', descricao: '', finalidade: 'AMBOS', num_parcelas: 1, intervalo_dias: 30, ativo: true });
     this.clearParcelas();
     this.addParcela();
   }
@@ -157,6 +159,7 @@ export class PrazosPagamentoComponent implements OnInit {
         this.form.reset({
           codigo: det.codigo ?? '',
           descricao: det.descricao ?? '',
+          finalidade: det.finalidade ?? 'AMBOS',
           num_parcelas: Number(det.num_parcelas || 1),
           intervalo_dias: Number(det.intervalo_dias || 0),
           ativo: det.ativo !== false,
@@ -210,6 +213,7 @@ export class PrazosPagamentoComponent implements OnInit {
     const payload: Partial<PrazoPagamento> = {
       codigo: String(raw.codigo || '').trim(),
       descricao: String(raw.descricao || '').trim(),
+      finalidade: raw.finalidade || 'AMBOS',
       num_parcelas: this.parcelasFA.length,
       intervalo_dias: Number(raw.intervalo_dias || 0),
       ativo: !!raw.ativo,
@@ -275,6 +279,9 @@ export class PrazosPagamentoComponent implements OnInit {
     const dias = (p.parcelas ?? []).slice().sort((a, b) => a.ordem - b.ordem).map(parcela => parcela.dias);
     return dias.length ? dias.join('/') : '-';
   }
+  finalidadeLabel(value?: string | null): string {
+    return { PAGAR: 'Pagar', RECEBER: 'Receber', AMBOS: 'Ambos' }[String(value || 'AMBOS')] || 'Ambos';
+  }
   prazoId(p: PrazoPagamento | null): number | null { return p ? (p.Idprazo ?? (p as any).id ?? null) : null; }
   selecionarPrazo(p: PrazoPagamento): void { this.selectedPrazo = this.prazoId(this.selectedPrazo) === this.prazoId(p) ? null : p; }
   isSelected(p: PrazoPagamento): boolean { return this.prazoId(this.selectedPrazo) === this.prazoId(p); }
@@ -299,6 +306,7 @@ export class PrazosPagamentoComponent implements OnInit {
     push(f.get('codigo')?.hasError('maxlength') || false, 'codigo: Máx. 12 caracteres.');
     push(f.get('descricao')?.hasError('required') || false, 'descricao: Este campo é obrigatório.');
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
+    push(f.get('finalidade')?.hasError('required') || false, 'finalidade: Informe a finalidade.');
     push(f.get('num_parcelas')?.hasError('min') || false, 'num_parcelas: Informe ao menos 1 parcela.');
     push(f.get('intervalo_dias')?.hasError('min') || false, 'intervalo_dias: O intervalo não pode ser negativo.');
     if (this.parcelasFA.length === 0) msgs.push('É necessário informar ao menos uma parcela.');

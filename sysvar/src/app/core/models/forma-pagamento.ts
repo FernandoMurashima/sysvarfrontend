@@ -14,11 +14,12 @@ export type TipoFormaPagamento =
   | 'DINHEIRO'
   | 'PIX'
   | 'DEBITO'
-  | 'CREDITO_ROTATIVO'
-  | 'CREDITO_PARCELADO'
+  | 'CREDITO'
   | 'BOLETO'
   | 'TRANSFERENCIA'
   | 'OUTRO';
+
+export type FinalidadePrazoPagamento = 'PAGAR' | 'RECEBER' | 'AMBOS';
 
 export interface PrazoPagamentoParcela {
   Idprazoparcela?: number;
@@ -34,6 +35,7 @@ export interface PrazoPagamento {
   id?: number;
   codigo: string;
   descricao: string;
+  finalidade?: FinalidadePrazoPagamento;
   num_parcelas: number;
   intervalo_dias: number;
   ativo: boolean;
