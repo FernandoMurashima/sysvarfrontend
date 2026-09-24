@@ -3,10 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { FormaPagamento, PrazoPagamento, PrazoPagamentoParcela } from '../models/forma-pagamento';
+import { Adquirente, CondicaoAdquirente, FormaPagamento, PrazoPagamento, PrazoPagamentoParcela } from '../models/forma-pagamento';
 
 type ListResp = FormaPagamento[] | { results: FormaPagamento[]; count: number };
 type PrazosListResp = PrazoPagamento[] | { results: PrazoPagamento[]; count: number };
+type AdquirentesListResp = Adquirente[] | { results: Adquirente[]; count: number };
+type CondicoesAdquirenteListResp = CondicaoAdquirente[] | { results: CondicaoAdquirente[]; count: number };
 
 @Injectable({ providedIn: 'root' })
 export class FormasPagamentoService {
@@ -14,6 +16,8 @@ export class FormasPagamentoService {
   private base = `${environment.apiBaseUrl}/financeiro/formas/`;
   private basePrazos = `${environment.apiBaseUrl}/financeiro/prazos/`;
   private basePrazosParcelas = `${environment.apiBaseUrl}/financeiro/prazos-parcelas/`;
+  private baseAdquirentes = `${environment.apiBaseUrl}/financeiro/adquirentes/`;
+  private baseCondicoesAdquirente = `${environment.apiBaseUrl}/financeiro/condicoes-adquirente/`;
 
   // ===== Formas de pagamento =====
 
@@ -95,5 +99,61 @@ export class FormasPagamentoService {
 
   deletePrazoParcela(id: number): Observable<any> {
     return this.http.delete(`${this.basePrazosParcelas}${id}/`);
+  }
+
+  // ===== Adquirentes =====
+
+  listAdquirentes(params?: { ativo?: boolean; codigo?: string }): Observable<AdquirentesListResp> {
+    let httpParams = new HttpParams();
+    if (typeof params?.ativo === 'boolean') {
+      httpParams = httpParams.set('ativo', params.ativo ? 'true' : 'false');
+    }
+    if (params?.codigo) {
+      httpParams = httpParams.set('codigo', params.codigo.trim());
+    }
+    return this.http.get<AdquirentesListResp>(this.baseAdquirentes, { params: httpParams });
+  }
+
+  getAdquirente(id: number): Observable<Adquirente> {
+    return this.http.get<Adquirente>(`${this.baseAdquirentes}${id}/`);
+  }
+
+  createAdquirente(payload: Partial<Adquirente>): Observable<Adquirente> {
+    return this.http.post<Adquirente>(this.baseAdquirentes, payload);
+  }
+
+  updateAdquirente(id: number, payload: Partial<Adquirente>): Observable<Adquirente> {
+    return this.http.put<Adquirente>(`${this.baseAdquirentes}${id}/`, payload);
+  }
+
+  deleteAdquirente(id: number): Observable<any> {
+    return this.http.delete(`${this.baseAdquirentes}${id}/`);
+  }
+
+  // ===== Condições de adquirente =====
+
+  listCondicoesAdquirente(params?: { ativo?: boolean; adquirente?: number; forma_pagamento?: number; prazo_pagamento?: number }): Observable<CondicoesAdquirenteListResp> {
+    let httpParams = new HttpParams();
+    if (typeof params?.ativo === 'boolean') httpParams = httpParams.set('ativo', params.ativo ? 'true' : 'false');
+    if (params?.adquirente) httpParams = httpParams.set('adquirente', String(params.adquirente));
+    if (params?.forma_pagamento) httpParams = httpParams.set('forma_pagamento', String(params.forma_pagamento));
+    if (params?.prazo_pagamento) httpParams = httpParams.set('prazo_pagamento', String(params.prazo_pagamento));
+    return this.http.get<CondicoesAdquirenteListResp>(this.baseCondicoesAdquirente, { params: httpParams });
+  }
+
+  getCondicaoAdquirente(id: number): Observable<CondicaoAdquirente> {
+    return this.http.get<CondicaoAdquirente>(`${this.baseCondicoesAdquirente}${id}/`);
+  }
+
+  createCondicaoAdquirente(payload: Partial<CondicaoAdquirente>): Observable<CondicaoAdquirente> {
+    return this.http.post<CondicaoAdquirente>(this.baseCondicoesAdquirente, payload);
+  }
+
+  updateCondicaoAdquirente(id: number, payload: Partial<CondicaoAdquirente>): Observable<CondicaoAdquirente> {
+    return this.http.put<CondicaoAdquirente>(`${this.baseCondicoesAdquirente}${id}/`, payload);
+  }
+
+  deleteCondicaoAdquirente(id: number): Observable<any> {
+    return this.http.delete(`${this.baseCondicoesAdquirente}${id}/`);
   }
 }

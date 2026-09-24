@@ -32,6 +32,8 @@ import { CfopsComponent } from './features/cfops/cfops.component';
 import { TributosComponent } from './features/tributos/tributos.component';
 import { RegrasTributariasComponent } from './features/regras-tributarias/regras-tributarias.component';
 import { MateriaisComponent } from './features/material/materiais.component';
+import { AdquirentesComponent } from './features/adquirentes/adquirentes.component';
+import { CondicoesAdquirenteComponent } from './features/condicoes-adquirente/condicoes-adquirente.component';
 import { FormasPagamentoComponent } from './features/formas-pagamento/formas-pagamento.component';
 import { PrazosPagamentoComponent } from './features/prazos-pagamento/prazos-pagamento.component';
 import { ProdutosUsoComponent } from './features/produtos-uso/produtos-uso.component';
@@ -166,6 +168,8 @@ export const routes: Routes = [
       { path: 'financeiro/antecipacoes', component: AntecipacaoRecebiveisComponent, data: { roles: ['Diretor', 'Gerente', 'AssistenteReceber'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/movimentacoes', component: MovimentacoesFinanceirasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/configuracao', component: ConfigFinanceiraComponent, data: { roles: ['Admin'], moduloEmpresa: 'financeiro' } },
+      { path: 'financeiro/adquirentes', component: AdquirentesComponent, data: { roles: ['Admin'], moduloEmpresa: 'financeiro' } },
+      { path: 'financeiro/condicoes-adquirente', component: CondicoesAdquirenteComponent, data: { roles: ['Admin'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/prazos-pagamento', component: PrazosPagamentoComponent, data: { roles: ['Admin'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/consulta-naturezas', component: ConsultaFinanceiraNaturezaComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa', 'AssistenteReceber', 'AssistentePagar'], moduloEmpresa: 'financeiro' } },
       { path: 'financeiro/lancamentos-contabeis', component: LancamentosContabeisComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'fiscal_contabil' } },

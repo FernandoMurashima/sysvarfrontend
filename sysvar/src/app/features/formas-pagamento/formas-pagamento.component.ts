@@ -56,7 +56,6 @@ export class FormasPagamentoComponent implements OnInit {
     { key: 'tipo', label: 'Tipo', visible: true, required: false },
     { key: 'parcelas', label: 'Parcelas', visible: true, required: false },
     { key: 'liquidacao', label: 'Liquidação', visible: true, required: false },
-    { key: 'taxa', label: 'Taxa', visible: true, required: false },
     { key: 'status', label: 'Status', visible: true, required: false },
   ];
   successMsg = '';
@@ -89,12 +88,9 @@ export class FormasPagamentoComponent implements OnInit {
     tipo: ['DINHEIRO' as TipoFormaPagamento, Validators.required],
     ativo: [true],
     gera_recebivel_bancario: [false],
-    adquirente: ['', Validators.maxLength(80)],
     conta_liquidacao: [null as number | null],
     prazo_pagamento: [null as number | null],
     prazo_credito_dias: [0, [Validators.min(0)]],
-    taxa_percentual: [0, [Validators.min(0)]],
-    taxa_fixa: [0, [Validators.min(0)]],
     tef_habilitado: [false],
     tef_modalidade: [''],
     tef_adquirente_codigo: ['', Validators.maxLength(40)],
@@ -149,11 +145,6 @@ export class FormasPagamentoComponent implements OnInit {
     if (this.page > this.totalPages) this.page = this.totalPages;
     this.formas = filtered.slice(start, end);
     if (this.selectedForma && !filtered.some(f => this.formaId(f) === this.formaId(this.selectedForma))) this.selectedForma = null;
-  }
-
-  private blankToNull(v: any): string | null {
-    const s = (v ?? '').toString().trim();
-    return s === '' ? null : s;
   }
 
   // ====== Fluxo lista ======
@@ -253,12 +244,9 @@ export class FormasPagamentoComponent implements OnInit {
       tipo: 'DINHEIRO',
       ativo: true,
       gera_recebivel_bancario: false,
-      adquirente: '',
       conta_liquidacao: null,
       prazo_pagamento: null,
       prazo_credito_dias: 0,
-      taxa_percentual: 0,
-      taxa_fixa: 0,
       tef_habilitado: false,
       tef_modalidade: '',
       tef_adquirente_codigo: '',
@@ -288,12 +276,9 @@ export class FormasPagamentoComponent implements OnInit {
           tipo: det.tipo ?? 'OUTRO',
           ativo: !!det.ativo,
           gera_recebivel_bancario: !!det.gera_recebivel_bancario,
-          adquirente: det.adquirente ?? '',
           conta_liquidacao: det.conta_liquidacao ?? null,
           prazo_pagamento: det.prazo_pagamento ?? null,
           prazo_credito_dias: Number(det.prazo_credito_dias || 0),
-          taxa_percentual: Number(det.taxa_percentual || 0),
-          taxa_fixa: Number(det.taxa_fixa || 0),
           tef_habilitado: !!det.tef_habilitado,
           tef_modalidade: det.tef_modalidade ?? '',
           tef_adquirente_codigo: det.tef_adquirente_codigo ?? '',
@@ -345,12 +330,9 @@ export class FormasPagamentoComponent implements OnInit {
       tipo: f.tipo || 'OUTRO',
       ativo: !!f.ativo,
       gera_recebivel_bancario: !!f.gera_recebivel_bancario,
-      adquirente: null,
       conta_liquidacao: f.gera_recebivel_bancario ? Number(f.conta_liquidacao) : null,
       prazo_pagamento: f.prazo_pagamento ? Number(f.prazo_pagamento) : null,
       prazo_credito_dias: Number(f.prazo_credito_dias || 0),
-      taxa_percentual: this.blankToNull(f.taxa_percentual) ?? '0',
-      taxa_fixa: this.blankToNull(f.taxa_fixa) ?? '0',
       tef_habilitado: false,
       tef_modalidade: '',
       tef_adquirente_codigo: '',
@@ -442,7 +424,7 @@ export class FormasPagamentoComponent implements OnInit {
   }
   get indicadores() {
     const total = this.formasAll.length;
-    return { total, ativas: this.formasAll.filter(f => f.ativo !== false).length, banco: this.formasAll.filter(f => f.gera_recebivel_bancario).length, comTaxa: this.formasAll.filter(f => Number(f.taxa_percentual || 0) > 0 || Number(f.taxa_fixa || 0) > 0).length, filtradas: this.total };
+    return { total, ativas: this.formasAll.filter(f => f.ativo !== false).length, banco: this.formasAll.filter(f => f.gera_recebivel_bancario).length, filtradas: this.total };
   }
   tipoLabel(tipo?: string | null): string { return this.tipos.find(t => t.value === tipo)?.label ?? 'Outro'; }
   prazoLabel(id?: number | null): string {
@@ -454,15 +436,6 @@ export class FormasPagamentoComponent implements OnInit {
     if (!f.prazo_pagamento) return '-';
     const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === f.prazo_pagamento);
     return prazo?.num_parcelas ?? '-';
-  }
-  taxaLabel(f: FormaPagamento): string {
-    const percentual = Number(f.taxa_percentual || 0);
-    const fixa = Number(f.taxa_fixa || 0);
-    if (!percentual && !fixa) return '0';
-    const partes = [];
-    if (percentual) partes.push(`${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}%`);
-    if (fixa) partes.push(`R$ ${fixa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-    return partes.join(' + ');
   }
   formaId(f: FormaPagamento | null): number | null { return f ? (f.Idformapagamento ?? (f as any).id ?? null) : null; }
   selecionarForma(f: FormaPagamento): void { this.selectedForma = this.formaId(this.selectedForma) === this.formaId(f) ? null : f; }

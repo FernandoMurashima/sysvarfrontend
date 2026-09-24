@@ -40,16 +40,40 @@ export interface FormaPagamento {
   descricao: string;
   tipo?: TipoFormaPagamento;
   ativo: boolean;
-  adquirente?: string | null;
   conta_liquidacao?: number | null;
   prazo_pagamento?: number | null;
   gera_recebivel_bancario?: boolean;
   prazo_credito_dias?: number;
-  taxa_percentual?: string | number;
-  taxa_fixa?: string | number;
   tef_habilitado?: boolean;
   tef_modalidade?: string;
   tef_adquirente_codigo?: string;
   tef_terminal_logico?: string;
   data_cadastro?: string;
+}
+
+export interface Adquirente {
+  Idadquirente?: number;
+  id?: number;
+  codigo: string;
+  descricao: string;
+  ativo: boolean;
+  data_cadastro?: string;
+}
+
+export interface CondicaoAdquirente {
+  Idcondicaoadquirente?: number;
+  id?: number;
+  adquirente: number;
+  forma_pagamento: number;
+  prazo_pagamento: number;
+  taxa_percentual: string | number;
+  taxa_fixa: string | number;
+  ativo: boolean;
+  data_cadastro?: string;
+  adquirente_codigo?: string;
+  adquirente_descricao?: string;
+  forma_codigo?: string;
+  forma_descricao?: string;
+  prazo_codigo?: string;
+  prazo_descricao?: string;
 }
