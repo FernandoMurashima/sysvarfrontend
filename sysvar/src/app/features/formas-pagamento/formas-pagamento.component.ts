@@ -338,8 +338,6 @@ export class FormasPagamentoComponent implements OnInit {
     }
 
     const f = this.form.value as any;
-    const prazoSelecionado = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === Number(f.prazo_pagamento));
-    const numParcelas = Number(prazoSelecionado?.num_parcelas || 1);
 
     const payload: any = {
       codigo: (f.codigo || '').toString().trim(),
@@ -356,8 +354,7 @@ export class FormasPagamentoComponent implements OnInit {
       tef_habilitado: false,
       tef_modalidade: '',
       tef_adquirente_codigo: '',
-      tef_terminal_logico: '',
-      num_parcelas: numParcelas
+      tef_terminal_logico: ''
     };
 
     this.saving = true;
@@ -452,6 +449,11 @@ export class FormasPagamentoComponent implements OnInit {
     if (!id) return 'Sem prazo';
     const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === id);
     return prazo ? prazo.descricao : 'Prazo';
+  }
+  parcelasForma(f: FormaPagamento): number | string {
+    if (!f.prazo_pagamento) return '-';
+    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === f.prazo_pagamento);
+    return prazo?.num_parcelas ?? '-';
   }
   taxaLabel(f: FormaPagamento): string {
     const percentual = Number(f.taxa_percentual || 0);

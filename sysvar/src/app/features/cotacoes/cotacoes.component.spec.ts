@@ -49,7 +49,7 @@ describe('CotacoesComponent', () => {
     api.rejeitar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'REJEITADA', proposta_vencedora: 60, motivo_rejeicao: 'Revisar' } as any));
     api.cancelar.and.returnValue(of({ id: 7, numero: 1, empresa: 1, loja: 2, responsavel: 3, data_abertura: '2026-08-21', prioridade: 'NORMAL', tipo_compra: 'OUTRO', status: 'CANCELADA', motivo_cancelamento: 'Compra suspensa' } as any));
     fornecedoresApi.list.and.returnValue(of({ count: 2, next: null, previous: null, results: [{ id: 40, nome_fornecedor: 'Fornecedor A' }, { id: 41, nome_fornecedor: 'Fornecedor B' }] as any }));
-    formasPagamentoApi.list.and.returnValue(of([{ Idformapagamento: 1, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', num_parcelas: 1, ativo: true } as any]));
+    formasPagamentoApi.list.and.returnValue(of([{ Idformapagamento: 1, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', ativo: true } as any]));
     api.apoioDecisaoItem.and.returnValue(of({ cotacao_item: 10, produto: 5, necessidade_aberta: '6.000', estoque_atual: '7.000', pedidos_pendentes: '4.000', ultimas_compras: [{ data: '2026-08-21', quantidade: '10.000', preco_unitario: '2.80', fornecedor: 'Fornecedor A' }], media_quantidades_ultimas_compras: '10.000', ultimo_preco: '2.80', preco_medio: '2.80', quantidade_cotar: '1.000' }));
     api.requisicoesDisponiveis.and.returnValue(of([
       { id: 20, numero: 123, loja: 2, loja_nome: 'Loja A', setor_nome: 'TI', requisitante_nome: 'joao', quantidade_itens: 1, data_requisicao: '2026-08-21', prioridade: 'NORMAL', itens: [{ descricao: 'Item req', qtd_solicitada: '1.000' }] },

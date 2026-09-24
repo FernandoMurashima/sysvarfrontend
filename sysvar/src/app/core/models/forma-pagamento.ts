@@ -39,7 +39,6 @@ export interface FormaPagamento {
   codigo: string;
   descricao: string;
   tipo?: TipoFormaPagamento;
-  num_parcelas: number;
   ativo: boolean;
   adquirente?: string | null;
   conta_liquidacao?: number | null;

@@ -134,7 +134,7 @@ describe('NotasFiscaisEntradaComponent', () => {
     pedidosApi.listar.and.returnValue(of({ count: 1, results: [{ id: 10, tipo: '2', loja: 3, fornecedor: 4, emissao: '2026-01-01', status: 'AP', total_itens: '100.00', total_desconto: '0.00', frete: '0.00', total_pedido: '100.00' }] }));
     lojasApi.list.and.returnValue(of({ count: 1, results: [{ id: 3, nome_loja: 'Loja A' }] }));
     fornecedoresApi.list.and.returnValue(of({ count: 1, results: [{ id: 4, nome_fornecedor: 'Fornecedor A' }] }));
-    formasPagamentoApi.list.and.returnValue(of({ count: 1, results: [{ Idformapagamento: 8, id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', num_parcelas: 1, ativo: true }] }));
+    formasPagamentoApi.list.and.returnValue(of({ count: 1, results: [{ Idformapagamento: 8, id: 8, codigo: 'BOL', descricao: 'Boleto', tipo: 'BOLETO', ativo: true }] }));
 
     await TestBed.configureTestingModule({
       imports: [NotasFiscaisEntradaComponent],
