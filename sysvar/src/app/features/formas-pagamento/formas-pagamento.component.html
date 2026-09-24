@@ -22,8 +22,6 @@
         <label class="span-1 input-item">Taxa %<input type="number" min="0" step="0.0001" formControlName="taxa_percentual" /></label>
         <label class="span-2 input-item">Taxa fixa<input type="number" min="0" step="0.01" formControlName="taxa_fixa" /></label>
       </div>
-      <div class="results-header parcelas-actions"><div><strong>Liquidação por parcela</strong><span>{{ parcelasFA.length }} registro(s)</span></div><button type="button" class="btn" *ngIf="!consultando && podeEditarModulo" (click)="addParcela()">Adicionar parcela</button></div>
-      <div class="table-wrapper parcelas-wrapper"><table class="table parcelas-table"><thead><tr><th>Ordem</th><th>Dias</th><th>%</th><th>Valor fixo</th><th></th></tr></thead><tbody formArrayName="parcelas"><tr *ngFor="let fg of parcelasFA.controls; let i = index" [formGroupName]="i"><td><input type="number" formControlName="ordem" /></td><td><input type="number" formControlName="dias" /></td><td><input type="text" formControlName="percentual" /></td><td><input type="text" formControlName="valor_fixo" /></td><td><button type="button" class="btn sm danger-soft" *ngIf="!consultando && podeEditarModulo" (click)="removeParcela(i)">Remover</button></td></tr></tbody></table></div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length"><strong>Pendências</strong><ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul></div>
     </form>
   </section>

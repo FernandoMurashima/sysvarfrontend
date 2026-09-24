@@ -6,14 +6,13 @@ import {
   FormsModule,
   FormBuilder,
   FormGroup,
-  Validators,
-  FormArray
+  Validators
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
-import { FormaPagamento, FormaPagamentoParcela, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
+import { FormaPagamento, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
 import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { AuthService } from '../../core/auth.service';
@@ -84,8 +83,6 @@ export class FormasPagamentoComponent implements OnInit {
   pageSizeOptions = [10, 20, 50, 100];
   total = 0;
 
-  originalParcelasIds: number[] = [];
-
   form: FormGroup = this.fb.group({
     codigo: ['', [Validators.required, Validators.maxLength(10)]],
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
@@ -101,13 +98,8 @@ export class FormasPagamentoComponent implements OnInit {
     tef_habilitado: [false],
     tef_modalidade: [''],
     tef_adquirente_codigo: ['', Validators.maxLength(40)],
-    tef_terminal_logico: ['', Validators.maxLength(40)],
-    parcelas: this.fb.array([])
+    tef_terminal_logico: ['', Validators.maxLength(40)]
   });
-
-  get parcelasFA(): FormArray {
-    return this.form.get('parcelas') as FormArray;
-  }
 
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.total / this.pageSize));
@@ -157,23 +149,6 @@ export class FormasPagamentoComponent implements OnInit {
     if (this.page > this.totalPages) this.page = this.totalPages;
     this.formas = filtered.slice(start, end);
     if (this.selectedForma && !filtered.some(f => this.formaId(f) === this.formaId(this.selectedForma))) this.selectedForma = null;
-  }
-
-  private makeParcelaGroup(p?: Partial<FormaPagamentoParcela>): FormGroup {
-    return this.fb.group({
-      Idformapagparcela: [p?.Idformapagparcela ?? null],
-      ordem: [p?.ordem ?? (this.parcelasFA.length + 1), [Validators.required, Validators.min(1)]],
-      dias: [p?.dias ?? 0, [Validators.required, Validators.min(0)]],
-      percentual: [p?.percentual ?? null],
-      valor_fixo: [p?.valor_fixo ?? null],
-    });
-  }
-
-  private clearParcelas(): void {
-    while (this.parcelasFA.length) {
-      this.parcelasFA.removeAt(0);
-    }
-    this.originalParcelasIds = [];
   }
 
   private blankToNull(v: any): string | null {
@@ -289,8 +264,6 @@ export class FormasPagamentoComponent implements OnInit {
       tef_adquirente_codigo: '',
       tef_terminal_logico: ''
     });
-    this.clearParcelas();
-    this.addParcela();
   }
 
   editar(row: FormaPagamento, modoConsulta = false): void {
@@ -327,21 +300,6 @@ export class FormasPagamentoComponent implements OnInit {
           tef_terminal_logico: det.tef_terminal_logico ?? ''
         });
 
-        this.clearParcelas();
-        const parcelas = det.parcelas ?? [];
-        this.originalParcelasIds = parcelas
-          .map(p => p.Idformapagparcela)
-          .filter((x): x is number => typeof x === 'number');
-
-        parcelas
-          .slice()
-          .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-          .forEach(p => this.parcelasFA.push(this.makeParcelaGroup(p)));
-
-        if (this.parcelasFA.length === 0) {
-          this.addParcela();
-        }
-
         if (this.consultando) {
           this.form.disable({ emitEvent: false });
         }
@@ -368,33 +326,11 @@ export class FormasPagamentoComponent implements OnInit {
     this.submitted = false;
     this.errorOverlayOpen = false;
     this.form.enable({ emitEvent: false });
-    this.clearParcelas();
-  }
-
-  addParcela(): void {
-    if (this.consultando) return;
-    this.parcelasFA.push(this.makeParcelaGroup());
-  }
-
-  removeParcela(ix: number): void {
-    if (this.consultando) return;
-    if (ix < 0 || ix >= this.parcelasFA.length) return;
-    this.parcelasFA.removeAt(ix);
-    // renumera ordens
-    this.parcelasFA.controls.forEach((fg, i) => {
-      const ctrl = fg.get('ordem');
-      if (ctrl) ctrl.setValue(i + 1);
-    });
   }
 
   salvar(): void {
     if (!this.podeEditarModulo) return;
     this.submitted = true;
-
-    if (this.parcelasFA.length === 0) {
-      this.openErrorOverlayIfNeeded();
-      return;
-    }
 
     if (this.form.invalid) {
       this.openErrorOverlayIfNeeded();
@@ -402,7 +338,8 @@ export class FormasPagamentoComponent implements OnInit {
     }
 
     const f = this.form.value as any;
-    const numParcelas = this.parcelasFA.length;
+    const prazoSelecionado = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === Number(f.prazo_pagamento));
+    const numParcelas = Number(prazoSelecionado?.num_parcelas || 1);
 
     const payload: any = {
       codigo: (f.codigo || '').toString().trim(),
@@ -429,75 +366,18 @@ export class FormasPagamentoComponent implements OnInit {
 
     const isEdit = this.editingId != null;
 
-    const afterFormaSaved = (formaId: number) => {
-      // monta payloads das parcelas
-      const parcelasPayload = this.parcelasFA.controls.map(fg => {
-        const raw = fg.value as any;
-        return {
-          forma: formaId,
-          ordem: Number(raw.ordem) || 1,
-          dias: Number(raw.dias) || 0,
-          percentual: this.blankToNull(raw.percentual),
-          valor_fixo: this.blankToNull(raw.valor_fixo),
-        };
-      });
-
-      const deleteIds = [...this.originalParcelasIds];
-
-      const doCreates = () => {
-        if (parcelasPayload.length === 0) {
-          this.saving = false;
-          this.successMsg = isEdit ? 'Alterações salvas com sucesso.' : 'Forma criada com sucesso.';
-          this.cancelarEdicao();
-          this.page = 1;
-          this.load();
-          return;
-        }
-
-        const creates$ = parcelasPayload.map(p =>
-          this.api.createParcela(p)
-        );
-
-        forkJoin(creates$).subscribe({
-          next: () => {
-            this.saving = false;
-            this.successMsg = isEdit ? 'Alterações salvas com sucesso.' : 'Forma criada com sucesso.';
-            this.cancelarEdicao();
-            this.page = 1;
-            this.load();
-          },
-          error: () => {
-            this.saving = false;
-            this.errorMsg = 'Falha ao salvar parcelas.';
-          }
-        });
-      };
-
-      if (deleteIds.length > 0) {
-        const deletes$ = deleteIds.map(id => this.api.deleteParcela(id));
-        forkJoin(deletes$).subscribe({
-          next: () => { doCreates(); },
-          error: () => {
-            this.saving = false;
-            this.errorMsg = 'Falha ao atualizar parcelas.';
-          }
-        });
-      } else {
-        doCreates();
-      }
+    const afterFormaSaved = () => {
+      this.saving = false;
+      this.successMsg = isEdit ? 'Alterações salvas com sucesso.' : 'Forma criada com sucesso.';
+      this.cancelarEdicao();
+      this.page = 1;
+      this.load();
     };
 
     if (!isEdit) {
       this.api.create(payload).subscribe({
-        next: (created: FormaPagamento) => {
-          const formaId = created.Idformapagamento ?? (created as any).id;
-          if (!formaId) {
-            this.saving = false;
-            this.errorMsg = 'Forma criada, mas não foi possível obter o ID.';
-            return;
-          }
-          this.originalParcelasIds = []; // não havia antes
-          afterFormaSaved(formaId);
+        next: () => {
+          afterFormaSaved();
         },
         error: (err) => {
           this.saving = false;
@@ -508,7 +388,7 @@ export class FormasPagamentoComponent implements OnInit {
       const id = this.editingId!;
       this.api.update(id, payload).subscribe({
         next: () => {
-          afterFormaSaved(id);
+          afterFormaSaved();
         },
         error: (err) => {
           this.saving = false;
@@ -620,20 +500,6 @@ export class FormasPagamentoComponent implements OnInit {
         seen.add(field);
       }
     });
-
-    this.parcelasFA.controls.forEach((fg, i) => {
-      const p = i + 1;
-      if (fg.get('ordem')?.hasError('required') || fg.get('ordem')?.hasError('min')) {
-        msgs.push(`Parcela ${p}: ordem inválida.`);
-      }
-      if (fg.get('dias')?.hasError('required') || fg.get('dias')?.hasError('min')) {
-        msgs.push(`Parcela ${p}: dias inválido.`);
-      }
-    });
-
-    if (this.parcelasFA.length === 0) {
-      msgs.push('É necessário informar ao menos uma parcela.');
-    }
 
     return msgs;
   }

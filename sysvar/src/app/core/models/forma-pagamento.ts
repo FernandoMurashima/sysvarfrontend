@@ -1,15 +1,5 @@
 // src/app/core/models/forma-pagamento.ts
 
-export interface FormaPagamentoParcela {
-  Idformapagparcela?: number;
-  forma?: number;               // FK para FormaPagamento
-  ordem: number;
-  dias: number;
-  percentual?: string | number | null;
-  valor_fixo?: string | number | null;
-  data_cadastro?: string;
-}
-
 export type TipoFormaPagamento =
   | 'DINHEIRO'
   | 'PIX'
@@ -63,5 +53,4 @@ export interface FormaPagamento {
   tef_adquirente_codigo?: string;
   tef_terminal_logico?: string;
   data_cadastro?: string;
-  parcelas?: FormaPagamentoParcela[];
 }
