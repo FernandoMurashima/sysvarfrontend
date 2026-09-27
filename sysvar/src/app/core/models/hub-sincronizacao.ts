@@ -1,5 +1,23 @@
 export type HubSincronizacaoStatus = 'PENDENTE' | 'PROCESSANDO' | 'CONCLUIDA' | 'ERRO' | '';
 export type HubSincronizacaoStatusVisual = 'VERDE' | 'AMARELO' | 'VERMELHO';
+export type HubAtivacaoEstado = 'PENDENTE' | 'UTILIZADA' | 'EXPIRADA' | 'REVOGADA';
+
+export interface HubAtivacaoAdmin {
+  id: number;
+  loja_id: number;
+  loja_nome: string;
+  empresa_id: number;
+  codigo_prefixo: string;
+  criada_em: string;
+  expira_em: string;
+  estado: HubAtivacaoEstado;
+  hub_id: number | null;
+}
+
+export interface HubAtivacaoCriada extends HubAtivacaoAdmin {
+  codigo: string;
+  empresa_nome?: string;
+}
 
 export interface HubSincronizacaoLoja {
   loja_id: number;
@@ -7,6 +25,7 @@ export interface HubSincronizacaoLoja {
   empresa_id: number;
   hub_id: number | null;
   hub_uuid: string | null;
+  hub_nome?: string;
   hub_ativo: boolean;
   hostname: string;
   versao: string;
@@ -20,6 +39,7 @@ export interface HubSincronizacaoLoja {
   etapa_atual: string;
   mensagem_erro: string;
   status_visual: HubSincronizacaoStatusVisual;
+  ativacao_pendente?: HubAtivacaoAdmin | null;
 }
 
 export interface HubSincronizacaoSolicitacao {
@@ -41,4 +61,12 @@ export interface HubSincronizacaoTodasResultado {
   ignoradas_sem_hub: number;
   ignoradas_inativas: number;
   solicitacoes: HubSincronizacaoSolicitacao[];
+}
+
+export interface HubAdministracaoAcaoResultado {
+  hub_id: number;
+  loja_id: number;
+  empresa_id: number;
+  ativo: boolean;
+  possui_credencial: boolean;
 }

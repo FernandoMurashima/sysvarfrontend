@@ -8,6 +8,48 @@
   overflow-x: auto;
 }
 
+.table th,
+.table td {
+  vertical-align: top;
+}
+
+.activation-code {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 12px 0;
+  padding: 12px;
+}
+
+.activation-code div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.activation-code span,
+.hint,
+.muted-text {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.activation-code code {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
 .state {
   display: inline-flex;
   align-items: center;
@@ -37,6 +79,30 @@
   background: #ef4444;
 }
 
+.badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+  padding: 3px 7px;
+}
+
+.badge.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge.bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 td small {
   display: block;
   color: #64748b;
@@ -59,6 +125,21 @@ td small {
   font-size: 12px;
 }
 
+.btn.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.activation-cell,
+.actions-stack {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
 .empty-state {
   display: flex;
   align-items: center;
@@ -75,5 +156,15 @@ td small {
 
   .title-actions .btn {
     width: 100%;
+  }
+
+  .activation-code {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .activation-code code {
+    white-space: normal;
+    word-break: break-word;
   }
 }

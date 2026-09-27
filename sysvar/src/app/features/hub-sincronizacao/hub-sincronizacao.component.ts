@@ -2,7 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { EMPTY, Subscription, catchError, finalize, interval, startWith, switchMap } from 'rxjs';
 
-import { HubSincronizacaoLoja } from '../../core/models/hub-sincronizacao';
+import { HubAtivacaoCriada, HubSincronizacaoLoja } from '../../core/models/hub-sincronizacao';
 import { HubSincronizacaoService } from '../../core/services/hub-sincronizacao.service';
 
 @Component({
@@ -20,17 +20,19 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
   loading = false;
   syncingAll = false;
   syncingLojaId: number | null = null;
+  actionKey: string | null = null;
   errorMsg = '';
   successMsg = '';
+  codigoGerado: HubAtivacaoCriada | null = null;
 
   ngOnInit(): void {
     this.polling = interval(10000).pipe(
       startWith(0),
       switchMap(() => {
         this.loading = this.linhas.length === 0;
-        return this.api.listarPainel().pipe(
+        return this.api.listarAdministracao().pipe(
           catchError(() => {
-            this.errorMsg = 'Não foi possível carregar o painel de sincronização.';
+            this.errorMsg = 'Não foi possível carregar o painel administrativo do Hub.';
             return EMPTY;
           }),
           finalize(() => this.loading = false),
@@ -39,7 +41,7 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: linhas => {
         this.linhas = linhas;
-        if (this.errorMsg === 'Não foi possível carregar o painel de sincronização.') {
+        if (this.errorMsg === 'Não foi possível carregar o painel administrativo do Hub.') {
           this.errorMsg = '';
         }
       },
@@ -80,25 +82,142 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
     });
   }
 
+  gerarAtivacao(linha: HubSincronizacaoLoja): void {
+    const key = this.key('ativar', linha.loja_id);
+    this.actionKey = key;
+    this.limparMensagens();
+    this.api.gerarAtivacao(linha.loja_id).pipe(
+      finalize(() => this.actionKey = null),
+    ).subscribe({
+      next: ativacao => {
+        this.codigoGerado = ativacao;
+        this.successMsg = 'Código de ativação gerado.';
+        this.recarregar();
+      },
+      error: err => this.errorMsg = this.backendError(err, 'Não foi possível gerar o código de ativação.'),
+    });
+  }
+
+  revogarAtivacao(linha: HubSincronizacaoLoja): void {
+    const ativacao = linha.ativacao_pendente;
+    if (!ativacao) return;
+    const key = this.key('revogar', linha.loja_id);
+    this.actionKey = key;
+    this.limparMensagens();
+    this.api.revogarAtivacao(ativacao.id).pipe(
+      finalize(() => this.actionKey = null),
+    ).subscribe({
+      next: () => {
+        this.successMsg = 'Ativação revogada.';
+        this.recarregar();
+      },
+      error: err => this.errorMsg = this.backendError(err, 'Não foi possível revogar a ativação.'),
+    });
+  }
+
+  desativarHub(linha: HubSincronizacaoLoja): void {
+    if (!linha.hub_id || !window.confirm(`Desativar o Hub da loja ${linha.loja_nome}? O vínculo e a credencial serão preservados.`)) return;
+    this.executarAcaoHub(linha, 'desativar', 'Hub desativado.', 'Não foi possível desativar o Hub.');
+  }
+
+  reativarHub(linha: HubSincronizacaoLoja): void {
+    if (!linha.hub_id) return;
+    this.executarAcaoHub(linha, 'reativar', 'Hub reativado.', 'Não foi possível reativar o Hub.');
+  }
+
+  desvincularHub(linha: HubSincronizacaoLoja): void {
+    if (!linha.hub_id) return;
+    const mensagem = [
+      `Desvincular o Hub da loja ${linha.loja_nome}?`,
+      'A credencial atual será invalidada.',
+      'O histórico será preservado.',
+      'Será necessária uma nova ativação para conectar novamente.',
+    ].join('\n');
+    if (!window.confirm(mensagem)) return;
+    this.executarAcaoHub(linha, 'desvincular', 'Hub desvinculado. Gere uma nova ativação para conectar novamente.', 'Não foi possível desvincular o Hub.');
+  }
+
+  copiarCodigo(): void {
+    if (!this.codigoGerado?.codigo) return;
+    if (!navigator?.clipboard?.writeText) {
+      this.errorMsg = 'Não foi possível copiar automaticamente. Selecione o código e copie manualmente.';
+      return;
+    }
+    navigator.clipboard.writeText(this.codigoGerado.codigo).then(
+      () => this.successMsg = 'Código copiado.',
+      () => this.errorMsg = 'Não foi possível copiar automaticamente. Selecione o código e copie manualmente.',
+    );
+  }
+
   podeSincronizar(linha: HubSincronizacaoLoja): boolean {
     return linha.hub_ativo && linha.sincronizacao_status !== 'PENDENTE' && linha.sincronizacao_status !== 'PROCESSANDO';
   }
 
   situacaoTexto(linha: HubSincronizacaoLoja): string {
+    if (!linha.hub_id) return 'Sem Hub';
+    if (!linha.hub_ativo) return 'Hub inativo';
     if (linha.status_visual === 'VERDE') return 'Sincronizado';
     if (linha.status_visual === 'AMARELO') return linha.sincronizacao_status === 'PROCESSANDO' ? 'Sincronizando' : 'Aguardando';
     return linha.sincronizacao_status === 'ERRO' ? 'Erro' : 'Não sincronizado';
+  }
+
+  hubSituacaoTexto(linha: HubSincronizacaoLoja): string {
+    if (!linha.hub_id) return 'Sem Hub';
+    return linha.hub_ativo ? 'Hub ativo' : 'Hub inativo';
+  }
+
+  hubSituacaoClasse(linha: HubSincronizacaoLoja): string {
+    if (!linha.hub_id) return 'muted';
+    return linha.hub_ativo ? 'ok' : 'bad';
   }
 
   ultimaSincronizacao(linha: HubSincronizacaoLoja): string | null {
     return linha.concluido_em || linha.iniciado_em || linha.solicitado_em;
   }
 
+  acaoEmAndamento(acao: string, lojaId: number): boolean {
+    return this.actionKey === this.key(acao, lojaId);
+  }
+
+  mostrarAtivacao(linha: HubSincronizacaoLoja): boolean {
+    return !linha.hub_id || !linha.hub_ativo || !!linha.ativacao_pendente;
+  }
+
   private recarregar(): void {
-    this.api.listarPainel().subscribe({
+    this.api.listarAdministracao().subscribe({
       next: linhas => this.linhas = linhas,
       error: () => {},
     });
+  }
+
+  private executarAcaoHub(linha: HubSincronizacaoLoja, acao: 'desativar' | 'reativar' | 'desvincular', sucesso: string, erro: string): void {
+    if (!linha.hub_id) return;
+    const key = this.key(acao, linha.loja_id);
+    this.actionKey = key;
+    this.limparMensagens();
+    const request = acao === 'desativar'
+      ? this.api.desativarHub(linha.hub_id)
+      : acao === 'reativar'
+        ? this.api.reativarHub(linha.hub_id)
+        : this.api.desvincularHub(linha.hub_id);
+    request.pipe(
+      finalize(() => this.actionKey = null),
+    ).subscribe({
+      next: () => {
+        this.successMsg = sucesso;
+        this.recarregar();
+      },
+      error: err => this.errorMsg = this.backendError(err, erro),
+    });
+  }
+
+  private limparMensagens(): void {
+    this.errorMsg = '';
+    this.successMsg = '';
+  }
+
+  private key(acao: string, lojaId: number): string {
+    return `${acao}:${lojaId}`;
   }
 
   private backendError(err: any, fallback: string): string {

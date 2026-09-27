@@ -1,7 +1,7 @@
 <div class="cadastro-page">
   <section class="title-bar">
     <div class="title-left">
-      <h1>Sincronização Hub</h1>
+      <h1>Administração do Sysvar Hub</h1>
     </div>
     <div class="title-actions">
       <button class="btn primary" type="button" (click)="sincronizarTodas()" [disabled]="syncingAll">
@@ -14,6 +14,18 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
+  <section class="activation-code" *ngIf="codigoGerado as ativacao">
+    <div>
+      <strong>Código temporário de ativação</strong>
+      <span>{{ ativacao.loja_nome }} · expira em {{ ativacao.expira_em | date:'short' }}</span>
+    </div>
+    <code>{{ ativacao.codigo }}</code>
+    <button class="btn small" type="button" (click)="copiarCodigo()">
+      <i class="bi bi-clipboard"></i>
+      Copiar
+    </button>
+  </section>
+
   <section class="panel">
     <div class="table-wrap" *ngIf="linhas.length > 0; else vazio">
       <table class="table">
@@ -22,11 +34,12 @@
             <th>Situação</th>
             <th>Loja</th>
             <th>Hub</th>
+            <th>Rede</th>
             <th>Último contato</th>
             <th>Última sincronização</th>
             <th>Etapa</th>
-            <th>Versão</th>
-            <th>Ação</th>
+            <th>Ativação</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -36,22 +49,63 @@
                 <span class="dot" [class.ok]="linha.status_visual === 'VERDE'" [class.warn]="linha.status_visual === 'AMARELO'" [class.bad]="linha.status_visual === 'VERMELHO'"></span>
                 <span>{{ situacaoTexto(linha) }}</span>
               </span>
+              <small>
+                <span class="badge" [class.ok]="hubSituacaoClasse(linha) === 'ok'" [class.bad]="hubSituacaoClasse(linha) === 'bad'" [class.muted]="hubSituacaoClasse(linha) === 'muted'">
+                  {{ hubSituacaoTexto(linha) }}
+                </span>
+              </small>
               <small class="error-text" *ngIf="linha.mensagem_erro">{{ linha.mensagem_erro }}</small>
             </td>
             <td>{{ linha.loja_nome }}</td>
             <td>
-              <strong>{{ linha.hostname || (linha.hub_id ? 'Hub vinculado' : 'Sem Hub') }}</strong>
+              <strong>{{ linha.hub_nome || (linha.hub_id ? 'Sysvar Hub' : 'Sem Hub') }}</strong>
               <small *ngIf="linha.hub_uuid">{{ linha.hub_uuid }}</small>
+              <small *ngIf="linha.hostname">Host: {{ linha.hostname }}</small>
+              <small>Versão: {{ linha.versao || '-' }}</small>
+            </td>
+            <td>
+              <strong>{{ linha.ultimo_ip || '-' }}</strong>
+              <small>Último IP</small>
             </td>
             <td>{{ linha.ultimo_contato ? (linha.ultimo_contato | date:'short') : '-' }}</td>
             <td>{{ ultimaSincronizacao(linha) ? (ultimaSincronizacao(linha) | date:'short') : '-' }}</td>
             <td>{{ linha.etapa_atual || '-' }}</td>
-            <td>{{ linha.versao || '-' }}</td>
             <td>
-              <button class="btn small" type="button" (click)="sincronizarLoja(linha)" [disabled]="!podeSincronizar(linha) || syncingLojaId === linha.loja_id">
-                <i class="bi bi-arrow-repeat"></i>
-                Sincronizar
-              </button>
+              <div class="activation-cell" *ngIf="mostrarAtivacao(linha); else semAtivacao">
+                <ng-container *ngIf="linha.ativacao_pendente as ativacao">
+                  <strong>{{ ativacao.estado }}</strong>
+                  <small>Prefixo {{ ativacao.codigo_prefixo }} · expira {{ ativacao.expira_em | date:'short' }}</small>
+                  <button class="btn small" type="button" (click)="revogarAtivacao(linha)" [disabled]="acaoEmAndamento('revogar', linha.loja_id)">
+                    Revogar
+                  </button>
+                </ng-container>
+                <button class="btn small primary" type="button" (click)="gerarAtivacao(linha)" [disabled]="acaoEmAndamento('ativar', linha.loja_id)">
+                  <i class="bi bi-key"></i>
+                  {{ linha.ativacao_pendente ? 'Gerar novo código' : 'Gerar código de ativação' }}
+                </button>
+                <small class="hint" *ngIf="linha.hub_id && !linha.hub_ativo">Use uma nova ativação se a credencial tiver sido invalidada.</small>
+              </div>
+              <ng-template #semAtivacao>
+                <span class="muted-text">Sem ativação pendente</span>
+              </ng-template>
+            </td>
+            <td>
+              <div class="actions-stack">
+                <button class="btn small" type="button" (click)="sincronizarLoja(linha)" [disabled]="!podeSincronizar(linha) || syncingLojaId === linha.loja_id">
+                  <i class="bi bi-arrow-repeat"></i>
+                  Sincronizar
+                </button>
+                <button class="btn small" *ngIf="linha.hub_id && linha.hub_ativo" type="button" (click)="desativarHub(linha)" [disabled]="acaoEmAndamento('desativar', linha.loja_id)">
+                  Desativar
+                </button>
+                <button class="btn small primary" *ngIf="linha.hub_id && !linha.hub_ativo" type="button" (click)="reativarHub(linha)" [disabled]="acaoEmAndamento('reativar', linha.loja_id)">
+                  Reativar
+                </button>
+                <button class="btn small danger" *ngIf="linha.hub_id" type="button" (click)="desvincularHub(linha)" [disabled]="acaoEmAndamento('desvincular', linha.loja_id)">
+                  <i class="bi bi-link-45deg"></i>
+                  Desvincular
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -60,7 +114,7 @@
 
     <ng-template #vazio>
       <div class="empty-state">
-        <i class="bi bi-arrow-repeat"></i>
+        <i class="bi bi-hdd-network"></i>
         <span>{{ loading ? 'Carregando painel...' : 'Nenhuma loja encontrada.' }}</span>
       </div>
     </ng-template>

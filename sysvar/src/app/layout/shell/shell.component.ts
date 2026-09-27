@@ -61,7 +61,7 @@ export class ShellComponent {
             { label: 'Usuários', link: '/config/usuarios', icon: 'bi bi-person-gear', moduloEmpresa: 'operacional' },
             { label: 'Perfis de Acesso', link: '/config/perfis', icon: 'bi bi-shield-lock', moduloEmpresa: 'operacional' },
             { label: 'Agente', link: '/config/agente-local', icon: 'bi bi-pc-display', roles: ['Admin', 'Diretor'] },
-            { label: 'Sincronização Hub', link: '/config/sincronizacao-hub', icon: 'bi bi-arrow-repeat', roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional' },
+            { label: 'Administração Hub', link: '/config/sincronizacao-hub', icon: 'bi bi-hdd-network', roles: ['Admin', 'Diretor'], moduloEmpresa: 'operacional' },
             { label: 'Auditoria', link: '/config/auditoria', icon: 'bi bi-clipboard-pulse', moduloEmpresa: 'auditoria' },
           ]
         },

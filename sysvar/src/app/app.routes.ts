@@ -196,7 +196,7 @@ export const routes: Routes = [
       { path: 'config/perfis', component: PerfisAcessoComponent, data: { moduloEmpresa: 'operacional' } },
       { path: 'config/auditoria', component: AuditoriaComponent, data: { moduloEmpresa: 'auditoria' } },
       { path: 'config/agente-local', component: AgenteLocalComponent, data: { roles: ['Admin', 'Diretor'] } },
-      { path: 'config/sincronizacao-hub', component: HubSincronizacaoComponent, data: { roles: ['Admin', 'Diretor', 'Gerente'], moduloEmpresa: 'operacional' } },
+      { path: 'config/sincronizacao-hub', component: HubSincronizacaoComponent, data: { roles: ['Admin', 'Diretor'], moduloEmpresa: 'operacional' } },
 
       // ⬇️ rota de coleções
 
