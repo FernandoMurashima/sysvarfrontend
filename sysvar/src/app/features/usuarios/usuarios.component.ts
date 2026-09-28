@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 
-import { UsersService } from '../../core/services/users.service';
+import { CredencialPdvStatus, UsersService } from '../../core/services/users.service';
 import { User } from '../../core/models/user';
 
 import { LojasService } from '../../core/services/lojas.service';
@@ -94,6 +94,15 @@ export class UsuariosComponent implements OnInit {
   errorMsg = '';
   excluirModal: User | null = null;
   sessoesModalUser: User | null = null;
+  credencialModalUser: User | null = null;
+  credencialPdv: CredencialPdvStatus | null = null;
+  credencialLoading = false;
+  credencialSaving = false;
+  credencialSubmitted = false;
+  credencialForm = this.fb.group({
+    senha: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(64)]],
+    confirmacao: ['', [Validators.required]],
+  });
   sessoesUsuario: SessaoUsuarioRow[] = [];
   sessoesLoading = false;
   private successTimer: any = null;
@@ -139,6 +148,7 @@ export class UsuariosComponent implements OnInit {
     { key: 'empresa', label: 'Empresa', visible: true, required: false },
     { key: 'loja', label: 'Loja principal', visible: true, required: false },
     { key: 'lojas', label: 'Lojas', visible: true, required: false },
+    { key: 'credencial_pdv', label: 'PDV', visible: true, required: false },
   ];
   editingId: number | null = null;
 
@@ -684,6 +694,7 @@ export class UsuariosComponent implements OnInit {
   editarSelecionado(): void { if (this.selectedUser && this.podeEditarModulo) this.editar(this.selectedUser); }
   excluirSelecionado(): void { if (this.selectedUser && this.podeExcluirModulo) this.excluir(this.selectedUser); }
   sessoesSelecionado(): void { if (this.selectedUser) this.abrirSessoes(this.selectedUser); }
+  credencialPdvSelecionado(): void { if (this.selectedUser && this.podeEditarModulo) this.abrirCredencialPdv(this.selectedUser); }
   toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; this.saveViewPreference(); }
   toggleFilters(): void { this.filtersVisible = !this.filtersVisible; this.saveViewPreference(); }
   restoreViewPreference(): void { localStorage.removeItem(this.viewPrefsKey); localStorage.removeItem('sysvar.list.usuarios.pageSize'); this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.columns = this.columns.map(c => ({ ...c, visible: true })); this.saveColumnsPreference(); this.load(); }
@@ -876,6 +887,131 @@ export class UsuariosComponent implements OnInit {
   fecharSessoesUsuario(): void {
     this.sessoesModalUser = null;
     this.sessoesUsuario = [];
+  }
+
+  abrirCredencialPdv(user: User): void {
+    if (!user.id) return;
+    this.credencialModalUser = user;
+    this.credencialPdv = user.credencial_pdv || null;
+    this.credencialSubmitted = false;
+    this.credencialForm.reset({ senha: '', confirmacao: '' });
+    this.carregarCredencialPdv();
+  }
+
+  carregarCredencialPdv(): void {
+    const user = this.credencialModalUser;
+    if (!user?.id) return;
+    this.credencialLoading = true;
+    this.api.credencialPdv(user.id).subscribe({
+      next: (status) => {
+        this.credencialPdv = status;
+        user.credencial_pdv = status;
+        const listado = this.usuarios.find(u => u.id === user.id);
+        if (listado) listado.credencial_pdv = status;
+        this.credencialLoading = false;
+      },
+      error: () => {
+        this.credencialLoading = false;
+        this.errorMsg = 'Falha ao carregar credencial PDV.';
+      }
+    });
+  }
+
+  salvarCredencialPdv(): void {
+    const user = this.credencialModalUser;
+    if (!user?.id) return;
+    this.credencialSubmitted = true;
+    const raw = this.credencialForm.getRawValue();
+    const confirmacao = this.credencialForm.get('confirmacao');
+    if (confirmacao?.errors?.['divergente']) {
+      const next = { ...confirmacao.errors };
+      delete next['divergente'];
+      confirmacao.setErrors(Object.keys(next).length ? next : null);
+    }
+    if ((raw.senha || '') !== (raw.confirmacao || '')) {
+      confirmacao?.setErrors({ ...(confirmacao.errors || {}), divergente: true });
+    }
+    if (this.credencialForm.invalid) {
+      this.credencialForm.markAllAsTouched();
+      return;
+    }
+    this.credencialSaving = true;
+    this.api.salvarCredencialPdv(user.id, { senha: raw.senha || '', confirmacao: raw.confirmacao || '' }).subscribe({
+      next: (status) => {
+        this.credencialSaving = false;
+        this.credencialSubmitted = false;
+        this.credencialForm.reset({ senha: '', confirmacao: '' });
+        this.credencialPdv = status;
+        user.credencial_pdv = status;
+        const listado = this.usuarios.find(u => u.id === user.id);
+        if (listado) listado.credencial_pdv = status;
+        this.setSuccess('Credencial PDV atualizada.');
+      },
+      error: (err) => {
+        this.credencialSaving = false;
+        this.errorMsg = this.extractError(err) || 'Não foi possível salvar a credencial PDV.';
+      }
+    });
+  }
+
+  removerCredencialPdv(): void {
+    const user = this.credencialModalUser;
+    if (!user?.id || !this.credencialPdv?.configurada) return;
+    if (!window.confirm('Remover a credencial PDV deste usuário?')) return;
+    this.credencialSaving = true;
+    this.api.removerCredencialPdv(user.id).subscribe({
+      next: () => {
+        const status = { configurada: false, habilitada: false, atualizado_em: null };
+        this.credencialSaving = false;
+        this.credencialPdv = status;
+        user.credencial_pdv = status;
+        const listado = this.usuarios.find(u => u.id === user.id);
+        if (listado) listado.credencial_pdv = status;
+        this.setSuccess('Credencial PDV removida.');
+      },
+      error: () => {
+        this.credencialSaving = false;
+        this.errorMsg = 'Não foi possível remover a credencial PDV.';
+      }
+    });
+  }
+
+  fecharCredencialPdv(): void {
+    this.credencialModalUser = null;
+    this.credencialPdv = null;
+    this.credencialSubmitted = false;
+    this.credencialForm.reset({ senha: '', confirmacao: '' });
+  }
+
+  credencialPdvLabel(user: User | null | undefined): string {
+    const credencial = user?.credencial_pdv;
+    if (credencial?.configurada && credencial.habilitada) return 'Configurada';
+    return 'Não configurada';
+  }
+
+  credencialPdvClass(user: User | null | undefined): string {
+    const credencial = user?.credencial_pdv;
+    return credencial?.configurada && credencial.habilitada ? 'active' : 'closed';
+  }
+
+  credencialFormErrors(): string[] {
+    const msgs: string[] = [];
+    const senha = this.credencialForm.get('senha');
+    const confirmacao = this.credencialForm.get('confirmacao');
+    if (senha?.errors?.['required']) msgs.push('Informe a senha PDV.');
+    if (senha?.errors?.['minlength']) msgs.push('Senha PDV deve ter pelo menos 8 caracteres.');
+    if (senha?.errors?.['maxlength']) msgs.push('Senha PDV deve ter no máximo 64 caracteres.');
+    if (confirmacao?.errors?.['required']) msgs.push('Confirme a senha PDV.');
+    if (confirmacao?.errors?.['divergente']) msgs.push('A confirmação da senha PDV não confere.');
+    return msgs;
+  }
+
+  private extractError(err: any): string {
+    const detail = err?.error?.detail;
+    if (detail) return Array.isArray(detail) ? detail.join(' ') : String(detail);
+    const data = err?.error;
+    if (!data || typeof data !== 'object') return '';
+    return Object.values(data).map(v => Array.isArray(v) ? v.join(' ') : String(v)).filter(Boolean).join(' ');
   }
 
   encerrarSessaoUsuario(sessao: SessaoUsuarioRow): void {

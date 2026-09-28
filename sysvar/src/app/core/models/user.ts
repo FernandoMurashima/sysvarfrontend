@@ -38,5 +38,10 @@ export interface User {
   sessao_atual?: { session_id: string; dispositivo_id: string; iniciada_em: string; ultima_atividade_em: string } | null;
   modulos_disponiveis_empresa?: string[];
   permissoes_efetivas?: Record<string, 'NONE' | 'VIEW' | 'EDIT'>;
+  credencial_pdv?: {
+    configurada: boolean;
+    habilitada: boolean;
+    atualizado_em?: string | null;
+  };
   password?: string; // write-only no backend; só enviar em criação/alteração de senha
 }

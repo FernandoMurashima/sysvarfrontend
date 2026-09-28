@@ -4,6 +4,12 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user';
 
+export interface CredencialPdvStatus {
+  configurada: boolean;
+  habilitada: boolean;
+  atualizado_em?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   private http = inject(HttpClient);
@@ -49,5 +55,17 @@ export class UsersService {
   encerrarSessoes(id: number): Observable<any> { return this.http.post<any>(`${this.base}${id}/encerrar-sessoes/`, {}); }
   redefinirSenha(id: number, payload: { nova_senha: string; confirmacao: string; encerrar_sessoes?: boolean }): Observable<any> {
     return this.http.post<any>(`${this.base}${id}/redefinir-senha/`, payload);
+  }
+
+  credencialPdv(id: number): Observable<CredencialPdvStatus> {
+    return this.http.get<CredencialPdvStatus>(`${this.base}${id}/credencial-pdv/`);
+  }
+
+  salvarCredencialPdv(id: number, payload: { senha: string; confirmacao: string }): Observable<CredencialPdvStatus> {
+    return this.http.put<CredencialPdvStatus>(`${this.base}${id}/credencial-pdv/`, payload);
+  }
+
+  removerCredencialPdv(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}${id}/credencial-pdv/`);
   }
 }

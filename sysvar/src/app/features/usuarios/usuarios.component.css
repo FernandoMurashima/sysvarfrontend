@@ -28,4 +28,7 @@
 .session-status.revoked { background: #fee2e2; color: #b91c1c; }
 .session-status.expired { background: #ffedd5; color: #c2410c; }
 .indicator-icon.gray { background: #e2e8f0; color: #475569; }
+.credencial-modal { width: min(620px, calc(100% - 24px)); }
+.credencial-status { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; flex-wrap: wrap; }
+.credencial-status small { color: #64748b; font-size: 12px; }
 @media (max-width: 900px) { .span-4,.span-6,.span-12 { grid-column: 1 / -1; } .permissions-grid { grid-template-columns: 1fr; } }
