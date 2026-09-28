@@ -18,6 +18,7 @@ describe('HubSincronizacaoComponent', () => {
     hub_uuid: 'uuid',
     hub_nome: 'Hub Loja',
     hub_ativo: true,
+    possui_credencial: true,
     hostname: 'HOST',
     versao: '1',
     ultimo_ip: null,
@@ -148,6 +149,59 @@ describe('HubSincronizacaoComponent', () => {
 
     expect(window.confirm).toHaveBeenCalled();
     expect(api.desvincularHub).toHaveBeenCalledWith(1);
+  });
+
+  it('deve exibir acoes para hub ativo com credencial', () => {
+    fixture.componentInstance.linhas = [linha({ hub_ativo: true, possui_credencial: true })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Hub ativo');
+    expect(text).toContain('Desativar');
+    expect(text).toContain('Desvincular');
+    expect(text).not.toContain('Reativar');
+    expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeTrue();
+  });
+
+  it('deve exibir reativar e desvincular para hub desativado com credencial', () => {
+    fixture.componentInstance.linhas = [linha({ hub_ativo: false, possui_credencial: true })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Hub desativado');
+    expect(text).toContain('Reativar');
+    expect(text).toContain('Desvincular');
+    expect(text).not.toContain('Gerar código de ativação');
+    expect(fixture.componentInstance.mostrarAtivacao(fixture.componentInstance.linhas[0])).toBeFalse();
+    expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeFalse();
+  });
+
+  it('deve oferecer nova ativacao para hub desvinculado sem credencial', () => {
+    fixture.componentInstance.linhas = [linha({ hub_ativo: false, possui_credencial: false })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Hub desvinculado');
+    expect(text).toContain('Gerar código de ativação');
+    expect(text).toContain('Nova ativação necessária.');
+    expect(text).not.toContain('Reativar');
+    expect(text).not.toContain('Desvincular');
+    expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeFalse();
+  });
+
+  it('deve oferecer ativacao para loja sem hub', () => {
+    fixture.componentInstance.linhas = [linha({ hub_id: null, hub_uuid: null, hub_ativo: false, possui_credencial: false })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Sem Hub');
+    expect(text).toContain('Gerar código de ativação');
+    expect(text).not.toContain('Reativar');
+    expect(text).not.toContain('Desvincular');
+  });
+
+  it('deve bloquear sincronizacao quando hub nao possui credencial', () => {
+    expect(fixture.componentInstance.podeSincronizar(linha({ hub_ativo: true, possui_credencial: false }))).toBeFalse();
   });
 
   it('nao deve desvincular quando confirmacao for recusada', () => {

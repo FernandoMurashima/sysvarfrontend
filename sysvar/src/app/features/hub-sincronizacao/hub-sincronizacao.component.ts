@@ -150,12 +150,13 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
   }
 
   podeSincronizar(linha: HubSincronizacaoLoja): boolean {
-    return linha.hub_ativo && linha.sincronizacao_status !== 'PENDENTE' && linha.sincronizacao_status !== 'PROCESSANDO';
+    return linha.hub_ativo && linha.possui_credencial && linha.sincronizacao_status !== 'PENDENTE' && linha.sincronizacao_status !== 'PROCESSANDO';
   }
 
   situacaoTexto(linha: HubSincronizacaoLoja): string {
     if (!linha.hub_id) return 'Sem Hub';
-    if (!linha.hub_ativo) return 'Hub inativo';
+    if (!linha.possui_credencial) return 'Hub desvinculado';
+    if (!linha.hub_ativo) return 'Hub desativado';
     if (linha.status_visual === 'VERDE') return 'Sincronizado';
     if (linha.status_visual === 'AMARELO') return linha.sincronizacao_status === 'PROCESSANDO' ? 'Sincronizando' : 'Aguardando';
     return linha.sincronizacao_status === 'ERRO' ? 'Erro' : 'Não sincronizado';
@@ -163,11 +164,13 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
 
   hubSituacaoTexto(linha: HubSincronizacaoLoja): string {
     if (!linha.hub_id) return 'Sem Hub';
-    return linha.hub_ativo ? 'Hub ativo' : 'Hub inativo';
+    if (!linha.possui_credencial) return 'Hub desvinculado';
+    return linha.hub_ativo ? 'Hub ativo' : 'Hub desativado';
   }
 
   hubSituacaoClasse(linha: HubSincronizacaoLoja): string {
     if (!linha.hub_id) return 'muted';
+    if (!linha.possui_credencial) return 'muted';
     return linha.hub_ativo ? 'ok' : 'bad';
   }
 
@@ -180,7 +183,15 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
   }
 
   mostrarAtivacao(linha: HubSincronizacaoLoja): boolean {
-    return !linha.hub_id || !linha.hub_ativo || !!linha.ativacao_pendente;
+    return !linha.hub_id || !linha.possui_credencial || !!linha.ativacao_pendente;
+  }
+
+  podeReativar(linha: HubSincronizacaoLoja): boolean {
+    return !!linha.hub_id && !linha.hub_ativo && linha.possui_credencial;
+  }
+
+  podeDesvincular(linha: HubSincronizacaoLoja): boolean {
+    return !!linha.hub_id && linha.possui_credencial;
   }
 
   private recarregar(): void {

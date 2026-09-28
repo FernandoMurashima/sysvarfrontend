@@ -27,6 +27,7 @@ export interface HubSincronizacaoLoja {
   hub_uuid: string | null;
   hub_nome?: string;
   hub_ativo: boolean;
+  possui_credencial: boolean;
   hostname: string;
   versao: string;
   ultimo_ip: string | null;

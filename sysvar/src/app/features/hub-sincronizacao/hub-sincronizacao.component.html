@@ -83,7 +83,7 @@
                   <i class="bi bi-key"></i>
                   {{ linha.ativacao_pendente ? 'Gerar novo código' : 'Gerar código de ativação' }}
                 </button>
-                <small class="hint" *ngIf="linha.hub_id && !linha.hub_ativo">Use uma nova ativação se a credencial tiver sido invalidada.</small>
+                <small class="hint" *ngIf="linha.hub_id && !linha.possui_credencial">Nova ativação necessária.</small>
               </div>
               <ng-template #semAtivacao>
                 <span class="muted-text">Sem ativação pendente</span>
@@ -95,13 +95,13 @@
                   <i class="bi bi-arrow-repeat"></i>
                   Sincronizar
                 </button>
-                <button class="btn small" *ngIf="linha.hub_id && linha.hub_ativo" type="button" (click)="desativarHub(linha)" [disabled]="acaoEmAndamento('desativar', linha.loja_id)">
+                <button class="btn small" *ngIf="linha.hub_id && linha.hub_ativo && linha.possui_credencial" type="button" (click)="desativarHub(linha)" [disabled]="acaoEmAndamento('desativar', linha.loja_id)">
                   Desativar
                 </button>
-                <button class="btn small primary" *ngIf="linha.hub_id && !linha.hub_ativo" type="button" (click)="reativarHub(linha)" [disabled]="acaoEmAndamento('reativar', linha.loja_id)">
+                <button class="btn small primary" *ngIf="podeReativar(linha)" type="button" (click)="reativarHub(linha)" [disabled]="acaoEmAndamento('reativar', linha.loja_id)">
                   Reativar
                 </button>
-                <button class="btn small danger" *ngIf="linha.hub_id" type="button" (click)="desvincularHub(linha)" [disabled]="acaoEmAndamento('desvincular', linha.loja_id)">
+                <button class="btn small danger" *ngIf="podeDesvincular(linha)" type="button" (click)="desvincularHub(linha)" [disabled]="acaoEmAndamento('desvincular', linha.loja_id)">
                   <i class="bi bi-link-45deg"></i>
                   Desvincular
                 </button>
