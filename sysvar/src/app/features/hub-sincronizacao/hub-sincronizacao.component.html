@@ -331,10 +331,10 @@
         <button class="modal-close" type="button" aria-label="Fechar código de pareamento" (click)="fecharPareamento()">×</button>
       </header>
       <dl class="hub-details">
-        <div><dt>Terminal</dt><dd>{{ comando.resultado?.['terminal']?.codigo || comando.payload?.['codigo'] || '-' }}</dd></div>
-        <div><dt>Expiração</dt><dd>{{ comando.resultado?.['expira_em'] ? (comando.resultado?.['expira_em'] | date:'dd/MM/yyyy HH:mm') : '-' }}</dd></div>
+        <div><dt>Terminal</dt><dd>{{ comando.resultado['terminal']?.codigo || comando.payload['codigo'] || '-' }}</dd></div>
+        <div><dt>Expiração</dt><dd>{{ comando.resultado['expira_em'] ? (comando.resultado['expira_em'] | date:'dd/MM/yyyy HH:mm') : '-' }}</dd></div>
       </dl>
-      <code class="modal-code">{{ comando.resultado?.['codigo'] }}</code>
+      <code class="modal-code">{{ comando.resultado['codigo'] }}</code>
       <footer>
         <button class="btn small" type="button" (click)="copiarPareamento()">Copiar</button>
         <button class="btn" type="button" (click)="fecharPareamento()">Fechar</button>
