@@ -17,7 +17,7 @@
   <section class="activation-code" *ngIf="codigoGerado as ativacao">
     <div>
       <strong>Código temporário de ativação</strong>
-      <span>{{ ativacao.loja_nome }} · expira em {{ ativacao.expira_em | date:'short' }}</span>
+      <span>{{ ativacao.loja_nome }} · expira em {{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</span>
     </div>
     <code>{{ ativacao.codigo }}</code>
     <button class="btn small" type="button" (click)="copiarCodigo()">
@@ -45,36 +45,43 @@
         <tbody>
           <tr *ngFor="let linha of linhas">
             <td>
-              <span class="state">
-                <span class="dot" [class.ok]="linha.status_visual === 'VERDE'" [class.warn]="linha.status_visual === 'AMARELO'" [class.bad]="linha.status_visual === 'VERMELHO'"></span>
-                <span>{{ situacaoTexto(linha) }}</span>
-              </span>
-              <small>
+              <div class="status-line">
+                <span class="state">
+                  <span class="dot" [class.ok]="linha.status_visual === 'VERDE'" [class.warn]="linha.status_visual === 'AMARELO'" [class.bad]="linha.status_visual === 'VERMELHO'"></span>
+                  <span>{{ situacaoTexto(linha) }}</span>
+                </span>
                 <span class="badge" [class.ok]="hubSituacaoClasse(linha) === 'ok'" [class.bad]="hubSituacaoClasse(linha) === 'bad'" [class.muted]="hubSituacaoClasse(linha) === 'muted'">
                   {{ hubSituacaoTexto(linha) }}
                 </span>
-              </small>
-              <small class="error-text" *ngIf="linha.mensagem_erro">{{ linha.mensagem_erro }}</small>
+              </div>
+              <small class="error-text" *ngIf="linha.mensagem_erro" [title]="linha.mensagem_erro">{{ linha.mensagem_erro }}</small>
             </td>
             <td>{{ linha.loja_nome }}</td>
             <td>
-              <strong>{{ linha.hub_nome || (linha.hub_id ? 'Sysvar Hub' : 'Sem Hub') }}</strong>
-              <small *ngIf="linha.hub_uuid">{{ linha.hub_uuid }}</small>
-              <small *ngIf="linha.hostname">Host: {{ linha.hostname }}</small>
-              <small>Versão: {{ linha.versao || '-' }}</small>
+              <span class="hub-name">
+                <strong>{{ linha.hub_nome || (linha.hub_id ? 'Sysvar Hub' : 'Sem Hub') }}</strong>
+                <button
+                  *ngIf="linha.hub_id"
+                  class="info-button"
+                  type="button"
+                  aria-label="Informações técnicas do Hub"
+                  [title]="'UUID: ' + (linha.hub_uuid || '-') + '\nHost: ' + (linha.hostname || '-') + '\nVersão: ' + (linha.versao || '-')"
+                >
+                  <i class="bi bi-info-circle"></i>
+                </button>
+              </span>
             </td>
             <td>
               <strong>{{ linha.ultimo_ip || '-' }}</strong>
-              <small>Último IP</small>
             </td>
-            <td>{{ linha.ultimo_contato ? (linha.ultimo_contato | date:'short') : '-' }}</td>
-            <td>{{ ultimaSincronizacao(linha) ? (ultimaSincronizacao(linha) | date:'short') : '-' }}</td>
+            <td>{{ linha.ultimo_contato ? (linha.ultimo_contato | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
+            <td>{{ ultimaSincronizacao(linha) ? (ultimaSincronizacao(linha) | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
             <td>{{ linha.etapa_atual || '-' }}</td>
             <td>
               <div class="activation-cell" *ngIf="mostrarAtivacao(linha); else semAtivacao">
                 <ng-container *ngIf="linha.ativacao_pendente as ativacao">
                   <strong>{{ ativacao.estado }}</strong>
-                  <small>Prefixo {{ ativacao.codigo_prefixo }} · expira {{ ativacao.expira_em | date:'short' }}</small>
+                  <small>Prefixo {{ ativacao.codigo_prefixo }} · expira {{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</small>
                   <button class="btn small" type="button" (click)="revogarAtivacao(linha)" [disabled]="acaoEmAndamento('revogar', linha.loja_id)">
                     Revogar
                   </button>

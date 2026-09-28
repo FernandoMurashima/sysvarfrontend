@@ -152,15 +152,48 @@ describe('HubSincronizacaoComponent', () => {
   });
 
   it('deve exibir acoes para hub ativo com credencial', () => {
-    fixture.componentInstance.linhas = [linha({ hub_ativo: true, possui_credencial: true })];
+    fixture.componentInstance.linhas = [linha({
+      hub_ativo: true,
+      possui_credencial: true,
+      status_visual: 'VERDE',
+      sincronizacao_status: 'CONCLUIDA',
+      ultimo_ip: '127.0.0.1',
+      ultimo_contato: '2026-09-28T09:20:00-03:00',
+      concluido_em: '2026-09-28T09:21:00-03:00',
+    })];
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Sincronizado');
     expect(text).toContain('Hub ativo');
+    expect(text).toContain('Sincronizar');
     expect(text).toContain('Desativar');
     expect(text).toContain('Desvincular');
     expect(text).not.toContain('Reativar');
+    expect(text).toContain('28/09/2026 09:20');
+    expect(text).toContain('28/09/2026 09:21');
+    expect(text).toContain('127.0.0.1');
+    expect(text).not.toContain('Último IP');
     expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeTrue();
+  });
+
+  it('deve manter uuid host e versao apenas no tooltip tecnico do hub', () => {
+    fixture.componentInstance.linhas = [linha({
+      hub_uuid: 'uuid-tecnico',
+      hostname: 'HOST-LOJA',
+      versao: '2.1.0',
+    })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    const infoButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.info-button');
+    expect(infoButton).withContext('botao de informacoes tecnicas').not.toBeNull();
+    expect(infoButton?.title).toContain('UUID: uuid-tecnico');
+    expect(infoButton?.title).toContain('Host: HOST-LOJA');
+    expect(infoButton?.title).toContain('Versão: 2.1.0');
+    expect(text).not.toContain('uuid-tecnico');
+    expect(text).not.toContain('Host: HOST-LOJA');
+    expect(text).not.toContain('Versão: 2.1.0');
   });
 
   it('deve exibir reativar e desvincular para hub desativado com credencial', () => {
@@ -198,6 +231,45 @@ describe('HubSincronizacaoComponent', () => {
     expect(text).toContain('Gerar código de ativação');
     expect(text).not.toContain('Reativar');
     expect(text).not.toContain('Desvincular');
+  });
+
+  it('deve formatar datas de ativacao pendente e codigo gerado em formato brasileiro', () => {
+    fixture.componentInstance.codigoGerado = {
+      id: 10,
+      loja_id: 1,
+      loja_nome: 'Loja',
+      empresa_id: 1,
+      codigo_prefixo: 'ABCD',
+      codigo: 'ABCD-EFGH-IJKL',
+      criada_em: '2026-09-28T09:00:00-03:00',
+      expira_em: '2026-09-28T09:20:00-03:00',
+      estado: 'PENDENTE',
+      hub_id: null,
+    } as HubAtivacaoCriada;
+    fixture.componentInstance.linhas = [linha({
+      hub_id: null,
+      hub_uuid: null,
+      hub_ativo: false,
+      possui_credencial: false,
+      ativacao_pendente: {
+        id: 5,
+        loja_id: 1,
+        loja_nome: 'Loja',
+        empresa_id: 1,
+        codigo_prefixo: 'WXYZ',
+        criada_em: '2026-09-28T09:00:00-03:00',
+        expira_em: '2026-09-28T09:30:00-03:00',
+        estado: 'PENDENTE',
+        hub_id: null,
+      },
+    })];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('28/09/2026 09:20');
+    expect(text).toContain('28/09/2026 09:30');
+    expect(text).not.toContain('AM');
+    expect(text).not.toContain('PM');
   });
 
   it('deve bloquear sincronizacao quando hub nao possui credencial', () => {
