@@ -24,6 +24,7 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
   errorMsg = '';
   successMsg = '';
   codigoGerado: HubAtivacaoCriada | null = null;
+  hubDetalhe: HubSincronizacaoLoja | null = null;
 
   ngOnInit(): void {
     this.polling = interval(10000).pipe(
@@ -192,6 +193,15 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
 
   podeDesvincular(linha: HubSincronizacaoLoja): boolean {
     return !!linha.hub_id && linha.possui_credencial;
+  }
+
+  abrirDetalhesHub(linha: HubSincronizacaoLoja): void {
+    if (!linha.hub_id) return;
+    this.hubDetalhe = linha;
+  }
+
+  fecharDetalhesHub(): void {
+    this.hubDetalhe = null;
   }
 
   private recarregar(): void {

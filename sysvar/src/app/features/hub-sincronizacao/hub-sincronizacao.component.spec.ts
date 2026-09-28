@@ -182,7 +182,7 @@ describe('HubSincronizacaoComponent', () => {
     expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeTrue();
   });
 
-  it('deve manter uuid host e versao apenas no tooltip tecnico do hub', () => {
+  it('deve mostrar hub existente como nome clicavel sem expor dados tecnicos na linha', () => {
     fixture.componentInstance.linhas = [linha({
       hub_uuid: 'uuid-tecnico',
       hostname: 'HOST-LOJA',
@@ -191,14 +191,48 @@ describe('HubSincronizacaoComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
-    const infoButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.info-button');
-    expect(infoButton).withContext('botao de informacoes tecnicas').not.toBeNull();
-    expect(infoButton?.title).toContain('UUID: uuid-tecnico');
-    expect(infoButton?.title).toContain('Host: HOST-LOJA');
-    expect(infoButton?.title).toContain('Versão: 2.1.0');
+    const hubButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.hub-link');
+    expect(hubButton).withContext('nome do hub clicavel').not.toBeNull();
+    expect(hubButton?.textContent).toContain('Hub Loja');
+    expect(fixture.nativeElement.querySelector('.info-button')).toBeNull();
     expect(text).not.toContain('uuid-tecnico');
     expect(text).not.toContain('Host: HOST-LOJA');
     expect(text).not.toContain('Versão: 2.1.0');
+  });
+
+  it('deve abrir e fechar modal com informacoes tecnicas do hub', () => {
+    fixture.componentInstance.linhas = [linha({
+      loja_nome: 'Loja Barra',
+      hub_nome: '',
+      hub_uuid: 'bb2c6672-165b-4512-bcb1-3aed8a36102d',
+      hostname: 'TakeshiViper',
+      versao: '0.1.0',
+      ultimo_ip: '127.0.0.1',
+      ultimo_contato: '2026-09-28T09:28:00-03:00',
+    })];
+    fixture.detectChanges();
+
+    const hubButton: HTMLButtonElement = fixture.nativeElement.querySelector('.hub-link');
+    hubButton.click();
+    fixture.detectChanges();
+
+    const dialog: HTMLElement | null = fixture.nativeElement.querySelector('[role="dialog"]');
+    expect(dialog).withContext('dialog aberto').not.toBeNull();
+    const dialogText = dialog?.textContent || '';
+    expect(dialogText).toContain('Informações do Sysvar Hub');
+    expect(dialogText).toContain('Loja Barra');
+    expect(dialogText).toContain('Sysvar Hub');
+    expect(dialogText).toContain('bb2c6672-165b-4512-bcb1-3aed8a36102d');
+    expect(dialogText).toContain('TakeshiViper');
+    expect(dialogText).toContain('0.1.0');
+    expect(dialogText).toContain('127.0.0.1');
+    expect(dialogText).toContain('28/09/2026 09:28');
+
+    const closeButton: HTMLButtonElement | null = fixture.nativeElement.querySelector('.hub-modal footer .btn');
+    closeButton?.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('deve exibir reativar e desvincular para hub desativado com credencial', () => {
@@ -233,6 +267,7 @@ describe('HubSincronizacaoComponent', () => {
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Sem Hub');
+    expect(fixture.nativeElement.querySelector('.hub-link')).toBeNull();
     expect(text).toContain('Gerar código de ativação');
     expect(text).not.toContain('Reativar');
     expect(text).not.toContain('Desvincular');

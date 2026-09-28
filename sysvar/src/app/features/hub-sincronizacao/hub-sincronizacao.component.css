@@ -139,22 +139,26 @@ td small {
   max-width: 240px;
 }
 
-.info-button {
-  align-items: center;
+.hub-link {
   background: transparent;
   border: 0;
-  color: #64748b;
-  cursor: help;
-  display: inline-flex;
-  font-size: 14px;
-  height: 24px;
-  justify-content: center;
+  border-radius: 4px;
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
   padding: 0;
-  width: 24px;
+  text-align: left;
 }
 
-.info-button i {
-  margin: 0;
+.hub-link:hover {
+  color: #0f62fe;
+  text-decoration: underline;
+}
+
+.hub-link:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 3px;
 }
 
 .btn i {
@@ -189,6 +193,87 @@ td small {
   gap: 10px;
   color: #64748b;
   padding: 18px 0;
+}
+
+.hub-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, .34);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.hub-modal {
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+  color: #0f172a;
+  max-width: 620px;
+  padding: 16px;
+  width: min(100%, 620px);
+}
+
+.hub-modal header,
+.hub-modal footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hub-modal h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.modal-close {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 20px;
+  font-weight: 700;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
+  width: 32px;
+}
+
+.hub-details {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.hub-details div {
+  align-items: center;
+  border-bottom: 1px solid #edf2f7;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 150px minmax(0, 1fr);
+  min-height: 34px;
+  padding-bottom: 8px;
+}
+
+.hub-details dt {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.hub-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hub-modal footer {
+  justify-content: flex-end;
 }
 
 @media (max-width: 760px) {

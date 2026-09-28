@@ -59,16 +59,12 @@
             <td>{{ linha.loja_nome }}</td>
             <td>
               <span class="hub-name">
-                <strong>{{ linha.hub_nome || (linha.hub_id ? 'Sysvar Hub' : 'Sem Hub') }}</strong>
-                <button
-                  *ngIf="linha.hub_id"
-                  class="info-button"
-                  type="button"
-                  aria-label="Informações técnicas do Hub"
-                  [title]="'UUID: ' + (linha.hub_uuid || '-') + '\nHost: ' + (linha.hostname || '-') + '\nVersão: ' + (linha.versao || '-')"
-                >
-                  <i class="bi bi-info-circle"></i>
+                <button *ngIf="linha.hub_id; else semHubNome" class="hub-link" type="button" (click)="abrirDetalhesHub(linha)">
+                  {{ linha.hub_nome || 'Sysvar Hub' }}
                 </button>
+                <ng-template #semHubNome>
+                  <strong>Sem Hub</strong>
+                </ng-template>
               </span>
             </td>
             <td>
@@ -126,4 +122,55 @@
       </div>
     </ng-template>
   </section>
+
+  <div class="hub-modal-backdrop" *ngIf="hubDetalhe as hub" (click)="fecharDetalhesHub()" (keydown.escape)="fecharDetalhesHub()">
+    <section
+      class="hub-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hub-detalhe-title"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+    >
+      <header>
+        <h2 id="hub-detalhe-title">Informações do Sysvar Hub</h2>
+        <button class="modal-close" type="button" aria-label="Fechar informações do Hub" (click)="fecharDetalhesHub()">×</button>
+      </header>
+
+      <dl class="hub-details">
+        <div>
+          <dt>Loja</dt>
+          <dd>{{ hub.loja_nome }}</dd>
+        </div>
+        <div>
+          <dt>Nome</dt>
+          <dd>{{ hub.hub_nome || 'Sysvar Hub' }}</dd>
+        </div>
+        <div>
+          <dt>UUID do Hub</dt>
+          <dd>{{ hub.hub_uuid || '-' }}</dd>
+        </div>
+        <div>
+          <dt>Host</dt>
+          <dd>{{ hub.hostname || '-' }}</dd>
+        </div>
+        <div>
+          <dt>Versão</dt>
+          <dd>{{ hub.versao || '-' }}</dd>
+        </div>
+        <div>
+          <dt>Último IP</dt>
+          <dd>{{ hub.ultimo_ip || '-' }}</dd>
+        </div>
+        <div>
+          <dt>Último contato</dt>
+          <dd>{{ hub.ultimo_contato ? (hub.ultimo_contato | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+        </div>
+      </dl>
+
+      <footer>
+        <button class="btn" type="button" (click)="fecharDetalhesHub()">Fechar</button>
+      </footer>
+    </section>
+  </div>
 </div>
