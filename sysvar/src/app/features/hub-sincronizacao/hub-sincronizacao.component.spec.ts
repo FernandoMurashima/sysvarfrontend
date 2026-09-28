@@ -170,6 +170,11 @@ describe('HubSincronizacaoComponent', () => {
     expect(text).toContain('Desativar');
     expect(text).toContain('Desvincular');
     expect(text).not.toContain('Reativar');
+    const actionsCell: HTMLTableCellElement | null = fixture.nativeElement.querySelector('td.actions-col');
+    expect(actionsCell).withContext('celula de acoes com largura reservada').not.toBeNull();
+    expect(actionsCell?.textContent).toContain('Sincronizar');
+    expect(actionsCell?.textContent).toContain('Desativar');
+    expect(actionsCell?.textContent).toContain('Desvincular');
     expect(text).toContain('28/09/2026 09:20');
     expect(text).toContain('28/09/2026 09:21');
     expect(text).toContain('127.0.0.1');

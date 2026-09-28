@@ -9,7 +9,13 @@
 }
 
 .table {
+  table-layout: auto;
   min-width: 1180px;
+}
+
+.actions-col {
+  min-width: 300px;
+  width: 300px;
 }
 
 .table th,

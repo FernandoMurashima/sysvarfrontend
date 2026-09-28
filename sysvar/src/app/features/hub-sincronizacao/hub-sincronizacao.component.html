@@ -39,7 +39,7 @@
             <th>Última sincronização</th>
             <th>Etapa</th>
             <th>Ativação</th>
-            <th>Ações</th>
+            <th class="actions-col">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -96,7 +96,7 @@
                 <span class="muted-text">Sem ativação pendente</span>
               </ng-template>
             </td>
-            <td>
+            <td class="actions-col">
               <div class="actions-stack">
                 <button class="btn small" type="button" (click)="sincronizarLoja(linha)" [disabled]="!podeSincronizar(linha) || syncingLojaId === linha.loja_id">
                   <i class="bi bi-arrow-repeat"></i>
