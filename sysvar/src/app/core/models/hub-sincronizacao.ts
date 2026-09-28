@@ -43,6 +43,36 @@ export interface HubSincronizacaoLoja {
   mensagem_erro: string;
   status_visual: HubSincronizacaoStatusVisual;
   ativacao_pendente?: HubAtivacaoAdmin | null;
+  caixas?: HubCaixaOpcao[];
+  hub_estado?: string;
+  configuracao_estado?: string;
+  pareamento_estado?: string;
+  total_terminais?: number;
+  terminais_ativos?: number;
+  terminais_pareados?: number;
+  comando_administrativo_ativo?: HubComandoAdministrativo | null;
+  ultimo_comando_configuracao?: HubComandoAdministrativo | null;
+  ultimo_comando_pareamento?: HubComandoAdministrativo | null;
+}
+
+export interface HubCaixaOpcao {
+  id: number;
+  codigo: string;
+  descricao: string;
+  ativo: boolean;
+}
+
+export interface HubComandoAdministrativo {
+  id: number;
+  tipo: 'CONFIGURAR_TERMINAL' | 'GERAR_PAREAMENTO';
+  payload: Record<string, any>;
+  resultado: Record<string, any>;
+  status: 'PENDENTE' | 'PROCESSANDO' | 'CONCLUIDO' | 'ERRO';
+  mensagem_erro: string;
+  solicitado_em: string;
+  iniciado_em: string | null;
+  concluido_em: string | null;
+  atualizado_em: string;
 }
 
 export interface HubSnapshotOperacional {
@@ -113,4 +143,11 @@ export interface HubAdministracaoAcaoResultado {
   empresa_id: number;
   ativo: boolean;
   possui_credencial: boolean;
+}
+
+export interface HubConfigurarTerminalPayload {
+  codigo: string;
+  nome: string;
+  caixa_retaguarda_id: number | null;
+  hostname?: string;
 }

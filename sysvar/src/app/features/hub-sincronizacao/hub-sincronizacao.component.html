@@ -14,18 +14,6 @@
   <div *ngIf="errorMsg" class="alert error">{{ errorMsg }}</div>
   <div *ngIf="successMsg" class="alert success">{{ successMsg }}</div>
 
-  <section class="activation-code" *ngIf="codigoGerado as ativacao">
-    <div>
-      <strong>Código temporário de ativação</strong>
-      <span>{{ ativacao.loja_nome }} · expira em {{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</span>
-    </div>
-    <code>{{ ativacao.codigo }}</code>
-    <button class="btn small" type="button" (click)="copiarCodigo()">
-      <i class="bi bi-clipboard"></i>
-      Copiar
-    </button>
-  </section>
-
   <section class="panel">
     <div class="table-wrap" *ngIf="linhas.length > 0; else vazio">
       <table class="table">
@@ -34,11 +22,9 @@
             <th>Situação</th>
             <th>Loja</th>
             <th>Hub</th>
-            <th>Rede</th>
-            <th>Último contato</th>
-            <th>Última sincronização</th>
-            <th>Etapa</th>
             <th>Ativação</th>
+            <th>Configuração</th>
+            <th>Pareamento</th>
             <th class="actions-col">Ações</th>
           </tr>
         </thead>
@@ -68,16 +54,10 @@
               </span>
             </td>
             <td>
-              <strong>{{ linha.ultimo_ip || '-' }}</strong>
-            </td>
-            <td>{{ linha.ultimo_contato ? (linha.ultimo_contato | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-            <td>{{ ultimaSincronizacao(linha) ? (ultimaSincronizacao(linha) | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-            <td>{{ linha.etapa_atual || '-' }}</td>
-            <td>
-              <div class="activation-cell" *ngIf="mostrarAtivacao(linha); else semAtivacao">
+              <div class="activation-cell" *ngIf="mostrarAtivacao(linha); else ativado">
                 <ng-container *ngIf="linha.ativacao_pendente as ativacao">
                   <strong>{{ ativacao.estado }}</strong>
-                  <small>Prefixo {{ ativacao.codigo_prefixo }} · expira {{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</small>
+                  <small>expira {{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</small>
                   <button class="btn small" type="button" (click)="revogarAtivacao(linha)" [disabled]="acaoEmAndamento('revogar', linha.loja_id)">
                     Revogar
                   </button>
@@ -88,9 +68,34 @@
                 </button>
                 <small class="hint" *ngIf="linha.hub_id && !linha.possui_credencial">Nova ativação necessária.</small>
               </div>
-              <ng-template #semAtivacao>
-                <span class="muted-text">Sem ativação pendente</span>
+              <ng-template #ativado>
+                <span class="badge ok">Ativado ✓</span>
               </ng-template>
+            </td>
+            <td>
+              <div class="flow-cell">
+                <span class="badge" [class.ok]="linha.configuracao_estado === 'CONFIGURADO'" [class.warn]="linha.configuracao_estado === 'AGUARDANDO' || linha.configuracao_estado === 'CONFIGURANDO'" [class.bad]="linha.configuracao_estado === 'ERRO'" [class.muted]="linha.configuracao_estado === 'NAO_DISPONIVEL' || linha.configuracao_estado === 'NAO_CONFIGURADO'">
+                  {{ configuracaoTexto(linha) }}
+                </span>
+                <button class="btn small" type="button" (click)="abrirConfiguracao(linha)" [disabled]="!podeConfigurar(linha) || acaoEmAndamento('configurar', linha.loja_id)">
+                  Configurar
+                </button>
+                <small class="error-text" *ngIf="linha.ultimo_comando_configuracao?.status === 'ERRO'">{{ linha.ultimo_comando_configuracao?.mensagem_erro }}</small>
+              </div>
+            </td>
+            <td>
+              <div class="flow-cell">
+                <span class="badge" [class.ok]="linha.pareamento_estado === 'PAREADO'" [class.warn]="linha.pareamento_estado === 'CODIGO_SOLICITADO' || linha.pareamento_estado === 'CODIGO_DISPONIVEL'" [class.bad]="linha.pareamento_estado === 'ERRO'" [class.muted]="linha.pareamento_estado === 'NAO_DISPONIVEL' || linha.pareamento_estado === 'NAO_PAREADO'">
+                  {{ pareamentoResumo(linha) }}
+                </span>
+                <button class="btn small" type="button" (click)="solicitarPareamento(linha)" [disabled]="!podeGerarPareamento(linha) || acaoEmAndamento('parear', linha.loja_id)">
+                  Gerar código de pareamento
+                </button>
+                <button class="btn small" *ngIf="linha.ultimo_comando_pareamento?.status === 'CONCLUIDO' && linha.pareamento_estado !== 'PAREADO'" type="button" (click)="codigoPareamento = linha.ultimo_comando_pareamento || null">
+                  Ver código
+                </button>
+                <small class="error-text" *ngIf="linha.ultimo_comando_pareamento?.status === 'ERRO'">{{ linha.ultimo_comando_pareamento?.mensagem_erro }}</small>
+              </div>
             </td>
             <td class="actions-col">
               <div class="actions-stack">
@@ -170,6 +175,42 @@
 
       <section class="operational-panel">
         <div class="operational-header">
+          <h3>Sincronização</h3>
+        </div>
+        <dl class="hub-details">
+          <div>
+            <dt>Status</dt>
+            <dd>{{ hub.sincronizacao_status || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Última sincronização</dt>
+            <dd>{{ ultimaSincronizacao(hub) ? (ultimaSincronizacao(hub) | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Solicitado em</dt>
+            <dd>{{ hub.solicitado_em ? (hub.solicitado_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Iniciado em</dt>
+            <dd>{{ hub.iniciado_em ? (hub.iniciado_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Concluído em</dt>
+            <dd>{{ hub.concluido_em ? (hub.concluido_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Etapa</dt>
+            <dd>{{ hub.etapa_atual || '-' }}</dd>
+          </div>
+          <div *ngIf="hub.mensagem_erro">
+            <dt>Mensagem</dt>
+            <dd>{{ hub.mensagem_erro }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="operational-panel">
+        <div class="operational-header">
           <h3>Terminais</h3>
           <span *ngIf="hub.snapshot_operacional_em">Atualizado em {{ hub.snapshot_operacional_em | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
@@ -239,6 +280,64 @@
 
       <footer>
         <button class="btn" type="button" (click)="fecharDetalhesHub()">Fechar</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="hub-modal-backdrop" *ngIf="codigoGerado as ativacao" (click)="fecharCodigoAtivacao()">
+    <section class="hub-modal small-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <header>
+        <h2>Código de ativação</h2>
+        <button class="modal-close" type="button" aria-label="Fechar código de ativação" (click)="fecharCodigoAtivacao()">×</button>
+      </header>
+      <dl class="hub-details">
+        <div><dt>Loja</dt><dd>{{ ativacao.loja_nome }}</dd></div>
+        <div><dt>Expiração</dt><dd>{{ ativacao.expira_em | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+      </dl>
+      <code class="modal-code">{{ ativacao.codigo }}</code>
+      <footer>
+        <button class="btn small" type="button" (click)="copiarCodigo()">Copiar</button>
+        <button class="btn" type="button" (click)="fecharCodigoAtivacao()">Fechar</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="hub-modal-backdrop" *ngIf="configuracaoHub as hub" (click)="fecharConfiguracao()">
+    <section class="hub-modal small-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <header>
+        <h2>Configuração do terminal</h2>
+        <button class="modal-close" type="button" aria-label="Fechar configuração" (click)="fecharConfiguracao()">×</button>
+      </header>
+      <label class="form-field">Código do terminal <input [(ngModel)]="formTerminal.codigo"></label>
+      <label class="form-field">Nome do terminal <input [(ngModel)]="formTerminal.nome"></label>
+      <label class="form-field">Caixa
+        <select [(ngModel)]="formTerminal.caixa_retaguarda_id">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let caixa of hub.caixas || []" [ngValue]="caixa.id">{{ caixa.codigo }} · {{ caixa.descricao }}</option>
+        </select>
+      </label>
+      <label class="form-field">Hostname opcional <input [(ngModel)]="formTerminal.hostname"></label>
+      <footer>
+        <button class="btn primary" type="button" (click)="salvarConfiguracao()" [disabled]="acaoEmAndamento('configurar', hub.loja_id)">Enviar</button>
+        <button class="btn" type="button" (click)="fecharConfiguracao()">Fechar</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="hub-modal-backdrop" *ngIf="codigoPareamento as comando" (click)="fecharPareamento()">
+    <section class="hub-modal small-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <header>
+        <h2>Código de pareamento</h2>
+        <button class="modal-close" type="button" aria-label="Fechar código de pareamento" (click)="fecharPareamento()">×</button>
+      </header>
+      <dl class="hub-details">
+        <div><dt>Terminal</dt><dd>{{ comando.resultado?.['terminal']?.codigo || comando.payload?.['codigo'] || '-' }}</dd></div>
+        <div><dt>Expiração</dt><dd>{{ comando.resultado?.['expira_em'] ? (comando.resultado?.['expira_em'] | date:'dd/MM/yyyy HH:mm') : '-' }}</dd></div>
+      </dl>
+      <code class="modal-code">{{ comando.resultado?.['codigo'] }}</code>
+      <footer>
+        <button class="btn small" type="button" (click)="copiarPareamento()">Copiar</button>
+        <button class="btn" type="button" (click)="fecharPareamento()">Fechar</button>
       </footer>
     </section>
   </div>

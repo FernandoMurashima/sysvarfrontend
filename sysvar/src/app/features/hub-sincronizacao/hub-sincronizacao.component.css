@@ -118,6 +118,11 @@
   color: #991b1b;
 }
 
+.badge.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .badge.muted {
   background: #f1f5f9;
   color: #475569;
@@ -178,6 +183,7 @@ td small {
 }
 
 .activation-cell,
+.flow-cell,
 .actions-stack {
   align-items: center;
   display: flex;
@@ -185,6 +191,46 @@ td small {
   flex-wrap: nowrap;
   gap: 6px;
   min-width: max-content;
+}
+
+.flow-cell {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.small-modal {
+  max-width: 520px;
+}
+
+.modal-code {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 12px 0;
+  padding: 10px;
+  text-align: center;
+}
+
+.form-field {
+  color: #334155;
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.form-field input,
+.form-field select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font: inherit;
+  min-height: 34px;
+  padding: 6px 8px;
 }
 
 .empty-state {

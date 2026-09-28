@@ -7,6 +7,8 @@ import {
   HubAdministracaoAcaoResultado,
   HubAtivacaoAdmin,
   HubAtivacaoCriada,
+  HubComandoAdministrativo,
+  HubConfigurarTerminalPayload,
   HubSincronizacaoLoja,
   HubSincronizacaoSolicitacao,
   HubSincronizacaoTodasResultado,
@@ -51,6 +53,14 @@ export class HubSincronizacaoService {
 
   desvincularHub(hubId: number): Observable<HubAdministracaoAcaoResultado> {
     return this.http.post<HubAdministracaoAcaoResultado>(`${this.administracaoUrl}${hubId}/desvincular/`, {});
+  }
+
+  configurarTerminal(hubId: number, payload: HubConfigurarTerminalPayload): Observable<HubComandoAdministrativo> {
+    return this.http.post<HubComandoAdministrativo>(`${this.administracaoUrl}${hubId}/terminais/configurar/`, payload);
+  }
+
+  gerarPareamento(hubId: number, payload: { terminal_uuid?: string | null; codigo?: string | null }): Observable<HubComandoAdministrativo> {
+    return this.http.post<HubComandoAdministrativo>(`${this.administracaoUrl}${hubId}/terminais/pareamento/`, payload);
   }
 
   sincronizarLoja(lojaId: number): Observable<HubSincronizacaoSolicitacao> {

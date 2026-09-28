@@ -177,9 +177,9 @@ describe('HubSincronizacaoComponent', () => {
     expect(actionsCell?.textContent).toContain('Sincronizar');
     expect(actionsCell?.textContent).toContain('Desativar');
     expect(actionsCell?.textContent).toContain('Desvincular');
-    expect(text).toContain('28/09/2026 09:20');
-    expect(text).toContain('28/09/2026 09:21');
-    expect(text).toContain('127.0.0.1');
+    expect(text).not.toContain('28/09/2026 09:20');
+    expect(text).not.toContain('28/09/2026 09:21');
+    expect(text).not.toContain('127.0.0.1');
     expect(text).not.toContain('Último IP');
     expect(fixture.componentInstance.podeSincronizar(fixture.componentInstance.linhas[0])).toBeTrue();
   });

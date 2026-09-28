@@ -1,14 +1,15 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { EMPTY, Subscription, catchError, finalize, interval, startWith, switchMap } from 'rxjs';
 
-import { HubAtivacaoCriada, HubSincronizacaoLoja, HubTerminalOperacional } from '../../core/models/hub-sincronizacao';
+import { HubAtivacaoCriada, HubComandoAdministrativo, HubConfigurarTerminalPayload, HubSincronizacaoLoja, HubTerminalOperacional } from '../../core/models/hub-sincronizacao';
 import { HubSincronizacaoService } from '../../core/services/hub-sincronizacao.service';
 
 @Component({
   selector: 'app-hub-sincronizacao',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, FormsModule],
   templateUrl: './hub-sincronizacao.component.html',
   styleUrls: ['./hub-sincronizacao.component.css'],
 })
@@ -25,6 +26,9 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
   successMsg = '';
   codigoGerado: HubAtivacaoCriada | null = null;
   hubDetalhe: HubSincronizacaoLoja | null = null;
+  configuracaoHub: HubSincronizacaoLoja | null = null;
+  codigoPareamento: HubComandoAdministrativo | null = null;
+  formTerminal: HubConfigurarTerminalPayload = { codigo: '', nome: '', caixa_retaguarda_id: null, hostname: '' };
 
   ngOnInit(): void {
     this.polling = interval(10000).pipe(
@@ -92,7 +96,6 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: ativacao => {
         this.codigoGerado = ativacao;
-        this.successMsg = 'Código de ativação gerado.';
         this.recarregar();
       },
       error: err => this.errorMsg = this.backendError(err, 'Não foi possível gerar o código de ativação.'),
@@ -150,6 +153,77 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
     );
   }
 
+  fecharCodigoAtivacao(): void {
+    this.codigoGerado = null;
+  }
+
+  abrirConfiguracao(linha: HubSincronizacaoLoja): void {
+    if (!this.podeConfigurar(linha)) return;
+    const terminal = this.terminalPreferencial(linha);
+    this.configuracaoHub = linha;
+    this.formTerminal = {
+      codigo: terminal?.codigo || '',
+      nome: terminal?.nome || '',
+      caixa_retaguarda_id: terminal?.caixa?.id || linha.caixas?.[0]?.id || null,
+      hostname: terminal?.hostname || '',
+    };
+  }
+
+  fecharConfiguracao(): void {
+    this.configuracaoHub = null;
+  }
+
+  salvarConfiguracao(): void {
+    if (!this.configuracaoHub?.hub_id) return;
+    const hubId = this.configuracaoHub.hub_id;
+    this.actionKey = this.key('configurar', this.configuracaoHub.loja_id);
+    this.limparMensagens();
+    this.api.configurarTerminal(hubId, this.formTerminal).pipe(
+      finalize(() => this.actionKey = null),
+    ).subscribe({
+      next: () => {
+        this.fecharConfiguracao();
+        this.successMsg = 'Configuração enviada ao Hub.';
+        this.recarregar();
+      },
+      error: err => this.errorMsg = this.backendError(err, 'Não foi possível solicitar configuração do terminal.'),
+    });
+  }
+
+  solicitarPareamento(linha: HubSincronizacaoLoja): void {
+    if (!linha.hub_id || !this.podeGerarPareamento(linha)) return;
+    const terminal = this.terminalPreferencial(linha);
+    const payload = { terminal_uuid: terminal?.terminal_uuid || null, codigo: terminal?.codigo || null };
+    this.actionKey = this.key('parear', linha.loja_id);
+    this.limparMensagens();
+    this.api.gerarPareamento(linha.hub_id, payload).pipe(
+      finalize(() => this.actionKey = null),
+    ).subscribe({
+      next: comando => {
+        if (comando.status === 'CONCLUIDO') {
+          this.codigoPareamento = comando;
+        } else {
+          this.successMsg = 'Pareamento solicitado ao Hub.';
+        }
+        this.recarregar();
+      },
+      error: err => this.errorMsg = this.backendError(err, 'Não foi possível solicitar código de pareamento.'),
+    });
+  }
+
+  fecharPareamento(): void {
+    this.codigoPareamento = null;
+  }
+
+  copiarPareamento(): void {
+    const codigo = this.codigoPareamento?.resultado?.['codigo'];
+    if (!codigo || !navigator?.clipboard?.writeText) return;
+    navigator.clipboard.writeText(codigo).then(
+      () => this.successMsg = 'Código copiado.',
+      () => this.errorMsg = 'Não foi possível copiar automaticamente.',
+    );
+  }
+
   podeSincronizar(linha: HubSincronizacaoLoja): boolean {
     return linha.hub_ativo && linha.possui_credencial && linha.sincronizacao_status !== 'PENDENTE' && linha.sincronizacao_status !== 'PROCESSANDO';
   }
@@ -185,6 +259,48 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
 
   mostrarAtivacao(linha: HubSincronizacaoLoja): boolean {
     return !linha.hub_id || !linha.possui_credencial || !!linha.ativacao_pendente;
+  }
+
+  ativacaoTexto(linha: HubSincronizacaoLoja): string {
+    if (linha.hub_id && linha.possui_credencial) return 'Ativado ✓';
+    if (linha.ativacao_pendente) return linha.ativacao_pendente.estado;
+    return 'Gerar código de ativação';
+  }
+
+  configuracaoTexto(linha: HubSincronizacaoLoja): string {
+    const estado = linha.configuracao_estado || 'NAO_DISPONIVEL';
+    const labels: Record<string, string> = {
+      NAO_DISPONIVEL: 'Não disponível',
+      NAO_CONFIGURADO: 'Não configurado',
+      AGUARDANDO: 'Aguardando',
+      CONFIGURANDO: 'Configurando',
+      CONFIGURADO: (linha.total_terminais || 0) > 1 ? `${linha.total_terminais} configurados` : 'Configurado ✓',
+      ERRO: 'Erro',
+    };
+    return labels[estado] || estado;
+  }
+
+  pareamentoResumo(linha: HubSincronizacaoLoja): string {
+    const estado = linha.pareamento_estado || 'NAO_DISPONIVEL';
+    if (estado === 'PAREADO') {
+      return (linha.total_terminais || 0) > 1 ? `${linha.terminais_pareados || 0}/${linha.total_terminais || 0} pareados` : 'Pareado ✓';
+    }
+    const labels: Record<string, string> = {
+      NAO_DISPONIVEL: 'Não disponível',
+      NAO_PAREADO: 'Não pareado',
+      CODIGO_SOLICITADO: 'Código solicitado',
+      CODIGO_DISPONIVEL: 'Código disponível',
+      ERRO: 'Erro',
+    };
+    return labels[estado] || estado;
+  }
+
+  podeConfigurar(linha: HubSincronizacaoLoja): boolean {
+    return !!linha.hub_id && linha.hub_ativo && linha.possui_credencial;
+  }
+
+  podeGerarPareamento(linha: HubSincronizacaoLoja): boolean {
+    return this.podeConfigurar(linha) && (linha.total_terminais || 0) > 0 && linha.pareamento_estado !== 'PAREADO';
   }
 
   podeReativar(linha: HubSincronizacaoLoja): boolean {
@@ -230,6 +346,10 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
     if (status === 'ABERTO') return 'ok';
     if (status === 'FECHADO' || status === 'SEM_CAIXA') return 'muted';
     return 'bad';
+  }
+
+  private terminalPreferencial(linha: HubSincronizacaoLoja): HubTerminalOperacional | null {
+    return linha.snapshot_operacional?.terminais?.[0] || null;
   }
 
   private recarregar(): void {
