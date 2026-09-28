@@ -2,7 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { EMPTY, Subscription, catchError, finalize, interval, startWith, switchMap } from 'rxjs';
 
-import { HubAtivacaoCriada, HubSincronizacaoLoja } from '../../core/models/hub-sincronizacao';
+import { HubAtivacaoCriada, HubSincronizacaoLoja, HubTerminalOperacional } from '../../core/models/hub-sincronizacao';
 import { HubSincronizacaoService } from '../../core/services/hub-sincronizacao.service';
 
 @Component({
@@ -202,6 +202,34 @@ export class HubSincronizacaoComponent implements OnInit, OnDestroy {
 
   fecharDetalhesHub(): void {
     this.hubDetalhe = null;
+  }
+
+  terminalEstadoTexto(terminal: HubTerminalOperacional): string {
+    return terminal.online ? 'Online' : 'Offline';
+  }
+
+  terminalEstadoClasse(terminal: HubTerminalOperacional): string {
+    return terminal.online ? 'ok' : 'bad';
+  }
+
+  pareamentoTexto(terminal: HubTerminalOperacional): string {
+    return terminal.pareado ? 'Pareado' : 'Não pareado';
+  }
+
+  caixaStatusTexto(status: string): string {
+    const labels: Record<string, string> = {
+      ABERTO: 'Caixa aberto',
+      FECHADO: 'Caixa fechado',
+      SEM_CAIXA: 'Sem caixa',
+      CAIXA_NAO_ENCONTRADO: 'Caixa não encontrado',
+    };
+    return labels[status] || status || '-';
+  }
+
+  caixaStatusClasse(status: string): string {
+    if (status === 'ABERTO') return 'ok';
+    if (status === 'FECHADO' || status === 'SEM_CAIXA') return 'muted';
+    return 'bad';
   }
 
   private recarregar(): void {

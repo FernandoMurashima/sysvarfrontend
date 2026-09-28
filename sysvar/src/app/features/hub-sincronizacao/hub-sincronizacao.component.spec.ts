@@ -23,6 +23,8 @@ describe('HubSincronizacaoComponent', () => {
     versao: '1',
     ultimo_ip: null,
     ultimo_contato: null,
+    snapshot_operacional: null,
+    snapshot_operacional_em: null,
     sincronizacao_id: null,
     sincronizacao_status: '',
     solicitado_em: null,
@@ -233,6 +235,126 @@ describe('HubSincronizacaoComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('deve informar quando snapshot operacional ainda nao foi recebido', () => {
+    fixture.componentInstance.linhas = [linha({ snapshot_operacional: null })];
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.hub-link').click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Dados operacionais ainda não recebidos do Hub.');
+  });
+
+  it('deve informar quando snapshot operacional nao possui terminais', () => {
+    fixture.componentInstance.linhas = [linha({
+      snapshot_operacional: { gerado_em: '2026-09-28T10:00:00-03:00', terminais: [] },
+      snapshot_operacional_em: '2026-09-28T10:01:00-03:00',
+    })];
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.hub-link').click();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Atualizado em 28/09/2026 10:01');
+    expect(text).toContain('Nenhum terminal configurado neste Hub.');
+  });
+
+  it('deve exibir terminais operacionais com pareamento e estado do caixa', () => {
+    fixture.componentInstance.linhas = [linha({
+      snapshot_operacional_em: '2026-09-28T10:01:00-03:00',
+      snapshot_operacional: {
+        gerado_em: '2026-09-28T10:00:00-03:00',
+        terminais: [
+          {
+            terminal_uuid: 'term-1',
+            codigo: 'PDV-01',
+            nome: 'PDV 01',
+            ativo: true,
+            pareado: true,
+            pareado_em: '2026-09-28T09:00:00-03:00',
+            hostname: 'PDV-LOCAL',
+            ultimo_ip: '10.0.0.20',
+            ultima_conexao_em: '2026-09-28T10:00:00-03:00',
+            online: true,
+            caixa: { id: 29, codigo: 'CX-01', descricao: 'Caixa 01', ativo: true },
+            caixa_status: 'ABERTO',
+            sessao_caixa: {
+              uuid: 'sessao-1',
+              status: 'ABERTO',
+              aberto_em: '2026-09-28T08:00:00-03:00',
+              operador: { codigo: 'op.caixa', nome: 'Operador Caixa' },
+              terminal_abertura: { codigo: 'PDV-01', nome: 'PDV 01' },
+            },
+          },
+          {
+            terminal_uuid: 'term-2',
+            codigo: 'PDV-02',
+            nome: 'PDV 02',
+            ativo: false,
+            pareado: false,
+            pareado_em: null,
+            hostname: null,
+            ultimo_ip: null,
+            ultima_conexao_em: null,
+            online: false,
+            caixa: null,
+            caixa_status: 'SEM_CAIXA',
+            sessao_caixa: null,
+          },
+          {
+            terminal_uuid: 'term-3',
+            codigo: 'PDV-03',
+            nome: 'PDV 03',
+            ativo: true,
+            pareado: true,
+            pareado_em: '2026-09-28T09:30:00-03:00',
+            hostname: 'PDV-03',
+            ultimo_ip: '10.0.0.21',
+            ultima_conexao_em: '2026-09-28T09:59:00-03:00',
+            online: false,
+            caixa: { id: 30, codigo: 'CX-02', descricao: 'Caixa 02', ativo: true },
+            caixa_status: 'FECHADO',
+            sessao_caixa: null,
+          },
+          {
+            terminal_uuid: 'term-4',
+            codigo: 'PDV-04',
+            nome: 'PDV 04',
+            ativo: true,
+            pareado: true,
+            pareado_em: null,
+            hostname: null,
+            ultimo_ip: null,
+            ultima_conexao_em: null,
+            online: false,
+            caixa: null,
+            caixa_status: 'CAIXA_NAO_ENCONTRADO',
+            sessao_caixa: null,
+          },
+        ],
+      },
+    })];
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.hub-link').click();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('PDV-01 · PDV 01');
+    expect(text).toContain('Online');
+    expect(text).toContain('Pareado');
+    expect(text).toContain('Caixa aberto');
+    expect(text).toContain('CX-01 · Caixa 01');
+    expect(text).toContain('op.caixa · Operador Caixa');
+    expect(text).toContain('28/09/2026 08:00');
+    expect(text).toContain('Offline');
+    expect(text).toContain('Não pareado');
+    expect(text).toContain('Sem caixa');
+    expect(text).toContain('Caixa fechado');
+    expect(text).toContain('Caixa não encontrado');
   });
 
   it('deve exibir reativar e desvincular para hub desativado com credencial', () => {

@@ -168,6 +168,75 @@
         </div>
       </dl>
 
+      <section class="operational-panel">
+        <div class="operational-header">
+          <h3>Terminais</h3>
+          <span *ngIf="hub.snapshot_operacional_em">Atualizado em {{ hub.snapshot_operacional_em | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+
+        <p class="operational-empty" *ngIf="!hub.snapshot_operacional">
+          Dados operacionais ainda não recebidos do Hub.
+        </p>
+
+        <ng-container *ngIf="hub.snapshot_operacional as snapshot">
+          <p class="operational-empty" *ngIf="snapshot.terminais.length === 0">
+            Nenhum terminal configurado neste Hub.
+          </p>
+
+          <div class="terminal-list" *ngIf="snapshot.terminais.length > 0">
+            <article class="terminal-card" *ngFor="let terminal of snapshot.terminais">
+              <div class="terminal-main">
+                <div>
+                  <strong>{{ terminal.codigo || '-' }} · {{ terminal.nome || '-' }}</strong>
+                  <small>{{ terminal.terminal_uuid || '-' }}</small>
+                </div>
+                <div class="terminal-badges">
+                  <span class="badge" [class.ok]="terminalEstadoClasse(terminal) === 'ok'" [class.bad]="terminalEstadoClasse(terminal) === 'bad'">{{ terminalEstadoTexto(terminal) }}</span>
+                  <span class="badge" [class.ok]="terminal.ativo" [class.bad]="!terminal.ativo">{{ terminal.ativo ? 'Ativo' : 'Inativo' }}</span>
+                  <span class="badge" [class.ok]="terminal.pareado" [class.muted]="!terminal.pareado">{{ pareamentoTexto(terminal) }}</span>
+                  <span class="badge" [class.ok]="caixaStatusClasse(terminal.caixa_status) === 'ok'" [class.bad]="caixaStatusClasse(terminal.caixa_status) === 'bad'" [class.muted]="caixaStatusClasse(terminal.caixa_status) === 'muted'">{{ caixaStatusTexto(terminal.caixa_status) }}</span>
+                </div>
+              </div>
+
+              <dl class="terminal-details">
+                <div>
+                  <dt>Host</dt>
+                  <dd>{{ terminal.hostname || '-' }}</dd>
+                </div>
+                <div>
+                  <dt>IP</dt>
+                  <dd>{{ terminal.ultimo_ip || '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Última conexão</dt>
+                  <dd>{{ terminal.ultima_conexao_em ? (terminal.ultima_conexao_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Pareamento</dt>
+                  <dd>{{ terminal.pareado_em ? (terminal.pareado_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Caixa</dt>
+                  <dd>{{ terminal.caixa ? ((terminal.caixa.codigo || '-') + ' · ' + (terminal.caixa.descricao || '-')) : '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Operador</dt>
+                  <dd>{{ terminal.sessao_caixa?.operador ? ((terminal.sessao_caixa?.operador?.codigo || '-') + ' · ' + (terminal.sessao_caixa?.operador?.nome || '-')) : '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Aberto em</dt>
+                  <dd>{{ terminal.sessao_caixa?.aberto_em ? (terminal.sessao_caixa?.aberto_em | date:'dd/MM/yyyy HH:mm') : '-' }}</dd>
+                </div>
+                <div>
+                  <dt>Terminal abertura</dt>
+                  <dd>{{ terminal.sessao_caixa?.terminal_abertura ? ((terminal.sessao_caixa?.terminal_abertura?.codigo || '-') + ' · ' + (terminal.sessao_caixa?.terminal_abertura?.nome || '-')) : '-' }}</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+        </ng-container>
+      </section>
+
       <footer>
         <button class="btn" type="button" (click)="fecharDetalhesHub()">Fechar</button>
       </footer>

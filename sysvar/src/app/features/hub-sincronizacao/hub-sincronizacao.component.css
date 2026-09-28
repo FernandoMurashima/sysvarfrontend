@@ -212,9 +212,11 @@ td small {
   border-radius: 10px;
   box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
   color: #0f172a;
-  max-width: 620px;
+  max-height: calc(100vh - 48px);
+  max-width: 860px;
+  overflow: auto;
   padding: 16px;
-  width: min(100%, 620px);
+  width: min(100%, 860px);
 }
 
 .hub-modal header,
@@ -272,6 +274,89 @@ td small {
   overflow-wrap: anywhere;
 }
 
+.operational-panel {
+  border-top: 1px solid #e2e8f0;
+  margin: 14px 0 0;
+  padding-top: 14px;
+}
+
+.operational-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.operational-header h3 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.operational-header span,
+.operational-empty,
+.terminal-card small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.operational-empty {
+  margin: 0 0 12px;
+}
+
+.terminal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.terminal-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.terminal-main {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.terminal-main strong,
+.terminal-card small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.terminal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.terminal-details {
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 10px 0 0;
+}
+
+.terminal-details div {
+  min-width: 0;
+}
+
+.terminal-details dt {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.terminal-details dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
 .hub-modal footer {
   justify-content: flex-end;
 }
@@ -294,5 +379,23 @@ td small {
   .activation-code code {
     white-space: normal;
     word-break: break-word;
+  }
+
+  .hub-modal-backdrop {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .hub-details div,
+  .terminal-details {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-main {
+    flex-direction: column;
+  }
+
+  .terminal-badges {
+    justify-content: flex-start;
   }
 }

@@ -32,6 +32,8 @@ export interface HubSincronizacaoLoja {
   versao: string;
   ultimo_ip: string | null;
   ultimo_contato: string | null;
+  snapshot_operacional: HubSnapshotOperacional | null;
+  snapshot_operacional_em: string | null;
   sincronizacao_id: number | null;
   sincronizacao_status: HubSincronizacaoStatus;
   solicitado_em: string | null;
@@ -41,6 +43,47 @@ export interface HubSincronizacaoLoja {
   mensagem_erro: string;
   status_visual: HubSincronizacaoStatusVisual;
   ativacao_pendente?: HubAtivacaoAdmin | null;
+}
+
+export interface HubSnapshotOperacional {
+  gerado_em: string | null;
+  terminais: HubTerminalOperacional[];
+}
+
+export interface HubTerminalOperacional {
+  terminal_uuid: string | null;
+  codigo: string;
+  nome: string;
+  ativo: boolean;
+  pareado: boolean;
+  pareado_em: string | null;
+  hostname: string | null;
+  ultimo_ip: string | null;
+  ultima_conexao_em: string | null;
+  online: boolean;
+  caixa: HubCaixaOperacional | null;
+  caixa_status: 'ABERTO' | 'FECHADO' | 'SEM_CAIXA' | 'CAIXA_NAO_ENCONTRADO' | string;
+  sessao_caixa: HubSessaoCaixaOperacional | null;
+}
+
+export interface HubCaixaOperacional {
+  id: number | null;
+  codigo: string;
+  descricao: string;
+  ativo: boolean;
+}
+
+export interface HubSessaoCaixaOperacional {
+  uuid: string | null;
+  status: string;
+  aberto_em: string | null;
+  operador: HubIdentificacaoOperacional | null;
+  terminal_abertura: HubIdentificacaoOperacional | null;
+}
+
+export interface HubIdentificacaoOperacional {
+  codigo: string;
+  nome: string;
 }
 
 export interface HubSincronizacaoSolicitacao {
