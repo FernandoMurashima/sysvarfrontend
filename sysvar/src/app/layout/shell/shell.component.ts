@@ -131,6 +131,7 @@ export class ShellComponent {
         { label: 'Pedidos', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras', children: [
           { label: 'Pedidos de Compra', link: '/compras/pedidos', icon: 'bi bi-bag-check', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         ] },
+        { label: 'Entrada de NF-e', link: '/compras/notas-entrada', icon: 'bi bi-file-earmark-text', roles: this.comprasRoles, moduloEmpresa: 'compras' },
         { label: 'Serviços', icon: 'bi bi-tools', processoAnyOf: ['requisicoes.atender'], children: [
           { label: 'Ordens de Serviço', link: '/ordens-servico', icon: 'bi bi-tools', processoAnyOf: ['requisicoes.atender'] },
         ] },
@@ -304,7 +305,7 @@ export class ShellComponent {
 
   get showPageBarControls(): boolean {
     const path = this.normalizeUrl(this.router.url);
-    return ['/home', '/dashboard/executivo', '/dashboard/vendas', '/dashboard/produtos', '/dashboard/estoque', '/dashboard/financeiro', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/sincronizacao-hub', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/adquirentes', '/financeiro/condicoes-adquirente', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
+    return ['/home', '/dashboard/executivo', '/dashboard/vendas', '/dashboard/produtos', '/dashboard/estoque', '/dashboard/financeiro', '/empresas', '/clientes', '/fornecedores', '/lojas', '/funcionarios', '/natureza', '/produtos', '/produtos-fornecedor', '/produtos-uso', '/insumos', '/grupos', '/cores', '/grades', '/colecoes', '/packs', '/unidades', '/setores', '/categorias-material', '/finalidades-aquisicao', '/matriz-requisicao', '/fiscal/ncm', '/fiscal/cfop', '/fiscal/tributos', '/fiscal/regras-tributarias', '/fiscal/faturamento', '/plano-contabil', '/material', '/financeiro/lancamentos-contabeis', '/financeiro/dre', '/estoque/consulta-referencia', '/estoque/consulta-referencia-uso-consumo', '/estoque/consulta-movimentacao-referencia', '/estoque/movimentacao-uso-consumo', '/estoque/consulta-colest', '/estoque/movimentacoes', '/estoque/inventario', '/estoque/etiquetas', '/estoque/nfe-detectadas', '/estoque/recebimentos-mercadoria', '/distribuicao', '/distribuicao/pedidos-venda', '/loja/pdv-offline', '/loja/recebimento', '/loja/devolucoes', '/config/usuarios', '/config/perfis', '/config/agente-local', '/config/sincronizacao-hub', '/config/auditoria', '/financeiro/configuracao', '/financeiro/formas-pagamento', '/financeiro/prazos-pagamento', '/financeiro/adquirentes', '/financeiro/condicoes-adquirente', '/financeiro/vales-troca', '/financeiro/receber', '/financeiro/pagar', '/financeiro/caixa', '/financeiro/contas', '/financeiro/antecipacoes', '/financeiro/movimentacoes', '/financeiro/consulta-naturezas', '/producao', '/producao/ficha-tecnica', '/producao/ordens', '/requisicoes', '/ordens-servico', '/compras/pedidos', '/compras/cotacoes', '/compras/notas-entrada', '/vendas/relatorios', '/vendas/cashback', '/vendas/promocoes', '/vendas/tabelas', '/relatorios/margem-cmv'].includes(path);
   }
 
   toggleBarControls(): void {
@@ -383,6 +384,7 @@ export class ShellComponent {
       '/ordens-servico': 'ordens-servico',
       '/compras/pedidos': 'pedidos-compra',
       '/compras/cotacoes': 'cotacoes',
+      '/compras/notas-entrada': 'notas-entrada',
       '/vendas/relatorios': 'relatorios-vendas',
       '/vendas/cashback': 'cashback',
       '/vendas/promocoes': 'promocoes',

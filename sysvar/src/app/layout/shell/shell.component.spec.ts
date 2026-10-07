@@ -237,24 +237,25 @@ describe('ShellComponent menu lateral', () => {
     expect(findItem(estoque?.children, 'Recebimento de Almoxarifado')?.link).toBe('/estoque/recebimentos-mercadoria');
   });
 
-  it('nao mostra Entrada de NF-e no menu Compras', () => {
+  it('mostra Entrada de NF-e no menu Compras mantendo compras e NF-e de estoque', () => {
     currentUser = {
       id: 8,
       username: 'compras',
       type: 'Gerente',
       is_full_company_administrator: false,
-      modulos_disponiveis_empresa: ['compras'],
-      permissoes_efetivas: { compras: 'VIEW' },
+      modulos_disponiveis_empresa: ['compras', 'estoque'],
+      permissoes_efetivas: { compras: 'VIEW', estoque: 'VIEW' },
     };
 
     const component = render();
     const compras = component.visibleMenu.find(item => item.label === 'Compras');
+    const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
 
     expect(compras).toBeTruthy();
-    expect(findItem(compras?.children, 'Pedidos de Compra')).toBeTruthy();
-    expect(findItem(compras?.children, 'Cotações')).toBeTruthy();
-    expect(findItem(compras?.children, 'Entrada de NF-e')).toBeFalsy();
-    expect(linksOf(compras?.children)).not.toContain('/compras/notas-entrada');
+    expect(findItem(compras?.children, 'Entrada de NF-e')?.link).toBe('/compras/notas-entrada');
+    expect(linksOf(compras?.children)).toContain('/compras/pedidos');
+    expect(linksOf(compras?.children)).toContain('/compras/cotacoes');
+    expect(findItem(estoque?.children, 'NF-e')?.link).toBe('/estoque/nfe-detectadas');
   });
 
   it('mantem PDV somente no menu Loja e remove os PDVs do menu Vendas', () => {
