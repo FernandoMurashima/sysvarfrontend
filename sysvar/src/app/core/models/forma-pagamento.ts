@@ -86,8 +86,8 @@ export interface CondicaoAdquirente {
   adquirente: number;
   forma_pagamento: number;
   prazo_pagamento: number;
-  taxa_percentual: string | number;
-  taxa_fixa: string | number;
+  taxa_percentual?: string | number;
+  taxa_fixa?: string | number;
   ativo: boolean;
   data_cadastro?: string;
   adquirente_codigo?: string;

@@ -50,8 +50,6 @@ export class CondicoesAdquirenteComponent implements OnInit {
     adquirente: [null as number | null, Validators.required],
     forma_pagamento: [null as number | null, Validators.required],
     prazo_pagamento: [null as number | null, Validators.required],
-    taxa_percentual: [0, [Validators.required, Validators.min(0)]],
-    taxa_fixa: [0, [Validators.required, Validators.min(0)]],
     ativo: [true],
   });
 
@@ -124,7 +122,7 @@ export class CondicoesAdquirenteComponent implements OnInit {
     this.consultando = false;
     this.submitted = false;
     this.form.enable({ emitEvent: false });
-    this.form.reset({ adquirente: null, forma_pagamento: null, prazo_pagamento: null, taxa_percentual: 0, taxa_fixa: 0, ativo: true });
+    this.form.reset({ adquirente: null, forma_pagamento: null, prazo_pagamento: null, ativo: true });
   }
 
   editar(row: CondicaoAdquirente, modoConsulta = false): void {
@@ -140,8 +138,6 @@ export class CondicoesAdquirenteComponent implements OnInit {
       adquirente: row.adquirente,
       forma_pagamento: row.forma_pagamento,
       prazo_pagamento: row.prazo_pagamento,
-      taxa_percentual: Number(row.taxa_percentual || 0),
-      taxa_fixa: Number(row.taxa_fixa || 0),
       ativo: row.ativo !== false,
     });
     if (modoConsulta) this.form.disable({ emitEvent: false });
@@ -156,8 +152,6 @@ export class CondicoesAdquirenteComponent implements OnInit {
       adquirente: Number(f.adquirente),
       forma_pagamento: Number(f.forma_pagamento),
       prazo_pagamento: Number(f.prazo_pagamento),
-      taxa_percentual: String(f.taxa_percentual ?? 0),
-      taxa_fixa: String(f.taxa_fixa ?? 0),
       ativo: !!f.ativo,
     };
     this.saving = true;
@@ -190,11 +184,6 @@ export class CondicoesAdquirenteComponent implements OnInit {
   adquirenteLabel(c: CondicaoAdquirente): string { return c.adquirente_descricao || this.adquirentes.find(a => (a.Idadquirente ?? a.id) === c.adquirente)?.descricao || 'Adquirente'; }
   formaLabel(c: CondicaoAdquirente): string { return c.forma_descricao || this.formas.find(f => (f.Idformapagamento ?? f.id) === c.forma_pagamento)?.descricao || 'Forma'; }
   prazoLabel(c: CondicaoAdquirente): string { return c.prazo_descricao || this.prazos.find(p => (p.Idprazo ?? p.id) === c.prazo_pagamento)?.descricao || 'Prazo'; }
-  taxaLabel(c: CondicaoAdquirente): string {
-    const percentual = Number(c.taxa_percentual || 0);
-    const fixa = Number(c.taxa_fixa || 0);
-    return `${percentual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}% + R$ ${fixa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
   toggleIndicators(): void { this.indicatorsVisible = !this.indicatorsVisible; }
   toggleFilters(): void { this.filtersVisible = !this.filtersVisible; }
   restoreViewPreference(): void { this.indicatorsVisible = true; this.filtersVisible = true; this.pageSize = 20; this.applyPage(); }
