@@ -11,6 +11,14 @@
 .parcelas-wrapper { max-height: 260px; margin-top: 8px; }
 .parcelas-table { min-width: 680px; }
 .parcelas-actions { margin-top: 8px; }
+.condicoes-panel { grid-column: 1 / -1; margin-top: 14px; }
+.condicoes-actions { margin-top: 0; }
+.condicoes-table { min-width: 820px; }
+.condicoes-table select,
+.condicoes-table input { width: 100%; min-width: 96px; }
+.condicoes-table td:nth-child(2) { width: 90px; text-align: center; }
+.table-checkbox { justify-content: center; min-height: 0; }
+.condicoes-empty { margin-top: 8px; }
 .badge-ok, .status-pill.badge-ok { background: #dcfce7; color: #15803d; }
 .badge-off, .status-pill.badge-off { background: #e2e8f0; color: #475569; }
 @media (max-width: 900px) { .span-1,.span-2,.span-3,.span-4,.span-6,.span-12 { grid-column: 1 / -1; } }

@@ -3,12 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Adquirente, CondicaoAdquirente, FormaPagamento, PrazoPagamento, PrazoPagamentoParcela } from '../models/forma-pagamento';
+import { Adquirente, CondicaoAdquirente, FormaPagamento, FormaPagamentoCondicao, PrazoPagamento, PrazoPagamentoParcela } from '../models/forma-pagamento';
 
 type ListResp = FormaPagamento[] | { results: FormaPagamento[]; count: number };
 type PrazosListResp = PrazoPagamento[] | { results: PrazoPagamento[]; count: number };
 type AdquirentesListResp = Adquirente[] | { results: Adquirente[]; count: number };
 type CondicoesAdquirenteListResp = CondicaoAdquirente[] | { results: CondicaoAdquirente[]; count: number };
+type FormaPagamentoCondicoesListResp = FormaPagamentoCondicao[] | { results: FormaPagamentoCondicao[]; count: number };
 
 @Injectable({ providedIn: 'root' })
 export class FormasPagamentoService {
@@ -16,6 +17,7 @@ export class FormasPagamentoService {
   private base = `${environment.apiBaseUrl}/financeiro/formas/`;
   private basePrazos = `${environment.apiBaseUrl}/financeiro/prazos/`;
   private basePrazosParcelas = `${environment.apiBaseUrl}/financeiro/prazos-parcelas/`;
+  private baseFormasCondicoes = `${environment.apiBaseUrl}/financeiro/formas-condicoes/`;
   private baseAdquirentes = `${environment.apiBaseUrl}/financeiro/adquirentes/`;
   private baseCondicoesAdquirente = `${environment.apiBaseUrl}/financeiro/condicoes-adquirente/`;
 
@@ -50,6 +52,28 @@ export class FormasPagamentoService {
 
   remove(id: number): Observable<any> {
     return this.http.delete(`${this.base}${id}/`);
+  }
+
+  // ===== Condições de parcelamento por forma =====
+
+  listFormaCondicoes(params?: { ativo?: boolean; forma_pagamento?: number; prazo_pagamento?: number }): Observable<FormaPagamentoCondicoesListResp> {
+    let httpParams = new HttpParams();
+    if (typeof params?.ativo === 'boolean') httpParams = httpParams.set('ativo', params.ativo ? 'true' : 'false');
+    if (params?.forma_pagamento) httpParams = httpParams.set('forma_pagamento', String(params.forma_pagamento));
+    if (params?.prazo_pagamento) httpParams = httpParams.set('prazo_pagamento', String(params.prazo_pagamento));
+    return this.http.get<FormaPagamentoCondicoesListResp>(this.baseFormasCondicoes, { params: httpParams });
+  }
+
+  createFormaCondicao(payload: Partial<FormaPagamentoCondicao>): Observable<FormaPagamentoCondicao> {
+    return this.http.post<FormaPagamentoCondicao>(this.baseFormasCondicoes, payload);
+  }
+
+  updateFormaCondicao(id: number, payload: Partial<FormaPagamentoCondicao>): Observable<FormaPagamentoCondicao> {
+    return this.http.put<FormaPagamentoCondicao>(`${this.baseFormasCondicoes}${id}/`, payload);
+  }
+
+  deleteFormaCondicao(id: number): Observable<any> {
+    return this.http.delete(`${this.baseFormasCondicoes}${id}/`);
   }
 
   // ===== Prazos de pagamento =====

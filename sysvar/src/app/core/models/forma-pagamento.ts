@@ -42,6 +42,8 @@ export interface FormaPagamento {
   ativo: boolean;
   conta_liquidacao?: number | null;
   prazo_pagamento?: number | null;
+  permite_parcelamento?: boolean;
+  condicoes_parcelamento?: FormaPagamentoCondicao[];
   gera_recebivel_bancario?: boolean;
   prazo_credito_dias?: number;
   tef_habilitado?: boolean;
@@ -49,6 +51,24 @@ export interface FormaPagamento {
   tef_adquirente_codigo?: string;
   tef_terminal_logico?: string;
   data_cadastro?: string;
+}
+
+export interface FormaPagamentoCondicao {
+  Idformapagamentocondicao?: number;
+  id?: number;
+  empresa?: number | null;
+  forma_pagamento: number;
+  prazo_pagamento: number;
+  prazo?: number;
+  taxa_percentual: string | number;
+  taxa_fixa: string | number;
+  ativo: boolean;
+  data_cadastro?: string;
+  forma_codigo?: string;
+  forma_descricao?: string;
+  prazo_codigo?: string;
+  prazo_descricao?: string;
+  prazo_num_parcelas?: number;
 }
 
 export interface Adquirente {

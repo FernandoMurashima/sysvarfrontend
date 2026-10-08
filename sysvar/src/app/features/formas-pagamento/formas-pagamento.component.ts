@@ -4,15 +4,16 @@ import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
   FormsModule,
+  FormArray,
   FormBuilder,
   FormGroup,
   Validators
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
-import { FormaPagamento, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
+import { FormaPagamento, FormaPagamentoCondicao, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
 import { ContaBancaria } from '../../core/models/conta-bancaria';
 import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { AuthService } from '../../core/auth.service';
@@ -67,6 +68,7 @@ export class FormasPagamentoComponent implements OnInit {
   formas: FormaPagamento[] = [];
   contas: ContaBancaria[] = [];
   prazos: PrazoPagamento[] = [];
+  removedCondicoesIds: number[] = [];
   tipos = [
     { value: 'DINHEIRO' as TipoFormaPagamento, label: 'Dinheiro' },
     { value: 'PIX' as TipoFormaPagamento, label: 'Pix' },
@@ -87,6 +89,7 @@ export class FormasPagamentoComponent implements OnInit {
     descricao: ['', [Validators.required, Validators.maxLength(120)]],
     tipo: ['DINHEIRO' as TipoFormaPagamento, Validators.required],
     ativo: [true],
+    permite_parcelamento: [false],
     gera_recebivel_bancario: [false],
     conta_liquidacao: [null as number | null],
     prazo_pagamento: [null as number | null],
@@ -94,9 +97,11 @@ export class FormasPagamentoComponent implements OnInit {
     tef_habilitado: [false],
     tef_modalidade: [''],
     tef_adquirente_codigo: ['', Validators.maxLength(40)],
-    tef_terminal_logico: ['', Validators.maxLength(40)]
+    tef_terminal_logico: ['', Validators.maxLength(40)],
+    condicoes_parcelamento: this.fb.array([])
   });
 
+  get condicoesFA(): FormArray { return this.form.get('condicoes_parcelamento') as FormArray; }
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.total / this.pageSize));
   }
@@ -243,6 +248,7 @@ export class FormasPagamentoComponent implements OnInit {
       descricao: '',
       tipo: 'DINHEIRO',
       ativo: true,
+      permite_parcelamento: false,
       gera_recebivel_bancario: false,
       conta_liquidacao: null,
       prazo_pagamento: null,
@@ -252,6 +258,7 @@ export class FormasPagamentoComponent implements OnInit {
       tef_adquirente_codigo: '',
       tef_terminal_logico: ''
     });
+    this.clearCondicoes();
   }
 
   editar(row: FormaPagamento, modoConsulta = false): void {
@@ -267,14 +274,20 @@ export class FormasPagamentoComponent implements OnInit {
     this.errorMsg = '';
     this.loading = true;
 
-    this.api.get(id).subscribe({
-      next: (det: FormaPagamento) => {
+    forkJoin({
+      forma: this.api.get(id),
+      condicoes: this.api.listFormaCondicoes({ forma_pagamento: id })
+    }).subscribe({
+      next: (res: any) => {
+        const det = res.forma as FormaPagamento;
+        const condicoes = Array.isArray(res.condicoes) ? res.condicoes : (res.condicoes?.results ?? []);
         this.form.enable({ emitEvent: false });
         this.form.reset({
           codigo: det.codigo ?? '',
           descricao: det.descricao ?? '',
           tipo: det.tipo ?? 'OUTRO',
           ativo: !!det.ativo,
+          permite_parcelamento: !!det.permite_parcelamento,
           gera_recebivel_bancario: !!det.gera_recebivel_bancario,
           conta_liquidacao: det.conta_liquidacao ?? null,
           prazo_pagamento: det.prazo_pagamento ?? null,
@@ -284,6 +297,7 @@ export class FormasPagamentoComponent implements OnInit {
           tef_adquirente_codigo: det.tef_adquirente_codigo ?? '',
           tef_terminal_logico: det.tef_terminal_logico ?? ''
         });
+        this.setCondicoes(condicoes);
 
         if (this.consultando) {
           this.form.disable({ emitEvent: false });
@@ -317,7 +331,7 @@ export class FormasPagamentoComponent implements OnInit {
     if (!this.podeEditarModulo) return;
     this.submitted = true;
 
-    if (this.form.invalid) {
+    if (this.form.invalid || this.getFormErrors().length) {
       this.openErrorOverlayIfNeeded();
       return;
     }
@@ -329,6 +343,7 @@ export class FormasPagamentoComponent implements OnInit {
       descricao: (f.descricao || '').toString().trim(),
       tipo: f.tipo || 'OUTRO',
       ativo: !!f.ativo,
+      permite_parcelamento: !!f.permite_parcelamento,
       gera_recebivel_bancario: !!f.gera_recebivel_bancario,
       conta_liquidacao: f.gera_recebivel_bancario ? Number(f.conta_liquidacao) : null,
       prazo_pagamento: f.prazo_pagamento ? Number(f.prazo_pagamento) : null,
@@ -345,19 +360,32 @@ export class FormasPagamentoComponent implements OnInit {
 
     const isEdit = this.editingId != null;
 
-    const afterFormaSaved = () => {
-      this.saving = false;
-      this.successMsg = isEdit ? 'Alterações salvas com sucesso.' : 'Forma criada com sucesso.';
-      this.cancelarEdicao();
-      this.page = 1;
-      this.load();
+    const afterFormaSaved = (forma: FormaPagamento) => {
+      const formaId = forma.Idformapagamento ?? (forma as any).id ?? this.editingId;
+      if (!formaId) {
+        this.saving = false;
+        this.errorMsg = 'Forma salva, mas não foi possível obter o ID.';
+        return;
+      }
+      this.salvarCondicoes(formaId, !!f.permite_parcelamento).subscribe({
+        next: () => {
+          this.saving = false;
+          this.successMsg = isEdit ? 'Alterações salvas com sucesso.' : 'Forma criada com sucesso.';
+          this.cancelarEdicao();
+          this.page = 1;
+          this.load();
+        },
+        error: (err) => {
+          this.saving = false;
+          this.handleServerErrors(err);
+          if (!this.errorOverlayOpen) this.errorMsg = 'Forma salva, mas houve falha ao salvar condições.';
+        }
+      });
     };
 
     if (!isEdit) {
       this.api.create(payload).subscribe({
-        next: () => {
-          afterFormaSaved();
-        },
+        next: afterFormaSaved,
         error: (err) => {
           this.saving = false;
           this.handleServerErrors(err);
@@ -366,9 +394,7 @@ export class FormasPagamentoComponent implements OnInit {
     } else {
       const id = this.editingId!;
       this.api.update(id, payload).subscribe({
-        next: () => {
-          afterFormaSaved();
-        },
+        next: afterFormaSaved,
         error: (err) => {
           this.saving = false;
           this.handleServerErrors(err);
@@ -433,9 +459,43 @@ export class FormasPagamentoComponent implements OnInit {
     return prazo ? prazo.descricao : 'Prazo';
   }
   parcelasForma(f: FormaPagamento): number | string {
+    const condicoes = (f.condicoes_parcelamento ?? []).filter(c => c.ativo !== false);
+    if (f.permite_parcelamento && condicoes.length) {
+      const nums = condicoes.map(c => c.prazo_num_parcelas).filter((v): v is number => typeof v === 'number');
+      if (nums.length) return nums.length === 1 ? `${nums[0]}x` : `${Math.min(...nums)}-${Math.max(...nums)}x`;
+      return condicoes.length;
+    }
     if (!f.prazo_pagamento) return '-';
     const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === f.prazo_pagamento);
     return prazo?.num_parcelas ?? '-';
+  }
+  prazoParcelas(id?: number | null): number | string {
+    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === Number(id));
+    return prazo?.num_parcelas ?? '-';
+  }
+  prazoCondicaoLabel(id?: number | null): string {
+    if (!id) return 'Selecione';
+    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === Number(id));
+    return prazo ? `${prazo.codigo} - ${prazo.descricao}` : 'Prazo';
+  }
+  condicaoId(raw: any): number | null { return raw?.Idformapagamentocondicao ?? raw?.id ?? null; }
+  prazoJaSelecionado(prazoId: number, index: number): boolean {
+    return this.condicoesFA.controls.some((ctrl, ix) => ix !== index && Number(ctrl.get('prazo_pagamento')?.value) === Number(prazoId));
+  }
+  prazoDisponivel(prazo: PrazoPagamento, index: number): boolean {
+    const id = prazo.Idprazo ?? (prazo as any).id;
+    if (!id) return false;
+    return !this.prazoJaSelecionado(id, index);
+  }
+  addCondicao(): void {
+    if (this.consultando) return;
+    this.condicoesFA.push(this.makeCondicaoGroup());
+  }
+  removeCondicao(index: number): void {
+    if (this.consultando || index < 0 || index >= this.condicoesFA.length) return;
+    const id = this.condicaoId(this.condicoesFA.at(index).value);
+    if (id) this.removedCondicoesIds.push(id);
+    this.condicoesFA.removeAt(index);
   }
   formaId(f: FormaPagamento | null): number | null { return f ? (f.Idformapagamento ?? (f as any).id ?? null) : null; }
   selecionarForma(f: FormaPagamento): void { this.selectedForma = this.formaId(this.selectedForma) === this.formaId(f) ? null : f; }
@@ -465,6 +525,15 @@ export class FormasPagamentoComponent implements OnInit {
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
     push(f.get('tipo')?.hasError('required') || false, 'tipo: Informe o tipo da forma.');
     push(!!f.get('gera_recebivel_bancario')?.value && !f.get('conta_liquidacao')?.value, 'conta_liquidacao: Informe a conta de liquidação.');
+    if (f.get('permite_parcelamento')?.value) {
+      this.condicoesFA.controls.forEach((fg, i) => {
+        push(fg.get('prazo_pagamento')?.hasError('required') || false, `condição ${i + 1}: Informe o prazo.`);
+        push(fg.get('taxa_percentual')?.hasError('min') || false, `condição ${i + 1}: A taxa percentual não pode ser negativa.`);
+        push(fg.get('taxa_fixa')?.hasError('min') || false, `condição ${i + 1}: A taxa fixa não pode ser negativa.`);
+        const prazoId = Number(fg.get('prazo_pagamento')?.value || 0);
+        push(!!prazoId && this.prazoJaSelecionado(prazoId, i), `condição ${i + 1}: O prazo já foi selecionado.`);
+      });
+    }
 
     const fields = ['codigo', 'descricao', 'tipo', 'conta_liquidacao', 'prazo_pagamento'];
     const seen = new Set<string>();
@@ -508,6 +577,55 @@ export class FormasPagamentoComponent implements OnInit {
       });
     }
     this.openErrorOverlayIfNeeded();
+  }
+
+  private makeCondicaoGroup(condicao?: Partial<FormaPagamentoCondicao>): FormGroup {
+    return this.fb.group({
+      Idformapagamentocondicao: [condicao?.Idformapagamentocondicao ?? condicao?.id ?? null],
+      prazo_pagamento: [condicao?.prazo_pagamento ?? condicao?.prazo ?? null, Validators.required],
+      taxa_percentual: [condicao?.taxa_percentual ?? 0, [Validators.min(0)]],
+      taxa_fixa: [condicao?.taxa_fixa ?? 0, [Validators.min(0)]],
+      ativo: [condicao?.ativo !== false],
+    });
+  }
+
+  private setCondicoes(condicoes: FormaPagamentoCondicao[]): void {
+    this.clearCondicoes();
+    this.removedCondicoesIds = [];
+    condicoes
+      .slice()
+      .sort((a, b) => (a.prazo_num_parcelas ?? 0) - (b.prazo_num_parcelas ?? 0) || String(a.prazo_codigo || '').localeCompare(String(b.prazo_codigo || '')))
+      .forEach(condicao => this.condicoesFA.push(this.makeCondicaoGroup(condicao)));
+  }
+
+  private clearCondicoes(): void {
+    while (this.condicoesFA.length) this.condicoesFA.removeAt(0);
+    this.removedCondicoesIds = [];
+  }
+
+  private salvarCondicoes(formaId: number, permiteParcelamento: boolean) {
+    const deletes = Array.from(new Set(this.removedCondicoesIds)).map(id => this.api.deleteFormaCondicao(id));
+    const saves = this.condicoesFA.controls
+      .map(ctrl => ctrl.value as any)
+      .filter(raw => permiteParcelamento && raw.prazo_pagamento)
+      .map(raw => {
+        const payload: Partial<FormaPagamentoCondicao> = {
+          forma_pagamento: formaId,
+          prazo_pagamento: Number(raw.prazo_pagamento),
+          taxa_percentual: this.numeroDecimalPayload(raw.taxa_percentual),
+          taxa_fixa: this.numeroDecimalPayload(raw.taxa_fixa),
+          ativo: raw.ativo !== false,
+        };
+        const id = this.condicaoId(raw);
+        return id ? this.api.updateFormaCondicao(id, payload) : this.api.createFormaCondicao(payload);
+      });
+    const operacoes = [...deletes, ...saves];
+    return operacoes.length ? forkJoin(operacoes) : of([]);
+  }
+
+  private numeroDecimalPayload(value: any): string {
+    const raw = String(value ?? '0').trim().replace(',', '.');
+    return raw === '' ? '0' : raw;
   }
 
   private loadColumnsPreference(): void {

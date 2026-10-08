@@ -15,10 +15,30 @@
         <label class="span-4 input-item" [class.invalid]="form.get('descricao')?.invalid && (form.get('descricao')?.touched || submitted)">Descrição*<input type="text" formControlName="descricao" /></label>
         <label class="span-3 input-item" [class.invalid]="form.get('tipo')?.invalid && (form.get('tipo')?.touched || submitted)">Tipo*<select formControlName="tipo"><option *ngFor="let tipo of tipos" [value]="tipo.value">{{ tipo.label }}</option></select></label>
         <label class="span-1 checkbox-line"><input type="checkbox" formControlName="ativo" /> Ativo</label>
+        <label class="span-2 checkbox-line"><input type="checkbox" formControlName="permite_parcelamento" /> Permite parcelamento</label>
         <label class="span-2 checkbox-line"><input type="checkbox" formControlName="gera_recebivel_bancario" /> Recebível</label>
         <label class="span-4 input-item">Conta bancária<select formControlName="conta_liquidacao"><option [ngValue]="null">Selecione</option><option *ngFor="let conta of contas" [ngValue]="conta.Idconta">{{ conta.descricao }} - {{ conta.banco }}</option></select></label>
-        <label class="span-3 input-item">Prazo / condição<select formControlName="prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let prazo of prazos" [ngValue]="prazo.Idprazo">{{ prazo.descricao }}</option></select></label>
+        <label class="span-3 input-item">Prazo legado<select formControlName="prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let prazo of prazos" [ngValue]="prazo.Idprazo">{{ prazo.descricao }}</option></select></label>
         <label class="span-2 input-item">Prazo liq.<input type="number" min="0" formControlName="prazo_credito_dias" /></label>
+      </div>
+      <div class="condicoes-panel" *ngIf="form.get('permite_parcelamento')?.value">
+        <div class="results-header condicoes-actions"><div><strong>Condições de parcelamento</strong><span>{{ condicoesFA.length }} registro(s)</span></div><div class="form-title-actions"><button class="btn" type="button" *ngIf="!consultando && podeEditarModulo" (click)="addCondicao()">Adicionar condição</button></div></div>
+        <div class="table-wrapper parcelas-wrapper" *ngIf="condicoesFA.length > 0; else semCondicoesTpl">
+          <table class="table parcelas-table condicoes-table">
+            <thead><tr><th>Prazo</th><th>Parcelas</th><th>Taxa %</th><th>Taxa fixa</th><th>Status</th><th></th></tr></thead>
+            <tbody formArrayName="condicoes_parcelamento">
+              <tr *ngFor="let fg of condicoesFA.controls; let i = index" [formGroupName]="i">
+                <td><select formControlName="prazo_pagamento"><option [ngValue]="null">Selecione</option><option *ngFor="let prazo of prazos" [ngValue]="prazo.Idprazo" [disabled]="!prazoDisponivel(prazo, i)">{{ prazo.codigo }} - {{ prazo.descricao }}</option></select></td>
+                <td>{{ prazoParcelas(fg.get('prazo_pagamento')?.value) }}</td>
+                <td><input type="number" min="0" step="0.0001" formControlName="taxa_percentual" /></td>
+                <td><input type="number" min="0" step="0.01" formControlName="taxa_fixa" /></td>
+                <td><label class="checkbox-line table-checkbox"><input type="checkbox" formControlName="ativo" /> Ativo</label></td>
+                <td><button type="button" class="btn sm danger-soft" *ngIf="!consultando && podeEditarModulo" (click)="removeCondicao(i)">Remover</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #semCondicoesTpl><div class="empty-hint condicoes-empty">Nenhuma condição vinculada.</div></ng-template>
       </div>
       <div class="form-pending" *ngIf="(submitted || form.touched) && getFormErrors().length"><strong>Pendências</strong><ul><li *ngFor="let m of getFormErrors()">{{ m }}</li></ul></div>
     </form>
