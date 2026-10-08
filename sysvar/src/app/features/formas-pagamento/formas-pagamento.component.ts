@@ -14,8 +14,6 @@ import { forkJoin, of } from 'rxjs';
 
 import { FormasPagamentoService } from '../../core/services/formas-pagamento.service';
 import { FormaPagamento, FormaPagamentoCondicao, PrazoPagamento, TipoFormaPagamento } from '../../core/models/forma-pagamento';
-import { ContaBancaria } from '../../core/models/conta-bancaria';
-import { ContasBancariasService } from '../../core/services/contas-bancarias.service';
 import { AuthService } from '../../core/auth.service';
 import { SearchSuggestComponent } from '../../shared/search-suggest/search-suggest.component';
 
@@ -29,7 +27,6 @@ import { SearchSuggestComponent } from '../../shared/search-suggest/search-sugge
 export class FormasPagamentoComponent implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(FormasPagamentoService);
-  private contasApi = inject(ContasBancariasService);
   private auth = inject(AuthService);
 
   loading = false;
@@ -40,7 +37,6 @@ export class FormasPagamentoComponent implements OnInit {
   consultando = false;
 
   search = '';
-  filterLiquidacao = '';
   filterTipo = '';
   filterStatus = '';
   advancedOpen = false;
@@ -55,8 +51,7 @@ export class FormasPagamentoComponent implements OnInit {
     { key: 'codigo', label: 'Código', visible: true, required: true },
     { key: 'descricao', label: 'Descrição', visible: true, required: true },
     { key: 'tipo', label: 'Tipo', visible: true, required: false },
-    { key: 'parcelas', label: 'Parcelas', visible: true, required: false },
-    { key: 'liquidacao', label: 'Liquidação', visible: true, required: false },
+    { key: 'parcelamento', label: 'Parcelamento', visible: true, required: false },
     { key: 'status', label: 'Status', visible: true, required: false },
   ];
   successMsg = '';
@@ -66,7 +61,6 @@ export class FormasPagamentoComponent implements OnInit {
 
   formasAll: FormaPagamento[] = [];
   formas: FormaPagamento[] = [];
-  contas: ContaBancaria[] = [];
   prazos: PrazoPagamento[] = [];
   removedCondicoesIds: number[] = [];
   tipos = [
@@ -91,9 +85,6 @@ export class FormasPagamentoComponent implements OnInit {
     ativo: [true],
     permite_parcelamento: [false],
     gera_recebivel_bancario: [false],
-    conta_liquidacao: [null as number | null],
-    prazo_pagamento: [null as number | null],
-    prazo_credito_dias: [0, [Validators.min(0)]],
     tef_habilitado: [false],
     tef_modalidade: [''],
     tef_adquirente_codigo: ['', Validators.maxLength(40)],
@@ -156,9 +147,8 @@ export class FormasPagamentoComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    forkJoin({ formas: this.api.list(), contas: this.contasApi.list({ ativo: true }), prazos: this.api.listPrazos({ ativo: true, finalidade: 'RECEBER' }) }).subscribe({
+    forkJoin({ formas: this.api.list(), prazos: this.api.listPrazos({ ativo: true, finalidade: 'RECEBER' }) }).subscribe({
       next: (res: any) => {
-        this.contas = Array.isArray(res.contas) ? res.contas : (res.contas?.results ?? []);
         this.prazos = Array.isArray(res.prazos) ? res.prazos : (res.prazos?.results ?? []);
         const rawArr: FormaPagamento[] = Array.isArray(res.formas) ? res.formas : (res.formas?.results ?? []);
         this.formasAll = rawArr;
@@ -225,7 +215,6 @@ export class FormasPagamentoComponent implements OnInit {
 
   clearSearch(): void {
       this.search = '';
-      this.filterLiquidacao = '';
       this.filterTipo = '';
       this.filterStatus = '';
     this.page = 1;
@@ -250,9 +239,6 @@ export class FormasPagamentoComponent implements OnInit {
       ativo: true,
       permite_parcelamento: false,
       gera_recebivel_bancario: false,
-      conta_liquidacao: null,
-      prazo_pagamento: null,
-      prazo_credito_dias: 0,
       tef_habilitado: false,
       tef_modalidade: '',
       tef_adquirente_codigo: '',
@@ -289,9 +275,6 @@ export class FormasPagamentoComponent implements OnInit {
           ativo: !!det.ativo,
           permite_parcelamento: !!det.permite_parcelamento,
           gera_recebivel_bancario: !!det.gera_recebivel_bancario,
-          conta_liquidacao: det.conta_liquidacao ?? null,
-          prazo_pagamento: det.prazo_pagamento ?? null,
-          prazo_credito_dias: Number(det.prazo_credito_dias || 0),
           tef_habilitado: !!det.tef_habilitado,
           tef_modalidade: det.tef_modalidade ?? '',
           tef_adquirente_codigo: det.tef_adquirente_codigo ?? '',
@@ -345,9 +328,6 @@ export class FormasPagamentoComponent implements OnInit {
       ativo: !!f.ativo,
       permite_parcelamento: !!f.permite_parcelamento,
       gera_recebivel_bancario: !!f.gera_recebivel_bancario,
-      conta_liquidacao: f.gera_recebivel_bancario ? Number(f.conta_liquidacao) : null,
-      prazo_pagamento: f.prazo_pagamento ? Number(f.prazo_pagamento) : null,
-      prazo_credito_dias: Number(f.prazo_credito_dias || 0),
       tef_habilitado: false,
       tef_modalidade: '',
       tef_adquirente_codigo: '',
@@ -442,33 +422,17 @@ export class FormasPagamentoComponent implements OnInit {
     return this.formasAll.filter(f => {
       const tipo = this.tipoLabel(f.tipo).toLowerCase();
       const matchesSearch = !term || (f.codigo || '').toLowerCase().includes(term) || (f.descricao || '').toLowerCase().includes(term) || tipo.includes(term);
-      const matchesLiquidacao = !this.filterLiquidacao || (this.filterLiquidacao === 'banco' && !!f.gera_recebivel_bancario) || (this.filterLiquidacao === 'caixa' && !f.gera_recebivel_bancario);
       const matchesTipo = !this.filterTipo || f.tipo === this.filterTipo;
       const matchesStatus = !this.filterStatus || (this.filterStatus === 'ativo' && f.ativo !== false) || (this.filterStatus === 'inativo' && f.ativo === false);
-      return matchesSearch && matchesLiquidacao && matchesTipo && matchesStatus;
+      return matchesSearch && matchesTipo && matchesStatus;
     });
   }
   get indicadores() {
     const total = this.formasAll.length;
-    return { total, ativas: this.formasAll.filter(f => f.ativo !== false).length, banco: this.formasAll.filter(f => f.gera_recebivel_bancario).length, filtradas: this.total };
+    return { total, ativas: this.formasAll.filter(f => f.ativo !== false).length, parcelamento: this.formasAll.filter(f => f.permite_parcelamento === true).length, filtradas: this.total };
   }
   tipoLabel(tipo?: string | null): string { return this.tipos.find(t => t.value === tipo)?.label ?? 'Outro'; }
-  prazoLabel(id?: number | null): string {
-    if (!id) return 'Sem prazo';
-    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === id);
-    return prazo ? prazo.descricao : 'Prazo';
-  }
-  parcelasForma(f: FormaPagamento): number | string {
-    const condicoes = (f.condicoes_parcelamento ?? []).filter(c => c.ativo !== false);
-    if (f.permite_parcelamento && condicoes.length) {
-      const nums = condicoes.map(c => c.prazo_num_parcelas).filter((v): v is number => typeof v === 'number');
-      if (nums.length) return nums.length === 1 ? `${nums[0]}x` : `${Math.min(...nums)}-${Math.max(...nums)}x`;
-      return condicoes.length;
-    }
-    if (!f.prazo_pagamento) return '-';
-    const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === f.prazo_pagamento);
-    return prazo?.num_parcelas ?? '-';
-  }
+  parcelamentoLabel(f: FormaPagamento): string { return f.permite_parcelamento === true ? 'Sim' : 'Não'; }
   prazoParcelas(id?: number | null): number | string {
     const prazo = this.prazos.find(p => (p.Idprazo ?? (p as any).id) === Number(id));
     return prazo?.num_parcelas ?? '-';
@@ -524,7 +488,6 @@ export class FormasPagamentoComponent implements OnInit {
     push(f.get('descricao')?.hasError('required') || false, 'descricao: Este campo é obrigatório.');
     push(f.get('descricao')?.hasError('maxlength') || false, 'descricao: Máx. 120 caracteres.');
     push(f.get('tipo')?.hasError('required') || false, 'tipo: Informe o tipo da forma.');
-    push(!!f.get('gera_recebivel_bancario')?.value && !f.get('conta_liquidacao')?.value, 'conta_liquidacao: Informe a conta de liquidação.');
     if (f.get('permite_parcelamento')?.value) {
       this.condicoesFA.controls.forEach((fg, i) => {
         push(fg.get('prazo_pagamento')?.hasError('required') || false, `condição ${i + 1}: Informe o prazo.`);
@@ -535,7 +498,7 @@ export class FormasPagamentoComponent implements OnInit {
       });
     }
 
-    const fields = ['codigo', 'descricao', 'tipo', 'conta_liquidacao', 'prazo_pagamento'];
+    const fields = ['codigo', 'descricao', 'tipo'];
     const seen = new Set<string>();
     fields.forEach(field => {
       const err = f.get(field)?.errors?.['server'];
@@ -635,7 +598,11 @@ export class FormasPagamentoComponent implements OnInit {
     if (!raw) return;
     try {
       const saved = JSON.parse(raw) as Record<string, boolean>;
-      this.columns = this.columns.map(c => c.required ? c : { ...c, visible: saved[c.key] ?? c.visible });
+      this.columns = this.columns.map(c => {
+        if (c.required) return c;
+        const legacyKey = c.key === 'parcelamento' ? 'parcelas' : c.key;
+        return { ...c, visible: saved[c.key] ?? saved[legacyKey] ?? c.visible };
+      });
     } catch {}
   }
 
