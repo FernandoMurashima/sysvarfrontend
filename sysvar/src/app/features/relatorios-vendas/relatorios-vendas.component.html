@@ -21,16 +21,16 @@
       </select>
     </label>
     <label>Vendedor
-      <select [(ngModel)]="vendedorId">
+      <select [(ngModel)]="vendedorId" (ngModelChange)="onFiltroGlobalChange()">
         <option [ngValue]="null">Todos</option>
         <option *ngFor="let vendedor of vendedoresFiltrados" [ngValue]="vendedor.id">{{ vendedor.nomefuncionario }}</option>
       </select>
     </label>
     <label>De
-      <input type="date" [(ngModel)]="dataIni" />
+      <input type="date" [(ngModel)]="dataIni" (ngModelChange)="onFiltroGlobalChange()" />
     </label>
     <label>Até
-      <input type="date" [(ngModel)]="dataFim" />
+      <input type="date" [(ngModel)]="dataFim" (ngModelChange)="onFiltroGlobalChange()" />
     </label>
   </div>
 
@@ -49,6 +49,7 @@
     </section>
 
     <nav class="report-tabs">
+      <button type="button" [class.active]="abaAtiva === 'vendas'" (click)="selecionarAba('vendas')">Vendas</button>
       <button type="button" [class.active]="abaAtiva === 'lojas'" (click)="selecionarAba('lojas')">Por loja</button>
       <button type="button" [class.active]="abaAtiva === 'vendedores'" (click)="selecionarAba('vendedores')">Por vendedor</button>
       <button type="button" [class.active]="abaAtiva === 'pagamentos'" (click)="selecionarAba('pagamentos')">Pagamento</button>
@@ -58,6 +59,226 @@
     </nav>
 
     <section class="report-focus">
+      <article class="panel sales-panel" *ngIf="abaAtiva === 'vendas'">
+        <div class="panel-title">
+          <h3>Vendas</h3>
+          <span>{{ consultaVendas?.count || 0 }} venda(s)</span>
+        </div>
+
+        <div class="sales-filters">
+          <label>Venda
+            <input type="text" placeholder="VE0050000004" [(ngModel)]="vendaFiltro" (ngModelChange)="onFiltroConsultaChange()" />
+          </label>
+          <label>Cliente
+            <input type="text" placeholder="Cliente" [(ngModel)]="clienteFiltro" (ngModelChange)="onFiltroConsultaChange()" />
+          </label>
+          <label>Forma
+            <input type="text" placeholder="CRE" [(ngModel)]="formaFiltro" (ngModelChange)="onFiltroConsultaChange()" />
+          </label>
+          <label>NFC-e
+            <input type="text" placeholder="NFC-e" [(ngModel)]="nfceFiltro" (ngModelChange)="onFiltroConsultaChange()" />
+          </label>
+          <label>Status
+            <select [(ngModel)]="statusFiltro" (ngModelChange)="onFiltroConsultaChange()">
+              <option value="FINALIZADA">FINALIZADA</option>
+              <option value="ABERTA">ABERTA</option>
+              <option value="CANCELADA">CANCELADA</option>
+            </select>
+          </label>
+          <label>Itens
+            <select [(ngModel)]="vendasPageSize" (ngModelChange)="alterarPageSize()">
+              <option [ngValue]="20">20</option>
+              <option [ngValue]="50">50</option>
+              <option [ngValue]="100">100</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="empty" *ngIf="!vendasResultados.length && !loading">Nenhuma venda encontrada.</div>
+        <div class="sales-table-wrap" *ngIf="vendasResultados.length">
+          <table class="report-table sales-table">
+            <thead>
+              <tr>
+                <th>Venda</th>
+                <th>Data/Hora</th>
+                <th>Loja</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Pagamento</th>
+                <th>NFC-e</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable-row" *ngFor="let venda of vendasResultados" [class.selected]="vendaSelecionada?.id === venda.id" (click)="selecionarVenda(venda)">
+                <td><strong>{{ venda.documento }}</strong></td>
+                <td>{{ venda.data_venda | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ venda.loja?.nome || '-' }}</td>
+                <td>{{ venda.cliente?.nome || '-' }}</td>
+                <td>{{ venda.vendedor?.nome || '-' }}</td>
+                <td>{{ pagamentosResumo(venda) }}</td>
+                <td>{{ nfceResumo(venda) }}</td>
+                <td>{{ venda.total | currency:'BRL' }}</td>
+                <td><span class="status-badge" [ngClass]="statusClass(venda.status)">{{ venda.status }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <span>Página {{ consultaVendas?.page || 1 }} de {{ totalPaginasVendas }}</span>
+          <span>Mostrando {{ vendasExibidas }} vendas</span>
+          <div>
+            <button class="btn" type="button" (click)="alterarPagina(vendasPage - 1)" [disabled]="vendasPage <= 1 || loading">Anterior</button>
+            <button class="btn" type="button" (click)="alterarPagina(vendasPage + 1)" [disabled]="vendasPage >= totalPaginasVendas || loading">Próxima</button>
+          </div>
+        </div>
+
+        <div class="detail-loading" *ngIf="vendaDetalheLoading">Carregando detalhe...</div>
+        <section class="sale-detail" *ngIf="vendaSelecionada as venda">
+          <div class="detail-header">
+            <div>
+              <span>Venda</span>
+              <strong>{{ venda.documento }}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{{ venda.status }}</strong>
+            </div>
+            <div>
+              <span>Data/Hora</span>
+              <strong>{{ venda.data_venda | date:'dd/MM/yyyy HH:mm' }}</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>{{ venda.totais.total | currency:'BRL' }}</strong>
+            </div>
+          </div>
+
+          <div class="detail-grid">
+            <div>
+              <h4>Cabeçalho</h4>
+              <p><b>Loja:</b> {{ venda.loja?.nome || '-' }}</p>
+              <p><b>Caixa:</b> {{ venda.caixa?.descricao || venda.caixa?.codigo || '-' }}</p>
+              <p><b>Operador:</b> {{ venda.operador?.nome || '-' }}</p>
+              <p><b>Cliente:</b> {{ venda.cliente?.nome || '-' }}</p>
+              <p><b>Documento cliente:</b> {{ venda.cliente?.documento || '-' }}</p>
+              <p><b>Vendedor:</b> {{ venda.vendedor?.nome || '-' }}</p>
+            </div>
+            <div>
+              <h4>Totais</h4>
+              <p><b>Subtotal:</b> {{ venda.totais.subtotal | currency:'BRL' }}</p>
+              <p><b>Desconto itens:</b> {{ venda.totais.desconto_itens | currency:'BRL' }}</p>
+              <p><b>Desconto geral:</b> {{ venda.totais.desconto_geral | currency:'BRL' }}</p>
+              <p><b>Total:</b> {{ venda.totais.total | currency:'BRL' }}</p>
+              <p><b>Recebido:</b> {{ venda.totais.valor_recebido | currency:'BRL' }}</p>
+              <p><b>Troco:</b> {{ venda.totais.troco | currency:'BRL' }}</p>
+            </div>
+            <div>
+              <h4>NFC-e</h4>
+              <p><b>Número:</b> {{ venda.nfce?.numero || '-' }}</p>
+              <p><b>Série:</b> {{ venda.nfce?.serie || '-' }}</p>
+              <p><b>Status:</b> {{ venda.nfce?.status || '-' }}</p>
+              <p><b>Chave:</b> {{ venda.nfce?.chave || '-' }}</p>
+              <p><b>Protocolo:</b> {{ venda.nfce?.protocolo || '-' }}</p>
+              <p><b>Tipo emissão:</b> {{ venda.nfce?.tipo_emissao || '-' }}</p>
+              <p><b>Emissão:</b> {{ venda.nfce?.emitida_em ? (venda.nfce?.emitida_em | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
+              <p><b>Autorização:</b> {{ venda.nfce?.autorizada_em ? (venda.nfce?.autorizada_em | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h4>Itens</h4>
+            <table class="report-table detail-table">
+              <thead>
+                <tr>
+                  <th>Referência</th>
+                  <th>EAN</th>
+                  <th>Descrição</th>
+                  <th>Cor</th>
+                  <th>Tamanho</th>
+                  <th>Qtd.</th>
+                  <th>Preço</th>
+                  <th>Desconto</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of venda.itens">
+                  <td>{{ item.referencia || '-' }}</td>
+                  <td>{{ item.ean }}</td>
+                  <td><strong>{{ item.descricao }}</strong></td>
+                  <td>{{ item.cor || '-' }}</td>
+                  <td>{{ item.tamanho || '-' }}</td>
+                  <td>{{ item.quantidade }}</td>
+                  <td>{{ item.preco_unitario | currency:'BRL' }}</td>
+                  <td>{{ item.desconto | currency:'BRL' }}</td>
+                  <td>{{ item.total_item | currency:'BRL' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="detail-section">
+            <h4>Pagamentos</h4>
+            <table class="report-table detail-table">
+              <thead>
+                <tr>
+                  <th>Forma</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th>Autorização</th>
+                  <th>Parcelas</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let pagamento of venda.pagamentos">
+                  <td>{{ pagamento.codigo || pagamento.forma }}</td>
+                  <td>{{ pagamento.descricao || '-' }}</td>
+                  <td>{{ pagamento.valor | currency:'BRL' }}</td>
+                  <td>{{ pagamento.autorizacao || '-' }}</td>
+                  <td>{{ pagamento.parcelas?.length || 0 }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="detail-section" *ngIf="venda.financeiro.parcelas.length">
+            <h4>Parcelas financeiras</h4>
+            <table class="report-table detail-table">
+              <thead>
+                <tr>
+                  <th>Parcela</th>
+                  <th>Vencimento</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                  <th>Taxa</th>
+                  <th>Líquido</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let parcela of venda.financeiro.parcelas">
+                  <td>{{ parcela.parcela_n }}/{{ parcela.parcela_total }}</td>
+                  <td>{{ parcela.data_vencimento ? (parcela.data_vencimento | date:'dd/MM/yyyy') : '-' }}</td>
+                  <td>{{ parcela.status }}</td>
+                  <td>{{ parcela.valor_parcela | currency:'BRL' }}</td>
+                  <td>{{ parcela.valor_taxa | currency:'BRL' }}</td>
+                  <td>{{ parcela.valor_liquido_previsto | currency:'BRL' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="detail-notes" *ngIf="venda.devolucoes.length || venda.vales_troca.length || venda.cashback.gerado.length || venda.cashback.usado.length">
+            <span *ngIf="venda.devolucoes.length">Devoluções: {{ venda.devolucoes.length }}</span>
+            <span *ngIf="venda.vales_troca.length">Vale-troca: {{ venda.vales_troca.length }}</span>
+            <span *ngIf="venda.cashback.gerado.length">Cashback gerado: {{ venda.cashback.gerado.length }}</span>
+            <span *ngIf="venda.cashback.usado.length">Cashback usado: {{ venda.cashback.usado.length }}</span>
+          </div>
+        </section>
+      </article>
+
       <article class="panel" *ngIf="abaAtiva === 'lojas'">
         <div class="panel-title">
           <h3>Venda por loja</h3>

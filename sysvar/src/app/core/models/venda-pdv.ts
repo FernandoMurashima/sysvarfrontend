@@ -90,6 +90,169 @@ export interface VendaPdv {
   cupom?: CupomPdv;
 }
 
+export interface VendaConsultaPessoa {
+  id: number;
+  nome: string;
+  documento?: string;
+}
+
+export interface VendaConsultaLoja {
+  id: number;
+  nome: string;
+}
+
+export interface VendaConsultaCaixa {
+  id: number;
+  codigo: string;
+  descricao: string;
+}
+
+export interface VendaConsultaOperador {
+  id: number;
+  username: string;
+  nome: string;
+}
+
+export interface VendaConsultaPagamento {
+  forma: string;
+  codigo: string;
+  descricao: string;
+  tipo?: string | null;
+  valor: string;
+  autorizacao?: string;
+  parcelas?: VendaConsultaParcela[];
+}
+
+export interface VendaConsultaNfce {
+  id: number;
+  numero: number;
+  serie: number;
+  status: string;
+  chave?: string;
+  protocolo?: string;
+  tipo_emissao?: string;
+  emitida_em?: string | null;
+  autorizada_em?: string | null;
+  ambiente?: string;
+}
+
+export interface VendaConsultaResumo {
+  id: number;
+  documento: string;
+  status: string;
+  data_venda: string;
+  loja: VendaConsultaLoja | null;
+  cliente: VendaConsultaPessoa | null;
+  vendedor: VendaConsultaPessoa | null;
+  pagamentos: VendaConsultaPagamento[];
+  nfce: VendaConsultaNfce | null;
+  subtotal: string;
+  desconto: string;
+  total: string;
+}
+
+export interface VendaConsultaPaginada {
+  count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  results: VendaConsultaResumo[];
+}
+
+export interface VendaConsultaItem {
+  id: number;
+  referencia: string;
+  ean: string;
+  descricao: string;
+  cor: string;
+  tamanho: string;
+  quantidade: number;
+  preco_unitario: string;
+  desconto: string;
+  total_item: string;
+  promocao?: string | null;
+}
+
+export interface VendaConsultaTotais {
+  subtotal: string;
+  desconto_itens: string;
+  desconto_geral: string;
+  total: string;
+  valor_recebido: string;
+  troco: string;
+}
+
+export interface VendaConsultaParcela {
+  id: number;
+  parcela_n: number;
+  parcela_total: number;
+  status: string;
+  data_vencimento: string | null;
+  valor_parcela: string;
+  valor_bruto: string;
+  taxa_percentual: string;
+  taxa_fixa: string;
+  valor_taxa: string;
+  valor_liquido_previsto: string;
+  prazo_pagamento_id: number | null;
+  forma_pagamento_id: number | null;
+  adquirente_id: number | null;
+  condicao_adquirente_id: number | null;
+}
+
+export interface VendaConsultaFinanceiro {
+  receber: {
+    id: number;
+    titulo: string;
+    documento: string;
+    valor_total: string;
+  } | null;
+  parcelas: VendaConsultaParcela[];
+}
+
+export interface VendaConsultaDevolucao {
+  id: number;
+  documento: string;
+  status: string;
+  credito_cliente: string;
+}
+
+export interface VendaConsultaValeTroca {
+  id: number;
+  tipo: string;
+  valor: string;
+  vale: {
+    id: number;
+    documento: string;
+    status: string;
+    saldo: string;
+  } | null;
+}
+
+export interface VendaConsultaCashback {
+  id: number;
+  tipo: string;
+  status: string;
+  valor: string;
+  validade: string | null;
+}
+
+export interface VendaConsultaDetalhe extends VendaConsultaResumo {
+  caixa: VendaConsultaCaixa | null;
+  operador: VendaConsultaOperador | null;
+  itens: VendaConsultaItem[];
+  totais: VendaConsultaTotais;
+  pagamentos: VendaConsultaPagamento[];
+  financeiro: VendaConsultaFinanceiro;
+  nfce: VendaConsultaNfce | null;
+  devolucoes: VendaConsultaDevolucao[];
+  vales_troca: VendaConsultaValeTroca[];
+  cashback: {
+    gerado: VendaConsultaCashback[];
+    usado: VendaConsultaCashback[];
+  };
+}
+
 export interface VendaDevolucaoItemConsulta {
   id: number;
   produto: number;

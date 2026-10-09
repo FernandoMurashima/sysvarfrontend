@@ -5,12 +5,12 @@ import { forkJoin } from 'rxjs';
 
 import { Funcionario } from '../../core/models/funcionario';
 import { Loja } from '../../core/models/loja';
-import { RelatorioVendas } from '../../core/models/venda-pdv';
+import { RelatorioVendas, VendaConsultaDetalhe, VendaConsultaPaginada, VendaConsultaResumo } from '../../core/models/venda-pdv';
 import { FuncionariosService } from '../../core/services/funcionarios.service';
 import { LojasService } from '../../core/services/lojas.service';
 import { VendaPdvService } from '../../core/services/venda-pdv.service';
 
-type RelatorioAba = 'lojas' | 'vendedores' | 'pagamentos' | 'produtos' | 'colecoes' | 'grupos';
+type RelatorioAba = 'vendas' | 'lojas' | 'vendedores' | 'pagamentos' | 'produtos' | 'colecoes' | 'grupos';
 
 @Component({
   selector: 'app-relatorios-vendas',
@@ -28,12 +28,22 @@ export class RelatoriosVendasComponent implements OnInit {
   errorMsg = '';
   lojaId: number | null = null;
   vendedorId: number | null = null;
-  dataIni = '';
-  dataFim = '';
+  dataIni = this.dataLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  dataFim = this.dataLocal(new Date());
   telaCheia = false;
-  abaAtiva: RelatorioAba = 'lojas';
+  abaAtiva: RelatorioAba = 'vendas';
   grupoSelecionado = '';
   colecaoSelecionada = '';
+  vendaFiltro = '';
+  clienteFiltro = '';
+  formaFiltro = '';
+  nfceFiltro = '';
+  statusFiltro = 'FINALIZADA';
+  vendasPage = 1;
+  vendasPageSize = 20;
+  consultaVendas: VendaConsultaPaginada | null = null;
+  vendaSelecionada: VendaConsultaDetalhe | null = null;
+  vendaDetalheLoading = false;
 
   lojas: Loja[] = [];
   vendedores: Funcionario[] = [];
@@ -76,19 +86,18 @@ export class RelatoriosVendasComponent implements OnInit {
   carregar(): void {
     this.loading = true;
     this.errorMsg = '';
-    this.vendasApi.relatorioVendas({
-      loja: this.lojaId,
-      vendedor: this.vendedorId,
-      data_ini: this.dataIni,
-      data_fim: this.dataFim
+    forkJoin({
+      relatorio: this.vendasApi.relatorioVendas(this.filtrosRelatorio()),
+      consulta: this.vendasApi.consultaVendas(this.filtrosConsulta())
     }).subscribe({
-      next: relatorio => {
-        this.relatorio = relatorio;
+      next: data => {
+        this.relatorio = data.relatorio;
+        this.consultaVendas = data.consulta;
         this.loading = false;
       },
       error: () => {
         this.loading = false;
-        this.errorMsg = 'Falha ao carregar relatório de vendas.';
+        this.errorMsg = 'Falha ao carregar consulta de vendas.';
       }
     });
   }
@@ -97,6 +106,45 @@ export class RelatoriosVendasComponent implements OnInit {
     if (this.vendedorId && !this.vendedoresFiltrados.some(v => v.id === this.vendedorId)) {
       this.vendedorId = null;
     }
+    this.resetarConsulta();
+  }
+
+  onFiltroGlobalChange(): void {
+    this.resetarConsulta();
+  }
+
+  onFiltroConsultaChange(): void {
+    this.resetarConsulta();
+  }
+
+  alterarPagina(page: number): void {
+    if (page < 1 || page > this.totalPaginasVendas || page === this.vendasPage) return;
+    this.vendasPage = page;
+    this.carregar();
+  }
+
+  alterarPageSize(): void {
+    this.vendasPage = 1;
+    this.carregar();
+  }
+
+  selecionarVenda(venda: VendaConsultaResumo): void {
+    if (this.vendaSelecionada?.id === venda.id) {
+      this.vendaSelecionada = null;
+      return;
+    }
+    this.vendaDetalheLoading = true;
+    this.errorMsg = '';
+    this.vendasApi.consultaVendaDetalhe(venda.id).subscribe({
+      next: detalhe => {
+        this.vendaSelecionada = detalhe;
+        this.vendaDetalheLoading = false;
+      },
+      error: () => {
+        this.vendaDetalheLoading = false;
+        this.errorMsg = 'Falha ao carregar detalhe da venda.';
+      }
+    });
   }
 
   valor(value: string | number | null | undefined): number {
@@ -174,7 +222,66 @@ export class RelatoriosVendasComponent implements OnInit {
     return Math.max(0, ...this.subgruposDoGrupo.map(s => this.valor(s.total)));
   }
 
+  pagamentosResumo(venda: VendaConsultaResumo): string {
+    const codigos = venda.pagamentos.map(p => p.codigo || p.forma).filter(Boolean);
+    return Array.from(new Set(codigos)).join(' + ') || '-';
+  }
+
+  nfceResumo(venda: VendaConsultaResumo): string {
+    return venda.nfce ? `${venda.nfce.numero} / ${venda.nfce.serie}` : '-';
+  }
+
+  statusClass(statusValue: string): string {
+    return `status-${(statusValue || '').toLowerCase()}`;
+  }
+
+  get vendasResultados(): VendaConsultaResumo[] {
+    return this.consultaVendas?.results ?? [];
+  }
+
+  get totalPaginasVendas(): number {
+    return this.consultaVendas?.total_pages || 1;
+  }
+
+  get vendasExibidas(): number {
+    return this.vendasResultados.length;
+  }
+
   private unwrap<T>(res: any): T[] {
     return Array.isArray(res) ? res : (res?.results ?? []);
+  }
+
+  private resetarConsulta(): void {
+    this.vendasPage = 1;
+    this.vendaSelecionada = null;
+  }
+
+  private filtrosRelatorio(): Record<string, string | number | null | undefined> {
+    return {
+      loja: this.lojaId,
+      vendedor: this.vendedorId,
+      data_ini: this.dataIni,
+      data_fim: this.dataFim
+    };
+  }
+
+  private filtrosConsulta(): Record<string, string | number | null | undefined> {
+    return {
+      ...this.filtrosRelatorio(),
+      documento: this.vendaFiltro.trim(),
+      cliente: this.clienteFiltro.trim(),
+      forma_pagamento: this.formaFiltro.trim(),
+      nfce: this.nfceFiltro.trim(),
+      status: this.statusFiltro,
+      page: this.vendasPage,
+      page_size: this.vendasPageSize
+    };
+  }
+
+  private dataLocal(data: Date): string {
+    const ano = data.getFullYear();
+    const mes = `${data.getMonth() + 1}`.padStart(2, '0');
+    const dia = `${data.getDate()}`.padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
   }
 }

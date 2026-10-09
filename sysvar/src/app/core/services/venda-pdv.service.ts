@@ -12,6 +12,8 @@ import {
   RelatorioVendas,
   VendaDevolucao,
   VendaDevolucaoConsulta,
+  VendaConsultaDetalhe,
+  VendaConsultaPaginada,
   VendaPdv
 } from '../models/venda-pdv';
 
@@ -37,18 +39,21 @@ export class VendaPdvService {
   }
 
   relatorioVendas(params?: Record<string, string | number | null | undefined>): Observable<RelatorioVendas> {
-    const query: Record<string, string> = {};
-    Object.entries(params ?? {}).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') query[key] = String(value);
-    });
+    const query = this.queryParams(params);
     return this.http.get<RelatorioVendas>(`${this.base}/vendas-pdv/relatorio-vendas/`, { params: query });
   }
 
+  consultaVendas(params?: Record<string, string | number | null | undefined>): Observable<VendaConsultaPaginada> {
+    const query = this.queryParams(params);
+    return this.http.get<VendaConsultaPaginada>(`${this.base}/vendas-pdv/consulta-vendas/`, { params: query });
+  }
+
+  consultaVendaDetalhe(id: number): Observable<VendaConsultaDetalhe> {
+    return this.http.get<VendaConsultaDetalhe>(`${this.base}/vendas-pdv/${id}/consulta/`);
+  }
+
   relatorioMargem(params?: Record<string, string | number | null | undefined>): Observable<RelatorioMargem> {
-    const query: Record<string, string> = {};
-    Object.entries(params ?? {}).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') query[key] = String(value);
-    });
+    const query = this.queryParams(params);
     return this.http.get<RelatorioMargem>(`${this.base}/vendas-pdv/relatorio-margem/`, { params: query });
   }
 
@@ -67,5 +72,13 @@ export class VendaPdvService {
 
   finalizarDevolucao(payload: FinalizarDevolucaoVendaPayload): Observable<VendaDevolucao> {
     return this.http.post<VendaDevolucao>(`${this.base}/devolucoes-venda/finalizar/`, payload);
+  }
+
+  private queryParams(params?: Record<string, string | number | null | undefined>): Record<string, string> {
+    const query: Record<string, string> = {};
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') query[key] = String(value);
+    });
+    return query;
   }
 }
