@@ -1,3 +1,8 @@
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+
 import { routes } from './app.routes';
 
 describe('rotas de auditoria', () => {
@@ -98,10 +103,50 @@ describe('rotas preservadas na reorganizacao dos menus', () => {
     });
   }
 
-  it('mantem a rota e o componente PDV para a remocao posterior', () => {
-    const rota = shell?.children?.find(route => route.path === 'loja/pdv-offline');
-    expect(rota?.component).toBeTruthy();
-    expect(rota?.data?.['moduloEmpresa']).toBe('vendas');
-    expect(rota?.data?.['roles']).toEqual(['Caixa', 'Gerente']);
+
+});
+
+
+@Component({ standalone: true, template: '<h1>Home</h1>' })
+class HomeDestinoTesteComponent {}
+
+describe('PDVs da Central descontinuados', () => {
+  const shell = routes.find(route => route.path === '');
+  const caminhosAntigos = ['vendas/pdv', 'vendas/pdv-desktop', 'loja/pdv-offline'];
+
+  for (const path of caminhosAntigos) {
+    it('redireciona /' + path + ' para /home sem carregar PDV', async () => {
+      const legada = shell?.children?.find(route => route.path === path);
+      expect(legada).toBeTruthy();
+      expect(legada?.redirectTo).toBe('/home');
+      expect(legada?.pathMatch).toBe('full');
+      expect(legada?.component).toBeUndefined();
+      expect(legada?.loadComponent).toBeUndefined();
+      expect(legada?.loadChildren).toBeUndefined();
+      TestBed.configureTestingModule({
+        providers: [provideRouter([
+          legada!,
+          { path: 'home', component: HomeDestinoTesteComponent },
+        ])],
+      });
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/' + path, HomeDestinoTesteComponent);
+      expect(TestBed.inject(Router).url).toBe('/home');
+      expect(harness.routeNativeElement?.textContent).toBe('Home');
+    });
+  }
+
+  it('preserva componentes e acessos de vendas, devolucoes e recebimento', () => {
+    for (const [path, modulo, roles] of [
+      ['vendas/relatorios', 'vendas', ['Diretor', 'Gerente']],
+      ['loja/devolucoes', 'vendas', ['Diretor', 'Gerente', 'Caixa']],
+      ['loja/recebimento', 'estoque', ['Diretor', 'Gerente', 'Caixa']],
+    ] as const) {
+      const route = shell?.children?.find(item => item.path === path);
+      expect(route?.component).toBeTruthy();
+      expect(route?.redirectTo).toBeUndefined();
+      expect(route?.data?.['moduloEmpresa']).toBe(modulo);
+      expect(route?.data?.['roles']).toEqual([...roles]);
+    }
   });
 });

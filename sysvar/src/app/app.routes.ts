@@ -66,8 +66,6 @@ import { DistribuicaoComponent } from './features/distribuicao/distribuicao.comp
 import { PedidosVendaDistribuicaoComponent } from './features/pedidos-venda-distribuicao/pedidos-venda-distribuicao.component';
 import { FaturamentoComponent } from './features/faturamento/faturamento.component';
 import { LojaRecebimentoComponent } from './features/loja-recebimento/loja-recebimento.component';
-import { PdvComponent } from './features/pdv/pdv.component';
-import { PdvDesktopComponent } from './features/pdv-desktop/pdv-desktop.component';
 import { RelatoriosVendasComponent } from './features/relatorios-vendas/relatorios-vendas.component';
 import { RelatorioMargemComponent } from './features/relatorio-margem/relatorio-margem.component';
 import { CashbackComponent } from './features/cashback/cashback.component';
@@ -130,8 +128,8 @@ export const routes: Routes = [
       { path: 'produtos-fornecedor', component: ProdutoFornecedorComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'produtos-uso', component: ProdutosUsoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
       { path: 'insumos', component: InsumosComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'produtos' } },
-      { path: 'vendas/pdv', component: PdvComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
-      { path: 'vendas/pdv-desktop', redirectTo: 'loja/pdv-offline', pathMatch: 'full' },
+      { path: 'vendas/pdv', redirectTo: '/home', pathMatch: 'full' },
+      { path: 'vendas/pdv-desktop', redirectTo: '/home', pathMatch: 'full' },
       { path: 'vendas/relatorios', component: RelatoriosVendasComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/cashback', component: CashbackComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
       { path: 'vendas/promocoes', component: PromocoesComponent, data: { roles: ['Diretor', 'Gerente'], moduloEmpresa: 'vendas' } },
@@ -189,7 +187,7 @@ export const routes: Routes = [
       { path: 'distribuicao/pedidos-venda', component: PedidosVendaDistribuicaoComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'distribuicao' } },
       { path: 'estoque/etiquetas', component: EstoqueEtiquetasComponent, data: { roles: ['Diretor', 'Gerente', 'Auxiliar'], moduloEmpresa: 'estoque' } },
       { path: 'loja/recebimento', component: LojaRecebimentoComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'estoque' } },
-      { path: 'loja/pdv-offline', component: PdvDesktopComponent, data: { roles: ['Caixa', 'Gerente'], moduloEmpresa: 'vendas' } },
+      { path: 'loja/pdv-offline', redirectTo: '/home', pathMatch: 'full' },
       { path: 'loja/devolucoes', component: DevolucoesVendasComponent, data: { roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'vendas' } },
 
       { path: 'config/usuarios', component: UsuariosComponent, data: { moduloEmpresa: 'operacional' } },

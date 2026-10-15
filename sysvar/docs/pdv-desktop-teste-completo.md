@@ -1,4 +1,17 @@
-# PDV Desktop - Teste Completo
+# PDV Desktop - Teste Completo — DESCONTINUADO
+
+**Status: DESCONTINUADO em 15/10/2026. O PDV oficial é o Sysvar Hub.**
+
+Os dois PDVs antigos da Central foram removidos. As URLs `/vendas/pdv`,
+`/vendas/pdv-desktop` e `/loja/pdv-offline` redirecionam para `/home`.
+Consulta de Vendas, Devoluções, Recebimento, Estoque, Financeiro e administração
+da sincronização Hub continuam disponíveis na Central.
+
+---
+
+O conteúdo abaixo é registro histórico do protótipo descontinuado; não é roteiro
+de operação ou homologação do PDV oficial do Hub.
+
 
 ## 1. Preparar online
 

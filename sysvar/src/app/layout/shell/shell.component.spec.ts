@@ -343,6 +343,17 @@ describe('ShellComponent menu lateral', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Perfis de Distribuição');
   });
 
+  it('nao configura controles de pagina para as URLs dos PDVs removidos', () => {
+    const component = render();
+    let currentUrl = '/home';
+    spyOnProperty((component as any).router, 'url', 'get').and.callFake(() => currentUrl);
+    for (const path of ['/vendas/pdv', '/vendas/pdv-desktop', '/loja/pdv-offline']) {
+      currentUrl = path;
+      expect(component.showPageBarControls).toBeFalse();
+      expect(linksOf(component.menuItems)).not.toContain(path);
+    }
+  });
+
   it('mantem todas as rotas do menu como rotas conhecidas da barra da pagina', () => {
     const component = render();
     const links = linksOf(component.menuItems);

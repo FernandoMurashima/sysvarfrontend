@@ -1,4 +1,31 @@
-# PDV Desktop - Fase 1
+# PDV Desktop - Fase 1 — DESCONTINUADO
+
+**Status: DESCONTINUADO em 15/10/2026. O PDV oficial é o Sysvar Hub.**
+
+Os dois PDVs antigos da Central foram removidos. As URLs `/vendas/pdv`,
+`/vendas/pdv-desktop` e `/loja/pdv-offline` redirecionam para `/home`.
+Consulta de Vendas, Devoluções, Recebimento, Estoque, Financeiro e administração
+da sincronização Hub continuam disponíveis na Central.
+
+### Dependências e dados históricos preservados
+
+- `VendaPdvService` e os modelos de venda continuam usados por Consulta de Vendas e Devoluções.
+- `PdvConnectivityService`, `ElectronBridgeService`, seus contratos e
+  `PdvOfflineDevolucaoQueueService` continuam necessários às Devoluções.
+- `PdvOfflineQueueService`, `PdvOfflineCatalogService`, `PdvLocalCaixaService` e
+  `PdvLocalAuditoriaService` foram mantidos para tratamento separado dos registros
+  legados. Nenhuma rota de PDV da Central os disponibiliza para novas operações.
+- Não remover automaticamente chaves de localStorage, dados SQLite, auditorias,
+  caixas ou filas existentes. Não há migração nem reprocessamento nesta alteração.
+- **Pendência separada:** definir procedimento de identificação e tratamento de
+  eventuais vendas pendentes e históricos do antigo PDV, antes de remover seus
+  adaptadores de persistência. A existência de pendências operacionais não foi consultada.
+
+---
+
+O conteúdo abaixo é registro histórico do protótipo descontinuado; não é roteiro
+de operação ou homologação do PDV oficial do Hub.
+
 
 ## Entregue nesta fase
 
