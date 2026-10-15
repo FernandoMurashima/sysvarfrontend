@@ -31,6 +31,17 @@ describe('DistribuicaoComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('mantem titulo Distribuicao e controles internos de perfis', () => {
+    fixture.detectChanges();
+    expect(text('.title-bar h1')).toBe('Distribuição');
+    const perfis = Array.from(fixture.nativeElement.querySelectorAll('.title-actions button') as NodeListOf<HTMLButtonElement>)
+      .find(button => normalize(button.textContent) === 'Perfis');
+    expect(perfis).toBeTruthy();
+    spyOn(component, 'novoPerfil');
+    perfis?.click();
+    expect(component.novoPerfil).toHaveBeenCalled();
+  });
+
   it('carrega distribuicoes sem depender do limite antigo de 500 e calcula indicadores com todas', () => {
     const rows = Array.from({ length: 501 }, (_, index) => ({
       id: index + 1,

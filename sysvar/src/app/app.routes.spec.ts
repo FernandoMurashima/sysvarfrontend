@@ -79,3 +79,29 @@ describe('rotas de requisicoes', () => {
     expect(rota?.data?.['moduloEmpresaAnyOf']).toEqual(['requisicoes', 'requisicoes_analise', 'requisicoes_atendimento', 'requisicoes_todas']);
   });
 });
+
+
+describe('rotas preservadas na reorganizacao dos menus', () => {
+  const shell = routes.find(route => route.path === '');
+  const cenarios = [
+    { path: 'loja/recebimento', modulo: 'estoque', roles: ['Diretor', 'Gerente', 'Caixa'] },
+    { path: 'distribuicao', modulo: 'distribuicao', roles: ['Diretor', 'Gerente', 'Auxiliar'] },
+    { path: 'distribuicao/pedidos-venda', modulo: 'distribuicao', roles: ['Diretor', 'Gerente', 'Auxiliar'] },
+    { path: 'fiscal/faturamento', modulo: 'distribuicao', roles: ['Diretor', 'Gerente'] },
+  ];
+  for (const cenario of cenarios) {
+    it('preserva rota e acesso de ' + cenario.path, () => {
+      const rota = shell?.children?.find(route => route.path === cenario.path);
+      expect(rota?.component).toBeTruthy();
+      expect(rota?.data?.['moduloEmpresa']).toBe(cenario.modulo);
+      expect(rota?.data?.['roles']).toEqual(cenario.roles);
+    });
+  }
+
+  it('mantem a rota e o componente PDV para a remocao posterior', () => {
+    const rota = shell?.children?.find(route => route.path === 'loja/pdv-offline');
+    expect(rota?.component).toBeTruthy();
+    expect(rota?.data?.['moduloEmpresa']).toBe('vendas');
+    expect(rota?.data?.['roles']).toEqual(['Caixa', 'Gerente']);
+  });
+});

@@ -1,5 +1,6 @@
+import { NgZone } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../core/auth.service';
@@ -130,7 +131,6 @@ describe('ShellComponent menu lateral', () => {
       'Distribuição',
       'Produção',
       'Vendas',
-      'Loja',
       'Financeiro',
       'Fiscal / Contábil',
     ]);
@@ -258,25 +258,89 @@ describe('ShellComponent menu lateral', () => {
     expect(findItem(estoque?.children, 'NF-e')?.link).toBe('/estoque/nfe-detectadas');
   });
 
-  it('mantem PDV somente no menu Loja e remove os PDVs do menu Vendas', () => {
+  it('remove Loja e PDV e mantem recebimento em Estoque sem duplicar Vendas', () => {
     currentUser = {
-      id: 9,
-      username: 'caixa',
-      type: 'Caixa',
-      is_full_company_administrator: false,
+      id: 9, username: 'gerente', type: 'Gerente', is_full_company_administrator: false,
       modulos_disponiveis_empresa: ['vendas', 'estoque'],
       permissoes_efetivas: { vendas: 'VIEW', estoque: 'VIEW' },
     };
-
     const component = render();
     const vendas = component.visibleMenu.find(item => item.label === 'Vendas');
-    const loja = component.visibleMenu.find(item => item.label === 'Loja');
+    const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
+    const links = linksOf(component.menuItems);
 
-    expect(linksOf(vendas?.children)).not.toContain('/vendas/pdv');
-    expect(linksOf(vendas?.children)).not.toContain('/loja/pdv-offline');
-    expect(findItem(loja?.children, 'PDV')?.link).toBe('/loja/pdv-offline');
-    expect(findItem(loja?.children, 'Recebimento de Mercadoria')?.link).toBe('/loja/recebimento');
-    expect(findItem(loja?.children, 'Consulta de Estoque')?.link).toBe('/estoque/consulta-referencia');
+    expect(findItem(component.menuItems, 'Loja')).toBeUndefined();
+    expect(findItem(component.visibleMenu, 'Loja')).toBeUndefined();
+    expect(findItem(component.menuItems, 'PDV')).toBeUndefined();
+    expect(links).not.toContain('/loja/pdv-offline');
+    expect(links).not.toContain('/vendas/pdv');
+    expect(findItem(estoque?.children, 'Recebimento de Mercadoria')).toEqual(jasmine.objectContaining({
+      link: '/loja/recebimento', roles: ['Diretor', 'Gerente', 'Caixa'], moduloEmpresa: 'estoque',
+    }));
+    for (const link of ['/loja/recebimento', '/vendas/relatorios', '/loja/devolucoes', '/estoque/consulta-referencia']) {
+      expect(links.filter(value => value === link).length).toBe(1);
+    }
+    expect(linksOf(vendas?.children)).toContain('/vendas/relatorios');
+    expect(linksOf(vendas?.children)).toContain('/loja/devolucoes');
+    expect(linksOf(vendas?.children)).not.toContain('/loja/recebimento');
+    expect(linksOf(estoque?.children)).toContain('/estoque/consulta-referencia');
+  });
+
+  it('mostra recebimento para Caixa com acesso a Estoque sem exigir Vendas', () => {
+    currentUser = {
+      id: 10, username: 'caixa', type: 'Caixa', is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['estoque'], permissoes_efetivas: { estoque: 'VIEW' },
+    };
+    const component = render();
+    const estoque = component.visibleMenu.find(item => item.label === 'Estoque');
+    expect(linksOf(estoque?.children)).toContain('/loja/recebimento');
+  });
+
+  it('mantem Distribuicao com exatamente tres opcoes diretas e seus acessos', () => {
+    currentUser.modulos_disponiveis_empresa = ['distribuicao'];
+    const component = render();
+    const distribuicao = component.visibleMenu.find(item => item.label === 'Distribuição');
+    expect(distribuicao?.roles).toEqual(['Diretor', 'Gerente', 'Auxiliar']);
+    expect(distribuicao?.moduloEmpresa).toBe('distribuicao');
+    expect(labelsOf(distribuicao?.children)).toEqual(['Distribuição', 'Pedido de Venda', 'Faturamento']);
+    expect(linksOf(distribuicao?.children)).toEqual(['/distribuicao', '/distribuicao/pedidos-venda', '/fiscal/faturamento']);
+    for (const [index, item] of (distribuicao?.children || []).entries()) {
+      expect(item.children).toBeUndefined();
+      expect(item.moduloEmpresa).toBe('distribuicao');
+      expect(item.roles).toEqual(index < 2 ? ['Diretor', 'Gerente', 'Auxiliar'] : ['Diretor', 'Gerente']);
+    }
+  });
+
+  it('oculta recebimento e Distribuicao sem permissao nos respectivos modulos', () => {
+    currentUser = {
+      id: 11, username: 'gerente', type: 'Gerente', is_full_company_administrator: false,
+      modulos_disponiveis_empresa: ['estoque', 'distribuicao', 'vendas'],
+      permissoes_efetivas: { estoque: 'NONE', distribuicao: 'NONE', vendas: 'VIEW' },
+    };
+    const component = render();
+    expect(linksOf(component.visibleMenu)).not.toContain('/loja/recebimento');
+    expect(linksOf(component.visibleMenu)).not.toContain('/distribuicao');
+    expect(linksOf(component.visibleMenu)).not.toContain('/distribuicao/pedidos-venda');
+    expect(linksOf(component.visibleMenu)).not.toContain('/fiscal/faturamento');
+  });
+
+  it('oculta recebimento e Distribuicao quando os modulos nao estao contratados', () => {
+    currentUser.modulos_disponiveis_empresa = [];
+    const component = render();
+    expect(linksOf(component.visibleMenu)).not.toContain('/loja/recebimento');
+    expect(linksOf(component.visibleMenu)).not.toContain('/distribuicao');
+    expect(linksOf(component.visibleMenu)).not.toContain('/distribuicao/pedidos-venda');
+    expect(linksOf(component.visibleMenu)).not.toContain('/fiscal/faturamento');
+  });
+
+  it('usa Distribuicao como titulo da pagina ao navegar para a rota existente', async () => {
+    const component = render();
+    const router = TestBed.inject(Router);
+    router.resetConfig([{ path: 'distribuicao', children: [] }]);
+    await TestBed.inject(NgZone).run(() => router.navigateByUrl('/distribuicao'));
+    fixture.detectChanges();
+    expect(component.currentPageTitle).toBe('Distribuição');
+    expect(fixture.nativeElement.textContent).not.toContain('Perfis de Distribuição');
   });
 
   it('mantem todas as rotas do menu como rotas conhecidas da barra da pagina', () => {
